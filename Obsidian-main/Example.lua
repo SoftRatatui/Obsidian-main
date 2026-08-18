@@ -88,6 +88,8 @@ end
 local Library, ActiveRepository = LoadModule("Library.lua", true)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
+local RunService = game:GetService("RunService")
+local StatsService = game:GetService("Stats")
 
 local Options = Library.Options
 local Toggles = Library.Toggles
@@ -588,6 +590,95 @@ end)
 
 local MenuGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
 SetGroupOrder(MenuGroup, -100)
+
+local WatermarkEnabled = true
+local WatermarkShowFPS = true
+local WatermarkShowPing = true
+local WatermarkFPS = 0
+local WatermarkPing = 0
+local WatermarkFrames = 0
+local WatermarkElapsed = 0
+
+local function RefreshWatermark()
+	local Sections = { "MonHub" }
+	if WatermarkShowFPS then
+		table.insert(Sections, string.format("%d FPS", WatermarkFPS))
+	end
+	if WatermarkShowPing then
+		table.insert(Sections, string.format("%d ms", WatermarkPing))
+	end
+	Library:SetWatermark(table.concat(Sections, "  |  "))
+	Library:SetWatermarkVisibility(WatermarkEnabled)
+end
+
+local function ReadPing()
+	local Success, Value = pcall(function()
+		return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+	end)
+	if not Success then
+		return 0
+	end
+	return math.max(0, math.floor((tonumber(Value) or 0) + 0.5))
+end
+
+local WatermarkToggle = MenuGroup:AddToggle("WatermarkEnabled", {
+	Text = "Watermark",
+	Default = true,
+	Callback = function(Value)
+		WatermarkEnabled = Value
+		WatermarkFrames = 0
+		WatermarkElapsed = 0
+		RefreshWatermark()
+	end,
+})
+
+local WatermarkSettings = MenuGroup:AddDependencyBox()
+WatermarkSettings:AddToggle("WatermarkFPS", {
+	Text = "Show FPS",
+	Default = true,
+	Callback = function(Value)
+		WatermarkShowFPS = Value
+		WatermarkFrames = 0
+		WatermarkElapsed = 0
+		RefreshWatermark()
+	end,
+})
+WatermarkSettings:AddToggle("WatermarkPing", {
+	Text = "Show ping",
+	Default = true,
+	Callback = function(Value)
+		WatermarkShowPing = Value
+		WatermarkElapsed = 0
+		RefreshWatermark()
+	end,
+})
+WatermarkSettings:SetupDependencies({ { WatermarkToggle, true } })
+
+Library:GiveSignal(RunService.RenderStepped:Connect(function(DeltaTime)
+	if not WatermarkEnabled or not (WatermarkShowFPS or WatermarkShowPing) then
+		return
+	end
+
+	WatermarkElapsed += DeltaTime
+	if WatermarkShowFPS then
+		WatermarkFrames += 1
+	end
+	if WatermarkElapsed < 0.5 then
+		return
+	end
+
+	if WatermarkShowFPS then
+		WatermarkFPS = math.floor(WatermarkFrames / WatermarkElapsed + 0.5)
+	end
+	if WatermarkShowPing then
+		WatermarkPing = ReadPing()
+	end
+	WatermarkFrames = 0
+	WatermarkElapsed = 0
+	RefreshWatermark()
+end))
+
+RefreshWatermark()
 MenuGroup:AddToggle("KeybindMenuOpen", {
 	Text = "Show keybind menu",
 	Default = Library.KeybindFrame.Visible,

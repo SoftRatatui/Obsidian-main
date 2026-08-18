@@ -85,6 +85,7 @@ export type DraggableLabel = {
     Label: TextLabel,
     SetText: (self: DraggableLabel, Text: string) -> (),
     SetVisible: (self: DraggableLabel, Visible: boolean) -> (),
+    SetPosition: (self: DraggableLabel, Position: UDim2) -> (),
     SetIcon: (self: DraggableLabel, Icon: string) -> (),
     SetIconPosition: (self: DraggableLabel, Position: string) -> (),
 }
@@ -1025,6 +1026,7 @@ export type Library = {
     KeybindContainer: Frame?,
     KeybindToggles: { [number]: KeybindToggle },
     Notifications: { [GuiObject]: Notification },
+    Watermark: DraggableLabel?,
     ClickSound: Sound?,
     ClickSounds: boolean,
     ClickSoundId: string,
@@ -1122,7 +1124,16 @@ export type Library = {
     MakeOutline: (self: Library, Frame: GuiObject, Corner: number?, ZIndex: number?) -> Frame,
     AddDraggableLabel: (
         self: Library,
-        Text: string | { Text: string, Icon: string?, IconPosition: string? },
+        Text: string
+            | {
+                Text: string,
+                Icon: string?,
+                IconPosition: string?,
+                Position: UDim2?,
+                AnchorPoint: Vector2?,
+                TextSize: number?,
+                BackgroundColor: string | Color3?,
+            },
         Icon: string?,
         IconPosition: string?
     ) -> DraggableLabel,

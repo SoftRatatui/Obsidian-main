@@ -398,8 +398,9 @@ function ThemeManager:SetDefaultTheme(Theme: any)
         FinalTheme.FontFace = FontFace
     
     else
-        LibraryScheme.Font = Font.fromEnum(Enum.Font.Code)
-        FinalTheme.FontFace = "Code"
+        local DefaultFontFace = DefaultThemeData.FontFace or "Gotham"
+        LibraryScheme.Font = Font.fromEnum(Enum.Font[DefaultFontFace] :: Enum.Font)
+        FinalTheme.FontFace = DefaultFontFace
     end
 
     
@@ -626,11 +627,24 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     local OutlineColor = CreateColorOption("Outline color", "OutlineColor")
     local FontColor = CreateColorOption("Font color", "FontColor")
     
+    local FontFaces = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "RobotoMono", "Roboto", "SourceSans" }
+    local CurrentFontFace = "Gotham"
+    local CurrentFont = ThemeManager.Library.Scheme.Font
+    if typeof(CurrentFont) == "Font" then
+        local CurrentFamily = string.lower(CurrentFont.Family)
+        for _, FontName in FontFaces do
+            if string.find(CurrentFamily, string.lower(FontName), 1, true) then
+                CurrentFontFace = FontName
+                break
+            end
+        end
+    end
+
     Themesbox:AddDropdown("FontFace", {
         Text = "Font Face",
-        Default = "Code",
+        Default = CurrentFontFace,
         
-        Values = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "Roboto", "RobotoMono", "SourceSans" },
+        Values = FontFaces,
         AllowNull = false,
         Multi = false
     })

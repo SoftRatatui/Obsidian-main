@@ -2250,11 +2250,19 @@ function Library:AddDraggableLabel(...)
     local Text
     local Icon
     local IconPosition = "left"
+    local Position = UDim2.fromOffset(6, 6)
+    local AnchorPoint = Vector2.zero
+    local TextSize = 15
+    local BackgroundColor = "BackgroundColor"
 
     if typeof(Params) == "table" then
         Text = Params.Text
         Icon = Params.Icon
         IconPosition = Params.IconPosition or "left"
+        Position = Params.Position or Position
+        AnchorPoint = Params.AnchorPoint or AnchorPoint
+        TextSize = Params.TextSize or TextSize
+        BackgroundColor = Params.BackgroundColor or BackgroundColor
     elseif typeof(Params) == "string" then
         Text = Params
         Icon = select(2, ...)
@@ -2275,12 +2283,13 @@ function Library:AddDraggableLabel(...)
 
     local IconImage
     local Label = New("TextLabel", {
+        AnchorPoint = AnchorPoint,
         AutomaticSize = Enum.AutomaticSize.XY,
-        BackgroundColor3 = "BackgroundColor",
+        BackgroundColor3 = BackgroundColor,
         Size = UDim2.fromOffset(0, 0),
-        Position = UDim2.fromOffset(6, 6),
-        Text = Text,
-        TextSize = 15,
+        Position = Position,
+        Text = Text or "",
+        TextSize = TextSize,
         ZIndex = 10,
         Parent = ScreenGui,
     })
@@ -2360,6 +2369,10 @@ function Library:AddDraggableLabel(...)
 
     function DraggableLabel:SetVisible(Visible: boolean)
         Label.Visible = Visible
+    end
+
+    function DraggableLabel:SetPosition(NewPosition: UDim2)
+        PositionDraggable(Label, NewPosition)
     end
     
     DraggableLabel:SetIcon(Icon)
@@ -2702,16 +2715,22 @@ end
 
 
 do
-    local WatermarkLabel = Library:AddDraggableLabel("")
+    local WatermarkLabel = Library:AddDraggableLabel({
+        Text = "",
+        Icon = "activity",
+        Position = UDim2.new(1, -8, 0, 8),
+        AnchorPoint = Vector2.new(1, 0),
+        TextSize = 13,
+        BackgroundColor = "MainColor",
+    })
     WatermarkLabel:SetVisible(false)
+    Library.Watermark = WatermarkLabel
 
     function Library:SetWatermark(Text: string)
-        warn("Watermark is deprecated, please use Library:AddDraggableLabel instead.")
         WatermarkLabel:SetText(Text)
     end
 
     function Library:SetWatermarkVisibility(Visible: boolean)
-        warn("Watermark is deprecated, please use Library:AddDraggableLabel instead.")
         WatermarkLabel:SetVisible(Visible)
     end
 end
@@ -6619,7 +6638,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Info.Compact and 15 or 33),
+            Size = UDim2.new(1, 0, 0, Info.Compact and 28 or 35),
             Visible = Slider.Visible,
             Parent = Container,
         })
@@ -6628,7 +6647,7 @@ do
         if not Info.Compact then
             SliderLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 14),
+                Size = UDim2.new(1, -96, 0, 14),
                 Text = Slider.Text,
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -6639,50 +6658,56 @@ do
         local Bar = New("TextButton", {
             Active = not Slider.Disabled,
             AnchorPoint = Vector2.new(0, 1),
-            BackgroundColor3 = "MainColor",
+            BackgroundTransparency = 1,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 15),
+            Size = UDim2.new(1, 0, 0, 14),
             Text = "",
             Parent = Holder,
         })
 
+        local Track = New("Frame", {
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundColor3 = "MainColor",
+            Position = UDim2.new(0, 5, 0.5, 0),
+            Size = UDim2.new(1, -10, 0, 4),
+            Parent = Bar,
+        })
+        New("UICorner", {
+            CornerRadius = UDim.new(0, 2),
+            Parent = Track,
+        })
         New("UIStroke", {
             Color = "OutlineColor",
-            Parent = Bar,
+            Transparency = 0.12,
+            Parent = Track,
         })
 
         local DisplayLabel = New("TextLabel", {
+            AnchorPoint = Info.Compact and Vector2.zero or Vector2.new(1, 0),
             BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 1),
+            Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
+            Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
             Text = "",
-            TextSize = 14,
+            TextSize = 13,
+            TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
             ZIndex = Bar.ZIndex + 2,
-            Parent = Bar,
-        })
-        New("UIStroke", {
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-            Color = "DarkColor",
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            Parent = DisplayLabel,
+            Parent = Holder,
         })
 
         local InputTextBox
         if Info.AllowRightClickInput then
             InputTextBox = New("TextBox", {
+                AnchorPoint = Info.Compact and Vector2.zero or Vector2.new(1, 0),
                 BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 1),
+                Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
+                Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
                 Text = "",
-                TextSize = 14,
+                TextSize = 13,
+                TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
                 ZIndex = Bar.ZIndex + 3,
                 Visible = false,
                 ClearTextOnFocus = false,
-                Parent = Bar,
-            })
-            New("UIStroke", {
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-                Color = "DarkColor",
-                LineJoinMode = Enum.LineJoinMode.Miter,
-                Parent = InputTextBox,
+                Parent = Holder,
             })
         end
 
@@ -6690,24 +6715,44 @@ do
             BackgroundColor3 = "AccentColor",
             Size = UDim2.fromScale(0.5, 1),
             ZIndex = Bar.ZIndex + 1,
-            Parent = Bar,
+            Parent = Track,
+        })
+        New("UICorner", {
+            CornerRadius = UDim.new(0, 2),
+            Parent = Fill,
         })
 
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Bar,
-            })
-        )
+        local Thumb = New("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = "FontColor",
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(10, 10),
+            ZIndex = Bar.ZIndex + 2,
+            Parent = Track,
+        })
+        New("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = Thumb,
+        })
+        New("UIStroke", {
+            Color = "OutlineColor",
+            Thickness = 1,
+            Parent = Thumb,
+        })
 
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Fill,
-            })
-        )
+        table.insert(Slider.Connections, Bar.MouseEnter:Connect(function()
+            if Slider.Disabled then
+                return
+            end
+            TweenService:Create(Thumb, Library.TweenInfo, {
+                Size = UDim2.fromOffset(12, 12),
+            }):Play()
+        end))
+        table.insert(Slider.Connections, Bar.MouseLeave:Connect(function()
+            TweenService:Create(Thumb, Library.TweenInfo, {
+                Size = UDim2.fromOffset(10, 10),
+            }):Play()
+        end))
 
         function Slider:UpdateColors()
             if Library.Unloaded then
@@ -6725,6 +6770,8 @@ do
 
             Fill.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.AccentColor
             Library.Registry[Fill].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "AccentColor"
+            Thumb.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.FontColor
+            Library.Registry[Thumb].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "FontColor"
         end
 
         function Slider:Display()
@@ -6760,6 +6807,7 @@ do
 
             local X = (Slider.Value - Slider.Min) / (Slider.Max - Slider.Min)
             Fill.Size = UDim2.fromScale(X, 1)
+            Thumb.Position = UDim2.fromScale(X, 0.5)
         end
 
         function Slider:OnChanged(Func)
@@ -6813,6 +6861,9 @@ do
             end
 
             Bar.Active = not Slider.Disabled
+            if Slider.Disabled then
+                Thumb.Size = UDim2.fromOffset(10, 10)
+            end
             Slider:UpdateColors()
         end
 
@@ -6935,8 +6986,8 @@ do
             end
 
             while IsDragInput(Input) and not Slider.Destroyed do
-                local Location = Mouse.X
-                local Scale = math.clamp((Location - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+                local Location = Input.UserInputType == Enum.UserInputType.Touch and Input.Position.X or Mouse.X
+                local Scale = math.clamp((Location - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
 
                 local OldValue = Slider.Value
                 Slider.Value = Round(Slider.Min + ((Slider.Max - Slider.Min) * Scale), Slider.Rounding)

@@ -96,15 +96,16 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library.Scheme.BackgroundColor = Color3.fromRGB(16, 15, 23)
-Library.Scheme.MainColor = Color3.fromRGB(29, 26, 40)
-Library.Scheme.AccentColor = Color3.fromRGB(145, 101, 214)
-Library.Scheme.OutlineColor = Color3.fromRGB(66, 57, 84)
-Library.Scheme.FontColor = Color3.fromRGB(242, 239, 247)
-Library.Scheme.WhiteColor = Color3.fromRGB(242, 239, 247)
+Library.Scheme.BackgroundColor = Color3.fromRGB(18, 19, 22)
+Library.Scheme.MainColor = Color3.fromRGB(29, 31, 36)
+Library.Scheme.AccentColor = Color3.fromRGB(121, 126, 139)
+Library.Scheme.OutlineColor = Color3.fromRGB(55, 58, 66)
+Library.Scheme.FontColor = Color3.fromRGB(232, 234, 239)
+Library.Scheme.WhiteColor = Color3.fromRGB(246, 247, 250)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 Library.CornerRadius = 5
 Library.IsLightTheme = false
+Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
 	Title = "MonHub",
@@ -171,7 +172,7 @@ local FeatureToggle = BasicGroup:AddToggle("FeatureEnabled", {
 
 FeatureToggle:AddColorPicker("FeatureColor", {
 	Title = "Feature color",
-	Default = Color3.fromRGB(145, 101, 214),
+	Default = Color3.fromRGB(121, 126, 139),
 	Transparency = 0,
 })
 
@@ -290,8 +291,8 @@ local function CreateR6Preview()
 	end
 
 	local Skin = Color3.fromRGB(239, 196, 156)
-	local Shirt = Color3.fromRGB(105, 70, 158)
-	local Pants = Color3.fromRGB(39, 34, 52)
+	local Shirt = Color3.fromRGB(86, 91, 105)
+	local Pants = Color3.fromRGB(39, 41, 47)
 	local Root = CreatePart("HumanoidRootPart", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Pants, nil, 1)
 	local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Shirt)
 	local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), Skin)
@@ -336,12 +337,12 @@ local function CreateR6Preview()
 		"Platform",
 		Vector3.new(4.8, 0.3, 3.2),
 		Vector3.new(0, -0.2, 0),
-		Color3.fromRGB(50, 42, 68),
+		Color3.fromRGB(50, 52, 59),
 		Enum.Material.SmoothPlastic
 	)
 	local PlatformLight = Instance.new("PointLight")
 	PlatformLight.Brightness = 0.8
-	PlatformLight.Color = Color3.fromRGB(174, 126, 238)
+	PlatformLight.Color = Color3.fromRGB(157, 164, 181)
 	PlatformLight.Range = 8
 	PlatformLight.Parent = Platform
 
@@ -354,7 +355,7 @@ local PreviewModel = CreateR6Preview()
 local MediaLeft = Tabs.Media:AddLeftGroupbox("R6 character preview", "user-round")
 MediaLeft:AddImage("ShowcaseImage", {
 	Image = "sparkles",
-	Color = Color3.fromRGB(196, 151, 245),
+	Color = Color3.fromRGB(184, 189, 201),
 	BackgroundTransparency = 0.08,
 	ScaleType = Enum.ScaleType.Fit,
 	Height = 82,
@@ -371,7 +372,7 @@ MediaLeft:AddLabel("Left or right drag to rotate. Use the mouse wheel or pinch t
 
 local CustomCard = Instance.new("Frame")
 CustomCard.Name = "CustomPassthroughCard"
-CustomCard.BackgroundColor3 = Color3.fromRGB(37, 32, 50)
+CustomCard.BackgroundColor3 = Color3.fromRGB(35, 37, 43)
 CustomCard.BorderSizePixel = 0
 CustomCard.Size = UDim2.fromScale(1, 1)
 
@@ -380,7 +381,7 @@ CardCorner.CornerRadius = UDim.new(0, 4)
 CardCorner.Parent = CustomCard
 
 local CardStroke = Instance.new("UIStroke")
-CardStroke.Color = Color3.fromRGB(91, 72, 119)
+CardStroke.Color = Color3.fromRGB(66, 69, 78)
 CardStroke.Parent = CustomCard
 
 local CardText = Instance.new("TextLabel")
@@ -389,7 +390,7 @@ CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
 CardText.Font = Enum.Font.Gotham
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
-CardText.TextColor3 = Color3.fromRGB(242, 239, 247)
+CardText.TextColor3 = Color3.fromRGB(232, 234, 239)
 CardText.TextSize = 14
 CardText.TextWrapped = true
 CardText.Parent = CustomCard
@@ -557,14 +558,14 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("The default palette uses layered charcoal and soft violet.", true)
-StyleTab:AddButton("Reapply premium violet", function()
-	Library.Scheme.BackgroundColor = Color3.fromRGB(16, 15, 23)
-	Library.Scheme.MainColor = Color3.fromRGB(29, 26, 40)
-	Library.Scheme.AccentColor = Color3.fromRGB(145, 101, 214)
-	Library.Scheme.OutlineColor = Color3.fromRGB(66, 57, 84)
-	Library.Scheme.FontColor = Color3.fromRGB(242, 239, 247)
-	Library.Scheme.WhiteColor = Color3.fromRGB(242, 239, 247)
+StyleTab:AddLabel("The default palette uses neutral graphite layers and a cool gray accent.", true)
+StyleTab:AddButton("Reapply graphite", function()
+	Library.Scheme.BackgroundColor = Color3.fromRGB(18, 19, 22)
+	Library.Scheme.MainColor = Color3.fromRGB(29, 31, 36)
+	Library.Scheme.AccentColor = Color3.fromRGB(121, 126, 139)
+	Library.Scheme.OutlineColor = Color3.fromRGB(55, 58, 66)
+	Library.Scheme.FontColor = Color3.fromRGB(232, 234, 239)
+	Library.Scheme.WhiteColor = Color3.fromRGB(246, 247, 250)
 	Library:UpdateColorsUsingRegistry()
 	Window:SetCornerRadius(5)
 end)

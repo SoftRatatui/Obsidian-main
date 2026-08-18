@@ -265,17 +265,17 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(16, 15, 23),
-        MainColor = Color3.fromRGB(29, 26, 40),
-        AccentColor = Color3.fromRGB(145, 101, 214),
-        OutlineColor = Color3.fromRGB(66, 57, 84),
-        FontColor = Color3.fromRGB(242, 239, 247),
+        BackgroundColor = Color3.fromRGB(18, 19, 22),
+        MainColor = Color3.fromRGB(29, 31, 36),
+        AccentColor = Color3.fromRGB(121, 126, 139),
+        OutlineColor = Color3.fromRGB(55, 58, 66),
+        FontColor = Color3.fromRGB(232, 234, 239),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(242, 239, 247),
+        WhiteColor = Color3.fromRGB(246, 247, 250),
 
         BackgroundImage = ""
     },
@@ -292,16 +292,27 @@ local Library = {
     Notify = nil, Toggle = nil 
 }
 
-Library.DefaultTheme = "BlackPurple"
+Library.DefaultTheme = "Graphite"
 Library.Themes = {
-    BlackPurple = {
-        BackgroundColor = Color3.fromRGB(16, 15, 23),
-        MainColor = Color3.fromRGB(29, 26, 40),
-        AccentColor = Color3.fromRGB(145, 101, 214),
-        OutlineColor = Color3.fromRGB(66, 57, 84),
-        FontColor = Color3.fromRGB(242, 239, 247),
+    Graphite = {
+        BackgroundColor = Color3.fromRGB(18, 19, 22),
+        MainColor = Color3.fromRGB(29, 31, 36),
+        AccentColor = Color3.fromRGB(121, 126, 139),
+        OutlineColor = Color3.fromRGB(55, 58, 66),
+        FontColor = Color3.fromRGB(232, 234, 239),
         Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(242, 239, 247),
+        WhiteColor = Color3.fromRGB(246, 247, 250),
+        CornerRadius = 5,
+        IsLight = false,
+    },
+    BlackPurple = {
+        BackgroundColor = Color3.fromRGB(9, 9, 13),
+        MainColor = Color3.fromRGB(18, 17, 24),
+        AccentColor = Color3.fromRGB(116, 82, 178),
+        OutlineColor = Color3.fromRGB(43, 38, 53),
+        FontColor = Color3.fromRGB(232, 229, 238),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(232, 229, 238),
         CornerRadius = 5,
         IsLight = false,
     },
@@ -1368,12 +1379,20 @@ local function New(ClassName: string, Properties: { [string]: any }): any
     if Templates[ClassName] then
         FillInstance(Templates[ClassName], Instance)
     end
-    FillInstance(Properties, Instance)
+        FillInstance(Properties, Instance)
 
     if Properties["Parent"] and not Properties["ZIndex"] then
         pcall(function()
             Instance.ZIndex = Properties.Parent.ZIndex
         end)
+    end
+
+    if Instance:IsA("GuiButton") then
+        Library:GiveSignal(Instance.Activated:Connect(function()
+            if Library.PlayClickSound then
+                Library:PlayClickSound()
+            end
+        end))
     end
 
     return Instance
@@ -1434,6 +1453,51 @@ local ScreenGui = New("ScreenGui", {
 })
 ParentUI(ScreenGui)
 Library.ScreenGui = ScreenGui
+
+local ClickSound = New("Sound", {
+    Name = "Click",
+    SoundId = "rbxassetid://92679954573730",
+    Volume = 0.3,
+    Parent = ScreenGui,
+})
+Library.ClickSound = ClickSound
+Library.ClickSounds = true
+Library.ClickSoundId = ClickSound.SoundId
+Library.ClickSoundVolume = ClickSound.Volume
+Library.LastClickSoundAt = 0
+
+function Library:SetClickSound(SoundId: string | number | boolean, Volume: number?)
+    if SoundId == false then
+        Library.ClickSounds = false
+        ClickSound:Stop()
+        return
+    end
+
+    if typeof(SoundId) == "number" then
+        SoundId = string.format("rbxassetid://%d", SoundId)
+    end
+
+    assert(typeof(SoundId) == "string", "SoundId must be a string, number, or false.")
+    Library.ClickSounds = true
+    Library.ClickSoundId = SoundId
+    Library.ClickSoundVolume = math.clamp(tonumber(Volume) or Library.ClickSoundVolume or 0.3, 0, 10)
+    ClickSound.SoundId = Library.ClickSoundId
+    ClickSound.Volume = Library.ClickSoundVolume
+end
+
+function Library:PlayClickSound()
+    if not Library.ClickSounds or Library.Unloaded or not ClickSound.Parent then
+        return
+    end
+
+    local CurrentTime = os.clock()
+    if CurrentTime - Library.LastClickSoundAt < 0.035 then
+        return
+    end
+    Library.LastClickSoundAt = CurrentTime
+    ClickSound.TimePosition = 0
+    ClickSound:Play()
+end
 
 ScreenGui.DescendantRemoving:Connect(function(Instance)
     Library:RemoveFromRegistry(Instance)
@@ -8108,10 +8172,10 @@ do
         })
 
         local ViewportFrame = New("ViewportFrame", {
-            Ambient = Color3.fromRGB(168, 153, 190),
-            BackgroundColor3 = Color3.fromRGB(20, 18, 29),
+            Ambient = Color3.fromRGB(156, 160, 170),
+            BackgroundColor3 = Color3.fromRGB(23, 24, 28),
             BackgroundTransparency = 0.08,
-            LightColor = Color3.fromRGB(239, 229, 255),
+            LightColor = Color3.fromRGB(235, 237, 242),
             LightDirection = Vector3.new(-1, -0.7, -1),
             Size = UDim2.fromScale(1, 1),
             Parent = Box,

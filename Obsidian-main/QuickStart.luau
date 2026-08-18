@@ -10,7 +10,7 @@ App = Library:Create({
     Tabs = {
         {
             Name = "Dashboard",
-            Icon = "layout-dashboard",
+            Icon = "house",
             Description = "Main controls",
 
             Sections = {

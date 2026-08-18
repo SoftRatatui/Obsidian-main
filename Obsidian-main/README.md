@@ -8,7 +8,7 @@ A fast Roblox UI library with a calm black-purple default theme, responsive layo
 - Smooth window, tab, groupbox, dropdown, key picker, and toggle transitions enabled by default.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
-- Faster startup: bundled Roblox icon sprites are preferred, the Lucide module is cached, and optional image files are no longer downloaded before the first window.
+- Faster startup: Roblox-hosted icon sprites are preferred, the Lucide module is cached, and optional image files are no longer downloaded before the first window.
 - Less work while typing: search is debounced and text measurements are cached.
 
 ## Quick start
@@ -134,3 +134,5 @@ Library.ImageManager.PreloadAssets()
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+Icons are provided by [Lucide](https://lucide.dev/) through [lucide-roblox-direct](https://github.com/mstudio45/lucide-roblox-direct).

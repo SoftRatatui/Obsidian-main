@@ -19,7 +19,6 @@
 + Draggable Watermark with FPS and ping settings in Example.lua
 + Interactive R6 viewport showcase with mouse, wheel, touch, and pinch controls
 + Editable TopBarColor theme field with automatic fallback for older themes
-+ Experimental mouse and touch tab reordering with runtime enable and order APIs
 
 [optimizations]
 + Removed four blocking optional image downloads from module initialization
@@ -32,7 +31,6 @@
 + Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
 + Window closing is six times faster, uses one short CanvasGroup fade, and supports immediate reversal
 + Watermark statistics update at a fixed interval with one lightweight frame counter
-+ Tab dragging updates only on pointer movement and only reorders after crossing another tab
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent

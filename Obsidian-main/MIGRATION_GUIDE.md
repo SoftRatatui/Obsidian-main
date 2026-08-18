@@ -186,41 +186,6 @@ MainRight:SetOrder(0)
 
 Используйте `SetOrder`, если ThemeManager, SaveManager или динамические groupboxes должны находиться в предсказуемом порядке.
 
-### Экспериментальная перестановка tabs
-
-Перетаскивание вкладок включается при создании окна:
-
-```luau
-local Window = Library:CreateWindow({
-    Title = "MonHub",
-    ReorderableTabs = true,
-})
-```
-
-Функцию можно переключать во время работы и сохранять порядок программно:
-
-```luau
-Window:SetTabReorderingEnabled(true)
-
-local CurrentOrder = Window:GetTabOrder()
-Window:SetTabOrder({ "Main", "Visuals", "UI Settings" })
-```
-
-Для отдельной вкладки:
-
-```luau
-local MainTab = Window:AddTab({
-    Name = "Main",
-    Icon = "house",
-    Reorderable = true,
-})
-
-MainTab:SetReorderable(false)
-MainTab:SetOrder(10)
-```
-
-Drag начинается только после небольшого движения указателя. Реализация поддерживает мышь и touch, не использует отдельный `RenderStepped` и обновляет порядок только при пересечении соседней вкладки. В `Example.lua` функция включена и доступна через `UI Settings → Draggable tabs`.
-
 ## Перенос controls
 
 ### Toggle и Checkbox

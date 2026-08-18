@@ -119,7 +119,6 @@ local Window = Library:CreateWindow({
 	Resizable = true,
 	GlobalSearch = true,
 	EnableSidebarResize = true,
-	ReorderableTabs = true,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
 	CornerRadius = 5,
@@ -702,14 +701,6 @@ MenuGroup:AddToggle("AlwaysOnTop", {
 	Default = Window.AlwaysOnTop,
 	Callback = function(Value)
 		Window:SetAlwaysOnTop(Value)
-	end,
-})
-
-MenuGroup:AddToggle("ReorderableTabs", {
-	Text = "Draggable tabs",
-	Default = Window:IsTabReorderingEnabled(),
-	Callback = function(Value)
-		Window:SetTabReorderingEnabled(Value)
 	end,
 })
 

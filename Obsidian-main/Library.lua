@@ -431,7 +431,6 @@ local Templates = {
         EnableCompacting = true,
         DisableCompactingSnap = false,
         SidebarCompacted = false,
-        ReorderableTabs = false,
         MinContainerWidth = 256,
 
         
@@ -10119,296 +10118,6 @@ function Library:CreateWindow(WindowInfo)
     local WindowTween
     local WindowScaleTween
     local WindowAnimationSequence = 0
-    local TabCreationSequence = 0
-    local TabDragState
-    local TabReorderingEnabled = WindowInfo.ReorderableTabs == true
-
-    local function GetOrderedTabEntries()
-        local Entries = {}
-
-        for _, Entry in Library.TabButtons do
-            if Entry.Button and Entry.Button.Parent == Tabs then
-                table.insert(Entries, Entry)
-            end
-        end
-
-        table.sort(Entries, function(Left, Right)
-            local LeftOrder = Left.Button.LayoutOrder
-            local RightOrder = Right.Button.LayoutOrder
-
-            if LeftOrder == RightOrder then
-                return (Left.CreationIndex or 0) < (Right.CreationIndex or 0)
-            end
-
-            return LeftOrder < RightOrder
-        end)
-
-        return Entries
-    end
-
-    local function ApplyTabOrder(Entries)
-        for Index, Entry in Entries do
-            local Order = Index * 10
-            Entry.Button.LayoutOrder = Order
-            Entry.Order = Order
-
-            if Entry.Tab then
-                Entry.Tab.Order = Order
-            end
-        end
-    end
-
-    local function SetGhostPosition(State, Position)
-        local Scale = math.max(Library.DPIScale or 1, 0.01)
-        local MainPosition = MainFrame.AbsolutePosition
-        State.Ghost.Position = UDim2.fromOffset(
-            (Position.X - MainPosition.X) / Scale,
-            (Position.Y - MainPosition.Y) / Scale
-        )
-    end
-
-    local function BeginTabDrag(State, Position)
-        local Button = State.Entry.Button
-        local Scale = math.max(Library.DPIScale or 1, 0.01)
-        local Entries = GetOrderedTabEntries()
-        local CurrentIndex = table.find(Entries, State.Entry)
-
-        if not CurrentIndex then
-            return false
-        end
-
-        local Placeholder = New("Frame", {
-            BackgroundColor3 = "AccentColor",
-            BackgroundTransparency = 0.82,
-            LayoutOrder = Button.LayoutOrder,
-            Size = Button.Size,
-            Parent = Tabs,
-        })
-        New("UICorner", {
-            CornerRadius = UDim.new(0, math.max(WindowInfo.CornerRadius - 2, 2)),
-            Parent = Placeholder,
-        })
-
-        local Ghost = Button:Clone()
-        Ghost.Active = false
-        Ghost.AnchorPoint = Vector2.new(0.5, 0.5)
-        Ghost.AutoButtonColor = false
-        Ghost.Size = UDim2.fromOffset(Button.AbsoluteSize.X / Scale, Button.AbsoluteSize.Y / Scale)
-        Ghost.Visible = true
-        Ghost.ZIndex = 100
-        Ghost.Parent = MainFrame
-
-        for _, Descendant in Ghost:GetDescendants() do
-            if Descendant:IsA("GuiObject") then
-                Descendant.ZIndex += 100
-            end
-        end
-
-        State.Dragging = true
-        State.Entries = Entries
-        State.Placeholder = Placeholder
-        State.Ghost = Ghost
-        State.OriginalVisible = Button.Visible
-        State.TargetIndex = CurrentIndex
-        Button.Visible = false
-        SetGhostPosition(State, Position)
-
-        return true
-    end
-
-    local function UpdateTabDrag(State, Position)
-        SetGhostPosition(State, Position)
-
-        local TargetIndex = 1
-        for _, Candidate in State.Entries do
-            if Candidate ~= State.Entry and Candidate.Button.Visible then
-                local Button = Candidate.Button
-                local CenterY = Button.AbsolutePosition.Y + Button.AbsoluteSize.Y * 0.5
-                if Position.Y > CenterY then
-                    TargetIndex += 1
-                end
-            end
-        end
-
-        TargetIndex = math.clamp(TargetIndex, 1, #State.Entries)
-        local CurrentIndex = table.find(State.Entries, State.Entry)
-
-        if not CurrentIndex or TargetIndex == CurrentIndex then
-            return
-        end
-
-        table.remove(State.Entries, CurrentIndex)
-        table.insert(State.Entries, TargetIndex, State.Entry)
-        ApplyTabOrder(State.Entries)
-        State.Placeholder.LayoutOrder = State.Entry.Button.LayoutOrder
-        State.TargetIndex = TargetIndex
-    end
-
-    local function EndTabDrag()
-        local State = TabDragState
-        if not State then
-            return
-        end
-
-        TabDragState = nil
-
-        if not State.Dragging then
-            return
-        end
-
-        local Entry = State.Entry
-        Entry.Button.Visible = State.OriginalVisible
-
-        if State.Placeholder then
-            State.Placeholder:Destroy()
-        end
-
-        if State.Ghost then
-            State.Ghost:Destroy()
-        end
-
-        if Entry.Tab then
-            Entry.Tab.SuppressClick = true
-            task.delay(0.12, function()
-                if Entry.Tab then
-                    Entry.Tab.SuppressClick = false
-                end
-            end)
-        end
-    end
-
-    local function RegisterTabEntry(Entry)
-        local Connection = Entry.Button.InputBegan:Connect(function(Input)
-            if not TabReorderingEnabled or Entry.Reorderable == false or TabDragState then
-                return
-            end
-
-            local InputType = Input.UserInputType
-            if InputType ~= Enum.UserInputType.MouseButton1 and InputType ~= Enum.UserInputType.Touch then
-                return
-            end
-
-            TabDragState = {
-                Entry = Entry,
-                Input = Input,
-                StartPosition = Vector2.new(Input.Position.X, Input.Position.Y),
-                Dragging = false,
-            }
-        end)
-
-        if Entry.Tab and Entry.Tab.Connections then
-            table.insert(Entry.Tab.Connections, Connection)
-        else
-            Library:GiveSignal(Connection)
-        end
-    end
-
-    function Window:NormalizeTabOrder()
-        local Entries = GetOrderedTabEntries()
-        ApplyTabOrder(Entries)
-        return Entries
-    end
-
-    function Window:SetTabReorderingEnabled(Enabled: boolean)
-        TabReorderingEnabled = Enabled == true
-        Window.TabReorderingEnabled = TabReorderingEnabled
-
-        if not TabReorderingEnabled then
-            EndTabDrag()
-        end
-    end
-
-    function Window:IsTabReorderingEnabled()
-        return TabReorderingEnabled
-    end
-
-    function Window:GetTabOrder()
-        local Names = {}
-        for _, Entry in GetOrderedTabEntries() do
-            table.insert(Names, Entry.Name)
-        end
-        return Names
-    end
-
-    function Window:SetTabOrder(Names)
-        assert(typeof(Names) == "table", "Tab order must be a table")
-        EndTabDrag()
-
-        local CurrentEntries = GetOrderedTabEntries()
-        local ByName = {}
-        local OrderedEntries = {}
-        local Added = {}
-
-        for _, Entry in CurrentEntries do
-            ByName[Entry.Name] = Entry
-        end
-
-        for _, Name in Names do
-            local Entry = ByName[Name]
-            if Entry and not Added[Entry] then
-                Added[Entry] = true
-                table.insert(OrderedEntries, Entry)
-            end
-        end
-
-        for _, Entry in CurrentEntries do
-            if not Added[Entry] then
-                table.insert(OrderedEntries, Entry)
-            end
-        end
-
-        ApplyTabOrder(OrderedEntries)
-        return Window:GetTabOrder()
-    end
-
-    Window.TabReorderingEnabled = TabReorderingEnabled
-
-    Library:GiveSignal(UserInputService.InputChanged:Connect(function(Input)
-        local State = TabDragState
-        if not State then
-            return
-        end
-
-        local InputType = State.Input.UserInputType
-        if InputType == Enum.UserInputType.MouseButton1 then
-            if Input.UserInputType ~= Enum.UserInputType.MouseMovement then
-                return
-            end
-        elseif Input ~= State.Input then
-            return
-        end
-
-        local Position = Vector2.new(Input.Position.X, Input.Position.Y)
-        if not State.Dragging then
-            if (Position - State.StartPosition).Magnitude < 7 then
-                return
-            end
-
-            if not BeginTabDrag(State, Position) then
-                EndTabDrag()
-                return
-            end
-        end
-
-        UpdateTabDrag(State, Position)
-    end))
-
-    Library:GiveSignal(UserInputService.InputEnded:Connect(function(Input)
-        local State = TabDragState
-        if not State then
-            return
-        end
-
-        if State.Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then
-                return
-            end
-        elseif Input ~= State.Input then
-            return
-        end
-
-        EndTabDrag()
-    end))
 
     local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
         local Current = UICorner[Corner]
@@ -10687,7 +10396,6 @@ function Library:CreateWindow(WindowInfo)
         local Icon = nil
         local Description = nil
         local Order = nil
-        local Reorderable = true
 
         if select("#", ...) == 1 and typeof(...) == "table" then
             local Info = select(1, ...)
@@ -10695,7 +10403,6 @@ function Library:CreateWindow(WindowInfo)
             Icon = Info.Icon
             Description = Info.Description
             Order = Info.Order
-            Reorderable = Info.Reorderable ~= false
         else
             Name = select(1, ...)
             Icon = select(2, ...)
@@ -10707,7 +10414,6 @@ function Library:CreateWindow(WindowInfo)
         local TabLabel
         local TabIcon
         local TabIndicator
-        local TabButtonEntry
 
         local TabContainer
         local TabCanvas
@@ -10716,7 +10422,6 @@ function Library:CreateWindow(WindowInfo)
         local ColumnGap = 8
         local ColumnOffset = ColumnGap / 2
 
-        TabCreationSequence += 1
         Icon = Library:GetCustomIcon(Icon)
         do
             TabButton = New("TextButton", {
@@ -10726,7 +10431,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, -20, 0, 36),
                 Text = "",
-                LayoutOrder = typeof(Order) == "number" and Order or TabCreationSequence * 10,
+                LayoutOrder = Order,
                 Parent = Tabs,
             })
             New("UICorner", {
@@ -10773,15 +10478,11 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            TabButtonEntry = {
+            table.insert(Library.TabButtons, {
                 Button = TabButton,
                 Label = TabLabel,
                 Icon = TabIcon,
-                Name = Name,
-                CreationIndex = TabCreationSequence,
-                Reorderable = Reorderable,
-            }
-            table.insert(Library.TabButtons, TabButtonEntry)
+            })
 
             
             TabCanvas = New("CanvasGroup", {
@@ -10969,11 +10670,7 @@ function Library:CreateWindow(WindowInfo)
 
         
         local Tab = {
-            Name = Name,
             Description = Description,
-            Button = TabButton,
-            Order = TabButton.LayoutOrder,
-            Reorderable = Reorderable,
 
             Connections = {},
             Destroyed = false,
@@ -10996,9 +10693,6 @@ function Library:CreateWindow(WindowInfo)
             Tabboxes = {},
             DependencyGroupboxes = {},
         }
-
-        TabButtonEntry.Tab = Tab
-        RegisterTabEntry(TabButtonEntry)
 
         function Tab:UpdateWarningBox(Info)
             if typeof(Info.IsNormal) == "boolean" then
@@ -11860,25 +11554,10 @@ function Library:CreateWindow(WindowInfo)
 
         function Tab:SetOrder(Order: number)
             TabButton.LayoutOrder = Order
-            TabButtonEntry.Order = Order
-            Tab.Order = Order
-        end
-
-        function Tab:SetReorderable(Enabled: boolean)
-            Tab.Reorderable = Enabled == true
-            TabButtonEntry.Reorderable = Tab.Reorderable
-        end
-
-        function Tab:GetOrder()
-            return TabButton.LayoutOrder
         end
 
         function Tab:Destroy()
             Tab.Destroyed = true
-
-            if TabDragState and TabDragState.Entry == TabButtonEntry then
-                EndTabDrag()
-            end
 
             if Tab.Connections then
                 for _, Connection in Tab.Connections do
@@ -11923,8 +11602,6 @@ function Library:CreateWindow(WindowInfo)
                 TabButton:Destroy()
             end
 
-            Window:NormalizeTabOrder()
-            
             Library.Tabs[Name] = nil
         end
 
@@ -11939,17 +11616,9 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(function()
-            if Tab.SuppressClick then
-                Tab.SuppressClick = false
-                return
-            end
-
-            Tab:Show()
-        end)
+        TabButton.MouseButton1Click:Connect(Tab.Show)
 
         Library.Tabs[Name] = Tab
-        Window:NormalizeTabOrder()
 
         return Tab
     end
@@ -11958,21 +11627,16 @@ function Library:CreateWindow(WindowInfo)
         local Name = nil
         local Icon = nil
         local Description = nil
-        local Order = nil
-        local Reorderable = true
 
         if select("#", ...) == 1 and typeof(...) == "table" then
             local Info = select(1, ...)
             Name = Info.Name or "Tab"
             Icon = Info.Icon
             Description = Info.Description
-            Order = Info.Order
-            Reorderable = Info.Reorderable ~= false
         else
             Name = select(1, ...) or "Tab"
             Icon = select(2, ...)
             Description = select(3, ...)
-            Order = select(4, ...)
         end
 
         Icon = Icon or "key"
@@ -11981,12 +11645,10 @@ function Library:CreateWindow(WindowInfo)
         local TabLabel
         local TabIcon
         local TabIndicator
-        local TabButtonEntry
 
         local TabCanvas
         local TabContainer
 
-        TabCreationSequence += 1
         Icon = if Icon == "key" then KeyIcon else Library:GetCustomIcon(Icon)
         do
             TabButton = New("TextButton", {
@@ -11994,7 +11656,6 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                LayoutOrder = typeof(Order) == "number" and Order or TabCreationSequence * 10,
                 Size = UDim2.new(1, -20, 0, 36),
                 Text = "",
                 Parent = Tabs,
@@ -12044,15 +11705,11 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            TabButtonEntry = {
+            table.insert(Library.TabButtons, {
                 Button = TabButton,
                 Label = TabLabel,
                 Icon = TabIcon,
-                Name = Name,
-                CreationIndex = TabCreationSequence,
-                Reorderable = Reorderable,
-            }
-            table.insert(Library.TabButtons, TabButtonEntry)
+            })
 
             
             TabCanvas = New("CanvasGroup", {
@@ -12096,23 +11753,14 @@ function Library:CreateWindow(WindowInfo)
 
         
         local Tab = {
-            Name = Name,
             Description = Description,
             IsKeyTab = true,
-            Button = TabButton,
-            Connections = {},
-            Destroyed = false,
-            Order = TabButton.LayoutOrder,
-            Reorderable = Reorderable,
 
             Elements = {},
 
             Window = Window,
             Canvas = TabCanvas
         }
-
-        TabButtonEntry.Tab = Tab
-        RegisterTabEntry(TabButtonEntry)
 
         function Tab:AddKeyBox(Callback)
             assert(typeof(Callback) == "function", "Callback must be a function")
@@ -12183,16 +11831,6 @@ function Library:CreateWindow(WindowInfo)
         end
         
         function Tab:Destroy()
-            Tab.Destroyed = true
-
-            if TabDragState and TabDragState.Entry == TabButtonEntry then
-                EndTabDrag()
-            end
-
-            for _, Connection in Tab.Connections do
-                Connection:Disconnect()
-            end
-
             if TabCanvas then
                 TabCanvas:Destroy()
             elseif TabContainer then
@@ -12210,8 +11848,6 @@ function Library:CreateWindow(WindowInfo)
                 TabButton:Destroy()
             end
 
-            Window:NormalizeTabOrder()
-            
             Library.Tabs[Name] = nil
         end
 
@@ -12307,21 +11943,6 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        function Tab:SetOrder(NewOrder: number)
-            TabButton.LayoutOrder = NewOrder
-            TabButtonEntry.Order = NewOrder
-            Tab.Order = NewOrder
-        end
-
-        function Tab:SetReorderable(Enabled: boolean)
-            Tab.Reorderable = Enabled == true
-            TabButtonEntry.Reorderable = Tab.Reorderable
-        end
-
-        function Tab:GetOrder()
-            return TabButton.LayoutOrder
-        end
-
         
         if not Library.ActiveTab then
             Tab:Show()
@@ -12333,20 +11954,12 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(function()
-            if Tab.SuppressClick then
-                Tab.SuppressClick = false
-                return
-            end
-
-            Tab:Show()
-        end)
+        TabButton.MouseButton1Click:Connect(Tab.Show)
 
         Tab.Container = TabContainer
         setmetatable(Tab, BaseGroupbox)
 
         Library.Tabs[Name] = Tab
-        Window:NormalizeTabOrder()
 
         return Tab
     end

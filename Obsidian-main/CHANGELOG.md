@@ -28,7 +28,7 @@
 + Slider decimal rounding no longer formats strings on every drag frame
 + Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
 + Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
-+ Window open and close transitions use responsive asymmetric timing and support immediate reversal
++ Window closing is six times faster, uses one short CanvasGroup fade, and supports immediate reversal
 + Watermark statistics update at a fixed interval with one lightweight frame counter
 
 [fixes]
@@ -45,6 +45,7 @@
 + Slider labels, values, track, thumb, mouse input, and touch input now use separate aligned regions
 + Rapid menu toggles no longer get ignored or leave stale visibility state
 + Groupboxes keep a consistent bottom breathing space after their final control
++ Groupbox height follows deferred coalesced layout measurements instead of stale element sizes
 ```
 
 ## 17.08.2026

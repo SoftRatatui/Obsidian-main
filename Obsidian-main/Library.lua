@@ -219,7 +219,7 @@ local Library = {
 
     WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     WindowOpenAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+    WindowCloseAnimationInfo = TweenInfo.new(0.14 / 6, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
     DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
@@ -11248,6 +11248,7 @@ function Library:CreateWindow(WindowInfo)
 
             local ResizeTween
             local CollapseArrowTween
+            local ResizeQueued = false
 
             function Groupbox:Resize()
                 if ResizeTween then
@@ -11285,6 +11286,27 @@ function Library:CreateWindow(WindowInfo)
                     GroupboxHolder.Size = TargetSize
                 end
             end
+
+            function Groupbox:QueueResize()
+                if ResizeQueued or Groupbox.Destroyed then
+                    return
+                end
+
+                ResizeQueued = true
+                task.defer(function()
+                    ResizeQueued = false
+
+                    if Groupbox.Destroyed or not GroupboxHolder.Parent then
+                        return
+                    end
+
+                    Groupbox:Resize()
+                end)
+            end
+
+            table.insert(Groupbox.Connections, GroupboxList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                Groupbox:QueueResize()
+            end))
 
             function Groupbox:SetCollapsed(Collapsed: boolean)
                 if Info.DisableCollapsing == true then return end
@@ -12450,9 +12472,13 @@ function Library:CreateWindow(WindowInfo)
             WindowTween = TweenService:Create(MainFrame, AnimationInfo, {
                 GroupTransparency = Library.Toggled and 0 or 1,
             })
-            WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
-                Scale = Library.Toggled and TargetScale or TargetScale * 0.99,
-            })
+            if Library.Toggled then
+                WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
+                    Scale = TargetScale,
+                })
+            else
+                WindowScale.Scale = TargetScale
+            end
 
             local ActiveWindowTween = WindowTween
             local ActiveScaleTween = WindowScaleTween
@@ -12475,7 +12501,10 @@ function Library:CreateWindow(WindowInfo)
                 end
             end)
             WindowTween:Play()
-            WindowScaleTween:Play()
+
+            if WindowScaleTween then
+                WindowScaleTween:Play()
+            end
         else
             MainFrame.GroupTransparency = Library.Toggled and 0 or 1
             MainFrame.Visible = Library.Toggled

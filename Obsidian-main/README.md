@@ -10,6 +10,8 @@ A fast Roblox UI library with a calm black-purple default theme, responsive layo
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
 - Faster startup: Roblox-hosted icon sprites are preferred, the Lucide module is cached, and optional image files are no longer downloaded before the first window.
 - Less work while typing: search is debounced and text measurements are cached.
+- Responsive geometry: windows remain inside the viewport, resize work is coalesced, and scrollable columns expose subtle overflow indicators.
+- Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 
 ## Quick start
 
@@ -17,7 +19,7 @@ A fast Roblox UI library with a calm black-purple default theme, responsive layo
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
 ))()
 
 local App = Library:Create({
@@ -119,6 +121,10 @@ Group:AddToggle("enabled", {
         print(Value)
     end,
 })
+
+-- Optional layout controls
+Group:SetOrder(10)
+Window:FitToViewport()
 ```
 
 Full documentation: [docs.mspaint.cc/obsidian](https://docs.mspaint.cc/obsidian)

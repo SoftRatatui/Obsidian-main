@@ -1203,6 +1203,10 @@ function Library:SetDPIScale(DPIScale: number)
     end
 
     (Library :: any):UpdateNotificationPositions(true)
+
+    if Library.Window and Library.Window.FitToViewport then
+        task.defer(Library.Window.FitToViewport, Library.Window)
+    end
 end
 
 function Library:GiveSignal(Connection: RBXScriptConnection | RBXScriptSignal)
@@ -1740,8 +1744,78 @@ function GetNonOverlappingPosition(UI: GuiObject, StartPos: UDim2?)
     return UDim2.fromOffset(CurrentX, CurrentY)
 end
 
+local ClampGuiToViewport
+
 function PositionDraggable(UI: GuiObject, StartPos: UDim2?)
     UI.Position = GetNonOverlappingPosition(UI, StartPos)
+    ClampGuiToViewport(UI, 6)
+end
+
+ClampGuiToViewport = function(UI: GuiObject, Margin: number?)
+    local Camera = workspace.CurrentCamera
+    if not Camera or not UI.Parent then
+        return
+    end
+
+    Margin = Margin or 8
+
+    local ViewportSize = Camera.ViewportSize
+    local AbsolutePosition = UI.AbsolutePosition
+    local AbsoluteSize = UI.AbsoluteSize
+    local MaxX = math.max(Margin, ViewportSize.X - AbsoluteSize.X - Margin)
+    local MaxY = math.max(Margin, ViewportSize.Y - AbsoluteSize.Y - Margin)
+    local ClampedX = math.clamp(AbsolutePosition.X, Margin, MaxX)
+    local ClampedY = math.clamp(AbsolutePosition.Y, Margin, MaxY)
+    local Correction = Vector2.new(ClampedX, ClampedY) - AbsolutePosition
+
+    if Correction.Magnitude > 0 then
+        UI.Position = UDim2.new(
+            UI.Position.X.Scale,
+            UI.Position.X.Offset + Correction.X,
+            UI.Position.Y.Scale,
+            UI.Position.Y.Offset + Correction.Y
+        )
+    end
+end
+
+local function ConfigureAutoScrollbar(ScrollFrame: ScrollingFrame, IdleTransparency: number?, HoverTransparency: number?)
+    IdleTransparency = IdleTransparency or 0.62
+    HoverTransparency = HoverTransparency or 0.18
+
+    local Hovering = false
+    local function Refresh(Animate: boolean?)
+        if Library.Unloaded or not ScrollFrame.Parent then
+            return
+        end
+
+        local IsScrollable = ScrollFrame.AbsoluteCanvasSize.Y > ScrollFrame.AbsoluteSize.Y + 1
+        local Transparency = IsScrollable and (Hovering and HoverTransparency or IdleTransparency) or 1
+
+        if Animate then
+            TweenService:Create(ScrollFrame, Library.TweenInfo, {
+                ScrollBarImageTransparency = Transparency,
+            }):Play()
+        else
+            ScrollFrame.ScrollBarImageTransparency = Transparency
+        end
+    end
+
+    Library:GiveSignal(ScrollFrame.MouseEnter:Connect(function()
+        Hovering = true
+        Refresh(true)
+    end))
+    Library:GiveSignal(ScrollFrame.MouseLeave:Connect(function()
+        Hovering = false
+        Refresh(true)
+    end))
+    Library:GiveSignal(ScrollFrame:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(function()
+        Refresh(false)
+    end))
+    Library:GiveSignal(ScrollFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        Refresh(false)
+    end))
+
+    task.defer(Refresh, false)
 end
 
 function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggled: boolean?, IsMainWindow: boolean?)
@@ -1793,6 +1867,8 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
             local Delta = Input.Position - StartPos
             UI.Position =
                 UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)
+
+            ClampGuiToViewport(UI, IsMainWindow and 8 or 6)
         end
     end)
 
@@ -1831,6 +1907,21 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
     local Changed
     local InputBegan
     local InputChanged
+    local CallbackQueued = false
+
+    local function QueueCallback()
+        if not Callback or CallbackQueued then
+            return
+        end
+
+        CallbackQueued = true
+        task.defer(function()
+            CallbackQueued = false
+            if not Library.Unloaded and UI.Parent then
+                Library:SafeCallback(Callback)
+            end
+        end)
+    end
 
     InputBegan = DragFrame.InputBegan:Connect(function(Input: InputObject)
         if not IsClickInput(Input) then
@@ -1867,15 +1958,22 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
 
         if Dragging and IsHoverInput(Input) then
             local Delta = Input.Position - StartPos
+            local Camera = workspace.CurrentCamera
+            local ViewportSize = Camera and Camera.ViewportSize or Vector2.new(math.huge, math.huge)
+            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local MaxWidth = math.max(0, (ViewportSize.X - UI.AbsolutePosition.X - 8) / Scale)
+            local MaxHeight = math.max(0, (ViewportSize.Y - UI.AbsolutePosition.Y - 8) / Scale)
+
+            MaxWidth = math.max(Library.MinSize.X, MaxWidth)
+            MaxHeight = math.max(Library.MinSize.Y, MaxHeight)
+
             UI.Size = UDim2.new(
                 FrameSize.X.Scale,
-                math.clamp(FrameSize.X.Offset + Delta.X, Library.MinSize.X, math.huge),
+                math.clamp(FrameSize.X.Offset + Delta.X / Scale, Library.MinSize.X, MaxWidth),
                 FrameSize.Y.Scale,
-                math.clamp(FrameSize.Y.Offset + Delta.Y, Library.MinSize.Y, math.huge)
+                math.clamp(FrameSize.Y.Offset + Delta.Y / Scale, Library.MinSize.Y, MaxHeight)
             )
-            if Callback then
-                Library:SafeCallback(Callback)
-            end
+            QueueCallback()
         end
     end)
 
@@ -9405,6 +9503,7 @@ function Library:CreateWindow(WindowInfo)
     local BottomBackground
     local FooterLabel
     local TopBar
+    local BottomBarHeight = 24
 
     local InitialLeftWidth = math.ceil(WindowInfo.Size.X.Offset * 0.3)
     local IsCompact = WindowInfo.SidebarCompacted
@@ -9462,7 +9561,7 @@ function Library:CreateWindow(WindowInfo)
         DividerLine = New("Frame", {
             BackgroundColor3 = "OutlineColor",
             Position = UDim2.fromOffset(InitialLeftWidth, 0),
-            Size = UDim2.new(0, 1, 1, -21),
+            Size = UDim2.new(0, 1, 1, -(BottomBarHeight + 1)),
             Parent = MainFrame,
             ZIndex = 2
         })
@@ -9688,9 +9787,9 @@ function Library:CreateWindow(WindowInfo)
                 ImageColor3 = "OutlineColor",
                 ImageRectOffset = MoveIcon.ImageRectOffset,
                 ImageRectSize = MoveIcon.ImageRectSize,
-                Position = UDim2.new(1, -10, 0.5, 0),
-                Size = UDim2.fromOffset(28, 28),
-                SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                ImageTransparency = 0.25,
+                Position = UDim2.new(1, -14, 0.5, 0),
+                Size = UDim2.fromOffset(20, 20),
                 Parent = TopBar,
             })
         end
@@ -9702,20 +9801,23 @@ function Library:CreateWindow(WindowInfo)
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
             end,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 20 + WindowInfo.CornerRadius),
-            Parent = MainFrame
+            Size = UDim2.new(1, 0, 0, BottomBarHeight + WindowInfo.CornerRadius),
+            ZIndex = 3,
+            Parent = MainFrame,
         })
         Library:MakeLine(MainFrame, {
             AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 0, 1, -20),
+            Position = UDim2.new(0, 0, 1, -BottomBarHeight),
             Size = UDim2.new(1, 0, 0, 1),
+            ZIndex = 4,
         })
 
         local BottomBar = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
             BackgroundTransparency = 1,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 20),
+            Size = UDim2.new(1, 0, 0, BottomBarHeight),
+            ZIndex = 4,
             Parent = MainFrame,
         })
         table.insert(
@@ -9729,10 +9831,13 @@ function Library:CreateWindow(WindowInfo)
         --// Footer \\-
         FooterLabel = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 1),
+            Position = UDim2.fromOffset(32, 0),
+            Size = UDim2.new(1, -64, 1, 0),
             Text = WindowInfo.Footer,
-            TextSize = 14,
+            TextSize = 13,
             TextTransparency = 0.5,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 5,
             Parent = BottomBar,
         })
 
@@ -9745,6 +9850,7 @@ function Library:CreateWindow(WindowInfo)
                 Size = UDim2.fromScale(1, 1),
                 SizeConstraint = Enum.SizeConstraint.RelativeYY,
                 Text = "",
+                ZIndex = 6,
                 Parent = BottomBar,
             })
 
@@ -9753,18 +9859,19 @@ function Library:CreateWindow(WindowInfo)
                     Tab:Resize(true)
                 end
             end)
-        end
 
-        New("ImageLabel", {
-            Image = ResizeIcon and ResizeIcon.Url or "",
-            ImageColor3 = "FontColor",
-            ImageRectOffset = ResizeIcon and ResizeIcon.ImageRectOffset or Vector2.zero,
-            ImageRectSize = ResizeIcon and ResizeIcon.ImageRectSize or Vector2.zero,
-            ImageTransparency = 0.5,
-            Position = UDim2.fromOffset(2, 2),
-            Size = UDim2.new(1, -4, 1, -4),
-            Parent = ResizeButton,
-        })
+            New("ImageLabel", {
+                Image = ResizeIcon and ResizeIcon.Url or "",
+                ImageColor3 = "FontColor",
+                ImageRectOffset = ResizeIcon and ResizeIcon.ImageRectOffset or Vector2.zero,
+                ImageRectSize = ResizeIcon and ResizeIcon.ImageRectSize or Vector2.zero,
+                ImageTransparency = 0.5,
+                Position = UDim2.fromOffset(3, 3),
+                Size = UDim2.new(1, -6, 1, -6),
+                ZIndex = 7,
+                Parent = ResizeButton,
+            })
+        end
 
         --// Tabs \\--
         Tabs = New("ScrollingFrame", {
@@ -9772,8 +9879,11 @@ function Library:CreateWindow(WindowInfo)
             BackgroundColor3 = "BackgroundColor",
             CanvasSize = UDim2.fromScale(0, 0),
             Position = UDim2.fromOffset(0, 49),
-            ScrollBarThickness = 0,
-            Size = UDim2.new(0, InitialLeftWidth, 1, -70),
+            ScrollBarImageColor3 = "AccentColor",
+            ScrollBarImageTransparency = 1,
+            ScrollBarThickness = 2,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            Size = UDim2.new(0, InitialLeftWidth, 1, -(50 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIListLayout", {
@@ -9781,6 +9891,7 @@ function Library:CreateWindow(WindowInfo)
             Padding = UDim.new(0, 2),
             Parent = Tabs,
         })
+        ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
 
         --// Container \\--
         Container = New("Frame", {
@@ -9791,7 +9902,7 @@ function Library:CreateWindow(WindowInfo)
             ClipsDescendants = true,
             Name = "Container",
             Position = UDim2.new(1, 0, 0, 49),
-            Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -70),
+            Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -(50 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIPadding", {
@@ -9923,8 +10034,10 @@ function Library:CreateWindow(WindowInfo)
         Library.CornerRadius = Radius
         WindowInfo.CornerRadius = Radius
 
-        ResizeButton.Position = UDim2.new(1, -Radius / 4, 0, 0)
-        BottomBackground.Size = UDim2.new(1, 0, 0, 20 + Radius)
+        if ResizeButton then
+            ResizeButton.Position = UDim2.new(1, -Radius / 4, 0, 0)
+        end
+        BottomBackground.Size = UDim2.new(1, 0, 0, BottomBarHeight + Radius)
 
         for _, Tab in Library.Tabs do
             if Tab.IsKeyTab then
@@ -10007,20 +10120,53 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:SetSidebarWidth(Width)
-        Width = math.clamp(Width, 48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
+        local MaxSidebarWidth = math.max(48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
+        Width = math.clamp(Width, 48, MaxSidebarWidth)
 
         DividerLine.Position = UDim2.fromOffset(Width, 0)
 
         TitleHolder.Size = UDim2.new(0, Width, 1, 0)
         RightWrapper.Size = UDim2.new(1, -Width - 57 - 1, 1, -16)
-        Tabs.Size = UDim2.new(0, Width, 1, -70)
-        Container.Size = UDim2.new(1, -Width - 1, 1, -70)
+        Tabs.Size = UDim2.new(0, Width, 1, -(50 + BottomBarHeight))
+        Container.Size = UDim2.new(1, -Width - 1, 1, -(50 + BottomBarHeight))
 
         if WindowInfo.EnableCompacting then
             ApplyCompact()
         end
         if not IsCompact then
             LastExpandedWidth = Width
+        end
+    end
+
+    function Window:FitToViewport()
+        local Camera = workspace.CurrentCamera
+        if not Camera or not MainFrame.Parent then
+            return
+        end
+
+        local Margin = 8
+        local Scale = math.max(Library.DPIScale or 1, 0.01)
+        local ViewportSize = Camera.ViewportSize
+        local OverflowX = math.max(0, MainFrame.AbsoluteSize.X - (ViewportSize.X - Margin * 2))
+        local OverflowY = math.max(0, MainFrame.AbsoluteSize.Y - (ViewportSize.Y - Margin * 2))
+
+        if OverflowX > 0 or OverflowY > 0 then
+            local MinWidth = math.min(Library.MinSize.X, math.max(240, (ViewportSize.X - Margin * 2) / Scale))
+            local MinHeight = math.min(Library.MinSize.Y, math.max(220, (ViewportSize.Y - Margin * 2) / Scale))
+
+            MainFrame.Size = UDim2.new(
+                MainFrame.Size.X.Scale,
+                math.max(MinWidth, MainFrame.Size.X.Offset - OverflowX / Scale),
+                MainFrame.Size.Y.Scale,
+                math.max(MinHeight, MainFrame.Size.Y.Offset - OverflowY / Scale)
+            )
+        end
+
+        Window:SetSidebarWidth(math.min(Window:GetSidebarWidth(), MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1))
+        ClampGuiToViewport(MainFrame, Margin)
+
+        for _, Tab in Library.Tabs do
+            Tab:Resize(true)
         end
     end
 
@@ -10069,6 +10215,8 @@ function Library:CreateWindow(WindowInfo)
         local TabCanvas
         local TabLeft
         local TabRight
+        local ColumnGap = 8
+        local ColumnOffset = ColumnGap / 2
 
         Icon = Library:GetCustomIcon(Icon)
         do
@@ -10161,9 +10309,12 @@ function Library:CreateWindow(WindowInfo)
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
                 CanvasSize = UDim2.fromScale(0, 0),
+                ElasticBehavior = Enum.ElasticBehavior.WhenScrollable,
+                ScrollBarImageColor3 = "AccentColor",
                 ScrollBarImageTransparency = 1,
-                ScrollBarThickness = 0,
-                Size = UDim2.new(0.5, -3, 1, 0),
+                ScrollBarThickness = 3,
+                ScrollingDirection = Enum.ScrollingDirection.Y,
+                Size = UDim2.new(0.5, -ColumnOffset, 1, 0),
                 Parent = TabContainer,
             })
             New("UIListLayout", {
@@ -10171,10 +10322,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabLeft,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 2),
-                PaddingLeft = UDim.new(0, 2),
-                PaddingRight = UDim.new(0, 2),
-                PaddingTop = UDim.new(0, 2),
+                PaddingBottom = UDim.new(0, 10),
+                PaddingLeft = UDim.new(0, 3),
+                PaddingRight = UDim.new(0, 5),
+                PaddingTop = UDim.new(0, 4),
                 Parent = TabLeft,
             })
             do
@@ -10195,10 +10346,13 @@ function Library:CreateWindow(WindowInfo)
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
                 CanvasSize = UDim2.fromScale(0, 0),
+                ElasticBehavior = Enum.ElasticBehavior.WhenScrollable,
                 Position = UDim2.fromScale(1, 0),
+                ScrollBarImageColor3 = "AccentColor",
                 ScrollBarImageTransparency = 1,
-                ScrollBarThickness = 0,
-                Size = UDim2.new(0.5, -3, 1, 0),
+                ScrollBarThickness = 3,
+                ScrollingDirection = Enum.ScrollingDirection.Y,
+                Size = UDim2.new(0.5, -ColumnOffset, 1, 0),
                 Parent = TabContainer,
             })
             New("UIListLayout", {
@@ -10206,10 +10360,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabRight,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 2),
-                PaddingLeft = UDim.new(0, 2),
-                PaddingRight = UDim.new(0, 2),
-                PaddingTop = UDim.new(0, 2),
+                PaddingBottom = UDim.new(0, 10),
+                PaddingLeft = UDim.new(0, 3),
+                PaddingRight = UDim.new(0, 5),
+                PaddingTop = UDim.new(0, 4),
                 Parent = TabRight,
             })
             do
@@ -10224,6 +10378,9 @@ function Library:CreateWindow(WindowInfo)
                     Parent = TabRight,
                 })
             end
+
+            ConfigureAutoScrollbar(TabLeft)
+            ConfigureAutoScrollbar(TabRight)
         end
 
         --// Warning Box \\--
@@ -10415,7 +10572,7 @@ function Library:CreateWindow(WindowInfo)
             local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
             for _, Side in Tab.Sides do
                 Side.Position = UDim2.new(Side.Position.X.Scale, 0, 0, Offset)
-                Side.Size = UDim2.new(0.5, -3, 1, -Offset)
+                Side.Size = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
             end
         end
 
@@ -10797,6 +10954,7 @@ function Library:CreateWindow(WindowInfo)
                     BackgroundColor3 = function()
                         return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.AccentColor, 0.028)
                     end,
+                    ClipsDescendants = true,
                     Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
                 })
@@ -10833,15 +10991,16 @@ function Library:CreateWindow(WindowInfo)
                 GroupboxLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
                     Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
-                    Size = UDim2.new(1, 0, 0, 34),
+                    Size = UDim2.new(1, -(BoxIcon and 24 or 0), 0, 34),
                     Text = Info.Name,
                     TextSize = 15,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = GroupboxHolder,
                 })
                 New("UIPadding", {
                     PaddingLeft = UDim.new(0, 12),
-                    PaddingRight = UDim.new(0, 12),
+                    PaddingRight = UDim.new(0, Info.DisableCollapsing == true and 12 or 38),
                     Parent = GroupboxLabel,
                 })
 
@@ -10909,7 +11068,13 @@ function Library:CreateWindow(WindowInfo)
                 local TargetSize = UDim2.new(1, 0, 0, if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49)
 
                 GroupboxLine.Visible = not Groupbox.Collapsed
-                if Library.Animations and Library.Animations.Groupbox then
+                local AnimateResize = Library.Animations
+                    and Library.Animations.Groupbox
+                    and TabCanvas.Visible
+                    and GroupboxHolder.Visible
+                    and GroupboxHolder.AbsoluteSize.Y > 0
+
+                if AnimateResize then
                     local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
                     local Tween = TweenService:Create(GroupboxHolder, TweenInfo, { Size = TargetSize })
                     ResizeTween = Tween
@@ -11021,6 +11186,11 @@ function Library:CreateWindow(WindowInfo)
                 if Visible == true and Library.Searching then
                     Library:UpdateSearch(Library.SearchText)
                 end
+            end
+
+            function Groupbox:SetOrder(Order: number)
+                assert(typeof(Order) == "number", "Groupbox order must be a number.")
+                BoxHolder.LayoutOrder = Order
             end
 
             function Groupbox:Show()
@@ -11306,7 +11476,10 @@ function Library:CreateWindow(WindowInfo)
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
                 CanvasSize = UDim2.fromScale(0, 0),
-                ScrollBarThickness = 0,
+                ScrollBarImageColor3 = "AccentColor",
+                ScrollBarImageTransparency = 1,
+                ScrollBarThickness = 3,
+                ScrollingDirection = Enum.ScrollingDirection.Y,
                 Position = UDim2.fromScale(0, 0),
                 Size = UDim2.fromScale(1, 1),
                 Visible = true,
@@ -11319,10 +11492,13 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIPadding", {
+                PaddingBottom = UDim.new(0, 10),
                 PaddingLeft = UDim.new(0, 1),
-                PaddingRight = UDim.new(0, 1),
+                PaddingRight = UDim.new(0, 5),
+                PaddingTop = UDim.new(0, 10),
                 Parent = TabContainer,
             })
+            ConfigureAutoScrollbar(TabContainer)
         end
 
         --// Tab Table \\--
@@ -12224,7 +12400,14 @@ function Library:CreateWindow(WindowInfo)
         end))
     end
 
+    if workspace.CurrentCamera then
+        Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            task.defer(Window.FitToViewport, Window)
+        end))
+    end
+
     Window:SetAlwaysOnTop(WindowInfo.AlwaysOnTop)
+    Window:FitToViewport()
     if WindowInfo.EnableCompacting and WindowInfo.SidebarCompacted then
         Window:SetSidebarWidth(WindowInfo.SidebarCompactWidth)
     end

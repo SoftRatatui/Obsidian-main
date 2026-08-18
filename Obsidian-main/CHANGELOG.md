@@ -19,11 +19,18 @@
 + Search input is debounced and stale requests are discarded
 + Theme registry now uses weak instance keys
 + Slider decimal rounding no longer formats strings on every drag frame
++ Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent
 + Unload callbacks no longer remove from the front of an array repeatedly
 + Unload only clears the global Library reference when it still owns it
++ Window dragging and resizing stay inside the active viewport
++ Window geometry is repaired automatically after viewport or DPI changes
++ Scrollable columns now expose subtle overflow indicators and safe bottom spacing
++ Footer, resize handle, and content use separate non-overlapping layout regions
++ Groupbox titles truncate correctly and no longer extend beyond icon headers
++ Added Groupbox:SetOrder for predictable addon alignment
 ```
 
 ## 17.08.2026

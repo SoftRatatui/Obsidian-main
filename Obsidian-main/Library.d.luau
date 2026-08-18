@@ -766,6 +766,7 @@ export type Groupbox = BaseGroupbox & {
     Elements: { [number]: Element },
 
     Resize: (self: Groupbox) -> (),
+    SetOrder: (self: Groupbox, Order: number) -> (),
     SetCollapsed: (self: Groupbox, Collapsed: boolean) -> (),
     ToggleCollapsed: (self: Groupbox) -> (),
 }
@@ -940,6 +941,7 @@ export type Window = {
     IsSidebarCompacted: (self: Window) -> boolean,
     GetSidebarWidth: (self: Window) -> number,
     SetSidebarWidth: (self: Window, Width: number) -> (),
+    FitToViewport: (self: Window) -> (),
     SetCompact: (self: Window, State: boolean) -> (),
     ShowTabInfo: (self: Window, Name: string, Description: string) -> (),
     HideTabInfo: (self: Window) -> (),

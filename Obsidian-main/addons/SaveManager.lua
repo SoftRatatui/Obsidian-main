@@ -7,7 +7,7 @@ end)
 
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 
---// Fix is_____ functions for shitsploits, those functions should never error, only return a boolean. (why is this still a problem in the big 2026)
+
 local isfolder, isfile, listfiles = isfolder, isfile, listfiles
 local isfolder_copy, isfile_copy, listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
 local isfolder_success, isfolder_error = pcall(function() return isfolder_copy("test" .. tostring(math.random(1000000, 9999999))) end)
@@ -29,7 +29,7 @@ if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
     end
 end
 
---// Save Manager
+
 local SaveManager = {
     Library = nil,
 
@@ -47,7 +47,7 @@ function SaveManager:SetLibrary(Library)
     SaveManager.Library = Library
 end
 
---// Element Parser \\--
+
 local SpecialValueParser = {
     UDim2 = {
         Encode = function(Value: UDim2)
@@ -216,7 +216,7 @@ local ElementParser = {}; do
     )
 end
 
---// Helpers \\--
+
 local function Trim(Text: string)
     return Text:match("^%s*(.-)%s*$")
 end
@@ -233,7 +233,7 @@ local function IsValidFolderPath(Name: string): boolean
     )
 end
 
---// Folder helper \\--
+
 local function SplitPath(Path: string): {string}
     local Result = {}
     local Current = ""
@@ -267,7 +267,7 @@ local function GetCurrentSettingsPath(): false | string
     return if SubFolderPath == false then GetFolderPath() else SubFolderPath
 end
 
---// Files helper \\--
+
 local function GetConfigPath(ConfigName: string): false | string
     local CurrentSettingsPath = GetCurrentSettingsPath()
     return if CurrentSettingsPath == false then false else string.format("%s/%s.json", CurrentSettingsPath, ConfigName)
@@ -283,7 +283,7 @@ local function GetAutoloadPath(): false | string
     return if CurrentSettingsPath == false then false else string.format("%s/autoload.txt", CurrentSettingsPath)
 end
 
---// Indexes \\--
+
 function SaveManager:SetLoadingOrder(Enabled: boolean, Order: {string}?)
     SaveManager.UseLoadingOrder = Enabled == true
     SaveManager.LoadingOrder = typeof(Order) == "table" and Order or SaveManager.LoadingOrder
@@ -304,7 +304,7 @@ function SaveManager:IgnoreThemeSettings()
     })
 end
 
---// Folders \\--
+
 function SaveManager:GetPaths(): {string}
     local SubFolderPath = GetSubFolderPath()
     if SubFolderPath == false then
@@ -369,7 +369,7 @@ function SaveManager:SetSubFolder(SubFolder: string)
     SaveManager:BuildFolderTree()
 end
 
---// Config Management \\--
+
 function SaveManager:RefreshConfigList()
     local SettingsPath = GetCurrentSettingsPath()
     if SettingsPath == false then
@@ -411,7 +411,7 @@ function SaveManager:SaveJSON(ConfigName)
         } else nil
     }
 
-    --// Toggles
+    
     for Index, Toggle in Library.Toggles do
         if not Toggle.Type then continue end
         if IgnoreIndexes[Index] then continue end
@@ -422,7 +422,7 @@ function SaveManager:SaveJSON(ConfigName)
         table.insert(CurrentData.objects, Parser.Save(Index, Toggle))
     end
 
-    --// Options
+    
     for Index, Option in Library.Options do
         if not Option.Type then continue end
         if IgnoreIndexes[Index] then continue end
@@ -433,7 +433,7 @@ function SaveManager:SaveJSON(ConfigName)
         table.insert(CurrentData.objects, Parser.Save(Index, Option))
     end
 
-    --// Groupboxes
+    
     for TabIndex, Tab in Library.Tabs do
         if not Tab.Groupboxes then continue end
 
@@ -506,7 +506,7 @@ function SaveManager:LoadJSON(Content: string)
         end)
     end
 
-    --// Keybind Menu
+    
     if Library.KeybindFrame and typeof(Decoded.keybindMenu) == "table" then
         local KeybindFrameData = Decoded.keybindMenu
         local IsVisible = KeybindFrameData.visible == true
@@ -521,7 +521,7 @@ function SaveManager:LoadJSON(Content: string)
         end
     end
 
-    --// Elements
+    
     for _, Option in Decoded.objects do
         if not Option.type then continue end
         if IgnoreIndexes[Option.idx] then continue end
@@ -575,7 +575,7 @@ function SaveManager:Delete(ConfigName: string): (boolean | string?)
     return true
 end
 
---// Auto Load Config \\--
+
 function SaveManager:GetAutoloadConfig(): (string, boolean, string?)
     SaveManager:CheckFolderTree()
 
@@ -667,7 +667,7 @@ function SaveManager:DeleteAutoLoadConfig(): (boolean, string?)
     return true
 end
 
---// GUI \\--
+
 local function ShowDialog(
     Condition: () -> boolean,
 
@@ -727,7 +727,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         if ConfigList then RefreshList() end
     end
 
-    --// Create
+    
     ConfigurationBox:AddInput("SaveManager_ConfigName", {
         Text = "Config name"
     })
@@ -769,7 +769,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
     ConfigurationBox:AddDivider()
 
-    --// Manage
+    
     ConfigurationBox:AddDropdown("SaveManager_ConfigList", {
         Text = "Config list",
 
@@ -806,7 +806,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
             ShowDialog(
                 function(): boolean
-                    return true --// Always show
+                    return true 
                 end,
 
                 "SaveManager_LoadConfig",
@@ -840,7 +840,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
             ShowDialog(
                 function(): boolean
-                    return true --// Always show
+                    return true 
                 end,
 
                 "SaveManager_OverwriteConfig",
@@ -874,7 +874,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
             ShowDialog(
                 function(): boolean
-                    return true --// Always show
+                    return true 
                 end,
 
                 "SaveManager_DeleteConfig",
@@ -898,7 +898,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
     ConfigurationBox:AddButton("Refresh list", RefreshList)
 
-    --// Autoload Config
+    
     ConfigurationBox:AddButton({
         Text = "Set as autoload",
         DoubleClick = false,
@@ -928,7 +928,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         Func = function()
             ShowDialog(
                 function(): boolean
-                    return true --// Always show
+                    return true 
                 end,
 
                 "SaveManager_ResetAutoload",
@@ -954,7 +954,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
     ConfigurationBox:AddDivider()
 
-    --// Import & Export
+    
     ConfigurationBox:AddInput("SaveManager_JSON", {
         Text = "Config JSON"
     })
@@ -968,7 +968,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
         ShowDialog(
             function(): boolean
-                return true --// Always show
+                return true 
             end,
 
             "SaveManager_ImportConfig",
@@ -1002,13 +1002,13 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         end
     end)
 
-    --// Set variables
+    
     ConfigNameInput, ConfigList, ConfigJSONInput =
         SaveManager.Library.Options.SaveManager_ConfigName, 
         SaveManager.Library.Options.SaveManager_ConfigList,
         SaveManager.Library.Options.SaveManager_JSON;
 
-    --// Refresh
+    
     RefreshAutoloadConfigLabel()
     SaveManager:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName", "SaveManager_JSON" })
 

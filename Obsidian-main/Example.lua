@@ -1,15 +1,15 @@
---[[
-	MonHub full showcase and smoke test.
 
-	The loader tries this repository first:
-	https://github.com/SoftRatatui/Obsidian-main
 
-	If the repository is private, unavailable, or returns a non-Lua response,
-	the example falls back to the stable upstream repository. This prevents
-	"Expected identifier" errors caused by passing a GitHub 404 page to loadstring.
 
-	Press RightShift to show or hide the window.
-]]
+
+
+
+
+
+
+
+
+
 
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
@@ -95,7 +95,7 @@ local Toggles = Library.Toggles
 Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
--- Apply the black and purple appearance before any UI objects are created.
+
 Library.Scheme.BackgroundColor = Color3.fromRGB(9, 9, 13)
 Library.Scheme.MainColor = Color3.fromRGB(18, 17, 24)
 Library.Scheme.AccentColor = Color3.fromRGB(116, 82, 178)
@@ -152,7 +152,7 @@ local Tabs = {
 	Settings = Window:AddTab("UI Settings", "settings-2"),
 }
 
--- Controls tab.
+
 local BasicGroup = Tabs.Controls:AddLeftGroupbox("Basic controls", "component")
 BasicGroup:AddLabel("All common controls are included in this smoke test.", true)
 BasicGroup:AddDivider()
@@ -264,7 +264,7 @@ DropdownGroup:AddLabel("Press keybind"):AddKeyPicker("PressKeybind", {
 	end,
 })
 
--- Media tab: Image, Viewport, Video, and UIPassthrough.
+
 local PreviewModel = Instance.new("Model")
 PreviewModel.Name = "MonHubPreviewModel"
 
@@ -355,7 +355,7 @@ MediaRight:AddUIPassthrough("CustomUI", {
 	Height = 76,
 })
 
--- Advanced tab: dialogs, loading, draggable UI, dependency boxes, and tabboxes.
+
 local AdvancedActions = Tabs.Advanced:AddLeftGroupbox("System actions", "blocks")
 
 AdvancedActions:AddButton("Show notification", function()
@@ -508,7 +508,7 @@ StyleTab:AddButton("Reapply black purple", function()
 	Window:SetCornerRadius(5)
 end)
 
--- Key system tab.
+
 Tabs.KeySystem:AddLabel({
 	Text = "Test key: <b>MONHUB</b>",
 	DoesWrap = true,
@@ -523,7 +523,7 @@ Tabs.KeySystem:AddKeyBox(function(ReceivedKey)
 	)
 end)
 
--- UI settings.
+
 local MenuGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
 SetGroupOrder(MenuGroup, 10)
 MenuGroup:AddToggle("KeybindMenuOpen", {
@@ -596,7 +596,7 @@ MenuGroup:AddButton({
 	end,
 })
 
--- Optional addons. The active library repository is tried first.
+
 if ThemeManager then
 	local ThemeReady, ThemeError = pcall(function()
 		ThemeManager:SetLibrary(Library)

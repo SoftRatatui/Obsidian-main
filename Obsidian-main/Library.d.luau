@@ -1,8 +1,8 @@
---!strict
--- Last updated: 18.08.2026
--- Luau type definitions for the Obsidian UI Library
 
---// Helper & Configuration Types
+
+
+
+
 export type Scheme = {
     BackgroundColor: Color3,
     MainColor: Color3,
@@ -102,7 +102,7 @@ export type DraggableImageButton = {
     SetIconSize: (self: DraggableImageButton, Size: number) -> (),
 }
 
---// Element Creation Info Types
+
 export type ButtonInfo = {
     Text: string,
     Func: (FromKeyPicker: boolean?) -> (),
@@ -337,7 +337,7 @@ export type AppInfo = {
     [string]: any,
 }
 
---// Addon Types
+
 export type KeyPicker = {
     Text: string,
     Value: string,
@@ -386,7 +386,7 @@ export type ColorPicker = {
 
 export type Addon = KeyPicker | ColorPicker
 
---// Base Element Types
+
 export type Label = {
     Text: string,
     DoesWrap: boolean,
@@ -400,7 +400,7 @@ export type Label = {
     SetVisible: (self: Label, Visible: boolean) -> (),
     SetText: (self: Label, Text: string) -> (),
 
-    -- From BaseAddons
+    
     AddKeyPicker: (self: Label, Idx: string, Info: KeyPickerInfo) -> Label,
     AddColorPicker: (self: Label, Idx: string, Info: ColorPickerInfo) -> Label,
     Destroy: (self: Label) -> (),
@@ -478,7 +478,7 @@ export type Toggle = {
     SetVisible: (self: Toggle, Visible: boolean) -> (),
     SetText: (self: Toggle, Text: string) -> (),
 
-    -- From BaseAddons
+    
     AddKeyPicker: (self: Toggle, Idx: string, Info: KeyPickerInfo) -> Toggle,
     AddColorPicker: (self: Toggle, Idx: string, Info: ColorPickerInfo) -> Toggle,
     Destroy: (self: Toggle) -> (),
@@ -702,7 +702,7 @@ export type Option =
     | KeyPicker
     | ColorPicker
 
---// Container Types
+
 export type BaseGroupbox = {
     AddDivider: (self: Groupbox, MarginTop: number?, MarginBottom: number?) -> (),
     AddLabel: (
@@ -1003,9 +1003,9 @@ export type App = {
     Destroy: (self: App) -> (),
 }
 
---// Main Library Type
+
 export type Library = {
-    -- Properties
+    
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
     IsMobile: boolean,
@@ -1071,7 +1071,7 @@ export type Library = {
         PreloadAssets: () -> (),
     },
 
-    -- Methods
+    
     UpdateDependencyBoxes: (self: Library) -> (),
     UpdateSearch: (self: Library, SearchText: string) -> (),
     QueueSearch: (self: Library, SearchText: string) -> (),

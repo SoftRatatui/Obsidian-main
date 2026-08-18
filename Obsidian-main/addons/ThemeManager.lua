@@ -7,7 +7,7 @@ end)
 
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 
---// Fix is_____ functions for shitsploits, those functions should never error, only return a boolean. (why is this still a problem in the big 2026)
+
 local isfolder, isfile, listfiles = isfolder, isfile, listfiles
 local isfolder_copy, isfile_copy, listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
 local isfolder_success, isfolder_error = pcall(function() return isfolder_copy("test" .. tostring(math.random(1000000, 9999999))) end)
@@ -29,7 +29,7 @@ if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
     end
 end
 
---// Theme Manager
+
 local SchemeIndexes = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 local ThemeManager = {
     Library = nil,
@@ -119,7 +119,7 @@ function ThemeManager:SetLibrary(Library)
     ThemeManager.Library = Library
 end
 
---// Helpers \\--
+
 local function Trim(Text: string)
     return Text:match("^%s*(.-)%s*$")
 end
@@ -136,7 +136,7 @@ local function IsValidFolderPath(Name: string): boolean
     )
 end
 
---// Folder helper \\--
+
 local function SplitPath(Path: string): {string}
 	local Result = {}
 	local Current = ""
@@ -159,7 +159,7 @@ end
 
 local GetCurrentThemesPath = GetFolderPath
 
---// Files helper \\--
+
 local function GetThemePath(ThemeName: string): false | string
     local CurrentThemesPath = GetCurrentThemesPath()
     return if CurrentThemesPath == false then false else string.format("%s/%s.json", CurrentThemesPath, ThemeName)
@@ -179,7 +179,7 @@ local function GetDefaultThemePath(): false | string
     return if CurrentThemesPath == false then false else string.format("%s/default.txt", CurrentThemesPath)
 end
 
---// Folders \\--
+
 function ThemeManager:GetPaths(): {string}
     local FolderPath = GetFolderPath()
     return if FolderPath == false then {} else SplitPath(FolderPath)
@@ -217,7 +217,7 @@ function ThemeManager:SetFolder(Folder: string)
     ThemeManager:BuildFolderTree()
 end
 
---// Theme Management \\--
+
 function ThemeManager:ReloadCustomThemes()
     local SettingsPath = GetCurrentThemesPath()
     if SettingsPath == false then
@@ -329,7 +329,7 @@ function ThemeManager:Delete(ThemeName: string): (boolean | string?)
     return true
 end
 
---// Default Theme \\--
+
 function ThemeManager:GetDefaultTheme(): (string, boolean, string?)
     ThemeManager:CheckFolderTree()
 
@@ -385,7 +385,7 @@ function ThemeManager:SetDefaultTheme(Theme: any)
         end
     end
 
-    --// Font
+    
     local FontFace = Theme["FontFace"]
     local FontFaceType = typeof(FontFace)
     
@@ -402,12 +402,12 @@ function ThemeManager:SetDefaultTheme(Theme: any)
         FinalTheme.FontFace = "Code"
     end
 
-    --// Default Scheme Colors
+    
     for _, DefaultSchemeColor in { "RedColor", "DestructiveColor", "DarkColor", "WhiteColor" } do
         LibraryScheme[DefaultSchemeColor] = Library.Scheme[DefaultSchemeColor]
     end
 
-    --// Apply
+    
     Library.Scheme = LibraryScheme
     ThemeManager.BuiltInThemes["Default"] = { 1, FinalTheme }
 
@@ -484,7 +484,7 @@ function ThemeManager:DeleteDefaultTheme(): (boolean, string?)
     return true
 end
 
---// Apply Theme \\--
+
 function ThemeManager:ThemeUpdate()
     local Library = ThemeManager.Library
 
@@ -542,7 +542,7 @@ function ThemeManager:ApplyTheme(ThemeName: string)
     return true
 end
 
---// GUI \\--
+
 local function ShowDialog(
     Condition: () -> boolean,
 
@@ -848,7 +848,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
     DefaultThemeLabel = Themesbox:AddLabel("Current default theme: ...", true);
 
-    --// Set Variables
+    
     CustomThemeList, CustomThemeName, ThemeList, FontFace, BackgroundImage =
         ThemeManager.Library.Options.ThemeManager_CustomThemeList,
         ThemeManager.Library.Options.ThemeManager_CustomThemeName,
@@ -856,7 +856,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         ThemeManager.Library.Options.FontFace,
         ThemeManager.Library.Options.BackgroundImage;
 
-    --// Handlers
+    
     ThemeList:OnChanged(function()
         ThemeManager:ApplyTheme(ThemeList.Value)
     end)
@@ -873,7 +873,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     FontFace:OnChanged(function(Value) ThemeManager.Library:SetFont(Enum.Font[Value]) end)
     BackgroundImage:OnChanged(function(Value) ThemeManager.Library:SetBackgroundImage(Value) end)
 
-    --// Load default
+    
     ThemeManager:LoadDefault()
     ThemeManager.AppliedToTab = true
     RefreshDefaultThemeLabel()

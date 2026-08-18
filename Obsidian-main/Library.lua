@@ -211,18 +211,18 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TabSwipeOffset = 20,
+    TabTransitionInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabSwipeOffset = 14,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    DropdownTransitionInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    KeyPickerTransitionInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeyPickerTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -265,17 +265,17 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(9, 9, 13),
-        MainColor = Color3.fromRGB(18, 17, 24),
-        AccentColor = Color3.fromRGB(116, 82, 178),
-        OutlineColor = Color3.fromRGB(43, 38, 53),
-        FontColor = Color3.fromRGB(232, 229, 238),
+        BackgroundColor = Color3.fromRGB(16, 15, 23),
+        MainColor = Color3.fromRGB(29, 26, 40),
+        AccentColor = Color3.fromRGB(145, 101, 214),
+        OutlineColor = Color3.fromRGB(66, 57, 84),
+        FontColor = Color3.fromRGB(242, 239, 247),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(232, 229, 238),
+        WhiteColor = Color3.fromRGB(242, 239, 247),
 
         BackgroundImage = ""
     },
@@ -295,13 +295,13 @@ local Library = {
 Library.DefaultTheme = "BlackPurple"
 Library.Themes = {
     BlackPurple = {
-        BackgroundColor = Color3.fromRGB(9, 9, 13),
-        MainColor = Color3.fromRGB(18, 17, 24),
-        AccentColor = Color3.fromRGB(116, 82, 178),
-        OutlineColor = Color3.fromRGB(43, 38, 53),
-        FontColor = Color3.fromRGB(232, 229, 238),
+        BackgroundColor = Color3.fromRGB(16, 15, 23),
+        MainColor = Color3.fromRGB(29, 26, 40),
+        AccentColor = Color3.fromRGB(145, 101, 214),
+        OutlineColor = Color3.fromRGB(66, 57, 84),
+        FontColor = Color3.fromRGB(242, 239, 247),
         Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(232, 229, 238),
+        WhiteColor = Color3.fromRGB(242, 239, 247),
         CornerRadius = 5,
         IsLight = false,
     },
@@ -436,8 +436,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.2,
-        TabSwipeOffset = 20,
+        TabTransitionTime = 0.22,
+        TabSwipeOffset = 14,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -2090,8 +2090,8 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        local Offset = Library.TabSwipeOffset or 20
+        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local Offset = Library.TabSwipeOffset or 14
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
 
@@ -8001,6 +8001,7 @@ do
 
         local Dragging, Pinching = false, false
         local LastMousePos, LastPinchDist = nil, 0
+        local MinZoomDistance, MaxZoomDistance = 2, 100
 
         local ViewportObject = Info.Object
         if Info.Clone and typeof(Info.Object) == "Instance" then
@@ -8025,6 +8026,12 @@ do
             Type = "Viewport",
         }
 
+        local function SetTabScrollingEnabled(Enabled)
+            for _, Side in Groupbox.Tab.Sides do
+                Side.ScrollingEnabled = Enabled
+            end
+        end
+
         assert(
             typeof(Viewport.Object) == "Instance" and (Viewport.Object:IsA("BasePart") or Viewport.Object:IsA("Model")),
             "Instance must be a BasePart or Model."
@@ -8046,10 +8053,33 @@ do
         local function FocusCamera()
             local ModelSize = GetModelSize(Viewport.Object)
             local MaxExtent = math.max(ModelSize.X, ModelSize.Y, ModelSize.Z)
-            local CameraDistance = MaxExtent * 2
+            local CameraDistance = math.max(MaxExtent * 1.75, 3)
             local ModelPosition = (Viewport.Object :: PVInstance):GetPivot().Position
+            local FocusOffset = Vector3.new(0, MaxExtent * 0.08, 0)
 
-            Viewport.Camera.CFrame = CFrame.new(ModelPosition + Vector3.new(0, MaxExtent / 2, CameraDistance), ModelPosition)
+            MinZoomDistance = math.max(MaxExtent * 0.8, 1.5)
+            MaxZoomDistance = math.max(MaxExtent * 4, MinZoomDistance + 1)
+            Viewport.Camera.CFrame = CFrame.lookAt(
+                ModelPosition + FocusOffset + Vector3.new(0, 0, CameraDistance),
+                ModelPosition + FocusOffset
+            )
+        end
+
+        local function ZoomCamera(Amount)
+            local ModelPosition = (Viewport.Object :: PVInstance):GetPivot().Position
+            local Camera = Viewport.Camera
+            local Offset = Camera.CFrame.Position - ModelPosition
+            local Distance = Offset.Magnitude
+            if Distance <= 0.001 then
+                return
+            end
+
+            local TargetDistance = math.clamp(Distance - Amount, MinZoomDistance, MaxZoomDistance)
+            Camera.CFrame = CFrame.lookAt(
+                ModelPosition + Offset.Unit * TargetDistance,
+                ModelPosition,
+                Camera.CFrame.UpVector
+            )
         end
 
         local Holder = New("Frame", {
@@ -8078,7 +8108,11 @@ do
         })
 
         local ViewportFrame = New("ViewportFrame", {
-            BackgroundTransparency = 1,
+            Ambient = Color3.fromRGB(168, 153, 190),
+            BackgroundColor3 = Color3.fromRGB(20, 18, 29),
+            BackgroundTransparency = 0.08,
+            LightColor = Color3.fromRGB(239, 229, 255),
+            LightDirection = Vector3.new(-1, -0.7, -1),
             Size = UDim2.fromScale(1, 1),
             Parent = Box,
             CurrentCamera = Viewport.Camera,
@@ -8090,9 +8124,7 @@ do
                 return
             end
 
-            for _, Side in Groupbox.Tab.Sides do
-                Side.ScrollingEnabled = false
-            end
+            SetTabScrollingEnabled(false)
         end))
 
         table.insert(Viewport.Connections, ViewportFrame.MouseLeave:Connect(function()
@@ -8100,9 +8132,7 @@ do
                 return
             end
 
-            for _, Side in Groupbox.Tab.Sides do
-                Side.ScrollingEnabled = true
-            end
+            SetTabScrollingEnabled(true)
         end))
 
         table.insert(Viewport.Connections, ViewportFrame.InputBegan:Connect(function(input)
@@ -8110,12 +8140,15 @@ do
                 return
             end
 
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.MouseButton2
+            then
                 Dragging = true
                 LastMousePos = input.Position
             elseif input.UserInputType == Enum.UserInputType.Touch and not Pinching then
                 Dragging = true
                 LastMousePos = input.Position
+                SetTabScrollingEnabled(false)
             end
         end))
 
@@ -8128,10 +8161,13 @@ do
                 return
             end
 
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.MouseButton2
+            then
                 Dragging = false
             elseif input.UserInputType == Enum.UserInputType.Touch then
                 Dragging = false
+                SetTabScrollingEnabled(true)
             end
         end))
 
@@ -8172,8 +8208,7 @@ do
             end
 
             if input.UserInputType == Enum.UserInputType.MouseWheel then
-                local ZoomAmount = input.Position.Z * 2
-                Viewport.Camera.CFrame += Viewport.Camera.CFrame.LookVector * ZoomAmount
+                ZoomCamera(input.Position.Z * 1.5)
             end
         end))
 
@@ -8190,13 +8225,15 @@ do
                 Pinching = true
                 Dragging = false
                 LastPinchDist = (touchPositions[1] - touchPositions[2]).Magnitude
+                SetTabScrollingEnabled(false)
             elseif state == Enum.UserInputState.Change then
                 local currentDist = (touchPositions[1] - touchPositions[2]).Magnitude
                 local delta = (currentDist - LastPinchDist) * 0.1
                 LastPinchDist = currentDist
-                Viewport.Camera.CFrame += Viewport.Camera.CFrame.LookVector * delta
+                ZoomCamera(delta)
             elseif state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
                 Pinching = false
+                SetTabScrollingEnabled(true)
             end
         end))
 
@@ -8218,6 +8255,10 @@ do
 
             Viewport.Object = Object
             ;(Viewport.Object :: PVInstance).Parent = ViewportFrame
+
+            if Viewport.AutoFocus then
+                FocusCamera()
+            end
 
             Groupbox:Resize()
         end
@@ -8250,6 +8291,11 @@ do
         function Viewport:SetInteractive(Interactive: boolean)
             Viewport.Interactive = Interactive
             ViewportFrame.Active = Interactive
+            if not Interactive then
+                Dragging = false
+                Pinching = false
+                SetTabScrollingEnabled(true)
+            end
         end
 
         function Viewport:SetVisible(Visible: boolean)
@@ -8268,6 +8314,7 @@ do
 
         function Viewport:Destroy()
             Viewport.Destroyed = true
+            SetTabScrollingEnabled(true)
 
             if Viewport.Connections then
                 for _, Connection in Viewport.Connections do
@@ -9504,15 +9551,16 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.2),
-        Enum.EasingStyle.Quart,
+        math.max(0, WindowInfo.TabTransitionTime or 0.22),
+        Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
-    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 20)
+    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 14)
     Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "bottom"
 
     local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
     local MainFrame
+    local WindowScale
     local DividerLine
     local TitleHolder
     local WindowTitle
@@ -9565,12 +9613,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = MainFrame,
             })
         )
-        table.insert(
-            Library.Scales,
-            New("UIScale", {
-                Parent = MainFrame,
-            })
-        )
+        WindowScale = New("UIScale", {
+            Parent = MainFrame,
+        })
+        table.insert(Library.Scales, WindowScale)
         Library:AddOutline(MainFrame)
         New("UIGradient", {
             Color = function()
@@ -9946,6 +9992,7 @@ function Library:CreateWindow(WindowInfo)
     local Window = {}
     local Fading = false
     local WindowTween
+    local WindowScaleTween
 
     local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
         local Current = UICorner[Corner]
@@ -10085,8 +10132,8 @@ function Library:CreateWindow(WindowInfo)
 
         if typeof(TabTransitionTime) == "number" then
             local TweenInfo = TweenInfo.new(
-                math.max(0, TabTransitionTime or 0.2),
-                Enum.EasingStyle.Quart,
+                math.max(0, TabTransitionTime or 0.22),
+                Enum.EasingStyle.Quint,
                 Enum.EasingDirection.Out
             )
 
@@ -12260,13 +12307,18 @@ function Library:CreateWindow(WindowInfo)
 
         if Library.Animations and Library.Animations.ToggleWindow == true then
             Fading = true
+            local TargetScale = math.max(Library.DPIScale or 1, 0.01)
             if Library.Toggled then
                 MainFrame.Visible = true
                 MainFrame.GroupTransparency = 1
+                WindowScale.Scale = TargetScale * 0.975
             end
 
             WindowTween = TweenService:Create(MainFrame, Library.WindowAnimationInfo, {
                 GroupTransparency = Library.Toggled and 0 or 1,
+            })
+            WindowScaleTween = TweenService:Create(WindowScale, Library.WindowAnimationInfo, {
+                Scale = Library.Toggled and TargetScale or TargetScale * 0.975,
             })
             WindowTween.Completed:Once(function()
                 if not Library.Unloaded and MainFrame.Parent and not Library.Toggled then
@@ -12274,12 +12326,15 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 WindowTween = nil
+                WindowScaleTween = nil
                 Fading = false
             end)
             WindowTween:Play()
+            WindowScaleTween:Play()
         else
             MainFrame.GroupTransparency = Library.Toggled and 0 or 1
             MainFrame.Visible = Library.Toggled
+            WindowScale.Scale = math.max(Library.DPIScale or 1, 0.01)
         end
 
         if WindowInfo.UnlockMouseWhileOpen then

@@ -96,12 +96,12 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library.Scheme.BackgroundColor = Color3.fromRGB(9, 9, 13)
-Library.Scheme.MainColor = Color3.fromRGB(18, 17, 24)
-Library.Scheme.AccentColor = Color3.fromRGB(116, 82, 178)
-Library.Scheme.OutlineColor = Color3.fromRGB(43, 38, 53)
-Library.Scheme.FontColor = Color3.fromRGB(232, 229, 238)
-Library.Scheme.WhiteColor = Color3.fromRGB(232, 229, 238)
+Library.Scheme.BackgroundColor = Color3.fromRGB(16, 15, 23)
+Library.Scheme.MainColor = Color3.fromRGB(29, 26, 40)
+Library.Scheme.AccentColor = Color3.fromRGB(145, 101, 214)
+Library.Scheme.OutlineColor = Color3.fromRGB(66, 57, 84)
+Library.Scheme.FontColor = Color3.fromRGB(242, 239, 247)
+Library.Scheme.WhiteColor = Color3.fromRGB(242, 239, 247)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 Library.CornerRadius = 5
 Library.IsLightTheme = false
@@ -118,6 +118,9 @@ local Window = Library:CreateWindow({
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
 	CornerRadius = 5,
+	TabTransitionTime = 0.22,
+	TabSwipeOffset = 14,
+	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 460) or UDim2.fromOffset(760, 660),
 	Animations = {
 		ToggleWindow = true,
@@ -168,7 +171,7 @@ local FeatureToggle = BasicGroup:AddToggle("FeatureEnabled", {
 
 FeatureToggle:AddColorPicker("FeatureColor", {
 	Title = "Feature color",
-	Default = Color3.fromRGB(116, 82, 178),
+	Default = Color3.fromRGB(145, 101, 214),
 	Transparency = 0,
 })
 
@@ -265,38 +268,96 @@ DropdownGroup:AddLabel("Press keybind"):AddKeyPicker("PressKeybind", {
 })
 
 
-local PreviewModel = Instance.new("Model")
-PreviewModel.Name = "MonHubPreviewModel"
+local function CreateR6Preview()
+	local Model = Instance.new("Model")
+	Model.Name = "MonHubR6Preview"
 
-local PreviewBase = Instance.new("Part")
-PreviewBase.Name = "Base"
-PreviewBase.Anchored = true
-PreviewBase.CanCollide = false
-PreviewBase.Material = Enum.Material.SmoothPlastic
-PreviewBase.Color = Color3.fromRGB(43, 34, 62)
-PreviewBase.Size = Vector3.new(4.8, 0.6, 4.8)
-PreviewBase.CFrame = CFrame.new(0, -1.6, 0)
-PreviewBase.Parent = PreviewModel
+	local function CreatePart(Name, Size, Position, Color, Material, Transparency)
+		local Part = Instance.new("Part")
+		Part.Name = Name
+		Part.Anchored = true
+		Part.CanCollide = false
+		Part.CastShadow = true
+		Part.Color = Color
+		Part.Material = Material or Enum.Material.SmoothPlastic
+		Part.Size = Size
+		Part.CFrame = CFrame.new(Position)
+		Part.Transparency = Transparency or 0
+		Part.TopSurface = Enum.SurfaceType.Smooth
+		Part.BottomSurface = Enum.SurfaceType.Smooth
+		Part.Parent = Model
+		return Part
+	end
 
-local PreviewCore = Instance.new("Part")
-PreviewCore.Name = "Core"
-PreviewCore.Anchored = true
-PreviewCore.CanCollide = false
-PreviewCore.Material = Enum.Material.Neon
-PreviewCore.Color = Color3.fromRGB(116, 82, 178)
-PreviewCore.Shape = Enum.PartType.Ball
-PreviewCore.Size = Vector3.new(2.5, 2.5, 2.5)
-PreviewCore.CFrame = CFrame.new(0, 0.1, 0)
-PreviewCore.Parent = PreviewModel
-PreviewModel.PrimaryPart = PreviewCore
+	local Skin = Color3.fromRGB(239, 196, 156)
+	local Shirt = Color3.fromRGB(105, 70, 158)
+	local Pants = Color3.fromRGB(39, 34, 52)
+	local Root = CreatePart("HumanoidRootPart", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Pants, nil, 1)
+	local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Shirt)
+	local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), Skin)
+	local RightArm = CreatePart("Right Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), Skin)
+	local LeftArm = CreatePart("Left Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, 0), Skin)
+	local RightLeg = CreatePart("Right Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), Pants)
+	local LeftLeg = CreatePart("Left Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), Pants)
 
-local MediaLeft = Tabs.Media:AddLeftGroupbox("Image and viewport", "image")
+	local HeadMesh = Instance.new("SpecialMesh")
+	HeadMesh.MeshType = Enum.MeshType.Head
+	HeadMesh.Scale = Vector3.new(1.25, 1.25, 1.25)
+	HeadMesh.Parent = Head
+
+	local Face = Instance.new("Decal")
+	Face.Face = Enum.NormalId.Back
+	Face.Texture = "rbxasset://textures/face.png"
+	Face.Parent = Head
+
+	local Humanoid = Instance.new("Humanoid")
+	Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	Humanoid.NameDisplayDistance = 0
+	Humanoid.HealthDisplayDistance = 0
+	Humanoid.Parent = Model
+
+	local function CreateJoint(Name, Part0, Part1)
+		local Joint = Instance.new("Motor6D")
+		Joint.Name = Name
+		Joint.Part0 = Part0
+		Joint.Part1 = Part1
+		Joint.C0 = Part0.CFrame:ToObjectSpace(Part1.CFrame)
+		Joint.Parent = Part0
+	end
+
+	CreateJoint("RootJoint", Root, Torso)
+	CreateJoint("Neck", Torso, Head)
+	CreateJoint("Right Shoulder", Torso, RightArm)
+	CreateJoint("Left Shoulder", Torso, LeftArm)
+	CreateJoint("Right Hip", Torso, RightLeg)
+	CreateJoint("Left Hip", Torso, LeftLeg)
+
+	local Platform = CreatePart(
+		"Platform",
+		Vector3.new(4.8, 0.3, 3.2),
+		Vector3.new(0, -0.2, 0),
+		Color3.fromRGB(50, 42, 68),
+		Enum.Material.SmoothPlastic
+	)
+	local PlatformLight = Instance.new("PointLight")
+	PlatformLight.Brightness = 0.8
+	PlatformLight.Color = Color3.fromRGB(174, 126, 238)
+	PlatformLight.Range = 8
+	PlatformLight.Parent = Platform
+
+	Model.PrimaryPart = Root
+	return Model
+end
+
+local PreviewModel = CreateR6Preview()
+
+local MediaLeft = Tabs.Media:AddLeftGroupbox("R6 character preview", "user-round")
 MediaLeft:AddImage("ShowcaseImage", {
 	Image = "sparkles",
-	Color = Color3.fromRGB(178, 142, 231),
-	BackgroundTransparency = 0.15,
+	Color = Color3.fromRGB(196, 151, 245),
+	BackgroundTransparency = 0.08,
 	ScaleType = Enum.ScaleType.Fit,
-	Height = 120,
+	Height = 82,
 })
 
 MediaLeft:AddViewport("ShowcaseViewport", {
@@ -304,13 +365,13 @@ MediaLeft:AddViewport("ShowcaseViewport", {
 	Clone = true,
 	AutoFocus = true,
 	Interactive = true,
-	Height = 220,
+	Height = 260,
 })
-MediaLeft:AddLabel("Drag to rotate the viewport. Use the mouse wheel to zoom.", true)
+MediaLeft:AddLabel("Left or right drag to rotate. Use the mouse wheel or pinch to zoom.", true)
 
 local CustomCard = Instance.new("Frame")
 CustomCard.Name = "CustomPassthroughCard"
-CustomCard.BackgroundColor3 = Color3.fromRGB(28, 23, 39)
+CustomCard.BackgroundColor3 = Color3.fromRGB(37, 32, 50)
 CustomCard.BorderSizePixel = 0
 CustomCard.Size = UDim2.fromScale(1, 1)
 
@@ -319,7 +380,7 @@ CardCorner.CornerRadius = UDim.new(0, 4)
 CardCorner.Parent = CustomCard
 
 local CardStroke = Instance.new("UIStroke")
-CardStroke.Color = Color3.fromRGB(75, 57, 105)
+CardStroke.Color = Color3.fromRGB(91, 72, 119)
 CardStroke.Parent = CustomCard
 
 local CardText = Instance.new("TextLabel")
@@ -328,7 +389,7 @@ CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
 CardText.Font = Enum.Font.Gotham
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
-CardText.TextColor3 = Color3.fromRGB(232, 229, 238)
+CardText.TextColor3 = Color3.fromRGB(242, 239, 247)
 CardText.TextSize = 14
 CardText.TextWrapped = true
 CardText.Parent = CustomCard
@@ -496,14 +557,14 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("The default palette is black and muted purple.", true)
-StyleTab:AddButton("Reapply black purple", function()
-	Library.Scheme.BackgroundColor = Color3.fromRGB(9, 9, 13)
-	Library.Scheme.MainColor = Color3.fromRGB(18, 17, 24)
-	Library.Scheme.AccentColor = Color3.fromRGB(116, 82, 178)
-	Library.Scheme.OutlineColor = Color3.fromRGB(43, 38, 53)
-	Library.Scheme.FontColor = Color3.fromRGB(232, 229, 238)
-	Library.Scheme.WhiteColor = Color3.fromRGB(232, 229, 238)
+StyleTab:AddLabel("The default palette uses layered charcoal and soft violet.", true)
+StyleTab:AddButton("Reapply premium violet", function()
+	Library.Scheme.BackgroundColor = Color3.fromRGB(16, 15, 23)
+	Library.Scheme.MainColor = Color3.fromRGB(29, 26, 40)
+	Library.Scheme.AccentColor = Color3.fromRGB(145, 101, 214)
+	Library.Scheme.OutlineColor = Color3.fromRGB(66, 57, 84)
+	Library.Scheme.FontColor = Color3.fromRGB(242, 239, 247)
+	Library.Scheme.WhiteColor = Color3.fromRGB(242, 239, 247)
 	Library:UpdateColorsUsingRegistry()
 	Window:SetCornerRadius(5)
 end)
@@ -525,7 +586,7 @@ end)
 
 
 local MenuGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
-SetGroupOrder(MenuGroup, 10)
+SetGroupOrder(MenuGroup, -100)
 MenuGroup:AddToggle("KeybindMenuOpen", {
 	Text = "Show keybind menu",
 	Default = Library.KeybindFrame.Visible,
@@ -602,7 +663,7 @@ if ThemeManager then
 		ThemeManager:SetLibrary(Library)
 		ThemeManager:SetFolder("MonHub")
 		local ThemeBox = ThemeManager:ApplyToTab(Tabs.Settings)
-		SetGroupOrder(ThemeBox, -10)
+		SetGroupOrder(ThemeBox, 0)
 	end)
 
 	if not ThemeReady then
@@ -618,7 +679,7 @@ if SaveManager then
 		SaveManager:SetFolder("MonHub")
 		SaveManager:SetSubFolder(tostring(game.PlaceId))
 		local ConfigurationBox = SaveManager:BuildConfigSection(Tabs.Settings)
-		SetGroupOrder(ConfigurationBox, -10)
+		SetGroupOrder(ConfigurationBox, -100)
 		SaveManager:LoadAutoloadConfig()
 	end)
 

@@ -100,6 +100,7 @@ Library.ShowToggleFrameInKeybinds = true
 
 Library.Scheme.BackgroundColor = Color3.fromRGB(18, 19, 22)
 Library.Scheme.MainColor = Color3.fromRGB(29, 31, 36)
+Library.Scheme.TopBarColor = Color3.fromRGB(32, 34, 39)
 Library.Scheme.AccentColor = Color3.fromRGB(121, 126, 139)
 Library.Scheme.OutlineColor = Color3.fromRGB(55, 58, 66)
 Library.Scheme.FontColor = Color3.fromRGB(232, 234, 239)
@@ -118,6 +119,7 @@ local Window = Library:CreateWindow({
 	Resizable = true,
 	GlobalSearch = true,
 	EnableSidebarResize = true,
+	ReorderableTabs = true,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
 	CornerRadius = 5,
@@ -700,6 +702,14 @@ MenuGroup:AddToggle("AlwaysOnTop", {
 	Default = Window.AlwaysOnTop,
 	Callback = function(Value)
 		Window:SetAlwaysOnTop(Value)
+	end,
+})
+
+MenuGroup:AddToggle("ReorderableTabs", {
+	Text = "Draggable tabs",
+	Default = Window:IsTabReorderingEnabled(),
+	Callback = function(Value)
+		Window:SetTabReorderingEnabled(Value)
 	end,
 })
 

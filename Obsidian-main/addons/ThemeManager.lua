@@ -30,7 +30,7 @@ if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
 end
 
 
-local SchemeIndexes = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+local SchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 local ThemeManager = {
     Library = nil,
 
@@ -42,7 +42,7 @@ local ThemeManager = {
     BuiltInThemes = {
         ["Default"] = {
             1,
-            { FontColor = "e8eaef", MainColor = "1d1f24", AccentColor = "797e8b", BackgroundColor = "121316", OutlineColor = "373a42", BackgroundImage = "", FontFace = "Gotham" },
+            { FontColor = "e8eaef", MainColor = "1d1f24", TopBarColor = "202227", AccentColor = "797e8b", BackgroundColor = "121316", OutlineColor = "373a42", BackgroundImage = "", FontFace = "Gotham" },
         },
         ["BBot"] = {
             2,
@@ -114,6 +114,11 @@ local ThemeManager = {
         }
     }
 }
+
+for _, ThemeInfo in ThemeManager.BuiltInThemes do
+    local ThemeData = ThemeInfo[2]
+    ThemeData.TopBarColor = ThemeData.TopBarColor or ThemeData.MainColor
+end
 
 function ThemeManager:SetLibrary(Library)
     ThemeManager.Library = Library
@@ -368,6 +373,9 @@ function ThemeManager:SetDefaultTheme(Theme: any)
 
     for _, SchemeIndex in SchemeIndexes do
         local IndexData = Theme[SchemeIndex]
+        if SchemeIndex == "TopBarColor" and IndexData == nil then
+            IndexData = Theme.MainColor
+        end
         local IndexType = typeof(IndexData)
         
         if IndexType == "Color3" then
@@ -515,6 +523,11 @@ function ThemeManager:ApplyTheme(ThemeName: string)
     local SchemeData = Data[2]
     local ThemeData = CustomThemeData or SchemeData
 
+    if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
+        ThemeData = table.clone(ThemeData)
+        ThemeData.TopBarColor = ThemeData.MainColor
+    end
+
     for Index, Value in ThemeData do
         if Index == "VideoLink" then
             continue
@@ -623,6 +636,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
     local BackgroundColor = CreateColorOption("Background color", "BackgroundColor")
     local MainColor = CreateColorOption("Main color", "MainColor")
+    local TopBarColor = CreateColorOption("Top bar color", "TopBarColor")
     local AccentColor = CreateColorOption("Accent color", "AccentColor")
     local OutlineColor = CreateColorOption("Outline color", "OutlineColor")
     local FontColor = CreateColorOption("Font color", "FontColor")
@@ -881,6 +895,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
     BackgroundColor:OnChanged(UpdateTheme)
     MainColor:OnChanged(UpdateTheme)
+    TopBarColor:OnChanged(UpdateTheme)
     AccentColor:OnChanged(UpdateTheme)
     OutlineColor:OnChanged(UpdateTheme)
     FontColor:OnChanged(UpdateTheme)

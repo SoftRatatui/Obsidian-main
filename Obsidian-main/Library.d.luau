@@ -6,6 +6,7 @@
 export type Scheme = {
     BackgroundColor: Color3,
     MainColor: Color3,
+    TopBarColor: Color3,
     AccentColor: Color3,
     OutlineColor: Color3,
     FontColor: Color3,
@@ -269,6 +270,7 @@ export type LoadingInfo = {
 export type ThemePreset = {
     BackgroundColor: Color3?,
     MainColor: Color3?,
+    TopBarColor: Color3?,
     AccentColor: Color3?,
     OutlineColor: Color3?,
     FontColor: Color3?,
@@ -794,6 +796,9 @@ export type Tabbox = {
 }
 
 export type Tab = {
+    Name: string,
+    Order: number,
+    Reorderable: boolean,
     Window: Window,
     Groupboxes: { [string]: Groupbox },
     Tabboxes: { [string]: Tabbox },
@@ -841,11 +846,16 @@ export type Tab = {
     Hide: (self: Tab) -> (),
     SetVisible: (self: Tab, Visible: boolean) -> (),
     SetOrder: (self: Tab, Order: number) -> (),
+    SetReorderable: (self: Tab, Enabled: boolean) -> (),
+    GetOrder: (self: Tab) -> number,
 }
 
 export type KeyTab = BaseGroupbox & {
     Elements: { [any]: any },
     IsKeyTab: true,
+    Name: string,
+    Order: number,
+    Reorderable: boolean,
     Window: Window,
     Container: ScrollingFrame,
 
@@ -855,6 +865,9 @@ export type KeyTab = BaseGroupbox & {
     Show: (self: KeyTab) -> (),
     Hide: (self: KeyTab) -> (),
     SetVisible: (self: KeyTab, Visible: boolean) -> (),
+    SetOrder: (self: KeyTab, Order: number) -> (),
+    SetReorderable: (self: KeyTab, Enabled: boolean) -> (),
+    GetOrder: (self: KeyTab) -> number,
 }
 
 export type LoadingErrorButtonInfo = {
@@ -944,20 +957,26 @@ export type Window = {
     SetSidebarWidth: (self: Window, Width: number) -> (),
     FitToViewport: (self: Window) -> (),
     SetCompact: (self: Window, State: boolean) -> (),
+    NormalizeTabOrder: (self: Window) -> { any },
+    SetTabReorderingEnabled: (self: Window, Enabled: boolean) -> (),
+    IsTabReorderingEnabled: (self: Window) -> boolean,
+    GetTabOrder: (self: Window) -> { string },
+    SetTabOrder: (self: Window, Names: { string }) -> { string },
     ShowTabInfo: (self: Window, Name: string, Description: string) -> (),
     HideTabInfo: (self: Window) -> (),
     AddTab: (
         self: Window,
-        Info: { Name: string, Icon: string?, Description: string?, Order: number? } | string,
+        Info: { Name: string, Icon: string?, Description: string?, Order: number?, Reorderable: boolean? } | string,
         Icon: string?,
         Description: string?,
         Order: number?
     ) -> Tab,
     AddKeyTab: (
         self: Window,
-        Info: { Name: string, Icon: string?, Description: string? } | string,
+        Info: { Name: string, Icon: string?, Description: string?, Order: number?, Reorderable: boolean? } | string,
         Icon: string?,
-        Description: string?
+        Description: string?,
+        Order: number?
     ) -> KeyTab,
     AddDialog: (
         self: Window,
@@ -1239,6 +1258,7 @@ export type Library = {
             EnableCompacting: boolean?,
             DisableCompactingSnap: boolean?,
             SidebarCompacted: boolean?,
+            ReorderableTabs: boolean?,
             MinContainerWidth: number?,
             MinSidebarWidth: number?,
             SidebarCompactWidth: number?,

@@ -15,6 +15,8 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and scrollable columns expose subtle overflow indicators.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable Watermark, FPS/ping settings, interactive R6 viewport controls, and refined sliders.
+- Editable top-bar theme color with backwards-compatible fallback for existing themes.
+- Optional mouse and touch tab reordering without a per-frame update loop.
 
 ## Quick start
 

@@ -489,7 +489,7 @@ local Templates = {
         ClearTextOnBlur = false,
         Placeholder = "",
         AllowEmpty = true,
-        EmptyReset = "---",
+        EmptyReset = "None",
 
         Callback = function() end,
         Changed = function() end,
@@ -1428,7 +1428,7 @@ local function SetAlwaysOnTop(Gui: ScreenGui, Enabled: boolean)
 end
 
 local ScreenGui = New("ScreenGui", {
-    Name = "Obsidian",
+    Name = "MonHub",
     DisplayOrder = 998,
     ResetOnSpawn = false,
 })
@@ -2090,8 +2090,8 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-    local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        local Offset = Library.TabSwipeOffset or 26
+        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        local Offset = Library.TabSwipeOffset or 20
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
 
@@ -2101,7 +2101,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
             StartPosition = UDim2.fromOffset(0, -Offset)
         elseif SwipeFrom == "right" then
             StartPosition = UDim2.fromOffset(Offset, 0)
-        else 
+        else
             StartPosition = UDim2.fromOffset(0, Offset)
         end
 
@@ -2150,7 +2150,7 @@ end
 
 
 function Library:MakeOutline(Frame: GuiObject, Corner: number?, ZIndex: number?)
-    warn("Obsidian:MakeOutline is deprecated, please use Obsidian:AddOutline instead.")
+    warn("MonHub:MakeOutline is deprecated, please use MonHub:AddOutline instead.")
     local Holder = New("Frame", {
         BackgroundColor3 = "DarkColor",
         Position = UDim2.fromOffset(-2, -2),
@@ -7050,7 +7050,7 @@ do
             Active = not Dropdown.Disabled,
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 0, 21),
-            Text = "---",
+            Text = "None",
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 2,
@@ -7217,7 +7217,7 @@ do
                 Str = Str:sub(1, 22) .. "..."
             end
 
-            DisplayButton.Text = (Str == "" and "---" or Str)
+            DisplayButton.Text = (Str == "" and "None" or Str)
             
             if ValueImage then
                 DisplayImage.Image = ValueImage.Url
@@ -9529,15 +9529,15 @@ function Library:CreateWindow(WindowInfo)
     local BottomBackground
     local FooterLabel
     local TopBar
-    local BottomBarHeight = 24
+    local BottomBarHeight = 20
 
     local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
     local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
     local LastExpandedWidth = InitialLeftWidth
     local LastCompactState = nil
     local NavigationIconSize = 18
-    local NavigationIconX = 14
-    local NavigationLabelX = 42
+    local NavigationIconX = 10
+    local NavigationLabelX = 38
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
 
     do
@@ -9827,14 +9827,14 @@ function Library:CreateWindow(WindowInfo)
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
             end,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, BottomBarHeight + WindowInfo.CornerRadius),
+            Size = UDim2.new(1, 0, 0, BottomBarHeight),
             ZIndex = 3,
             Parent = MainFrame,
         })
         Library:MakeLine(MainFrame, {
             AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 0, 1, -BottomBarHeight),
-            Size = UDim2.new(1, 0, 0, 1),
+            Position = UDim2.new(0, 8, 1, -BottomBarHeight),
+            Size = UDim2.new(1, -16, 0, 1),
             ZIndex = 4,
         })
 
@@ -9857,11 +9857,11 @@ function Library:CreateWindow(WindowInfo)
         
         FooterLabel = New("TextLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(32, 0),
-            Size = UDim2.new(1, -64, 1, 0),
+            Position = UDim2.fromOffset(36, 0),
+            Size = UDim2.new(1, -72, 1, 0),
             Text = WindowInfo.Footer,
-            TextSize = 13,
-            TextTransparency = 0.5,
+            TextSize = 12,
+            TextTransparency = 0.55,
             TextTruncate = Enum.TextTruncate.AtEnd,
             ZIndex = 5,
             Parent = BottomBar,
@@ -9870,11 +9870,10 @@ function Library:CreateWindow(WindowInfo)
         
         if WindowInfo.Resizable then
             ResizeButton = New("TextButton", {
-                AnchorPoint = Vector2.new(1, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
                 BackgroundTransparency = 1,
-                Position = UDim2.new(1, -WindowInfo.CornerRadius / 4, 0, 0),
-                Size = UDim2.fromScale(1, 1),
-                SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                Position = UDim2.new(1, -4, 0.5, 0),
+                Size = UDim2.fromOffset(24, BottomBarHeight),
                 Text = "",
                 ZIndex = 6,
                 Parent = BottomBar,
@@ -9887,13 +9886,14 @@ function Library:CreateWindow(WindowInfo)
             end)
 
             New("ImageLabel", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
                 Image = ResizeIcon and ResizeIcon.Url or "",
                 ImageColor3 = "FontColor",
                 ImageRectOffset = ResizeIcon and ResizeIcon.ImageRectOffset or Vector2.zero,
                 ImageRectSize = ResizeIcon and ResizeIcon.ImageRectSize or Vector2.zero,
-                ImageTransparency = 0.5,
-                Position = UDim2.fromOffset(3, 3),
-                Size = UDim2.new(1, -6, 1, -6),
+                ImageTransparency = 0.55,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(12, 12),
                 ZIndex = 7,
                 Parent = ResizeButton,
             })
@@ -10062,9 +10062,9 @@ function Library:CreateWindow(WindowInfo)
         WindowInfo.CornerRadius = Radius
 
         if ResizeButton then
-            ResizeButton.Position = UDim2.new(1, -Radius / 4, 0, 0)
+            ResizeButton.Position = UDim2.new(1, -4, 0.5, 0)
         end
-        BottomBackground.Size = UDim2.new(1, 0, 0, BottomBarHeight + Radius)
+        BottomBackground.Size = UDim2.new(1, 0, 0, BottomBarHeight)
 
         for _, Tab in Library.Tabs do
             if Tab.IsKeyTab then
@@ -10257,7 +10257,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -12, 0, 38),
+                Size = UDim2.new(1, -20, 0, 36),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -10270,8 +10270,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 3, 0.5, 0),
-                Size = UDim2.fromOffset(3, 18),
+                Position = UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.fromOffset(2, 16),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -11447,7 +11447,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -12, 0, 38),
+                Size = UDim2.new(1, -20, 0, 36),
                 Text = "",
                 Parent = Tabs,
             })
@@ -11459,8 +11459,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 3, 0.5, 0),
-                Size = UDim2.fromOffset(3, 18),
+                Position = UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.fromOffset(2, 16),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -12513,7 +12513,7 @@ function Library:CreateLoading(LoadingInfo)
 
     
     local ScreenGui = New("ScreenGui", {
-        Name = "ObsidianLoading",
+        Name = "MonHubLoading",
         DisplayOrder = 999,
         ResetOnSpawn = false
     })
@@ -13244,7 +13244,7 @@ function Library:Create(AppInfo)
         Library:SetTheme(Theme)
     end
 
-    WindowInfo.Title = WindowInfo.Title or "Obsidian"
+    WindowInfo.Title = WindowInfo.Title or "MonHub"
     WindowInfo.Footer = WindowInfo.Footer or ""
     WindowInfo.Font = WindowInfo.Font or Library.Scheme.Font
     WindowInfo.CornerRadius = WindowInfo.CornerRadius or Library.CornerRadius

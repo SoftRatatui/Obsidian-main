@@ -2,9 +2,12 @@
 
 ```diff
 [design]
-+ New calm black-purple default theme with Gotham typography and 9px corner radius
++ New calm black-purple default theme with Gotham typography and a compact 5px corner radius
 + Subtle purple surface tint for tabs, groupboxes, window chrome, and focused search
 + Smooth animations are enabled by default and toggle transitions now animate color and position
++ Refined the default radius from 9px to 5px for a cleaner, less rounded visual system
++ Checkboxes now use a compact square shape with a clear accent-filled selected state
++ Narrower sidebar proportions and denser navigation improve usable content space
 
 [features]
 + Library:Create / Library:Mount declarative UI API
@@ -20,6 +23,7 @@
 + Theme registry now uses weak instance keys
 + Slider decimal rounding no longer formats strings on every drag frame
 + Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
++ Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent

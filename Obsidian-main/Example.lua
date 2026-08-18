@@ -1,5 +1,5 @@
 --[[
-	Obsidian full showcase and smoke test.
+	MonHub full showcase and smoke test.
 
 	The loader tries this repository first:
 	https://github.com/SoftRatatui/Obsidian-main
@@ -81,7 +81,7 @@ local function LoadModule(Path, Required, PreferredBase)
 		error(Message, 0)
 	end
 
-	warn("[Obsidian Example] " .. Message)
+	warn("[MonHub Example] " .. Message)
 	return nil
 end
 
@@ -103,13 +103,12 @@ Library.Scheme.OutlineColor = Color3.fromRGB(43, 38, 53)
 Library.Scheme.FontColor = Color3.fromRGB(232, 229, 238)
 Library.Scheme.WhiteColor = Color3.fromRGB(232, 229, 238)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
-Library.CornerRadius = 9
+Library.CornerRadius = 5
 Library.IsLightTheme = false
 
 local Window = Library:CreateWindow({
-	Title = "Obsidian",
-	Footer = ActiveRepository == PRIMARY_REPOSITORY and "Full showcase | custom repository" or "Full showcase | upstream fallback",
-	Icon = "gem",
+	Title = "MonHub",
+	Footer = "Beta",
 	NotifySide = "Right",
 	Center = true,
 	AutoShow = true,
@@ -118,8 +117,8 @@ local Window = Library:CreateWindow({
 	EnableSidebarResize = true,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
-	CornerRadius = 9,
-	Size = Library.IsMobile and UDim2.fromOffset(560, 430) or UDim2.fromOffset(860, 620),
+	CornerRadius = 5,
+	Size = Library.IsMobile and UDim2.fromOffset(520, 460) or UDim2.fromOffset(760, 660),
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
@@ -163,7 +162,7 @@ local FeatureToggle = BasicGroup:AddToggle("FeatureEnabled", {
 	Default = true,
 	Tooltip = "A toggle with color and keybind addons",
 	Callback = function(Value)
-		print("[Obsidian] FeatureEnabled:", Value)
+		print("[MonHub] FeatureEnabled:", Value)
 	end,
 })
 
@@ -267,7 +266,7 @@ DropdownGroup:AddLabel("Press keybind"):AddKeyPicker("PressKeybind", {
 
 -- Media tab: Image, Viewport, Video, and UIPassthrough.
 local PreviewModel = Instance.new("Model")
-PreviewModel.Name = "ObsidianPreviewModel"
+PreviewModel.Name = "MonHubPreviewModel"
 
 local PreviewBase = Instance.new("Part")
 PreviewBase.Name = "Base"
@@ -316,7 +315,7 @@ CustomCard.BorderSizePixel = 0
 CustomCard.Size = UDim2.fromScale(1, 1)
 
 local CardCorner = Instance.new("UICorner")
-CardCorner.CornerRadius = UDim.new(0, 8)
+CardCorner.CornerRadius = UDim.new(0, 4)
 CardCorner.Parent = CustomCard
 
 local CardStroke = Instance.new("UIStroke")
@@ -360,7 +359,7 @@ MediaRight:AddUIPassthrough("CustomUI", {
 local AdvancedActions = Tabs.Advanced:AddLeftGroupbox("System actions", "blocks")
 
 AdvancedActions:AddButton("Show notification", function()
-	Notify("Obsidian is ready", "Notifications support a title, description, and duration.")
+	Notify("MonHub is ready", "Notifications support a title, description, and duration.")
 end)
 
 AdvancedActions:AddButton("Open dialog", function()
@@ -394,7 +393,7 @@ AdvancedActions:AddButton("Open dialog", function()
 
 	Dialog:AddInput("DialogInput", {
 		Text = "Message",
-		Default = "Hello from Obsidian",
+		Default = "Hello from MonHub",
 		ClearTextOnFocus = false,
 	})
 	Dialog:AddToggle("DialogOption", {
@@ -420,7 +419,7 @@ AdvancedActions:AddButton("Run loading test", function()
 		}
 
 		local Loading = Library:CreateLoading({
-			Title = "Obsidian Showcase",
+			Title = "MonHub Beta",
 			Icon = "orbit",
 			LoadingIcon = "loader-circle",
 			CurrentStep = 0,
@@ -454,7 +453,7 @@ local DraggableLabel
 AdvancedActions:AddButton("Create draggable label", function()
 	if not DraggableLabel or DraggableLabel.Destroyed then
 		DraggableLabel = Library:AddDraggableLabel({
-			Text = "Obsidian | draggable label",
+			Text = "MonHub | draggable label",
 			Icon = "grip",
 		})
 	else
@@ -506,18 +505,18 @@ StyleTab:AddButton("Reapply black purple", function()
 	Library.Scheme.FontColor = Color3.fromRGB(232, 229, 238)
 	Library.Scheme.WhiteColor = Color3.fromRGB(232, 229, 238)
 	Library:UpdateColorsUsingRegistry()
-	Window:SetCornerRadius(9)
+	Window:SetCornerRadius(5)
 end)
 
 -- Key system tab.
 Tabs.KeySystem:AddLabel({
-	Text = "Test key: <b>OBSIDIAN</b>",
+	Text = "Test key: <b>MONHUB</b>",
 	DoesWrap = true,
 	Size = 16,
 })
 
 Tabs.KeySystem:AddKeyBox(function(ReceivedKey)
-	local Success = ReceivedKey == "OBSIDIAN"
+	local Success = ReceivedKey == "MONHUB"
 	Notify(
 		Success and "Key accepted" or "Invalid key",
 		string.format("Received: %s\nSuccess: %s", tostring(ReceivedKey), tostring(Success))
@@ -601,13 +600,13 @@ MenuGroup:AddButton({
 if ThemeManager then
 	local ThemeReady, ThemeError = pcall(function()
 		ThemeManager:SetLibrary(Library)
-		ThemeManager:SetFolder("ObsidianShowcase")
+		ThemeManager:SetFolder("MonHub")
 		local ThemeBox = ThemeManager:ApplyToTab(Tabs.Settings)
 		SetGroupOrder(ThemeBox, -10)
 	end)
 
 	if not ThemeReady then
-		warn("[Obsidian Example] ThemeManager disabled: " .. tostring(ThemeError))
+		warn("[MonHub Example] ThemeManager disabled: " .. tostring(ThemeError))
 	end
 end
 
@@ -616,7 +615,7 @@ if SaveManager then
 		SaveManager:SetLibrary(Library)
 		SaveManager:IgnoreThemeSettings()
 		SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
-		SaveManager:SetFolder("ObsidianShowcase")
+		SaveManager:SetFolder("MonHub")
 		SaveManager:SetSubFolder(tostring(game.PlaceId))
 		local ConfigurationBox = SaveManager:BuildConfigSection(Tabs.Settings)
 		SetGroupOrder(ConfigurationBox, -10)
@@ -624,7 +623,7 @@ if SaveManager then
 	end)
 
 	if not SaveReady then
-		warn("[Obsidian Example] SaveManager disabled: " .. tostring(SaveError))
+		warn("[MonHub Example] SaveManager disabled: " .. tostring(SaveError))
 	end
 end
 
@@ -633,11 +632,11 @@ Library:OnUnload(function()
 		PreviewModel:Destroy()
 	end
 
-	print("[Obsidian Example] Interface unloaded and connections cleaned up.")
+	print("[MonHub Example] Interface unloaded and connections cleaned up.")
 end)
 
 Notify(
-	"Obsidian started",
+	"MonHub started",
 	ActiveRepository == PRIMARY_REPOSITORY
 		and "Loaded from the custom repository. Press RightShift to toggle the interface."
 		or "The custom repository was unavailable, so the verified upstream fallback was used.",

@@ -260,7 +260,7 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 9,
+    CornerRadius = 5,
 
     --// Scheme \\--
     IsLightTheme = false,
@@ -302,7 +302,7 @@ Library.Themes = {
         FontColor = Color3.fromRGB(232, 229, 238),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(232, 229, 238),
-        CornerRadius = 9,
+        CornerRadius = 5,
         IsLight = false,
     },
     Classic = {
@@ -313,7 +313,7 @@ Library.Themes = {
         FontColor = Color3.new(1, 1, 1),
         Font = Font.fromEnum(Enum.Font.Code),
         WhiteColor = Color3.new(1, 1, 1),
-        CornerRadius = 4,
+        CornerRadius = 3,
         IsLight = false,
     },
 }
@@ -387,7 +387,7 @@ local Templates = {
         Footer = "No Footer",
 
         Position = UDim2.fromOffset(6, 6),
-        Size = UDim2.fromOffset(720, 600),
+        Size = UDim2.fromOffset(760, 640),
         IconSize = UDim2.fromOffset(30, 30),
 
         AutoShow = true,
@@ -398,7 +398,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 9,
+        CornerRadius = 5,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -2058,7 +2058,6 @@ function Library:AddBlank(Frame: GuiObject, Size: UDim2)
 end
 
 --// Animations \\--
-local TransparencyCache = {}
 local ActiveTabTweens = setmetatable({}, { __mode = "k" })
 
 function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnComplete: (() -> ())?)
@@ -5736,8 +5735,8 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(26, 0),
-            Size = UDim2.new(1, -26, 1, 0),
+            Position = UDim2.fromOffset(24, 0),
+            Size = UDim2.new(1, -24, 1, 0),
             Text = Toggle.Text,
             TextSize = 14,
             TextTransparency = 0.4,
@@ -5754,17 +5753,14 @@ do
 
         local Checkbox = New("Frame", {
             BackgroundColor3 = "MainColor",
-            Size = UDim2.fromScale(1, 1),
-            SizeConstraint = Enum.SizeConstraint.RelativeYY,
+            Position = UDim2.fromOffset(0, 1),
+            Size = UDim2.fromOffset(16, 16),
             Parent = Button,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Checkbox,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(0, 2),
+            Parent = Checkbox,
+        })
 
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
@@ -5791,27 +5787,50 @@ do
                 return
             end
 
-            CheckboxStroke.Transparency = Toggle.Disabled and 0.5 or 0
+            local BackgroundColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.MainColor
+            local StrokeColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+
+            Library.Registry[Checkbox].BackgroundColor3 = Toggle.Value and "AccentColor" or "MainColor"
+            Library.Registry[CheckboxStroke].Color = Toggle.Value and "AccentColor" or "OutlineColor"
+
+            for _, TweenName in { "CheckboxTween", "CheckboxStrokeTween", "CheckboxLabelTween", "CheckboxIconTween" } do
+                if Toggle[TweenName] then
+                    StopTween(Toggle[TweenName], true)
+                    Toggle[TweenName] = nil
+                end
+            end
 
             if Toggle.Disabled then
                 Label.TextTransparency = 0.8
-                CheckImage.ImageTransparency = Toggle.Value and 0.8 or 1
-
-                Checkbox.BackgroundColor3 = Library.Scheme.BackgroundColor
-                Library.Registry[Checkbox].BackgroundColor3 = "BackgroundColor"
+                CheckImage.ImageTransparency = Toggle.Value and 0.65 or 1
+                Checkbox.BackgroundColor3 = BackgroundColor
+                Checkbox.BackgroundTransparency = 0.35
+                CheckboxStroke.Color = StrokeColor
+                CheckboxStroke.Transparency = 0.65
 
                 return
             end
 
-            TweenService:Create(Label, Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or 0.4,
-            }):Play()
-            TweenService:Create(CheckImage, Library.TweenInfo, {
-                ImageTransparency = Toggle.Value and 0 or 1,
-            }):Play()
+            Checkbox.BackgroundTransparency = 0
+            CheckboxStroke.Transparency = 0
 
-            Checkbox.BackgroundColor3 = Library.Scheme.MainColor
-            Library.Registry[Checkbox].BackgroundColor3 = "MainColor"
+            Toggle.CheckboxTween = TweenService:Create(Checkbox, Library.TweenInfo, {
+                BackgroundColor3 = BackgroundColor,
+            })
+            Toggle.CheckboxStrokeTween = TweenService:Create(CheckboxStroke, Library.TweenInfo, {
+                Color = StrokeColor,
+            })
+            Toggle.CheckboxLabelTween = TweenService:Create(Label, Library.TweenInfo, {
+                TextTransparency = Toggle.Value and 0 or 0.4,
+            })
+            Toggle.CheckboxIconTween = TweenService:Create(CheckImage, Library.TweenInfo, {
+                ImageTransparency = Toggle.Value and 0 or 1,
+            })
+
+            Toggle.CheckboxTween:Play()
+            Toggle.CheckboxStrokeTween:Play()
+            Toggle.CheckboxLabelTween:Play()
+            Toggle.CheckboxIconTween:Play()
         end
 
         function Toggle:OnChanged(Func)
@@ -5908,6 +5927,13 @@ do
 
         function Toggle:Destroy()
             Toggle.Destroyed = true
+
+            for _, TweenName in { "CheckboxTween", "CheckboxStrokeTween", "CheckboxLabelTween", "CheckboxIconTween" } do
+                if Toggle[TweenName] then
+                    StopTween(Toggle[TweenName], true)
+                    Toggle[TweenName] = nil
+                end
+            end
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -6015,7 +6041,7 @@ do
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(1, 0),
+            CornerRadius = UDim.new(0, 5),
             Parent = Switch,
         })
         New("UIPadding", {
@@ -6037,7 +6063,7 @@ do
             Parent = Switch,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(1, 0),
+            CornerRadius = UDim.new(0, 3),
             Parent = Ball,
         })
 
@@ -9505,7 +9531,7 @@ function Library:CreateWindow(WindowInfo)
     local TopBar
     local BottomBarHeight = 24
 
-    local InitialLeftWidth = math.ceil(WindowInfo.Size.X.Offset * 0.3)
+    local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
     local IsCompact = WindowInfo.SidebarCompacted
     local LastExpandedWidth = InitialLeftWidth
 
@@ -9515,13 +9541,13 @@ function Library:CreateWindow(WindowInfo)
         Library.KeybindFrame.Position = UDim2.new(0, 6, 0.5, 0)
         Library.KeybindFrame.Visible = false
 
-        MainFrame = New("TextButton", {
+        MainFrame = New("CanvasGroup", {
             BackgroundColor3 = function()
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
             end,
             ClipsDescendants = true,
+            GroupTransparency = 1,
             Name = "Main",
-            Text = "",
             Position = WindowInfo.Position,
             Size = WindowInfo.Size,
             Visible = false,
@@ -9919,6 +9945,7 @@ function Library:CreateWindow(WindowInfo)
     --// Window Table \\--
     local Window = {}
     local Fading = false
+    local WindowTween
 
     local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
         local Current = UICorner[Corner]
@@ -10099,10 +10126,10 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Button.Label.Visible = not IsCompact
-            Button.Padding.PaddingBottom = UDim.new(0, IsCompact and 6 or 11)
+            Button.Padding.PaddingBottom = UDim.new(0, IsCompact and 6 or 10)
             Button.Padding.PaddingLeft = UDim.new(0, IsCompact and 6 or 12)
             Button.Padding.PaddingRight = UDim.new(0, IsCompact and 6 or 12)
-            Button.Padding.PaddingTop = UDim.new(0, IsCompact and 6 or 11)
+            Button.Padding.PaddingTop = UDim.new(0, IsCompact and 6 or 10)
             Button.Icon.SizeConstraint = IsCompact and Enum.SizeConstraint.RelativeXY or Enum.SizeConstraint.RelativeYY
         end
     end
@@ -10225,7 +10252,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -12, 0, 40),
+                Size = UDim2.new(1, -12, 0, 38),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -10247,10 +10274,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabIndicator,
             })
             local ButtonPadding = New("UIPadding", {
-                PaddingBottom = UDim.new(0, IsCompact and 6 or 11),
+                PaddingBottom = UDim.new(0, IsCompact and 6 or 10),
                 PaddingLeft = UDim.new(0, IsCompact and 6 or 12),
                 PaddingRight = UDim.new(0, IsCompact and 6 or 12),
-                PaddingTop = UDim.new(0, IsCompact and 6 or 11),
+                PaddingTop = UDim.new(0, IsCompact and 6 or 10),
                 Parent = TabButton,
             })
 
@@ -11418,15 +11445,15 @@ function Library:CreateWindow(WindowInfo)
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 40),
+                Size = UDim2.new(1, 0, 0, 38),
                 Text = "",
                 Parent = Tabs,
             })
             local ButtonPadding = New("UIPadding", {
-                PaddingBottom = UDim.new(0, IsCompact and 6 or 11),
+                PaddingBottom = UDim.new(0, IsCompact and 6 or 10),
                 PaddingLeft = UDim.new(0, IsCompact and 6 or 12),
                 PaddingRight = UDim.new(0, IsCompact and 6 or 12),
-                PaddingTop = UDim.new(0, IsCompact and 6 or 11),
+                PaddingTop = UDim.new(0, IsCompact and 6 or 10),
                 Parent = TabButton,
             })
 
@@ -12186,33 +12213,12 @@ function Library:CreateWindow(WindowInfo)
         return Dialog
     end
 
-    local GuiProperties = { "BackgroundTransparency" }
-    local ImageProperties = { "BackgroundTransparency", "ImageTransparency" }
-    local TextProperties = { "BackgroundTransparency", "TextTransparency" }
-    local StrokeProperties = { "Transparency" }
-
-    local function FadeInstance(Desc, Properties)
-        local Cache = TransparencyCache[Desc]
-        if not Cache then
-            Cache = {}
-            TransparencyCache[Desc] = Cache
-        end
-
-        for _, Prop in Properties do
-            if not Library.Toggled then
-                Cache[Prop] = Desc[Prop]
-            end
-
-            if Cache[Prop] ~= nil and Cache[Prop] ~= 1 then
-                TweenService:Create(Desc, Library.WindowAnimationInfo, {
-                    [Prop] = Library.Toggled and Cache[Prop] or 1,
-                }):Play()
-            end
-        end
-    end
-
     function Window:Toggle(Value: boolean?)
         if Fading then
+            return
+        end
+
+        if typeof(Value) == "boolean" and Value == Library.Toggled then
             return
         end
 
@@ -12233,44 +12239,26 @@ function Library:CreateWindow(WindowInfo)
         end
 
         if Library.Animations and Library.Animations.ToggleWindow == true then
-            local FadeTime = Library.WindowAnimationInfo.Time
             Fading = true
-
             if Library.Toggled then
                 MainFrame.Visible = true
+                MainFrame.GroupTransparency = 1
             end
 
-            if Library.Toggled then 
-				FadeInstance(MainFrame, { "BackgroundTransparency" })
-				task.wait(FadeTime / 2)
-			else
-				task.delay(FadeTime / 2, FadeInstance, MainFrame, { "BackgroundTransparency" })
-			end
-
-            for _, Instance in MainFrame:GetDescendants() do
-                if Instance == TopBar then
-                    continue
+            WindowTween = TweenService:Create(MainFrame, Library.WindowAnimationInfo, {
+                GroupTransparency = Library.Toggled and 0 or 1,
+            })
+            WindowTween.Completed:Once(function()
+                if not Library.Unloaded and MainFrame.Parent and not Library.Toggled then
+                    MainFrame.Visible = false
                 end
 
-                if Instance:IsA("GuiObject") then
-                    local ClassName = Instance.ClassName
-                    if ClassName == "ImageLabel" or ClassName == "ImageButton" then
-                        FadeInstance(Instance, ImageProperties)
-                    elseif ClassName == "TextLabel" or ClassName == "TextBox" or ClassName == "TextButton" then
-                        FadeInstance(Instance, TextProperties)
-                    else
-                        FadeInstance(Instance, GuiProperties)
-                    end
-                elseif Instance.ClassName == "UIStroke" then
-                    FadeInstance(Instance, StrokeProperties)
-                end
-            end
-
-            task.delay(FadeTime, function()
-                MainFrame.Visible = Library.Toggled
+                WindowTween = nil
                 Fading = false
             end)
+            WindowTween:Play()
         else
+            MainFrame.GroupTransparency = Library.Toggled and 0 or 1
             MainFrame.Visible = Library.Toggled
         end
 
@@ -13566,7 +13554,6 @@ function Library:Unload()
     table.clear(Library.KeybindToggles)
     table.clear(Library.DependencyBoxes)
 
-    table.clear(TransparencyCache)
     table.clear(ActiveTabTweens)
     Library:ClearTextBoundsCache()
     

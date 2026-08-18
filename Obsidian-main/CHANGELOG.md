@@ -2,8 +2,9 @@
 
 ```diff
 [design]
-+ New calm black-purple default theme with Gotham typography and a compact 5px corner radius
-+ Subtle purple surface tint for tabs, groupboxes, window chrome, and focused search
++ New neutral Graphite default theme with Gotham typography and a compact 5px corner radius
++ Restrained cool-gray surfaces for tabs, groupboxes, window chrome, controls, and focused search
++ BlackPurple remains available as an optional preset
 + Smooth animations are enabled by default and toggle transitions now animate color and position
 + Refined the default radius from 9px to 5px for a cleaner, less rounded visual system
 + Checkboxes now use a compact square shape with a clear accent-filled selected state
@@ -12,8 +13,11 @@
 [features]
 + Library:Create / Library:Mount declarative UI API
 + App:Get, App:Toggle, App:Notify, and App:Destroy lifecycle helpers
-+ BlackPurple and Classic built-in theme presets with Library:SetTheme
++ Graphite, BlackPurple, and Classic built-in theme presets with Library:SetTheme
 + Library.ImageManager.PreloadAssets for optional background asset downloads
++ Centralized click sound with Library:SetClickSound
++ Draggable Watermark with FPS and ping settings in Example.lua
++ Interactive R6 viewport showcase with mouse, wheel, touch, and pinch controls
 
 [optimizations]
 + Removed four blocking optional image downloads from module initialization
@@ -24,6 +28,8 @@
 + Slider decimal rounding no longer formats strings on every drag frame
 + Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
 + Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
++ Window open and close transitions use responsive asymmetric timing and support immediate reversal
++ Watermark statistics update at a fixed interval with one lightweight frame counter
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent
@@ -35,6 +41,10 @@
 + Footer, resize handle, and content use separate non-overlapping layout regions
 + Groupbox titles truncate correctly and no longer extend beyond icon headers
 + Added Groupbox:SetOrder for predictable addon alignment
++ ThemeManager no longer resets Gotham to Code when opening UI Settings
++ Slider labels, values, track, thumb, mouse input, and touch input now use separate aligned regions
++ Rapid menu toggles no longer get ignored or leave stale visibility state
++ Groupboxes keep a consistent bottom breathing space after their final control
 ```
 
 ## 17.08.2026

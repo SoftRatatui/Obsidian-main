@@ -217,7 +217,9 @@ local Library = {
     TabSwipeOffset = 14,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
     DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
@@ -10105,9 +10107,9 @@ function Library:CreateWindow(WindowInfo)
 
     
     local Window = {}
-    local Fading = false
     local WindowTween
     local WindowScaleTween
+    local WindowAnimationSequence = 0
 
     local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
         local Current = UICorner[Corner]
@@ -10948,7 +10950,7 @@ function Library:CreateWindow(WindowInfo)
                     Parent = Container,
                 })
                 New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 7),
+                    PaddingBottom = UDim.new(0, 12),
                     PaddingLeft = UDim.new(0, 7),
                     PaddingRight = UDim.new(0, 7),
                     PaddingTop = UDim.new(0, 7),
@@ -11253,7 +11255,7 @@ function Library:CreateWindow(WindowInfo)
                     ResizeTween = nil
                 end
 
-                local TargetSize = UDim2.new(1, 0, 0, if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49)
+                local TargetSize = UDim2.new(1, 0, 0, if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 54)
 
                 GroupboxLine.Visible = not Groupbox.Collapsed
                 local AnimateResize = Library.Animations
@@ -12396,10 +12398,6 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:Toggle(Value: boolean?)
-        if Fading then
-            return
-        end
-
         if typeof(Value) == "boolean" and Value == Library.Toggled then
             return
         end
@@ -12420,29 +12418,61 @@ function Library:CreateWindow(WindowInfo)
             Library.Toggled = not Library.Toggled
         end
 
+        WindowAnimationSequence += 1
+        local AnimationSequence = WindowAnimationSequence
+
+        if WindowTween then
+            StopTween(WindowTween, true)
+            WindowTween = nil
+        end
+
+        if WindowScaleTween then
+            StopTween(WindowScaleTween, true)
+            WindowScaleTween = nil
+        end
+
         if Library.Animations and Library.Animations.ToggleWindow == true then
-            Fading = true
             local TargetScale = math.max(Library.DPIScale or 1, 0.01)
+            local AnimationInfo = Library.Toggled
+                and (Library.WindowOpenAnimationInfo or Library.WindowAnimationInfo)
+                or (Library.WindowCloseAnimationInfo or Library.WindowAnimationInfo)
+
             if Library.Toggled then
+                local WasVisible = MainFrame.Visible
                 MainFrame.Visible = true
-                MainFrame.GroupTransparency = 1
-                WindowScale.Scale = TargetScale * 0.975
+
+                if not WasVisible then
+                    MainFrame.GroupTransparency = 1
+                    WindowScale.Scale = TargetScale * 0.985
+                end
             end
 
-            WindowTween = TweenService:Create(MainFrame, Library.WindowAnimationInfo, {
+            WindowTween = TweenService:Create(MainFrame, AnimationInfo, {
                 GroupTransparency = Library.Toggled and 0 or 1,
             })
-            WindowScaleTween = TweenService:Create(WindowScale, Library.WindowAnimationInfo, {
-                Scale = Library.Toggled and TargetScale or TargetScale * 0.975,
+            WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
+                Scale = Library.Toggled and TargetScale or TargetScale * 0.99,
             })
-            WindowTween.Completed:Once(function()
+
+            local ActiveWindowTween = WindowTween
+            local ActiveScaleTween = WindowScaleTween
+
+            WindowTween.Completed:Once(function(PlaybackState)
+                if PlaybackState ~= Enum.PlaybackState.Completed or AnimationSequence ~= WindowAnimationSequence then
+                    return
+                end
+
                 if not Library.Unloaded and MainFrame.Parent and not Library.Toggled then
                     MainFrame.Visible = false
                 end
 
-                WindowTween = nil
-                WindowScaleTween = nil
-                Fading = false
+                if WindowTween == ActiveWindowTween then
+                    WindowTween = nil
+                end
+
+                if WindowScaleTween == ActiveScaleTween then
+                    WindowScaleTween = nil
+                end
             end)
             WindowTween:Play()
             WindowScaleTween:Play()

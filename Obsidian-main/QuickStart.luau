@@ -1,11 +1,14 @@
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
 ))()
+
+Library:SetTheme("Graphite")
+Library:SetClickSound(92679954573730, 0.3)
 
 local App
 App = Library:Create({
-    Title = "Black Purple",
-    Footer = "Fast, smooth, simple",
+    Title = "MonHub",
+    Footer = "Ready",
 
     Tabs = {
         {
@@ -59,7 +62,7 @@ App = Library:Create({
                             Text = "Show notification",
                             OnClick = function()
                                 App:Notify({
-                                    Title = "Obsidian",
+                                    Title = "MonHub",
                                     Description = "The new interface is ready.",
                                     Time = 3,
                                 })

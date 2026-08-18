@@ -1,10 +1,12 @@
-# Obsidian UI
+# MonHub UI
 
-A fast Roblox UI library with a calm black-purple default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Linoria-style API.
+A polished Roblox UI library with a neutral Graphite default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+
+Migrating from the original Obsidian: read the complete [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- New black-purple visual system with softer surfaces, focus states, rounded corners, and Gotham typography.
+- New Graphite visual system with neutral layered surfaces, restrained accents, compact geometry, and Gotham typography.
 - Smooth window, tab, groupbox, dropdown, key picker, and toggle transitions enabled by default.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -12,6 +14,7 @@ A fast Roblox UI library with a calm black-purple default theme, responsive layo
 - Less work while typing: search is debounced and text measurements are cached.
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and scrollable columns expose subtle overflow indicators.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
+- Centralized click sound, draggable Watermark, FPS/ping settings, interactive R6 viewport controls, and refined sliders.
 
 ## Quick start
 
@@ -23,7 +26,7 @@ local Library = loadstring(game:HttpGet(
 ))()
 
 local App = Library:Create({
-    Title = "My Interface",
+    Title = "MonHub",
     Footer = "Ready",
 
     Tabs = {
@@ -73,14 +76,7 @@ App:Get("speed"):SetValue(50)
 
 ### Wally / Roblox Studio
 
-```luau
-local Obsidian = require(Packages.Obsidian)
-local App = Obsidian.create({
-    Title = "My Interface",
-    Tabs = { -- same declarative structure as above
-    },
-})
-```
+The current public Wally package metadata points to upstream Obsidian. To guarantee this exact MonHub build, vendor `Library.lua`, `Library.d.luau`, and `addons`, or publish a package pinned to this repository. See [Wally or Studio installation](MIGRATION_GUIDE.md#установка-через-wally-или-studio).
 
 ## Declarative structure
 
@@ -97,13 +93,13 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Themes
 
-`BlackPurple` is the default. The previous visual style remains available:
+`Graphite` is the default. The previous black-purple style remains available:
 
 ```luau
-Library:SetTheme("Classic")
+Library:SetTheme("BlackPurple")
 ```
 
-You can also pass `Theme = "Classic"` to `Library:Create`, or supply a custom theme table.
+You can pass `Theme = "Graphite"` to `Library:Create`, select `Classic`, or supply a custom theme table.
 
 ## Legacy API
 
@@ -122,12 +118,13 @@ Group:AddToggle("enabled", {
     end,
 })
 
--- Optional layout controls
 Group:SetOrder(10)
 Window:FitToViewport()
 ```
 
-Full documentation: [docs.mspaint.cc/obsidian](https://docs.mspaint.cc/obsidian)
+MonHub migration and feature guide: [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
+
+Original legacy API documentation: [docs.mspaint.cc/obsidian](https://docs.mspaint.cc/obsidian)
 
 ## Optional asset preload
 

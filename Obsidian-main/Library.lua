@@ -211,6 +211,17 @@ do
     end
 end
 
+local function GetTahomaFont()
+    local Success, Tahoma = pcall(Font.fromName, "Tahoma", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+    if Success then
+        return Tahoma
+    end
+
+    return Font.fromEnum(Enum.Font.Arial)
+end
+
+local TahomaFont = GetTahomaFont()
+
 local Library = {
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
@@ -328,7 +339,7 @@ local Library = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = TahomaFont,
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
@@ -364,7 +375,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(119, 166, 209),
         OutlineColor = Color3.fromRGB(67, 89, 115),
         FontColor = Color3.fromRGB(238, 244, 250),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = TahomaFont,
         WhiteColor = Color3.fromRGB(248, 251, 254),
         CornerRadius = 4,
         IsLight = false,
@@ -376,7 +387,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = TahomaFont,
         WhiteColor = Color3.fromRGB(248, 249, 252),
         CornerRadius = 4,
         IsLight = false,
@@ -388,7 +399,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(116, 82, 178),
         OutlineColor = Color3.fromRGB(43, 38, 53),
         FontColor = Color3.fromRGB(232, 229, 238),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = TahomaFont,
         WhiteColor = Color3.fromRGB(232, 229, 238),
         CornerRadius = 4,
         IsLight = false,
@@ -400,7 +411,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(125, 85, 255),
         OutlineColor = Color3.fromRGB(40, 40, 40),
         FontColor = Color3.new(1, 1, 1),
-        Font = Font.fromEnum(Enum.Font.Code),
+        Font = TahomaFont,
         WhiteColor = Color3.new(1, 1, 1),
         CornerRadius = 3,
         IsLight = false,
@@ -10449,6 +10460,56 @@ function Library:CreateWindow(WindowInfo)
             })
         end
 
+        local MoveButton = New("TextButton", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            AutoButtonColor = false,
+            BackgroundColor3 = function()
+                return Library:GetAccentSurfaceColor(0.06)
+            end,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -24, 0.5, 0),
+            Size = UDim2.fromOffset(30, 30),
+            Text = "",
+            ZIndex = 4,
+            Parent = TopBar,
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, math.max(3, math.floor(WindowInfo.CornerRadius * 0.5))),
+                Parent = MoveButton,
+            })
+        )
+        local MoveOutline, MoveShadow = Library:AddOutline(MoveButton)
+        MoveOutline.Transparency = 0.74
+        MoveShadow.Transparency = 0.9
+
+        local MoveIcon = Library:GetIcon("move")
+        New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Image = MoveIcon and MoveIcon.Url or "",
+            ImageColor3 = "FontColor",
+            ImageRectOffset = MoveIcon and MoveIcon.ImageRectOffset or Vector2.zero,
+            ImageRectSize = MoveIcon and MoveIcon.ImageRectSize or Vector2.zero,
+            ImageTransparency = 0.42,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(16, 16),
+            ZIndex = 5,
+            Parent = MoveButton,
+        })
+        MoveButton.MouseEnter:Connect(function()
+            Library:PlayTween(MoveButton, "MoveButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0.78,
+            })
+        end)
+        MoveButton.MouseLeave:Connect(function()
+            Library:PlayTween(MoveButton, "MoveButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 1,
+            })
+        end)
+        Library:MakeDraggable(MainFrame, MoveButton, false, true)
+
         
         BottomBackground = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
@@ -10575,8 +10636,13 @@ function Library:CreateWindow(WindowInfo)
     end
 
     
+    local VisibilityChanged = New("BindableEvent", {
+        Name = "VisibilityChanged",
+        Parent = MainFrame,
+    })
     local Window = {
         Frame = MainFrame,
+        VisibilityChanged = VisibilityChanged,
     }
     local WindowTween
     local WindowScaleTween
@@ -12951,6 +13017,7 @@ function Library:CreateWindow(WindowInfo)
         else
             Library.Toggled = not Library.Toggled
         end
+        VisibilityChanged:Fire(Library.Toggled)
 
         WindowAnimationSequence += 1
         local AnimationSequence = WindowAnimationSequence

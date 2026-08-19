@@ -121,7 +121,7 @@ local VisualPreview = loadstring(game:HttpGet(
 
 local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
     Name = "ESP preview",
-    Width = 348,
+    Width = 300,
     Height = 420,
     Enabled = false,
 })

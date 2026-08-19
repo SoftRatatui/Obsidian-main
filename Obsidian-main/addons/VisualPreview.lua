@@ -159,7 +159,7 @@ function VisualPreview.Create(Library, Tab, Info)
     Holder.BorderSizePixel = 0
     Holder.ClipsDescendants = true
     Holder.Position = UDim2.fromOffset(8, 8)
-    Holder.Size = UDim2.fromOffset(Info.Width or 348, Info.Height or 420)
+    Holder.Size = UDim2.fromOffset(Info.Width or 300, Info.Height or 420)
     Holder.Visible = false
     Holder.ZIndex = 10
     Holder.Parent = Library.ScreenGui
@@ -270,15 +270,19 @@ function VisualPreview.Create(Library, Tab, Info)
 
         local MainPosition = MainFrame.AbsolutePosition
         local MainSize = MainFrame.AbsoluteSize
-        local PanelWidth = math.max(Holder.AbsoluteSize.X, Info.Width or 348)
+        local PanelWidth = math.max(Holder.AbsoluteSize.X, Info.Width or 300)
         local ScreenSize = CameraObject.ViewportSize
         local X = MainPosition.X + MainSize.X + 12
         local AnchorPoint = Vector2.new(0, 0.5)
 
         if X + PanelWidth > ScreenSize.X - 8 then
-            X = math.max(8, MainPosition.X - 12)
+            X = MainPosition.X - 12
             AnchorPoint = Vector2.new(1, 0.5)
         end
+
+        local MinimumX = AnchorPoint.X == 1 and PanelWidth + 8 or 8
+        local MaximumX = AnchorPoint.X == 1 and ScreenSize.X - 8 or math.max(8, ScreenSize.X - PanelWidth - 8)
+        X = math.clamp(X, MinimumX, MaximumX)
 
         Holder.AnchorPoint = AnchorPoint
         Holder.Position = UDim2.fromOffset(math.floor(X + 0.5), math.floor(MainPosition.Y + MainSize.Y / 2 + 0.5))

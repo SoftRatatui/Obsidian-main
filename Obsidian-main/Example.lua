@@ -424,7 +424,7 @@ local ESPPreview
 if VisualPreview then
 	local Created, PreviewOrError = pcall(VisualPreview.Create, Library, Tabs.Visuals, {
 		Name = "ESP preview",
-		Width = 348,
+		Width = 300,
 		Height = 420,
 		Color = Color3.fromRGB(119, 166, 209),
 	})

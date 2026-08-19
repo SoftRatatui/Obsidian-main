@@ -76,12 +76,12 @@ function VisualPreview.CreateR6()
     return Model
 end
 
-local function CreateOverlay(Parent, AccentColor)
+local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     local Overlay = Instance.new("Frame")
     Overlay.Name = "VisualPreviewOverlay"
     Overlay.BackgroundTransparency = 1
     Overlay.Size = UDim2.fromScale(1, 1)
-    Overlay.ZIndex = 3
+    Overlay.ZIndex = BaseZIndex
     Overlay.Parent = Parent
 
     local Highlight = Instance.new("Frame")
@@ -91,7 +91,7 @@ local function CreateOverlay(Parent, AccentColor)
     Highlight.BorderSizePixel = 0
     Highlight.Position = UDim2.new(0.5, 0, 0.52, 0)
     Highlight.Size = UDim2.new(0.34, 0, 0.62, 0)
-    Highlight.ZIndex = 3
+    Highlight.ZIndex = BaseZIndex + 1
     Highlight.Parent = Overlay
 
     local Box = Instance.new("Frame")
@@ -99,7 +99,7 @@ local function CreateOverlay(Parent, AccentColor)
     Box.BackgroundTransparency = 1
     Box.Position = UDim2.new(0.5, 0, 0.52, 0)
     Box.Size = UDim2.new(0.36, 0, 0.66, 0)
-    Box.ZIndex = 4
+    Box.ZIndex = BaseZIndex + 2
     Box.Parent = Overlay
 
     local BoxStroke = Instance.new("UIStroke")
@@ -119,7 +119,7 @@ local function CreateOverlay(Parent, AccentColor)
     Name.TextStrokeColor3 = Color3.fromRGB(9, 13, 18)
     Name.TextStrokeTransparency = 0.35
     Name.TextTruncate = Enum.TextTruncate.AtEnd
-    Name.ZIndex = 5
+    Name.ZIndex = BaseZIndex + 3
     Name.Parent = Overlay
 
     local Distance = Instance.new("TextLabel")
@@ -133,7 +133,7 @@ local function CreateOverlay(Parent, AccentColor)
     Distance.TextSize = 11
     Distance.TextStrokeColor3 = Color3.fromRGB(9, 13, 18)
     Distance.TextStrokeTransparency = 0.45
-    Distance.ZIndex = 5
+    Distance.ZIndex = BaseZIndex + 3
     Distance.Parent = Overlay
 
     local HealthBack = Instance.new("Frame")
@@ -142,7 +142,7 @@ local function CreateOverlay(Parent, AccentColor)
     HealthBack.BorderSizePixel = 0
     HealthBack.Position = UDim2.new(0.3, -4, 0.52, 0)
     HealthBack.Size = UDim2.new(0, 3, 0.66, 0)
-    HealthBack.ZIndex = 4
+    HealthBack.ZIndex = BaseZIndex + 2
     HealthBack.Parent = Overlay
 
     local Health = Instance.new("Frame")
@@ -151,7 +151,7 @@ local function CreateOverlay(Parent, AccentColor)
     Health.BorderSizePixel = 0
     Health.Position = UDim2.new(0, 0, 1, 0)
     Health.Size = UDim2.new(1, 0, 0.72, 0)
-    Health.ZIndex = 5
+    Health.ZIndex = BaseZIndex + 3
     Health.Parent = HealthBack
 
     local Tracer = Instance.new("Frame")
@@ -160,7 +160,7 @@ local function CreateOverlay(Parent, AccentColor)
     Tracer.BorderSizePixel = 0
     Tracer.Position = UDim2.new(0.5, 0, 0.98, 0)
     Tracer.Size = UDim2.new(0, 1, 0.32, 0)
-    Tracer.ZIndex = 4
+    Tracer.ZIndex = BaseZIndex + 2
     Tracer.Parent = Overlay
 
     return {
@@ -229,7 +229,7 @@ function VisualPreview.Create(Library, Tab, Info)
     Header.TextColor3 = Library.Scheme.FontColor
     Header.TextSize = 14
     Header.TextXAlignment = Enum.TextXAlignment.Left
-    Header.ZIndex = 11
+    Header.ZIndex = 12
     Header.Parent = Holder
     Library:AddToRegistry(Header, {
         FontFace = "Font",
@@ -241,7 +241,7 @@ function VisualPreview.Create(Library, Tab, Info)
     HeaderLine.BorderSizePixel = 0
     HeaderLine.Position = UDim2.fromOffset(0, 34)
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
-    HeaderLine.ZIndex = 11
+    HeaderLine.ZIndex = 12
     HeaderLine.Parent = Holder
     Library:AddToRegistry(HeaderLine, {
         BackgroundColor3 = "OutlineColor",
@@ -262,7 +262,7 @@ function VisualPreview.Create(Library, Tab, Info)
     ViewportFrame.LightColor = Color3.fromRGB(238, 246, 255)
     ViewportFrame.LightDirection = Vector3.new(-1, -0.7, -1)
     ViewportFrame.Size = UDim2.fromScale(1, 1)
-    ViewportFrame.ZIndex = 1
+    ViewportFrame.ZIndex = 11
     ViewportFrame.Parent = Content
     Library:AddToRegistry(ViewportFrame, {
         BackgroundColor3 = "BackgroundColor",
@@ -277,7 +277,7 @@ function VisualPreview.Create(Library, Tab, Info)
     FocusCamera(Model, Camera)
 
     local AccentColor = Info.Color or Library.Scheme.AccentColor
-    local Overlay = CreateOverlay(Content, AccentColor)
+    local Overlay = CreateOverlay(Content, AccentColor, 12)
     local Preview = {
         Holder = Holder,
         Frame = ViewportFrame,

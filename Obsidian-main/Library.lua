@@ -3543,7 +3543,6 @@ local CheckIcon = Library:GetIcon("check")
 local ArrowIcon = Library:GetIcon("chevron-up")
 local ResizeIcon = Library:GetIcon("move-diagonal-2")
 local KeyIcon = Library:GetIcon("key")
-local MoveIcon = Library:GetIcon("move")
 
 function Library:SetIconModule(module: IconModule)
     FetchIcons = true
@@ -3554,7 +3553,6 @@ function Library:SetIconModule(module: IconModule)
     ArrowIcon = Library:GetIcon("chevron-up")
     ResizeIcon = Library:GetIcon("move-diagonal-2")
     KeyIcon = Library:GetIcon("key")
-    MoveIcon = Library:GetIcon("move")
 end
 
 local BaseAddons = {}
@@ -10210,15 +10208,6 @@ function Library:CreateWindow(WindowInfo)
         })
         table.insert(Library.Scales, WindowScale)
         Library:AddOutline(MainFrame)
-        New("UIGradient", {
-            Color = function()
-                local White = Color3.new(1, 1, 1)
-                local AccentTint = White:Lerp(Library.Scheme.AccentColor, 0.075)
-                return ColorSequence.new(AccentTint, White)
-            end,
-            Rotation = 115,
-            Parent = MainFrame,
-        })
         Library:MakeLine(MainFrame, {
             Color = function()
                 return Library:GetAccentSurfaceColor(0.32)
@@ -10269,21 +10258,11 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 48),
             Parent = MainFrame,
         })
-        New("UIGradient", {
-            Color = function()
-                return ColorSequence.new(
-                    Library.Scheme.TopBarColor:Lerp(Library.Scheme.AccentColor, 0.11),
-                    Library.Scheme.TopBarColor
-                )
-            end,
-            Rotation = 0,
-            Parent = TopBar,
-        })
-        Library:MakeDraggable(MainFrame, TopBar, false, true)
 
         
         TitleHolder = New("Frame", {
-            BackgroundTransparency = 1,
+            BackgroundColor3 = "TopBarColor",
+            BackgroundTransparency = 0,
             Size = UDim2.new(0, InitialLeftWidth, 1, 0),
             Parent = TopBar,
         })
@@ -10450,20 +10429,6 @@ function Library:CreateWindow(WindowInfo)
                 Position = UDim2.new(0, 8, 0.5, 0),
                 Size = UDim2.fromOffset(16, 16),
                 Parent = SearchBox,
-            })
-        end
-
-        if MoveIcon then
-            New("ImageLabel", {
-                AnchorPoint = Vector2.new(1, 0.5),
-                Image = MoveIcon.Url,
-                ImageColor3 = "OutlineColor",
-                ImageRectOffset = MoveIcon.ImageRectOffset,
-                ImageRectSize = MoveIcon.ImageRectSize,
-                ImageTransparency = 0.25,
-                Position = UDim2.new(1, -14, 0.5, 0),
-                Size = UDim2.fromOffset(20, 20),
-                Parent = TopBar,
             })
         end
 
@@ -13344,8 +13309,6 @@ function Library:CreateLoading(LoadingInfo)
         ZIndex = 2,
         Parent = Container,
     })
-    Library:MakeDraggable(MainFrame, TopBar, true, true)
-
     local TitleHolder = New("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),

@@ -148,12 +148,13 @@ end
 
 function VisualPreview.Create(Library, Tab, Info)
     assert(Library and Library.AddToRegistry and Library.ScreenGui, "VisualPreview requires an active MonHub library")
-    assert(Tab and Tab.Canvas, "VisualPreview requires a regular tab")
+    assert(Tab, "VisualPreview requires a regular tab")
 
     Info = Info or {}
     local MainWindow = Info.Window or Library.Window
     assert(MainWindow and MainWindow.Frame, "VisualPreview requires a window with a frame")
     local MainFrame = MainWindow.Frame
+    local TabCanvas = Tab.Canvas
 
     local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
@@ -354,8 +355,24 @@ function VisualPreview.Create(Library, Tab, Info)
         Holder.Position = UDim2.fromOffset(math.floor(X + 0.5), math.floor(Y + 0.5))
     end
 
+    local function IsTabVisible()
+        if typeof(TabCanvas) ~= "Instance" or not TabCanvas:IsA("GuiObject") then
+            return true
+        end
+
+        return TabCanvas.Visible
+    end
+
+    local function IsMainVisible()
+        if typeof(MainFrame) ~= "Instance" or not MainFrame:IsA("GuiObject") then
+            return false
+        end
+
+        return MainFrame.Visible
+    end
+
     local function IsDisplayable()
-        return Preview.Enabled and Library.Toggled and Library.ActiveTab == Tab and Tab.Canvas.Visible and MainFrame.Visible
+        return Preview.Enabled and Library.Toggled and Library.ActiveTab == Tab and IsTabVisible() and IsMainVisible()
     end
 
     local function UpdateVisibility()
@@ -412,17 +429,26 @@ function VisualPreview.Create(Library, Tab, Info)
         end)
     end
 
-    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(PositionPanel))
-    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(PositionPanel))
-    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
-    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("GroupTransparency"):Connect(QueueVisibilityUpdate))
-    table.insert(Preview.Connections, Tab.Canvas:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
+    local function ConnectProperty(Object, Property, Callback)
+        if typeof(Object) ~= "Instance" then
+            return
+        end
+
+        local Success, Signal = pcall(Object.GetPropertyChangedSignal, Object, Property)
+        if Success and Signal then
+            table.insert(Preview.Connections, Signal:Connect(Callback))
+        end
+    end
+
+    ConnectProperty(MainFrame, "AbsolutePosition", PositionPanel)
+    ConnectProperty(MainFrame, "AbsoluteSize", PositionPanel)
+    ConnectProperty(MainFrame, "Visible", QueueVisibilityUpdate)
+    ConnectProperty(MainFrame, "GroupTransparency", QueueVisibilityUpdate)
+    ConnectProperty(TabCanvas, "Visible", QueueVisibilityUpdate)
     if MainWindow.VisibilityChanged then
         table.insert(Preview.Connections, MainWindow.VisibilityChanged.Event:Connect(UpdateVisibility))
     end
-    if workspace.CurrentCamera then
-        table.insert(Preview.Connections, workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(PositionPanel))
-    end
+    ConnectProperty(workspace.CurrentCamera, "ViewportSize", PositionPanel)
 
     function Preview:SetEnabled(Enabled)
         Preview.Enabled = Enabled == true

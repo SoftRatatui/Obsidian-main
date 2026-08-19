@@ -197,11 +197,12 @@ local Library = {
     KeybindMenuVisible = false,
     KeybindMenuTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeybindRowTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    ActiveTweens = setmetatable({}, { __mode = "k" }),
 
     
     Notifications = {},
     NotifySide = "Right",
-    NotifyTweenInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    NotifyTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     
     Dialogues = {},
@@ -215,20 +216,20 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabSwipeOffset = 14,
+    TabTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabSwipeOffset = 10,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     WindowCloseAnimationInfo = TweenInfo.new(0.14 / 6, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-    DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeyPickerTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DropdownTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeyPickerTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -266,23 +267,23 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 5,
+    CornerRadius = 4,
 
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(18, 19, 22),
-        MainColor = Color3.fromRGB(29, 31, 36),
-        TopBarColor = Color3.fromRGB(32, 34, 39),
-        AccentColor = Color3.fromRGB(121, 126, 139),
-        OutlineColor = Color3.fromRGB(55, 58, 66),
-        FontColor = Color3.fromRGB(232, 234, 239),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(246, 247, 250),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
 
         BackgroundImage = ""
     },
@@ -302,15 +303,15 @@ local Library = {
 Library.DefaultTheme = "Graphite"
 Library.Themes = {
     Graphite = {
-        BackgroundColor = Color3.fromRGB(18, 19, 22),
-        MainColor = Color3.fromRGB(29, 31, 36),
-        TopBarColor = Color3.fromRGB(32, 34, 39),
-        AccentColor = Color3.fromRGB(121, 126, 139),
-        OutlineColor = Color3.fromRGB(55, 58, 66),
-        FontColor = Color3.fromRGB(232, 234, 239),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
         Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(246, 247, 250),
-        CornerRadius = 5,
+        WhiteColor = Color3.fromRGB(248, 249, 252),
+        CornerRadius = 4,
         IsLight = false,
     },
     BlackPurple = {
@@ -322,7 +323,7 @@ Library.Themes = {
         FontColor = Color3.fromRGB(232, 229, 238),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(232, 229, 238),
-        CornerRadius = 5,
+        CornerRadius = 4,
         IsLight = false,
     },
     Classic = {
@@ -408,7 +409,7 @@ local Templates = {
         Footer = "No Footer",
 
         Position = UDim2.fromOffset(6, 6),
-        Size = UDim2.fromOffset(760, 640),
+        Size = UDim2.fromOffset(720, 680),
         IconSize = UDim2.fromOffset(30, 30),
 
         AutoShow = true,
@@ -419,7 +420,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 5,
+        CornerRadius = 4,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -460,8 +461,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.22,
-        TabSwipeOffset = 14,
+        TabTransitionTime = 0.18,
+        TabSwipeOffset = 10,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -760,6 +761,81 @@ local function StopTween(Tween: TweenBase, Destroy: boolean?)
     end
 end
 
+local function AreTweenTargetsEqual(First, Second)
+    for Property, Value in First do
+        if Second[Property] ~= Value then
+            return false
+        end
+    end
+
+    for Property in Second do
+        if First[Property] == nil then
+            return false
+        end
+    end
+
+    return true
+end
+
+function Library:PlayTween(Instance: Instance, Slot: string, TweenInfoValue: TweenInfo, Properties)
+    if not Instance or Library.Unloaded then
+        return nil
+    end
+
+    local TweenSlots = Library.ActiveTweens[Instance]
+    if not TweenSlots then
+        TweenSlots = {}
+        Library.ActiveTweens[Instance] = TweenSlots
+    end
+
+    local Existing = TweenSlots[Slot]
+    if Existing and AreTweenTargetsEqual(Existing.Properties, Properties) then
+        return Existing.Tween
+    end
+
+    if Existing then
+        StopTween(Existing.Tween, true)
+        TweenSlots[Slot] = nil
+    end
+
+    local Changed = false
+    for Property, Value in Properties do
+        if Instance[Property] ~= Value then
+            Changed = true
+            break
+        end
+    end
+
+    if not Changed then
+        return nil
+    end
+
+    local Tween = TweenService:Create(Instance, TweenInfoValue, Properties)
+    TweenSlots[Slot] = {
+        Tween = Tween,
+        Properties = table.clone(Properties),
+    }
+
+    Tween.Completed:Once(function()
+        if TweenSlots[Slot] and TweenSlots[Slot].Tween == Tween then
+            TweenSlots[Slot] = nil
+        end
+    end)
+
+    Tween:Play()
+    return Tween
+end
+
+function Library:CancelTween(Instance: Instance, Slot: string)
+    local TweenSlots = Library.ActiveTweens[Instance]
+    if not TweenSlots or not TweenSlots[Slot] then
+        return
+    end
+
+    StopTween(TweenSlots[Slot].Tween, true)
+    TweenSlots[Slot] = nil
+end
+
 local function Trim(Text: string)
     return Text:match("^%s*(.-)%s*$")
 end
@@ -806,6 +882,8 @@ local function GetTeams()
     return TeamList
 end
 
+local DependencyUpdateQueued = false
+
 function Library:UpdateDependencyBoxes()
     for _, Depbox in Library.DependencyBoxes do
         Depbox:Update(true)
@@ -814,6 +892,20 @@ function Library:UpdateDependencyBoxes()
     if Library.Searching then
         Library:UpdateSearch(Library.SearchText)
     end
+end
+
+function Library:QueueDependencyUpdate()
+    if DependencyUpdateQueued or Library.Unloaded then
+        return
+    end
+
+    DependencyUpdateQueued = true
+    task.defer(function()
+        DependencyUpdateQueued = false
+        if not Library.Unloaded then
+            Library:UpdateDependencyBoxes()
+        end
+    end)
 end
 
 local function CheckDepbox(Box, Search)
@@ -1199,16 +1291,25 @@ function Library:UpdateColorsUsingRegistry()
     for Instance, Properties in Library.Registry do
         for Property, Index in Properties do
             local SchemeValue = GetSchemeValue(Index)
+            local Value = SchemeValue
+            if Value == nil and typeof(Index) == "function" then
+                Value = Index()
+            end
 
-            if SchemeValue or typeof(Index) == "function" then
-                Instance[Property] = SchemeValue or Index()
+            if Value ~= nil and Instance[Property] ~= Value then
+                Instance[Property] = Value
             end
         end
     end
 end
 
 function Library:SetDPIScale(DPIScale: number)
-    Library.DPIScale = DPIScale / 100
+    local Scale = math.max(tonumber(DPIScale) or 100, 1) / 100
+    if Library.DPIScale == Scale then
+        return
+    end
+
+    Library.DPIScale = Scale
     Library.MinSize = Library.OriginalMinSize * Library.DPIScale
 
 	for _, UIScale in Library.Scales do
@@ -2116,12 +2217,14 @@ function Library:AddOutline(Frame: GuiObject)
     local OutlineStroke = New("UIStroke", {
         Color = "OutlineColor",
         Thickness = 1,
+        Transparency = 0.08,
         ZIndex = 2,
         Parent = Frame,
     })
     local ShadowStroke = New("UIStroke", {
         Color = "DarkColor",
-        Thickness = 1.5,
+        Thickness = 1,
+        Transparency = 0.62,
         ZIndex = 1,
         Parent = Frame,
     })
@@ -2224,6 +2327,36 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
         if OnComplete then
             OnComplete()
         end
+    end
+end
+
+function Library:AnimateTabHover(Label: TextLabel, Icon: ImageLabel?, Hovering: boolean)
+    Library:PlayTween(Label, "TabHover", Library.TweenInfo, {
+        TextTransparency = Hovering and 0.25 or 0.5,
+    })
+
+    if Icon then
+        Library:PlayTween(Icon, "TabHover", Library.TweenInfo, {
+            ImageTransparency = Hovering and 0.25 or 0.5,
+        })
+    end
+end
+
+function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Indicator: Frame, Icon: ImageLabel?, Selected: boolean)
+    Library:PlayTween(Button, "TabSelection", Library.TweenInfo, {
+        BackgroundTransparency = Selected and 0 or 1,
+    })
+    Library:PlayTween(Label, "TabSelection", Library.TweenInfo, {
+        TextTransparency = Selected and 0 or 0.5,
+    })
+    Library:PlayTween(Indicator, "TabSelection", Library.TweenInfo, {
+        BackgroundTransparency = Selected and 0 or 1,
+    })
+
+    if Icon then
+        Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, {
+            ImageTransparency = Selected and 0 or 0.5,
+        })
     end
 end
 
@@ -5679,20 +5812,18 @@ do
                     return
                 end
 
-                Button.Tween = TweenService:Create(Button.Base, Library.TweenInfo, {
+                Library:PlayTween(Button.Base, "ButtonHover", Library.TweenInfo, {
                     TextTransparency = 0,
                 })
-                Button.Tween:Play()
             end)
             Button.Base.MouseLeave:Connect(function()
                 if Button.Disabled then
                     return
                 end
 
-                Button.Tween = TweenService:Create(Button.Base, Library.TweenInfo, {
+                Library:PlayTween(Button.Base, "ButtonHover", Library.TweenInfo, {
                     TextTransparency = 0.4,
                 })
-                Button.Tween:Play()
             end)
 
             Button.Base.MouseButton1Click:Connect(function()
@@ -6049,14 +6180,11 @@ do
             Library.Registry[Checkbox].BackgroundColor3 = Toggle.Value and "AccentColor" or "MainColor"
             Library.Registry[CheckboxStroke].Color = Toggle.Value and "AccentColor" or "OutlineColor"
 
-            for _, TweenName in { "CheckboxTween", "CheckboxStrokeTween", "CheckboxLabelTween", "CheckboxIconTween" } do
-                if Toggle[TweenName] then
-                    StopTween(Toggle[TweenName], true)
-                    Toggle[TweenName] = nil
-                end
-            end
-
             if Toggle.Disabled then
+                Library:CancelTween(Checkbox, "CheckboxColor")
+                Library:CancelTween(CheckboxStroke, "CheckboxStroke")
+                Library:CancelTween(Label, "CheckboxLabel")
+                Library:CancelTween(CheckImage, "CheckboxIcon")
                 Label.TextTransparency = 0.8
                 CheckImage.ImageTransparency = Toggle.Value and 0.65 or 1
                 Checkbox.BackgroundColor3 = BackgroundColor
@@ -6070,23 +6198,18 @@ do
             Checkbox.BackgroundTransparency = 0
             CheckboxStroke.Transparency = 0
 
-            Toggle.CheckboxTween = TweenService:Create(Checkbox, Library.TweenInfo, {
+            Library:PlayTween(Checkbox, "CheckboxColor", Library.TweenInfo, {
                 BackgroundColor3 = BackgroundColor,
             })
-            Toggle.CheckboxStrokeTween = TweenService:Create(CheckboxStroke, Library.TweenInfo, {
+            Library:PlayTween(CheckboxStroke, "CheckboxStroke", Library.TweenInfo, {
                 Color = StrokeColor,
             })
-            Toggle.CheckboxLabelTween = TweenService:Create(Label, Library.TweenInfo, {
+            Library:PlayTween(Label, "CheckboxLabel", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
-            Toggle.CheckboxIconTween = TweenService:Create(CheckImage, Library.TweenInfo, {
+            Library:PlayTween(CheckImage, "CheckboxIcon", Library.TweenInfo, {
                 ImageTransparency = Toggle.Value and 0 or 1,
             })
-
-            Toggle.CheckboxTween:Play()
-            Toggle.CheckboxStrokeTween:Play()
-            Toggle.CheckboxLabelTween:Play()
-            Toggle.CheckboxIconTween:Play()
         end
 
         function Toggle:OnChanged(Func)
@@ -6103,6 +6226,11 @@ do
                 return
             end
 
+            Value = Value == true
+            if Toggle.Value == Value then
+                return
+            end
+
             Toggle.Value = Value
             Toggle:Display()
 
@@ -6113,7 +6241,7 @@ do
                 end
             end
 
-            Library:UpdateDependencyBoxes()
+            Library:QueueDependencyUpdate()
 
             if not Toggle.AnyKeyPickerPicking then
                 Toggle:RunChanged()
@@ -6121,6 +6249,10 @@ do
         end
 
         function Toggle:SetDisabled(Disabled: boolean)
+            if Toggle.Disabled == Disabled then
+                return
+            end
+
             Toggle.Disabled = Disabled
 
             if Toggle.TooltipTable then
@@ -6138,6 +6270,10 @@ do
         end
 
         function Toggle:SetVisible(Visible: boolean)
+            if Toggle.Visible == Visible then
+                return
+            end
+
             Toggle.Visible = Visible
 
             Button.Visible = Toggle.Visible
@@ -6342,14 +6478,11 @@ do
             Library.Registry[Switch].BackgroundColor3 = Toggle.Value and "AccentColor" or "MainColor"
             Library.Registry[SwitchStroke].Color = Toggle.Value and "AccentColor" or "OutlineColor"
 
-            for _, TweenName in { "SwitchTween", "StrokeTween", "LabelTween", "BallTween" } do
-                if Toggle[TweenName] then
-                    StopTween(Toggle[TweenName], true)
-                    Toggle[TweenName] = nil
-                end
-            end
-
             if Toggle.Disabled then
+                Library:CancelTween(Switch, "SwitchColor")
+                Library:CancelTween(SwitchStroke, "SwitchStroke")
+                Library:CancelTween(Label, "SwitchLabel")
+                Library:CancelTween(Ball, "SwitchBall")
                 Switch.BackgroundColor3 = SwitchColor
                 SwitchStroke.Color = StrokeColor
                 Label.TextTransparency = 0.8
@@ -6364,25 +6497,20 @@ do
                 return
             end
 
-            Toggle.SwitchTween = TweenService:Create(Switch, Library.TweenInfo, {
+            Library:PlayTween(Switch, "SwitchColor", Library.TweenInfo, {
                 BackgroundColor3 = SwitchColor,
             })
-            Toggle.StrokeTween = TweenService:Create(SwitchStroke, Library.TweenInfo, {
+            Library:PlayTween(SwitchStroke, "SwitchStroke", Library.TweenInfo, {
                 Color = StrokeColor,
             })
-            Toggle.LabelTween = TweenService:Create(Label, Library.TweenInfo, {
+            Library:PlayTween(Label, "SwitchLabel", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
-            Toggle.BallTween = TweenService:Create(Ball, Library.TweenInfo, {
+            Library:PlayTween(Ball, "SwitchBall", Library.TweenInfo, {
                 AnchorPoint = Vector2.new(Offset, 0),
                 Position = UDim2.fromScale(Offset, 0),
                 BackgroundColor3 = Library.Scheme.FontColor,
             })
-
-            Toggle.SwitchTween:Play()
-            Toggle.StrokeTween:Play()
-            Toggle.LabelTween:Play()
-            Toggle.BallTween:Play()
 
             Library.Registry[Ball].BackgroundColor3 = "FontColor"
         end
@@ -6401,6 +6529,11 @@ do
                 return
             end
 
+            Value = Value == true
+            if Toggle.Value == Value then
+                return
+            end
+
             Toggle.Value = Value
             Toggle:Display()
 
@@ -6411,7 +6544,7 @@ do
                 end
             end
 
-            Library:UpdateDependencyBoxes()
+            Library:QueueDependencyUpdate()
 
             if not Toggle.AnyKeyPickerPicking then
                 Toggle:RunChanged()
@@ -6419,6 +6552,10 @@ do
         end
 
         function Toggle:SetDisabled(Disabled: boolean)
+            if Toggle.Disabled == Disabled then
+                return
+            end
+
             Toggle.Disabled = Disabled
 
             if Toggle.TooltipTable then
@@ -6436,6 +6573,10 @@ do
         end
 
         function Toggle:SetVisible(Visible: boolean)
+            if Toggle.Visible == Visible then
+                return
+            end
+
             Toggle.Visible = Visible
 
             Button.Visible = Toggle.Visible
@@ -6651,6 +6792,10 @@ do
 
             if typeof(Info.VerifyValue) == "function" and (Text ~= Input.EmptyReset and Info.VerifyValue(Text) ~= true) then
                 Text = Input.EmptyReset
+            end
+
+            if Input.Value == Text then
+                return
             end
 
             Input.Value = Text
@@ -6917,14 +7062,14 @@ do
             if Slider.Disabled then
                 return
             end
-            TweenService:Create(Thumb, Library.TweenInfo, {
+            Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
                 Size = UDim2.fromOffset(12, 12),
-            }):Play()
+            })
         end))
         table.insert(Slider.Connections, Bar.MouseLeave:Connect(function()
-            TweenService:Create(Thumb, Library.TweenInfo, {
+            Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
                 Size = UDim2.fromOffset(10, 10),
-            }):Play()
+            })
         end))
 
         function Slider:UpdateColors()
@@ -7546,6 +7691,7 @@ do
         local DragPrevMin = nil
         local DragPrevMax = nil
         local DragLastIndex = nil
+        local DragChanged = false
         local DragInitialValues = {}
         local DragInputEndedConn = nil
         local DragInputChangedConn = nil
@@ -7669,6 +7815,7 @@ do
             DragPrevMin = nil
             DragPrevMax = nil
             DragLastIndex = nil
+            DragChanged = false
             table.clear(DragInitialValues)
 
             if DragInputEndedConn then
@@ -7707,6 +7854,7 @@ do
 
             Dropdown.Value[Entry.Value] = WantActive and true or nil
             DragActiveCount += WantActive and 1 or -1
+            DragChanged = true
         end
 
         local function ApplyDragRange(From, To, InRange)
@@ -7818,11 +7966,20 @@ do
 
                 Row.Selected = Selected and true or false
 
-                Container.BackgroundTransparency = Selected and 0 or 1
-                Button.TextTransparency = Entry.IsDisabled and 0.8 or Selected and 0 or 0.5
+                local BackgroundTransparency = Selected and 0 or 1
+                local TextTransparency = Entry.IsDisabled and 0.8 or Selected and 0 or 0.5
+                if Container.BackgroundTransparency ~= BackgroundTransparency then
+                    Container.BackgroundTransparency = BackgroundTransparency
+                end
+                if Button.TextTransparency ~= TextTransparency then
+                    Button.TextTransparency = TextTransparency
+                end
 
                 if Entry.ValueImage then
-                    Image.ImageTransparency = Entry.IsDisabled and 0.8 or Selected and 0 or 0.5
+                    local ImageTransparency = Entry.IsDisabled and 0.8 or Selected and 0 or 0.5
+                    if Image.ImageTransparency ~= ImageTransparency then
+                        Image.ImageTransparency = ImageTransparency
+                    end
                 end
             end
 
@@ -7840,6 +7997,7 @@ do
                 end
 
                 local Try = not Selected
+                local Changed = false
                 if not (Dropdown:GetActiveValues(true) == 1 and not Try and not Info.AllowNull) then
                     Selected = Try
                     if Info.Multi then
@@ -7847,16 +8005,21 @@ do
                     else
                         Dropdown.Value = Selected and Entry.Value or nil
                     end
+                    Changed = true
 
                     for _, OtherRow in Pool do
                         OtherRow:UpdateButton()
                     end
                 end
 
+                if not Changed then
+                    return
+                end
+
                 Row:UpdateButton()
                 Dropdown:Display()
 
-                Library:UpdateDependencyBoxes()
+                Library:QueueDependencyUpdate()
                 Dropdown:RunChanged()
             end)
 
@@ -7865,17 +8028,17 @@ do
 					return
 				end
 
-				TweenService:Create(Container, Library.TweenInfo, {
+				Library:PlayTween(Container, "DropdownRowHover", Library.TweenInfo, {
 					BackgroundTransparency = 0.85,
-				}):Play()
-				TweenService:Create(Button, Library.TweenInfo, {
+				})
+				Library:PlayTween(Button, "DropdownRowHover", Library.TweenInfo, {
 					TextTransparency = 0.25,
-				}):Play()
+				})
 
 				if Image then
-					TweenService:Create(Image, Library.TweenInfo, {
+					Library:PlayTween(Image, "DropdownRowHover", Library.TweenInfo, {
 						ImageTransparency = 0.25,
-					}):Play()
+					})
 				end
 			end)
 
@@ -7884,17 +8047,17 @@ do
 					return
 				end
 
-				TweenService:Create(Container, Library.TweenInfo, {
+				Library:PlayTween(Container, "DropdownRowHover", Library.TweenInfo, {
 					BackgroundTransparency = 1,
-				}):Play()
-				TweenService:Create(Button, Library.TweenInfo, {
+				})
+				Library:PlayTween(Button, "DropdownRowHover", Library.TweenInfo, {
 					TextTransparency = 0.5,
-				}):Play()
+				})
 
 				if Image then
-					TweenService:Create(Image, Library.TweenInfo, {
+					Library:PlayTween(Image, "DropdownRowHover", Library.TweenInfo, {
 						ImageTransparency = 0.5,
-					}):Play()
+					})
 				end
 			end)
 
@@ -7914,6 +8077,7 @@ do
 
                 DragSelecting = true
                 DragStartIndex = Row.Index
+                DragChanged = false
                 table.clear(DragInitialValues)
 
                 for _, FilteredEntry in FilteredEntries do
@@ -7944,9 +8108,11 @@ do
                         return
                     end
 
-                    Dropdown:Display()
-                    Library:UpdateDependencyBoxes()
-                    Dropdown:RunChanged()
+                    if DragChanged then
+                        Dropdown:Display()
+                        Library:QueueDependencyUpdate()
+                        Dropdown:RunChanged()
+                    end
 
                     StopDragSelect()
                 end))
@@ -7991,6 +8157,22 @@ do
             return Dropdown.Values[Val] ~= nil
         end
 
+        local function AreSelectedValuesEqual(First, Second)
+            for Value in First do
+                if not Second[Value] then
+                    return false
+                end
+            end
+
+            for Value in Second do
+                if not First[Value] then
+                    return false
+                end
+            end
+
+            return true
+        end
+
         function Dropdown:SetValue(Value)
             if Info.Multi then
                 local Table = {}
@@ -8003,13 +8185,24 @@ do
                     end
                 end
 
+                if AreSelectedValuesEqual(Dropdown.Value, Table) then
+                    return
+                end
+
                 Dropdown.Value = Table
             else
+                local NextValue = Dropdown.Value
                 if ValueExists(Value) then
-                    Dropdown.Value = Value
+                    NextValue = Value
                 elseif not Value then
-                    Dropdown.Value = nil
+                    NextValue = nil
                 end
+
+                if Dropdown.Value == NextValue then
+                    return
+                end
+
+                Dropdown.Value = NextValue
             end
 
             Dropdown:Display()
@@ -8018,7 +8211,7 @@ do
             end
 
             if not Dropdown.Disabled then
-                Library:UpdateDependencyBoxes()
+                Library:QueueDependencyUpdate()
                 Dropdown:RunChanged()
             end
         end
@@ -8044,7 +8237,7 @@ do
             Dropdown:Display()
 
             if Changed and not Dropdown.Disabled then
-                Library:UpdateDependencyBoxes()
+                Library:QueueDependencyUpdate()
                 Dropdown:RunChanged()
             end
         end
@@ -9847,11 +10040,11 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.22),
+        math.max(0, WindowInfo.TabTransitionTime or 0.18),
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
-    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 14)
+    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 10)
     Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "bottom"
 
     local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
@@ -9879,9 +10072,9 @@ function Library:CreateWindow(WindowInfo)
     local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
     local LastExpandedWidth = InitialLeftWidth
     local LastCompactState = nil
-    local NavigationIconSize = 18
+    local NavigationIconSize = 17
     local NavigationIconX = 10
-    local NavigationLabelX = 38
+    local NavigationLabelX = 36
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
 
     do
@@ -10019,7 +10212,7 @@ function Library:CreateWindow(WindowInfo)
             Position = UDim2.fromOffset(TitleX, 0),
             Size = UDim2.new(1, -(TitleX + 12), 1, 0),
             Text = WindowInfo.Title,
-            TextSize = 18,
+            TextSize = 17,
             TextTruncate = Enum.TextTruncate.AtEnd,
             TextXAlignment = Enum.TextXAlignment.Left,
             Visible = not IsCompact,
@@ -10098,7 +10291,7 @@ function Library:CreateWindow(WindowInfo)
             end,
             PlaceholderText = "Search",
             Size = WindowInfo.SearchbarSize,
-            TextScaled = true,
+            TextSize = 14,
             Visible = not (WindowInfo.DisableSearch or false),
             Parent = RightWrapper,
         })
@@ -10115,7 +10308,7 @@ function Library:CreateWindow(WindowInfo)
         )
         New("UIPadding", {
             PaddingBottom = UDim.new(0, 8),
-            PaddingLeft = UDim.new(0, 8),
+            PaddingLeft = UDim.new(0, 30),
             PaddingRight = UDim.new(0, 8),
             PaddingTop = UDim.new(0, 8),
             Parent = SearchBox,
@@ -10127,29 +10320,30 @@ function Library:CreateWindow(WindowInfo)
         })
         SearchBox.Focused:Connect(function()
             Library.Registry[SearchStroke].Color = "AccentColor"
-            TweenService:Create(SearchStroke, Library.TweenInfo, {
+            Library:PlayTween(SearchStroke, "SearchFocus", Library.TweenInfo, {
                 Color = Library.Scheme.AccentColor,
                 Transparency = 0,
-            }):Play()
+            })
         end)
         SearchBox.FocusLost:Connect(function()
             Library.Registry[SearchStroke].Color = "OutlineColor"
-            TweenService:Create(SearchStroke, Library.TweenInfo, {
+            Library:PlayTween(SearchStroke, "SearchFocus", Library.TweenInfo, {
                 Color = Library.Scheme.OutlineColor,
                 Transparency = 0.15,
-            }):Play()
+            })
         end)
 
         local SearchIcon = Library:GetIcon("search")
         if SearchIcon then
             New("ImageLabel", {
+                AnchorPoint = Vector2.new(0, 0.5),
                 Image = SearchIcon.Url,
                 ImageColor3 = "FontColor",
                 ImageRectOffset = SearchIcon.ImageRectOffset,
                 ImageRectSize = SearchIcon.ImageRectSize,
                 ImageTransparency = 0.5,
-                Size = UDim2.fromScale(1, 1),
-                SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                Position = UDim2.new(0, 8, 0.5, 0),
+                Size = UDim2.fromOffset(16, 16),
                 Parent = SearchBox,
             })
         end
@@ -10265,7 +10459,7 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIListLayout", {
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            Padding = UDim.new(0, 2),
+            Padding = UDim.new(0, 4),
             Parent = Tabs,
         })
         ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
@@ -10284,8 +10478,8 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIPadding", {
             PaddingBottom = UDim.new(0, 0),
-            PaddingLeft = UDim.new(0, 6),
-            PaddingRight = UDim.new(0, 6),
+            PaddingLeft = UDim.new(0, 8),
+            PaddingRight = UDim.new(0, 8),
             PaddingTop = UDim.new(0, 0),
             Parent = Container,
         })
@@ -10691,7 +10885,7 @@ function Library:CreateWindow(WindowInfo)
         local TabCanvas
         local TabLeft
         local TabRight
-        local ColumnGap = 8
+        local ColumnGap = 10
         local ColumnOffset = ColumnGap / 2
 
         Icon = Library:GetCustomIcon(Icon)
@@ -10701,7 +10895,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -20, 0, 36),
+                Size = UDim2.new(1, -18, 0, 34),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -10715,7 +10909,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 16),
+                Size = UDim2.fromOffset(2, 14),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -10727,7 +10921,7 @@ function Library:CreateWindow(WindowInfo)
                 Position = UDim2.fromOffset(NavigationLabelX, 0),
                 Size = UDim2.new(1, -(NavigationLabelX + 8), 1, 0),
                 Text = Name,
-                TextSize = 16,
+                TextSize = 15,
                 TextTruncate = Enum.TextTruncate.AtEnd,
                 TextTransparency = 0.5,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -10788,14 +10982,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 2),
+                Padding = UDim.new(0, 4),
                 Parent = TabLeft,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 10),
-                PaddingLeft = UDim.new(0, 3),
-                PaddingRight = UDim.new(0, 5),
-                PaddingTop = UDim.new(0, 4),
+                PaddingBottom = UDim.new(0, 12),
+                PaddingLeft = UDim.new(0, 4),
+                PaddingRight = UDim.new(0, 6),
+                PaddingTop = UDim.new(0, 6),
                 Parent = TabLeft,
             })
             do
@@ -10826,14 +11020,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 2),
+                Padding = UDim.new(0, 4),
                 Parent = TabRight,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 10),
-                PaddingLeft = UDim.new(0, 3),
-                PaddingRight = UDim.new(0, 5),
-                PaddingTop = UDim.new(0, 4),
+                PaddingBottom = UDim.new(0, 12),
+                PaddingLeft = UDim.new(0, 4),
+                PaddingRight = UDim.new(0, 6),
+                PaddingTop = UDim.new(0, 6),
                 Parent = TabRight,
             })
             do
@@ -11122,7 +11316,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = if ParentObj.Type == "Groupbox" then ParentObj.Container else (Info.Side == 1 and TabLeft or TabRight),
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 6),
+                Padding = UDim.new(0, 8),
                 Parent = BoxHolder,
             })
             New("UIPadding", {
@@ -11466,7 +11660,7 @@ function Library:CreateWindow(WindowInfo)
             do
                 GroupboxHolder = New("Frame", {
                     BackgroundColor3 = function()
-                        return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.AccentColor, 0.028)
+                        return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.AccentColor, 0.045)
                     end,
                     ClipsDescendants = true,
                     Size = UDim2.fromScale(1, 0),
@@ -11483,7 +11677,7 @@ function Library:CreateWindow(WindowInfo)
 
                 GroupboxLine = Library:MakeLine(GroupboxHolder, {
                     Color = function()
-                        return Library:GetAccentSurfaceColor(0.18)
+                        return Library:GetAccentSurfaceColor(0.12)
                     end,
                     Position = UDim2.fromOffset(0, 34),
                     Size = UDim2.new(1, 0, 0, 1),
@@ -11545,8 +11739,8 @@ function Library:CreateWindow(WindowInfo)
                 })
                 New("UIPadding", {
                     PaddingBottom = UDim.new(0, GroupboxBottomPadding),
-                    PaddingLeft = UDim.new(0, 7),
-                    PaddingRight = UDim.new(0, 7),
+                    PaddingLeft = UDim.new(0, 8),
+                    PaddingRight = UDim.new(0, 8),
                     PaddingTop = UDim.new(0, GroupboxTopPadding),
                     Parent = GroupboxContainer,
                 })
@@ -11570,16 +11764,9 @@ function Library:CreateWindow(WindowInfo)
                 Elements = {}
             }
 
-            local ResizeTween
-            local CollapseArrowTween
             local ResizeQueued = false
 
             function Groupbox:Resize()
-                if ResizeTween then
-                    StopTween(ResizeTween, true)
-                    ResizeTween = nil
-                end
-
                 local DPIScale = math.max(Library.DPIScale or 1, 0.01)
                 local ContentBottom = (GroupboxList.AbsoluteContentSize.Y / DPIScale) + GroupboxTopPadding
                 local ContainerY = GroupboxContainer.AbsolutePosition.Y
@@ -11603,22 +11790,9 @@ function Library:CreateWindow(WindowInfo)
 
                 if AnimateResize then
                     local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-                    local Tween = TweenService:Create(GroupboxHolder, TweenInfo, { Size = TargetSize })
-                    ResizeTween = Tween
-
-                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Once(function()
-                        if Connection then
-                            Connection:Disconnect()
-                        end
-
-                        if ResizeTween == Tween then
-                            StopTween(ResizeTween, true)
-                            ResizeTween = nil
-                        end
-                    end))
-
-                    Tween:Play()
+                    Library:PlayTween(GroupboxHolder, "GroupboxSize", TweenInfo, { Size = TargetSize })
                 else
+                    Library:CancelTween(GroupboxHolder, "GroupboxSize")
                     GroupboxHolder.Size = TargetSize
                 end
             end
@@ -11646,34 +11820,20 @@ function Library:CreateWindow(WindowInfo)
 
             function Groupbox:SetCollapsed(Collapsed: boolean)
                 if Info.DisableCollapsing == true then return end
-                Groupbox.Collapsed = Collapsed
-
-                if CollapseArrowTween then
-                    StopTween(CollapseArrowTween, true)
-                    CollapseArrowTween = nil
+                if Groupbox.Collapsed == Collapsed then
+                    return
                 end
+
+                Groupbox.Collapsed = Collapsed
 
                 local TargetRotation = if Collapsed then 0 else 180
 
                 GroupboxContainer.Visible = not Collapsed
                 if Library.Animations and Library.Animations.Groupbox then
-                local TweenInfo = Library.RotatingChevronTweenInfo or TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-                    local Tween = TweenService:Create(GroupboxCollapseArrow, TweenInfo, { Rotation = TargetRotation })
-                    CollapseArrowTween = Tween
-
-                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Connect(function()
-                        if Connection then
-                            Connection:Disconnect()
-                        end
-
-                        if CollapseArrowTween == Tween then
-                            StopTween(CollapseArrowTween, true)
-                            CollapseArrowTween = nil
-                        end
-                    end))
-
-                    Tween:Play()
+                    local TweenInfo = Library.RotatingChevronTweenInfo or TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+                    Library:PlayTween(GroupboxCollapseArrow, "GroupboxChevron", TweenInfo, { Rotation = TargetRotation })
                 else
+                    Library:CancelTween(GroupboxCollapseArrow, "GroupboxChevron")
                     GroupboxCollapseArrow.Rotation = TargetRotation
                 end
 
@@ -11688,14 +11848,9 @@ function Library:CreateWindow(WindowInfo)
             function Groupbox:Destroy()
                 Groupbox.Destroyed = true
 
-                if ResizeTween then
-                    StopTween(ResizeTween, true)
-                    ResizeTween = nil
-                end
-
-                if CollapseArrowTween then
-                    StopTween(CollapseArrowTween, true)
-                    CollapseArrowTween = nil
+                Library:CancelTween(GroupboxHolder, "GroupboxSize")
+                if GroupboxCollapseArrow then
+                    Library:CancelTween(GroupboxCollapseArrow, "GroupboxChevron")
                 end
 
                 if Groupbox.Connections then
@@ -11728,6 +11883,10 @@ function Library:CreateWindow(WindowInfo)
             end
 
             function Groupbox:SetVisible(Visible: boolean)
+                if Groupbox.Visible == Visible then
+                    return
+                end
+
                 Groupbox.Visible = Visible
                 BoxHolder.Visible = Visible
 
@@ -11785,14 +11944,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = Hovering and 0.25 or 0.5,
-                }):Play()
-            end
+            Library:AnimateTabHover(TabLabel, TabIcon, Hovering)
         end
 
         function Tab:Show()
@@ -11804,20 +11956,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
 
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
-            TweenService:Create(TabIndicator, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0,
-                }):Play()
-            end
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, true)
 
             if Description then
                 Window:ShowTabInfo(Name, Description)
@@ -11834,22 +11973,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
-            }):Play()
-            TweenService:Create(TabIndicator, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0.5,
-                }):Play()
-            end
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -11969,7 +12093,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.16)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -20, 0, 36),
+                Size = UDim2.new(1, -18, 0, 34),
                 Text = "",
                 Parent = Tabs,
             })
@@ -11982,7 +12106,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 16),
+                Size = UDim2.fromOffset(2, 14),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -11995,7 +12119,7 @@ function Library:CreateWindow(WindowInfo)
                 Position = UDim2.fromOffset(NavigationLabelX, 0),
                 Size = UDim2.new(1, -(NavigationLabelX + 8), 1, 0),
                 Text = Name,
-                TextSize = 16,
+                TextSize = 15,
                 TextTruncate = Enum.TextTruncate.AtEnd,
                 TextTransparency = 0.5,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -12173,14 +12297,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = Hovering and 0.25 or 0.5,
-                }):Play()
-            end
+            Library:AnimateTabHover(TabLabel, TabIcon, Hovering)
         end
 
         function Tab:Show()
@@ -12192,22 +12309,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
 
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
-            TweenService:Create(TabIndicator, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0,
-                }):Play()
-            end
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, true)
 
             Library:PlayTabAnimation(TabCanvas, true)
 
@@ -12225,22 +12327,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
-            }):Play()
-            TweenService:Create(TabIndicator, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0.5,
-                }):Play()
-            end
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -14070,6 +14157,13 @@ Library:GiveSignal(Teams.ChildRemoved:Connect(OnTeamChange))
 function Library:Unload()
     Library.Unloaded = true
     SearchRequestId += 1
+
+    for _, TweenSlots in Library.ActiveTweens do
+        for _, Entry in TweenSlots do
+            StopTween(Entry.Tween, true)
+        end
+    end
+    table.clear(Library.ActiveTweens)
 
     
     for Index = #Library.Signals, 1, -1 do

@@ -6,12 +6,12 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 
 ## What changed
 
-- New Graphite visual system with neutral layered surfaces, restrained accents, compact geometry, and Gotham typography.
-- Smooth window, tab, groupbox, dropdown, key picker, and toggle transitions enabled by default.
+- Graphite V2 visual system with lighter neutral layers, restrained steel-gray accents, 4px geometry, and Gotham typography.
+- Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
 - Faster startup: Roblox-hosted icon sprites are preferred, the Lucide module is cached, and optional image files are no longer downloaded before the first window.
-- Less work while typing: search is debounced and text measurements are cached.
+- Less work while typing and changing controls: search is debounced, text measurements are cached, dependency updates are batched, and unchanged values are ignored.
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable Watermark, FPS/ping settings, interactive R6 viewport controls, and refined sliders.

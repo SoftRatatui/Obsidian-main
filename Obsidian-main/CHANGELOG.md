@@ -2,11 +2,11 @@
 
 ```diff
 [design]
-+ New neutral Graphite default theme with Gotham typography and a compact 5px corner radius
++ Graphite V2 default theme with lighter neutral layers, a restrained steel-gray accent, and compact 4px geometry
 + Restrained cool-gray surfaces for tabs, groupboxes, window chrome, controls, and focused search
 + BlackPurple remains available as an optional preset
 + Smooth animations are enabled by default and toggle transitions now animate color and position
-+ Refined the default radius from 9px to 5px for a cleaner, less rounded visual system
++ Refined the default radius from 9px to 4px for a cleaner, less rounded visual system
 + Checkboxes now use a compact square shape with a clear accent-filled selected state
 + Narrower sidebar proportions and denser navigation improve usable content space
 
@@ -21,6 +21,7 @@
 + Editable TopBarColor theme field with automatic fallback for older themes
 + Responsive content columns that switch to a readable vertical layout on narrow windows and touch devices
 + Keybind panel filters out unassigned and invalid binds, hides when empty, and animates rows and visibility
++ Central motion controller deduplicates tab, groupbox, slider, dropdown, search, and button transitions
 
 [optimizations]
 + Removed four blocking optional image downloads from module initialization
@@ -35,6 +36,8 @@
 + Window closing is six times faster, uses one short CanvasGroup fade, and supports immediate reversal
 + Watermark statistics update at a fixed interval with one lightweight frame counter
 + Viewport and DPI changes are coalesced before recalculating responsive geometry
++ Dependency checks are batched for internal control updates and unchanged values skip callbacks, dependency work, and animations
++ Dropdown virtualization avoids redundant row property writes while scrolling
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent

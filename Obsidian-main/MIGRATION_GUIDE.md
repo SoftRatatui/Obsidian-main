@@ -69,8 +69,8 @@ local Window = Library:CreateWindow({
     GlobalSearch = true,
     EnableSidebarResize = true,
     Font = Enum.Font.Gotham,
-    CornerRadius = 5,
-    Size = Library.IsMobile and UDim2.fromOffset(520, 460) or UDim2.fromOffset(760, 660),
+    CornerRadius = 4,
+    Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 })
 
 local MainTab = Window:AddTab("Main", "house")
@@ -110,7 +110,7 @@ GeneralGroup:AddToggle("Enabled", {
 | `Library:SetWatermark` | Поддерживается | Можно использовать |
 | `Library:SetWatermarkVisibility` | Поддерживается | Можно использовать |
 
-Изменился внешний вид controls, но их основные методы и callbacks сохранены.
+Изменился внешний вид controls, но их основные методы сохранены. `SetValue` больше не вызывает callback повторно, если значение не изменилось: это убирает лишние зависимости, tweens и вычисления.
 
 ## Настройка окна
 
@@ -129,11 +129,11 @@ local Window = Library:CreateWindow({
     EnableCompacting = true,
     ShowCustomCursor = true,
     Font = Enum.Font.Gotham,
-    CornerRadius = 5,
-    TabTransitionTime = 0.22,
-    TabSwipeOffset = 14,
+    CornerRadius = 4,
+    TabTransitionTime = 0.18,
+    TabSwipeOffset = 10,
     TabSwipeFrom = "bottom",
-    Size = Library.IsMobile and UDim2.fromOffset(520, 460) or UDim2.fromOffset(760, 660),
+    Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
     Animations = {
         ToggleWindow = true,
         TabSwitch = true,
@@ -363,8 +363,8 @@ Library:SetTheme("Graphite")
 
 ```luau
 Library:SetTheme({
-    MainColor = Color3.fromRGB(29, 31, 36),
-    TopBarColor = Color3.fromRGB(32, 34, 39),
+    MainColor = Color3.fromRGB(33, 36, 43),
+    TopBarColor = Color3.fromRGB(39, 42, 50),
 })
 ```
 
@@ -386,14 +386,14 @@ Library:SetTheme("Classic")
 
 ```luau
 Library:SetTheme({
-    BackgroundColor = Color3.fromRGB(18, 19, 22),
-    MainColor = Color3.fromRGB(29, 31, 36),
-    AccentColor = Color3.fromRGB(121, 126, 139),
-    OutlineColor = Color3.fromRGB(55, 58, 66),
-    FontColor = Color3.fromRGB(232, 234, 239),
-    WhiteColor = Color3.fromRGB(246, 247, 250),
+    BackgroundColor = Color3.fromRGB(22, 24, 29),
+    MainColor = Color3.fromRGB(33, 36, 43),
+    AccentColor = Color3.fromRGB(133, 141, 160),
+    OutlineColor = Color3.fromRGB(65, 69, 80),
+    FontColor = Color3.fromRGB(239, 241, 246),
+    WhiteColor = Color3.fromRGB(248, 249, 252),
     Font = Font.fromEnum(Enum.Font.Gotham),
-    CornerRadius = 5,
+    CornerRadius = 4,
     IsLight = false,
 })
 ```
@@ -588,10 +588,12 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.22, 14, "bottom")
+}, 0.18, 10, "bottom")
 ```
 
-Для мгновенного UI отключите конкретную animation, а не все transitions сразу.
+Для мгновенного UI отключите конкретную animation, а не все transitions сразу. Повторный hover или повторная установка того же состояния не создаёт новый tween: библиотека переиспользует активную цель анимации.
+
+Для пользовательских controls, которые меняют несколько значений в одном callback, используйте `Library:QueueDependencyUpdate()`. Библиотека выполнит одну общую проверку зависимостей в конце текущего task cycle.
 
 ## Notifications
 

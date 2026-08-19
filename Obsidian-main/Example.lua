@@ -98,15 +98,15 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library.Scheme.BackgroundColor = Color3.fromRGB(18, 19, 22)
-Library.Scheme.MainColor = Color3.fromRGB(29, 31, 36)
-Library.Scheme.TopBarColor = Color3.fromRGB(32, 34, 39)
-Library.Scheme.AccentColor = Color3.fromRGB(121, 126, 139)
-Library.Scheme.OutlineColor = Color3.fromRGB(55, 58, 66)
-Library.Scheme.FontColor = Color3.fromRGB(232, 234, 239)
-Library.Scheme.WhiteColor = Color3.fromRGB(246, 247, 250)
+Library.Scheme.BackgroundColor = Color3.fromRGB(22, 24, 29)
+Library.Scheme.MainColor = Color3.fromRGB(33, 36, 43)
+Library.Scheme.TopBarColor = Color3.fromRGB(39, 42, 50)
+Library.Scheme.AccentColor = Color3.fromRGB(133, 141, 160)
+Library.Scheme.OutlineColor = Color3.fromRGB(65, 69, 80)
+Library.Scheme.FontColor = Color3.fromRGB(239, 241, 246)
+Library.Scheme.WhiteColor = Color3.fromRGB(248, 249, 252)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
-Library.CornerRadius = 5
+Library.CornerRadius = 4
 Library.IsLightTheme = false
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -124,11 +124,11 @@ local Window = Library:CreateWindow({
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
-	CornerRadius = 5,
-	TabTransitionTime = 0.22,
-	TabSwipeOffset = 14,
+	CornerRadius = 4,
+	TabTransitionTime = 0.18,
+	TabSwipeOffset = 10,
 	TabSwipeFrom = "bottom",
-	Size = Library.IsMobile and UDim2.fromOffset(520, 460) or UDim2.fromOffset(760, 660),
+	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
@@ -564,16 +564,9 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("The default palette uses neutral graphite layers and a cool gray accent.", true)
+StyleTab:AddLabel("Graphite V2 uses neutral layered surfaces, a restrained steel-gray accent, and compact geometry.", true)
 StyleTab:AddButton("Reapply graphite", function()
-	Library.Scheme.BackgroundColor = Color3.fromRGB(18, 19, 22)
-	Library.Scheme.MainColor = Color3.fromRGB(29, 31, 36)
-	Library.Scheme.AccentColor = Color3.fromRGB(121, 126, 139)
-	Library.Scheme.OutlineColor = Color3.fromRGB(55, 58, 66)
-	Library.Scheme.FontColor = Color3.fromRGB(232, 234, 239)
-	Library.Scheme.WhiteColor = Color3.fromRGB(246, 247, 250)
-	Library:UpdateColorsUsingRegistry()
-	Window:SetCornerRadius(5)
+	Library:SetTheme("Graphite")
 end)
 
 

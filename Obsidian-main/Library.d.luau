@@ -1093,12 +1093,15 @@ export type Library = {
 
     
     UpdateDependencyBoxes: (self: Library) -> (),
+    QueueDependencyUpdate: (self: Library) -> (),
     UpdateSearch: (self: Library, SearchText: string) -> (),
     QueueSearch: (self: Library, SearchText: string) -> (),
     AddToRegistry: (self: Library, Instance: Instance, Properties: { [string]: string | () -> any }) -> (),
     RemoveFromRegistry: (self: Library, Instance: Instance) -> (),
     UpdateColorsUsingRegistry: (self: Library) -> (),
     SetDPIScale: (self: Library, DPIScale: number) -> (),
+    PlayTween: (self: Library, Instance: Instance, Slot: string, TweenInfoValue: TweenInfo, Properties: { [string]: any }) -> Tween?,
+    CancelTween: (self: Library, Instance: Instance, Slot: string) -> (),
     SetClickSound: (self: Library, SoundId: string | number | boolean, Volume: number?) -> (),
     PlayClickSound: (self: Library) -> (),
     GiveSignal: (self: Library, Connection: RBXScriptConnection) -> RBXScriptConnection,
@@ -1188,6 +1191,8 @@ export type Library = {
     HasVisibleKeybinds: (self: Library) -> boolean,
     RefreshKeybindMenu: (self: Library) -> (),
     SetKeybindMenuVisible: (self: Library, Visible: boolean) -> (),
+    AnimateTabHover: (self: Library, Label: TextLabel, Icon: ImageLabel?, Hovering: boolean) -> (),
+    AnimateTabSelection: (self: Library, Button: TextButton, Label: TextLabel, Indicator: Frame, Icon: ImageLabel?, Selected: boolean) -> (),
     SetWatermarkVisibility: (self: Library, Visible: boolean) -> (),
     SetWatermark: (self: Library, Text: string) -> (),
     AddContextMenu: (

@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with a neutral Graphite default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with a premium Azure default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
 Migrating from the original Obsidian: read the complete [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- Graphite V2 visual system with lighter neutral layers, restrained steel-gray accents, 4px geometry, and Gotham typography.
+- Azure visual system with layered blue-slate surfaces, a muted cool accent, 4px geometry, and Gotham typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -87,20 +87,11 @@ local App = Library:Create({
 App:Get("speed"):SetValue(50)
 ```
 
-## Executor compatibility
+## Full executor profile
 
-The core library works without `gethui`, `cloneref`, `clonefunction`, hidden-property APIs, or metamethod hooks. It falls back from `request` to `game:HttpGet`, from hidden UI parenting to `CoreGui` and then `PlayerGui`, and from local asset files to standard `rbxassetid` images.
+MonHub is tuned for full-featured executors with `request`, `loadstring`, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. This profile keeps every visual enhancement, local theme/config workflow, custom image support, cursor, and refined transitions enabled.
 
-The supplied sUNC profile supports the complete configuration and custom-theme workflow: filesystem operations, `getcustomasset`, `setscriptable`, `request`, and `loadstring` are available. Clipboard copying is unavailable, so exported JSON remains in the interface input field instead of being copied automatically.
-
-Use `LowSpec` before creating a window when a device needs the lightest rendering path. It disables the custom cursor and all optional UI animations without removing any controls.
-
-```luau
-Library:SetCompatibilityMode("LowSpec")
-
-print(Library:Supports("FileSystem"))
-print(Library:Supports("AlwaysOnTop"))
-```
+The library retains ordinary defensive guards where they are free, but reduced-feature executor compatibility is not the target of this build.
 
 ### Wally / Roblox Studio
 
@@ -121,13 +112,13 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Themes
 
-`Graphite` is the default. The previous black-purple style remains available:
+`Azure` is the default. `Graphite`, `BlackPurple`, and `Classic` remain available:
 
 ```luau
 Library:SetTheme("BlackPurple")
 ```
 
-You can pass `Theme = "Graphite"` to `Library:Create`, select `Classic`, or supply a custom theme table.
+You can pass `Theme = "Azure"` to `Library:Create`, select another built-in theme, or supply a custom theme table.
 
 ## Legacy API
 

@@ -1,3 +1,23 @@
+## 19.08.2026
+
+```diff
+[design]
++ Azure is now the default visual system: deep blue-slate layers, a restrained cool-blue accent, and high-contrast soft-white typography
++ Added a subtle theme-aware top-bar gradient and refined accent dividers for a more composed premium surface
++ Graphite remains available as an optional neutral preset
+
+[motion]
++ Tuned window opening, closing, tab, dropdown, key picker, keybind, notification, and groupbox timings for smoother 60 FPS transitions
++ Window closing now combines a short fade with a restrained scale settle instead of an abrupt transparency-only exit
++ Tab motion uses a smaller 8px offset for a cleaner, less distracting page transition
+
+[performance]
++ Full executor profile keeps advanced UI features enabled while reusing the existing tween deduplication and coalesced resize pipeline
+
+[changes]
+- Removed the public capability and LowSpec profile API from this full-featured build
+```
+
 ## 18.08.2026
 
 ```diff

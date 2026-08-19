@@ -44,18 +44,6 @@ local NativeSetScriptable = IsFunction(setscriptable) and setscriptable or nil
 local NativeGetCustomAsset = IsFunction(getcustomasset) and getcustomasset or nil
 local NativeLoadString = IsFunction(loadstring) and loadstring or nil
 
-local CapabilityFlags = {
-    Request = IsFunction(ExecutorRequest),
-    LoadString = IsFunction(NativeLoadString),
-    FileSystem = IsFunction(isfolder) and IsFunction(isfile) and IsFunction(readfile) and IsFunction(writefile) and IsFunction(makefolder) and IsFunction(listfiles) and IsFunction(delfile),
-    CustomAssets = IsFunction(NativeGetCustomAsset),
-    Clipboard = IsFunction(NativeSetClipboard),
-    HiddenUI = IsFunction(NativeGetHui),
-    ProtectedUI = IsFunction(NativeProtectGui),
-    AlwaysOnTop = IsFunction(NativeSetHiddenProperty) or IsFunction(NativeSetScriptable),
-    CloneReference = IsFunction(NativeCloneRef),
-}
-
 local cloneref = (NativeCloneRef or function(instance: any)
     return instance
 end)
@@ -226,8 +214,6 @@ end
 local Library = {
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
-    Capabilities = CapabilityFlags,
-    CompatibilityMode = "Auto",
 
     
     DevicePlatform = nil,
@@ -259,14 +245,14 @@ local Library = {
     KeybindToggles = {},
     KeybindMenuRequested = false,
     KeybindMenuVisible = false,
-    KeybindMenuTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeybindRowTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeybindMenuTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeybindRowTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     ActiveTweens = setmetatable({}, { __mode = "k" }),
 
     
     Notifications = {},
     NotifySide = "Right",
-    NotifyTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    NotifyTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     
     Dialogues = {},
@@ -280,20 +266,20 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabSwipeOffset = 10,
+    TabTransitionInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabSwipeOffset = 8,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.14 / 6, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-    DropdownTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeyPickerTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+    DropdownTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeyPickerTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -336,18 +322,18 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
+        BackgroundColor = Color3.fromRGB(18, 25, 34),
+        MainColor = Color3.fromRGB(28, 39, 52),
+        TopBarColor = Color3.fromRGB(34, 48, 65),
+        AccentColor = Color3.fromRGB(119, 166, 209),
+        OutlineColor = Color3.fromRGB(67, 89, 115),
+        FontColor = Color3.fromRGB(238, 244, 250),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(248, 249, 252),
+        WhiteColor = Color3.fromRGB(248, 251, 254),
 
         BackgroundImage = ""
     },
@@ -364,45 +350,25 @@ local Library = {
     Notify = nil, Toggle = nil 
 }
 
-function Library:GetCapabilities()
-    return table.clone(CapabilityFlags)
-end
-
-function Library:Supports(Capability: string): boolean
-    return CapabilityFlags[Capability] == true
-end
-
 function Library:Fetch(URL: string): (boolean, string)
     assert(type(URL) == "string" and #URL > 0, "Expected a non-empty URL")
     return RequestGet(URL)
 end
 
-function Library:SetCompatibilityMode(Mode: string)
-    assert(Mode == "Auto" or Mode == "Safe" or Mode == "LowSpec", "Compatibility mode must be Auto, Safe, or LowSpec")
-    Library.CompatibilityMode = Mode
-end
-
-function Library:ApplyCompatibility(WindowInfo)
-    if not CapabilityFlags.AlwaysOnTop then
-        WindowInfo.AlwaysOnTop = false
-    end
-
-    if Library.CompatibilityMode == "LowSpec" then
-        WindowInfo.ShowCustomCursor = false
-        WindowInfo.Animations = {
-            ToggleWindow = false,
-            TabSwitch = false,
-            Groupbox = false,
-            Dropdown = false,
-            KeyPicker = false,
-        }
-    end
-
-    return WindowInfo
-end
-
-Library.DefaultTheme = "Graphite"
+Library.DefaultTheme = "Azure"
 Library.Themes = {
+    Azure = {
+        BackgroundColor = Color3.fromRGB(18, 25, 34),
+        MainColor = Color3.fromRGB(28, 39, 52),
+        TopBarColor = Color3.fromRGB(34, 48, 65),
+        AccentColor = Color3.fromRGB(119, 166, 209),
+        OutlineColor = Color3.fromRGB(67, 89, 115),
+        FontColor = Color3.fromRGB(238, 244, 250),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(248, 251, 254),
+        CornerRadius = 4,
+        IsLight = false,
+    },
     Graphite = {
         BackgroundColor = Color3.fromRGB(22, 24, 29),
         MainColor = Color3.fromRGB(33, 36, 43),
@@ -562,8 +528,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.18,
-        TabSwipeOffset = 10,
+        TabTransitionTime = 0.2,
+        TabSwipeOffset = 8,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -1501,7 +1467,7 @@ local FetchIcons, Icons = pcall(function()
 
     
     
-    if not CapabilityFlags.LoadString then
+    if not NativeLoadString then
         error("loadstring is unavailable")
     end
 
@@ -2878,15 +2844,6 @@ function Library:RefreshKeybindMenu()
         return
     end
 
-    if Library.KeybindMenuTween then
-        StopTween(Library.KeybindMenuTween, true)
-        Library.KeybindMenuTween = nil
-    end
-    if Library.KeybindMenuScaleTween then
-        StopTween(Library.KeybindMenuScaleTween, true)
-        Library.KeybindMenuScaleTween = nil
-    end
-
     Library.KeybindMenuVisible = ShouldShow
 
     if ShouldShow then
@@ -2896,14 +2853,12 @@ function Library:RefreshKeybindMenu()
         Frame.GroupTransparency = 1
         AnimationScale.Scale = 0.96
 
-        Library.KeybindMenuTween = TweenService:Create(Frame, Library.KeybindMenuTweenInfo, {
+        Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
             GroupTransparency = 0,
         })
-        Library.KeybindMenuScaleTween = TweenService:Create(AnimationScale, Library.KeybindMenuTweenInfo, {
+        Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
             Scale = 1,
         })
-        Library.KeybindMenuTween:Play()
-        Library.KeybindMenuScaleTween:Play()
         return
     end
 
@@ -2913,14 +2868,21 @@ function Library:RefreshKeybindMenu()
         return
     end
 
-    Library.KeybindMenuTween = TweenService:Create(Frame, Library.KeybindMenuTweenInfo, {
+    Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
         GroupTransparency = 1,
     })
-    Library.KeybindMenuScaleTween = TweenService:Create(AnimationScale, Library.KeybindMenuTweenInfo, {
+    Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
         Scale = 0.96,
     })
 
     local Tween = Library.KeybindMenuTween
+    if not Tween then
+        Library.UpdatingKeybindMenuVisibility = true
+        Frame.Visible = false
+        Library.UpdatingKeybindMenuVisibility = false
+        return
+    end
+
     Tween.Completed:Connect(function(State)
         if State ~= Enum.PlaybackState.Completed or Library.KeybindMenuVisible or Library.KeybindMenuTween ~= Tween then
             return
@@ -2930,8 +2892,6 @@ function Library:RefreshKeybindMenu()
         Frame.Visible = false
         Library.UpdatingKeybindMenuVisibility = false
     end)
-    Library.KeybindMenuTween:Play()
-    Library.KeybindMenuScaleTween:Play()
 end
 
 function Library:SetKeybindMenuVisible(Visible: boolean)
@@ -10102,7 +10062,6 @@ end
 
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
-    WindowInfo = Library:ApplyCompatibility(WindowInfo)
     local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
     if RunService:IsStudio() and ViewportSize.X <= 5 and ViewportSize.Y <= 5 then
         repeat
@@ -10228,8 +10187,8 @@ function Library:CreateWindow(WindowInfo)
         New("UIGradient", {
             Color = function()
                 local White = Color3.new(1, 1, 1)
-                local PurpleTint = White:Lerp(Library.Scheme.AccentColor, 0.075)
-                return ColorSequence.new(PurpleTint, White)
+                local AccentTint = White:Lerp(Library.Scheme.AccentColor, 0.075)
+                return ColorSequence.new(AccentTint, White)
             end,
             Rotation = 115,
             Parent = MainFrame,
@@ -10283,6 +10242,16 @@ function Library:CreateWindow(WindowInfo)
             BackgroundTransparency = 0,
             Size = UDim2.new(1, 0, 0, 48),
             Parent = MainFrame,
+        })
+        New("UIGradient", {
+            Color = function()
+                return ColorSequence.new(
+                    Library.Scheme.TopBarColor:Lerp(Library.Scheme.AccentColor, 0.11),
+                    Library.Scheme.TopBarColor
+                )
+            end,
+            Rotation = 0,
+            Parent = TopBar,
         })
         Library:MakeDraggable(MainFrame, TopBar, false, true)
 
@@ -13005,13 +12974,9 @@ function Library:CreateWindow(WindowInfo)
             WindowTween = TweenService:Create(MainFrame, AnimationInfo, {
                 GroupTransparency = Library.Toggled and 0 or 1,
             })
-            if Library.Toggled then
-                WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
-                    Scale = TargetScale,
-                })
-            else
-                WindowScale.Scale = TargetScale
-            end
+            WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
+                Scale = Library.Toggled and TargetScale or TargetScale * 0.992,
+            })
 
             local ActiveWindowTween = WindowTween
             local ActiveScaleTween = WindowScaleTween

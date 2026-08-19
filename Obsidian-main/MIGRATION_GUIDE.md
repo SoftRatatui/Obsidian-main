@@ -324,6 +324,14 @@ FeatureToggle:AddKeyPicker("FeatureKeybind", {
 
 Доступные key modes: `Always`, `Toggle`, `Hold`, `Press`.
 
+Панель keybinds теперь автоматически скрывает строки без назначенной клавиши (`None` или некорректный bind) и не показывает пустое окно. Для её плавного отображения используйте публичный метод:
+
+```luau
+Library:SetKeybindMenuVisible(true)
+```
+
+Если позднее назначить первую клавишу, панель появится сама, пока эта настройка включена.
+
 ## Доступ к значениям
 
 Не меняйте IDs при переносе configs.
@@ -539,13 +547,25 @@ ConfigGroup:SetOrder(-100)
 
 ## Mobile и desktop
 
-MonHub автоматически compact-ит sidebar на touch devices. Не создавайте отдельную библиотеку для телефона.
+MonHub автоматически compact-ит sidebar на touch devices. При узкой рабочей области контентные колонки перестраиваются вертикально: сначала левая, затем правая. Это сохраняет ширину controls и не сжимает slider, dropdown или input до нечитаемого размера.
 
 ```luau
 local WindowSize = Library.IsMobile
     and UDim2.fromOffset(520, 460)
     or UDim2.fromOffset(760, 660)
 ```
+
+Responsive layout включён по умолчанию. Его порог можно настроить под конкретный интерфейс:
+
+```luau
+local Window = Library:CreateWindow({
+    ResponsiveLayout = true,
+    SingleColumnWidth = 540,
+    HideSearchAtWidth = 210,
+})
+```
+
+`SingleColumnWidth` — рабочая ширина контента, при которой две колонки становятся вертикальными. `HideSearchAtWidth` — крайний порог: если места почти нет, search временно скрывается вместо наложения на заголовок. Используйте `Window:SetResponsiveLayoutEnabled(false)`, только если ваш интерфейс гарантированно рассчитан на desktop.
 
 Рекомендации:
 
@@ -555,6 +575,7 @@ local WindowSize = Library.IsMobile
 - Проверяйте обе колонки при DPI `75%`, `100%`, `125%`, `150%`.
 - Проверяйте viewport в landscape mobile mode.
 - После ручного изменения размеров вызывайте `Window:FitToViewport()`.
+- В `Example.lua` настройка находится в `UI Settings → Responsive layout`.
 
 ## Анимации
 

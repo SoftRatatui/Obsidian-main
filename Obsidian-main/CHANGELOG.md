@@ -19,18 +19,22 @@
 + Draggable Watermark with FPS and ping settings in Example.lua
 + Interactive R6 viewport showcase with mouse, wheel, touch, and pinch controls
 + Editable TopBarColor theme field with automatic fallback for older themes
++ Responsive content columns that switch to a readable vertical layout on narrow windows and touch devices
++ Keybind panel filters out unassigned and invalid binds, hides when empty, and animates rows and visibility
 
 [optimizations]
 + Removed four blocking optional image downloads from module initialization
 + Lucide source is cached and uses Roblox-hosted sprites instead of synchronously downloading two PNG files
 + Text bounds are cached and temporary GetTextBoundsParams instances are destroyed
 + Search input is debounced and stale requests are discarded
++ Keybind visibility updates avoid repeated tween work unless a bind or state actually changes
 + Theme registry now uses weak instance keys
 + Slider decimal rounding no longer formats strings on every drag frame
 + Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
 + Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
 + Window closing is six times faster, uses one short CanvasGroup fade, and supports immediate reversal
 + Watermark statistics update at a fixed interval with one lightweight frame counter
++ Viewport and DPI changes are coalesced before recalculating responsive geometry
 
 [fixes]
 + Timed event waits no longer fire a destroyed BindableEvent

@@ -12,7 +12,7 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
 - Faster startup: Roblox-hosted icon sprites are preferred, the Lucide module is cached, and optional image files are no longer downloaded before the first window.
 - Less work while typing: search is debounced and text measurements are cached.
-- Responsive geometry: windows remain inside the viewport, resize work is coalesced, and scrollable columns expose subtle overflow indicators.
+- Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable Watermark, FPS/ping settings, interactive R6 viewport controls, and refined sliders.
 - Editable top-bar theme color with backwards-compatible fallback for existing themes.

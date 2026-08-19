@@ -193,6 +193,10 @@ local Library = {
     KeybindFrame = nil,
     KeybindContainer = nil,
     KeybindToggles = {},
+    KeybindMenuRequested = false,
+    KeybindMenuVisible = false,
+    KeybindMenuTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeybindRowTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     
     Notifications = {},
@@ -432,6 +436,9 @@ local Templates = {
         DisableCompactingSnap = false,
         SidebarCompacted = false,
         MinContainerWidth = 256,
+        ResponsiveLayout = true,
+        SingleColumnWidth = 540,
+        HideSearchAtWidth = 210,
 
         
         MinSidebarWidth = 128,
@@ -1221,7 +1228,9 @@ function Library:SetDPIScale(DPIScale: number)
 
     (Library :: any):UpdateNotificationPositions(true)
 
-    if Library.Window and Library.Window.FitToViewport then
+    if Library.Window and Library.Window.QueueFitToViewport then
+        Library.Window:QueueFitToViewport()
+    elseif Library.Window and Library.Window.FitToViewport then
         task.defer(Library.Window.FitToViewport, Library.Window)
     end
 end
@@ -2529,9 +2538,10 @@ function Library:AddDraggableButton(...)
 end
 
 function Library:AddDraggableMenu(Name: string)
-    local Holder = New("Frame", {
+    local Holder = New("CanvasGroup", {
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundColor3 = "BackgroundColor",
+        GroupTransparency = 1,
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.fromOffset(0, 0),
         ZIndex = 10,
@@ -2550,6 +2560,10 @@ function Library:AddDraggableMenu(Name: string)
             Parent = Holder,
         })
     )
+    local AnimationScale = New("UIScale", {
+        Scale = 1,
+        Parent = Holder,
+    })
     Library:AddOutline(Holder)
 
     Library:MakeLine(Holder, {
@@ -2597,7 +2611,90 @@ function Library:AddDraggableMenu(Name: string)
 
     PositionDraggable(Holder, Holder.Position)
 
-    return Holder, Container
+    return Holder, Container, AnimationScale
+end
+
+function Library:HasVisibleKeybinds()
+    for _, KeybindToggle in Library.KeybindToggles do
+        if KeybindToggle.Loaded and KeybindToggle.Visible then
+            return true
+        end
+    end
+
+    return false
+end
+
+function Library:RefreshKeybindMenu()
+    local Frame = Library.KeybindFrame
+    local AnimationScale = Library.KeybindAnimationScale
+    if not Frame or not AnimationScale or Library.Unloaded then
+        return
+    end
+
+    local ShouldShow = Library.KeybindMenuRequested and Library:HasVisibleKeybinds()
+    if Library.KeybindMenuVisible == ShouldShow and Frame.Visible == ShouldShow then
+        return
+    end
+
+    if Library.KeybindMenuTween then
+        StopTween(Library.KeybindMenuTween, true)
+        Library.KeybindMenuTween = nil
+    end
+    if Library.KeybindMenuScaleTween then
+        StopTween(Library.KeybindMenuScaleTween, true)
+        Library.KeybindMenuScaleTween = nil
+    end
+
+    Library.KeybindMenuVisible = ShouldShow
+
+    if ShouldShow then
+        Library.UpdatingKeybindMenuVisibility = true
+        Frame.Visible = true
+        Library.UpdatingKeybindMenuVisibility = false
+        Frame.GroupTransparency = 1
+        AnimationScale.Scale = 0.96
+
+        Library.KeybindMenuTween = TweenService:Create(Frame, Library.KeybindMenuTweenInfo, {
+            GroupTransparency = 0,
+        })
+        Library.KeybindMenuScaleTween = TweenService:Create(AnimationScale, Library.KeybindMenuTweenInfo, {
+            Scale = 1,
+        })
+        Library.KeybindMenuTween:Play()
+        Library.KeybindMenuScaleTween:Play()
+        return
+    end
+
+    if not Frame.Visible then
+        Frame.GroupTransparency = 1
+        AnimationScale.Scale = 0.96
+        return
+    end
+
+    Library.KeybindMenuTween = TweenService:Create(Frame, Library.KeybindMenuTweenInfo, {
+        GroupTransparency = 1,
+    })
+    Library.KeybindMenuScaleTween = TweenService:Create(AnimationScale, Library.KeybindMenuTweenInfo, {
+        Scale = 0.96,
+    })
+
+    local Tween = Library.KeybindMenuTween
+    Tween.Completed:Connect(function(State)
+        if State ~= Enum.PlaybackState.Completed or Library.KeybindMenuVisible or Library.KeybindMenuTween ~= Tween then
+            return
+        end
+
+        Library.UpdatingKeybindMenuVisibility = true
+        Frame.Visible = false
+        Library.UpdatingKeybindMenuVisibility = false
+    end)
+    Library.KeybindMenuTween:Play()
+    Library.KeybindMenuScaleTween:Play()
+end
+
+function Library:SetKeybindMenuVisible(Visible: boolean)
+    Library.KeybindMenuRequested = Visible == true
+    Library:RefreshKeybindMenu()
 end
 
 function Library:AddDraggableImageButton(...)
@@ -3525,13 +3622,17 @@ do
             Picker.Size = UDim2.new(0, 18, 1, 0)
         end
 
-        local KeybindsToggle = { Normal = KeyPicker.Mode ~= "Toggle" }
+        local KeybindsToggle = {
+            Normal = nil,
+            Visible = false,
+        }
         do
             local Holder = New("TextButton", {
                 BackgroundTransparency = 1,
+                ClipsDescendants = true,
                 Size = UDim2.new(1, 0, 0, 16),
                 Text = "",
-                Visible = not Info.NoUI,
+                Visible = false,
                 Parent = Library.KeybindContainer,
             })
 
@@ -3577,8 +3678,27 @@ do
             })
 
             function KeybindsToggle:Display(State)
-                Label.TextTransparency = State and 0 or 0.5
-                CheckImage.ImageTransparency = State and 0 or 1
+                if KeybindsToggle.DisplayState == State then
+                    return
+                end
+
+                KeybindsToggle.DisplayState = State
+
+                if KeybindsToggle.LabelTween then
+                    StopTween(KeybindsToggle.LabelTween, true)
+                end
+                if KeybindsToggle.CheckTween then
+                    StopTween(KeybindsToggle.CheckTween, true)
+                end
+
+                KeybindsToggle.LabelTween = TweenService:Create(Label, Library.KeybindRowTweenInfo, {
+                    TextTransparency = State and 0 or 0.5,
+                })
+                KeybindsToggle.CheckTween = TweenService:Create(CheckImage, Library.KeybindRowTweenInfo, {
+                    ImageTransparency = State and 0 or 1,
+                })
+                KeybindsToggle.LabelTween:Play()
+                KeybindsToggle.CheckTween:Play()
             end
 
             function KeybindsToggle:SetText(Text)
@@ -3586,11 +3706,49 @@ do
             end
 
             function KeybindsToggle:SetVisibility(Visibility)
-                Holder.Visible = Visibility
+                Visibility = Visibility == true
+                if KeybindsToggle.Visible == Visibility then
+                    return
+                end
+
+                KeybindsToggle.Visible = Visibility
+
+                if KeybindsToggle.VisibilityTween then
+                    StopTween(KeybindsToggle.VisibilityTween, true)
+                    KeybindsToggle.VisibilityTween = nil
+                end
+
+                if Visibility then
+                    Holder.Visible = true
+                    Holder.Size = UDim2.new(1, 0, 0, 0)
+                    KeybindsToggle.VisibilityTween = TweenService:Create(Holder, Library.KeybindRowTweenInfo, {
+                        Size = UDim2.new(1, 0, 0, 16),
+                    })
+                    KeybindsToggle.VisibilityTween:Play()
+                else
+                    KeybindsToggle.VisibilityTween = TweenService:Create(Holder, Library.KeybindRowTweenInfo, {
+                        Size = UDim2.new(1, 0, 0, 0),
+                    })
+
+                    local Tween = KeybindsToggle.VisibilityTween
+                    Tween.Completed:Connect(function(State)
+                        if State == Enum.PlaybackState.Completed and not KeybindsToggle.Visible and KeybindsToggle.VisibilityTween == Tween then
+                            Holder.Visible = false
+                        end
+                    end)
+                    KeybindsToggle.VisibilityTween:Play()
+                end
+
+                Library:RefreshKeybindMenu()
             end
 
             function KeybindsToggle:SetNormal(Normal)
+                if KeybindsToggle.Normal == Normal and KeybindsToggle.NormalApplied then
+                    return
+                end
+
                 KeybindsToggle.Normal = Normal
+                KeybindsToggle.NormalApplied = true
 
                 Holder.Active = not Normal
                 Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(22, 0)
@@ -3807,6 +3965,11 @@ do
                 return
             end
 
+            if not KeyPicker:IsBound() then
+                KeybindsToggle:SetVisibility(false)
+                return
+            end
+
             if KeyPicker.Mode == "Toggle" and ParentObj.Type == "Toggle" and ParentObj.Disabled then
                 KeybindsToggle:SetVisibility(false)
                 return
@@ -3830,6 +3993,10 @@ do
                 KeybindsToggle:SetVisibility(true)
                 KeybindsToggle:Display(State)
             end
+        end
+
+        function KeyPicker:IsBound()
+            return KeyPicker.Value ~= "None" and KeyPicker.Value ~= "Unknown"
         end
 
         function KeyPicker:GetState()
@@ -9668,6 +9835,8 @@ function Library:CreateWindow(WindowInfo)
     WindowInfo.SidebarCompactWidth = math.max(48, WindowInfo.SidebarCompactWidth)
     WindowInfo.SidebarCollapseThreshold = math.clamp(WindowInfo.SidebarCollapseThreshold, 0.1, 0.9)
     WindowInfo.CompactWidthActivation = math.max(48, WindowInfo.CompactWidthActivation)
+    WindowInfo.SingleColumnWidth = math.max(240, WindowInfo.SingleColumnWidth)
+    WindowInfo.HideSearchAtWidth = math.max(120, WindowInfo.HideSearchAtWidth)
 
     Library.CornerRadius = WindowInfo.CornerRadius
     Library:SetNotifySide(WindowInfo.NotifySide)
@@ -9716,10 +9885,18 @@ function Library:CreateWindow(WindowInfo)
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
 
     do
-        Library.KeybindFrame, Library.KeybindContainer = Library:AddDraggableMenu("Keybinds")
+        Library.KeybindFrame, Library.KeybindContainer, Library.KeybindAnimationScale = Library:AddDraggableMenu("Keybinds")
         Library.KeybindFrame.AnchorPoint = Vector2.new(0, 0.5)
         Library.KeybindFrame.Position = UDim2.new(0, 6, 0.5, 0)
         Library.KeybindFrame.Visible = false
+        Library:GiveSignal(Library.KeybindFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            if Library.UpdatingKeybindMenuVisibility then
+                return
+            end
+
+            Library.KeybindMenuRequested = Library.KeybindFrame.Visible
+            Library:RefreshKeybindMenu()
+        end))
 
         MainFrame = New("CanvasGroup", {
             BackgroundColor3 = function()
@@ -10051,8 +10228,11 @@ function Library:CreateWindow(WindowInfo)
             })
 
             Library:MakeResizable(MainFrame, ResizeButton, function()
-                for _, Tab in Library.Tabs do
-                    Tab:Resize(true)
+                if Library.ActiveTab then
+                    Library.ActiveTab:Resize(Library.ActiveTab.WarningBox and Library.ActiveTab.WarningBox.Visible)
+                end
+                if Library.Window and Library.Window.RefreshResponsiveLayout then
+                    Library.Window:RefreshResponsiveLayout()
                 end
             end)
 
@@ -10118,6 +10298,80 @@ function Library:CreateWindow(WindowInfo)
     local WindowTween
     local WindowScaleTween
     local WindowAnimationSequence = 0
+    local IsNarrowLayout = false
+    local IsUltraNarrowLayout = false
+    local TabInfoRequested = false
+    local ResponsiveLayoutQueued = false
+    local ViewportFitQueued = false
+
+    local function GetContentWidth()
+        local Scale = math.max(Library.DPIScale or 1, 0.01)
+        local Width = Container.AbsoluteSize.X / Scale
+
+        if Width <= 0 then
+            Width = MainFrame.Size.X.Offset - Window:GetSidebarWidth() - 1
+        end
+
+        return math.max(0, Width)
+    end
+
+    function Window:IsSingleColumnLayout()
+        return IsNarrowLayout
+    end
+
+    function Window:SetResponsiveLayoutEnabled(Enabled: boolean)
+        WindowInfo.ResponsiveLayout = Enabled == true
+        Window:RefreshResponsiveLayout()
+    end
+
+    function Window:RefreshResponsiveLayout()
+        local ContentWidth = GetContentWidth()
+        local PreviousNarrowLayout = IsNarrowLayout
+        IsNarrowLayout = WindowInfo.ResponsiveLayout == true and ContentWidth <= WindowInfo.SingleColumnWidth
+        IsUltraNarrowLayout = ContentWidth <= WindowInfo.HideSearchAtWidth
+
+        local ShowSearch = WindowInfo.DisableSearch ~= true and not IsUltraNarrowLayout
+        local ShowTabInfo = TabInfoRequested and not IsUltraNarrowLayout
+        local TabInfoSize = UDim2.fromScale(ShowSearch and 0.5 or 1, 1)
+        local SearchSize = UDim2.fromScale(ShowTabInfo and 0.5 or 1, 1)
+
+        if SearchBox.Visible ~= ShowSearch then
+            SearchBox.Visible = ShowSearch
+        end
+        if CurrentTabInfo.Visible ~= ShowTabInfo then
+            CurrentTabInfo.Visible = ShowTabInfo
+        end
+        if CurrentTabInfo.Size ~= TabInfoSize then
+            CurrentTabInfo.Size = TabInfoSize
+        end
+
+        if IsDefaultSearchbarSize and SearchBox.Size ~= SearchSize then
+            SearchBox.Size = SearchSize
+        end
+
+        if PreviousNarrowLayout ~= IsNarrowLayout then
+            for _, Tab in Library.Tabs do
+                if not Tab.IsKeyTab and Tab.RefreshSides then
+                    Tab:RefreshSides()
+                end
+            end
+        end
+    end
+
+    local function QueueResponsiveLayout()
+        if ResponsiveLayoutQueued then
+            return
+        end
+
+        ResponsiveLayoutQueued = true
+        task.defer(function()
+            ResponsiveLayoutQueued = false
+
+            if not Library.Unloaded and MainFrame.Parent then
+                Window:RefreshResponsiveLayout()
+            end
+        end)
+    end
 
     local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
         local Current = UICorner[Corner]
@@ -10325,7 +10579,11 @@ function Library:CreateWindow(WindowInfo)
 
     function Window:SetSidebarWidth(Width)
         local MaxSidebarWidth = math.max(48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
-        Width = math.clamp(Width, 48, MaxSidebarWidth)
+        Width = math.floor(math.clamp(Width, 48, MaxSidebarWidth) + 0.5)
+
+        if Width == Tabs.Size.X.Offset then
+            return
+        end
 
         DividerLine.Position = UDim2.fromOffset(Width, 0)
 
@@ -10340,6 +10598,8 @@ function Library:CreateWindow(WindowInfo)
         if not IsCompact then
             LastExpandedWidth = Width
         end
+
+        QueueResponsiveLayout()
     end
 
     function Window:FitToViewport()
@@ -10369,26 +10629,38 @@ function Library:CreateWindow(WindowInfo)
         Window:SetSidebarWidth(math.min(Window:GetSidebarWidth(), MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1))
         ClampGuiToViewport(MainFrame, Margin)
 
-        for _, Tab in Library.Tabs do
-            Tab:Resize(true)
+        Window:RefreshResponsiveLayout()
+
+        if Library.ActiveTab then
+            Library.ActiveTab:Resize(Library.ActiveTab.WarningBox and Library.ActiveTab.WarningBox.Visible)
         end
+    end
+
+    function Window:QueueFitToViewport()
+        if ViewportFitQueued then
+            return
+        end
+
+        ViewportFitQueued = true
+        task.defer(function()
+            ViewportFitQueued = false
+
+            if not Library.Unloaded and MainFrame.Parent then
+                Window:FitToViewport()
+            end
+        end)
     end
 
     function Window:ShowTabInfo(Name, Description)
         CurrentTabLabel.Text = Name
         CurrentTabDescription.Text = Description
-
-        if IsDefaultSearchbarSize then
-            SearchBox.Size = UDim2.fromScale(0.5, 1)
-        end
-        CurrentTabInfo.Visible = true
+        TabInfoRequested = true
+        Window:RefreshResponsiveLayout()
     end
 
     function Window:HideTabInfo()
-        CurrentTabInfo.Visible = false
-        if IsDefaultSearchbarSize then
-            SearchBox.Size = UDim2.fromScale(1, 1)
-        end
+        TabInfoRequested = false
+        Window:RefreshResponsiveLayout()
     end
 
     function Window:AddTab(...)
@@ -10768,9 +11040,50 @@ function Library:CreateWindow(WindowInfo)
 
         function Tab:RefreshSides()
             local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
-            for _, Side in Tab.Sides do
-                Side.Position = UDim2.new(Side.Position.X.Scale, 0, 0, Offset)
-                Side.Size = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+            if IsNarrowLayout then
+                local HalfOffset = math.floor(Offset / 2)
+                local Gap = 6
+                local LeftPosition = UDim2.fromOffset(0, Offset)
+                local LeftSize = UDim2.new(1, 0, 0.5, -(HalfOffset + Gap))
+                local RightPosition = UDim2.new(0, 0, 0.5, HalfOffset + Gap)
+                local RightSize = UDim2.new(1, 0, 0.5, -(HalfOffset + Gap))
+
+                if TabLeft.Position ~= LeftPosition then
+                    TabLeft.Position = LeftPosition
+                end
+                if TabLeft.Size ~= LeftSize then
+                    TabLeft.Size = LeftSize
+                end
+                if TabRight.AnchorPoint ~= Vector2.new(0, 0) then
+                    TabRight.AnchorPoint = Vector2.new(0, 0)
+                end
+                if TabRight.Position ~= RightPosition then
+                    TabRight.Position = RightPosition
+                end
+                if TabRight.Size ~= RightSize then
+                    TabRight.Size = RightSize
+                end
+            else
+                local LeftPosition = UDim2.fromOffset(0, Offset)
+                local LeftSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+                local RightPosition = UDim2.new(1, 0, 0, Offset)
+                local RightSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+
+                if TabLeft.Position ~= LeftPosition then
+                    TabLeft.Position = LeftPosition
+                end
+                if TabLeft.Size ~= LeftSize then
+                    TabLeft.Size = LeftSize
+                end
+                if TabRight.AnchorPoint ~= Vector2.new(1, 0) then
+                    TabRight.AnchorPoint = Vector2.new(1, 0)
+                end
+                if TabRight.Position ~= RightPosition then
+                    TabRight.Position = RightPosition
+                end
+                if TabRight.Size ~= RightSize then
+                    TabRight.Size = RightSize
+                end
             end
         end
 
@@ -11511,7 +11824,7 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Library:PlayTabAnimation(TabCanvas, true)
-            Tab:RefreshSides()
+            Tab:Resize(Tab.WarningBox.Visible)
 
             Library.ActiveTab = Tab
 
@@ -12662,7 +12975,7 @@ function Library:CreateWindow(WindowInfo)
 
     if workspace.CurrentCamera then
         Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-            task.defer(Window.FitToViewport, Window)
+            Window:QueueFitToViewport()
         end))
     end
 

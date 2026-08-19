@@ -119,6 +119,9 @@ local Window = Library:CreateWindow({
 	Resizable = true,
 	GlobalSearch = true,
 	EnableSidebarResize = true,
+	ResponsiveLayout = true,
+	SingleColumnWidth = 540,
+	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
 	CornerRadius = 5,
@@ -684,7 +687,7 @@ MenuGroup:AddToggle("KeybindMenuOpen", {
 	Text = "Show keybind menu",
 	Default = Library.KeybindFrame.Visible,
 	Callback = function(Value)
-		Library.KeybindFrame.Visible = Value
+		Library:SetKeybindMenuVisible(Value)
 	end,
 })
 
@@ -693,6 +696,14 @@ MenuGroup:AddToggle("CustomCursor", {
 	Default = Library.ShowCustomCursor,
 	Callback = function(Value)
 		Library.ShowCustomCursor = Value
+	end,
+})
+
+MenuGroup:AddToggle("ResponsiveLayout", {
+	Text = "Responsive layout",
+	Default = true,
+	Callback = function(Value)
+		Window:SetResponsiveLayoutEnabled(Value)
 	end,
 })
 

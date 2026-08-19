@@ -406,7 +406,7 @@ function SaveManager:SaveJSON(ConfigName)
 
         objects = {},
         keybindMenu = if Library.KeybindFrame then {
-            visible = Library.KeybindFrame.Visible,
+            visible = if Library.KeybindMenuRequested ~= nil then Library.KeybindMenuRequested else Library.KeybindFrame.Visible,
             position = SpecialValueParser.UDim2.Encode(Library.KeybindFrame.Position)
         } else nil
     }
@@ -512,7 +512,11 @@ function SaveManager:LoadJSON(Content: string)
         local IsVisible = KeybindFrameData.visible == true
         local Position = SpecialValueParser.UDim2.Decode(KeybindFrameData.position)
 
-        Library.KeybindFrame.Visible = IsVisible
+        if Library.SetKeybindMenuVisible then
+            Library:SetKeybindMenuVisible(IsVisible)
+        else
+            Library.KeybindFrame.Visible = IsVisible
+        end
         Library.KeybindFrame.Position = Position or Library.KeybindFrame.Position
         
         local KeybindMenuToggle = Library.Options and Library.Options.KeybindMenuOpen

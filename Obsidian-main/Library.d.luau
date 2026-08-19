@@ -71,6 +71,7 @@ export type Notification = {
 
 export type KeybindToggle = {
     Normal: boolean,
+    Visible: boolean,
     Holder: TextButton,
     Label: TextLabel,
     Checkbox: Frame,
@@ -356,6 +357,7 @@ export type KeyPicker = {
 
     Display: (self: KeyPicker) -> (),
     Update: (self: KeyPicker) -> (),
+    IsBound: (self: KeyPicker) -> boolean,
     GetState: (self: KeyPicker) -> boolean,
     OnChanged: (self: KeyPicker, Func: (Key: Enum.KeyCode | Enum.UserInputType) -> ()) -> (),
     OnClick: (self: KeyPicker, Func: () -> ()) -> (),
@@ -945,7 +947,11 @@ export type Window = {
     GetSidebarWidth: (self: Window) -> number,
     SetSidebarWidth: (self: Window, Width: number) -> (),
     FitToViewport: (self: Window) -> (),
+    QueueFitToViewport: (self: Window) -> (),
     SetCompact: (self: Window, State: boolean) -> (),
+    IsSingleColumnLayout: (self: Window) -> boolean,
+    SetResponsiveLayoutEnabled: (self: Window, Enabled: boolean) -> (),
+    RefreshResponsiveLayout: (self: Window) -> (),
     ShowTabInfo: (self: Window, Name: string, Description: string) -> (),
     HideTabInfo: (self: Window) -> (),
     AddTab: (
@@ -1024,9 +1030,12 @@ export type Library = {
     ActiveLoading: Loading?,
     Tabs: { [string]: Tab | KeyTab },
     DependencyBoxes: { [number]: DependencyBox | DependencyGroupbox },
-    KeybindFrame: Frame?,
+    KeybindFrame: CanvasGroup?,
     KeybindContainer: Frame?,
+    KeybindAnimationScale: UIScale?,
     KeybindToggles: { [number]: KeybindToggle },
+    KeybindMenuRequested: boolean,
+    KeybindMenuVisible: boolean,
     Notifications: { [GuiObject]: Notification },
     Watermark: DraggableLabel?,
     ClickSound: Sound?,
@@ -1038,6 +1047,8 @@ export type Library = {
     TweenInfo: TweenInfo,
     NotifyTweenInfo: TweenInfo,
     TabTransitionInfo: TweenInfo,
+    KeybindMenuTweenInfo: TweenInfo,
+    KeybindRowTweenInfo: TweenInfo,
     TabSwipeOffset: number,
     TabSwipeFrom: string,
     Animations: {
@@ -1173,7 +1184,10 @@ export type Library = {
         ExcludeScaling: boolean?,
         ExcludeDragging: boolean?
     ) -> DraggableImageButton,
-    AddDraggableMenu: (self: Library, Name: string) -> (Frame, Frame),
+    AddDraggableMenu: (self: Library, Name: string) -> (CanvasGroup, Frame, UIScale),
+    HasVisibleKeybinds: (self: Library) -> boolean,
+    RefreshKeybindMenu: (self: Library) -> (),
+    SetKeybindMenuVisible: (self: Library, Visible: boolean) -> (),
     SetWatermarkVisibility: (self: Library, Visible: boolean) -> (),
     SetWatermark: (self: Library, Text: string) -> (),
     AddContextMenu: (
@@ -1242,6 +1256,9 @@ export type Library = {
             DisableCompactingSnap: boolean?,
             SidebarCompacted: boolean?,
             MinContainerWidth: number?,
+            ResponsiveLayout: boolean?,
+            SingleColumnWidth: number?,
+            HideSearchAtWidth: number?,
             MinSidebarWidth: number?,
             SidebarCompactWidth: number?,
             SidebarCollapseThreshold: number?,

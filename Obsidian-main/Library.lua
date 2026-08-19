@@ -322,18 +322,18 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(18, 25, 34),
-        MainColor = Color3.fromRGB(28, 39, 52),
-        TopBarColor = Color3.fromRGB(34, 48, 65),
-        AccentColor = Color3.fromRGB(119, 166, 209),
-        OutlineColor = Color3.fromRGB(67, 89, 115),
-        FontColor = Color3.fromRGB(238, 244, 250),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(248, 251, 254),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
 
         BackgroundImage = ""
     },
@@ -355,7 +355,7 @@ function Library:Fetch(URL: string): (boolean, string)
     return RequestGet(URL)
 end
 
-Library.DefaultTheme = "Azure"
+Library.DefaultTheme = "Graphite"
 Library.Themes = {
     Azure = {
         BackgroundColor = Color3.fromRGB(18, 25, 34),
@@ -3030,13 +3030,37 @@ do
     })
     WatermarkLabel:SetVisible(false)
     Library.Watermark = WatermarkLabel
+    local ClampQueued = false
+
+    local function QueueWatermarkClamp()
+        if ClampQueued then
+            return
+        end
+
+        ClampQueued = true
+        task.defer(function()
+            ClampQueued = false
+            if not Library.Unloaded and WatermarkLabel.Label and WatermarkLabel.Label.Parent then
+                ClampGuiToViewport(WatermarkLabel.Label, 8)
+            end
+        end)
+    end
 
     function Library:SetWatermark(Text: string)
         WatermarkLabel:SetText(Text)
+        QueueWatermarkClamp()
     end
 
     function Library:SetWatermarkVisibility(Visible: boolean)
         WatermarkLabel:SetVisible(Visible)
+        if Visible then
+            QueueWatermarkClamp()
+        end
+    end
+
+    Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
+    if workspace.CurrentCamera then
+        Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(QueueWatermarkClamp))
     end
 end
 

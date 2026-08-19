@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with a premium Azure default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with a premium Graphite default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
 Migrating from the original Obsidian: read the complete [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- Azure visual system with layered blue-slate surfaces, a muted cool accent, 4px geometry, and Gotham typography.
+- Graphite visual system with layered neutral-gray surfaces, a muted slate accent, 4px geometry, and Gotham typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -133,13 +133,13 @@ Preview:SetColor(Color3.fromRGB(119, 166, 209))
 
 ## Themes
 
-`Azure` is the default. `Graphite`, `BlackPurple`, and `Classic` remain available:
+`Graphite` is the default. `Azure`, `BlackPurple`, and `Classic` remain available:
 
 ```luau
 Library:SetTheme("BlackPurple")
 ```
 
-You can pass `Theme = "Azure"` to `Library:Create`, select another built-in theme, or supply a custom theme table.
+You can pass `Theme = "Graphite"` to `Library:Create`, select another built-in theme, or supply a custom theme table.
 
 ## Legacy API
 

@@ -183,29 +183,76 @@ local function FocusCamera(Object, Camera)
 end
 
 function VisualPreview.Create(Library, Tab, Info)
-    assert(Library and Library.AddDraggableMenu and Library.Window, "VisualPreview requires an active MonHub library")
+    assert(Library and Library.AddToRegistry and Library.Window and Library.ScreenGui, "VisualPreview requires an active MonHub library")
     assert(Tab and Tab.Canvas, "VisualPreview requires a regular tab")
 
     Info = Info or {}
 
-    local Holder, Container, AnimationScale = Library:AddDraggableMenu(Info.Name or "ESP preview")
+    local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
     Holder.AnchorPoint = Vector2.new(0, 0.5)
-    Holder.AutomaticSize = Enum.AutomaticSize.None
+    Holder.BackgroundColor3 = Library.Scheme.BackgroundColor
+    Holder.BorderSizePixel = 0
+    Holder.ClipsDescendants = true
+    Holder.Position = UDim2.fromOffset(8, 8)
     Holder.Size = UDim2.fromOffset(Info.Width or 348, Info.Height or 420)
     Holder.Visible = false
-    AnimationScale.Scale = 0.98
+    Holder.ZIndex = 10
+    Holder.Parent = Library.ScreenGui
+    Library:AddToRegistry(Holder, {
+        BackgroundColor3 = "BackgroundColor",
+    })
 
-    for _, Child in Container:GetChildren() do
-        if Child:IsA("UIListLayout") or Child:IsA("UIPadding") then
-            Child:Destroy()
-        end
-    end
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, Library.CornerRadius)
+    Corner.Parent = Holder
+
+    local Outline = Instance.new("UIStroke")
+    Outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    Outline.Color = Library.Scheme.OutlineColor
+    Outline.Thickness = 1
+    Outline.Parent = Holder
+    Library:AddToRegistry(Outline, {
+        Color = "OutlineColor",
+    })
+
+    local AnimationScale = Instance.new("UIScale")
+    AnimationScale.Scale = 0.98
+    AnimationScale.Parent = Holder
+
+    local Header = Instance.new("TextLabel")
+    Header.BackgroundTransparency = 1
+    Header.FontFace = Library.Scheme.Font
+    Header.Position = UDim2.fromOffset(12, 0)
+    Header.Size = UDim2.new(1, -24, 0, 34)
+    Header.Text = Info.Name or "ESP preview"
+    Header.TextColor3 = Library.Scheme.FontColor
+    Header.TextSize = 14
+    Header.TextXAlignment = Enum.TextXAlignment.Left
+    Header.ZIndex = 11
+    Header.Parent = Holder
+    Library:AddToRegistry(Header, {
+        FontFace = "Font",
+        TextColor3 = "FontColor",
+    })
+
+    local HeaderLine = Instance.new("Frame")
+    HeaderLine.BackgroundColor3 = Library.Scheme.OutlineColor
+    HeaderLine.BorderSizePixel = 0
+    HeaderLine.Position = UDim2.fromOffset(0, 34)
+    HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    HeaderLine.ZIndex = 11
+    HeaderLine.Parent = Holder
+    Library:AddToRegistry(HeaderLine, {
+        BackgroundColor3 = "OutlineColor",
+    })
 
     local Content = Instance.new("Frame")
     Content.BackgroundTransparency = 1
-    Content.Size = UDim2.fromScale(1, 1)
-    Content.Parent = Container
+    Content.Position = UDim2.fromOffset(0, 35)
+    Content.Size = UDim2.new(1, 0, 1, -35)
+    Content.ZIndex = 11
+    Content.Parent = Holder
 
     local ViewportFrame = Instance.new("ViewportFrame")
     ViewportFrame.Active = true
@@ -274,7 +321,7 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     local function IsDisplayable()
-        return Preview.Enabled and Tab.Canvas.Visible and MainFrame.Visible
+        return Preview.Enabled and Library.Toggled and Library.ActiveTab == Tab and Tab.Canvas.Visible and MainFrame.Visible
     end
 
     local function UpdateVisibility()
@@ -289,13 +336,9 @@ function VisualPreview.Create(Library, Tab, Info)
         if Visible then
             PositionPanel()
             if not Holder.Visible then
-                Holder.GroupTransparency = 1
                 AnimationScale.Scale = 0.98
                 Holder.Visible = true
             end
-            Library:PlayTween(Holder, "VisualPreviewVisibility", TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                GroupTransparency = 0,
-            })
             Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Scale = 1,
             })
@@ -306,10 +349,7 @@ function VisualPreview.Create(Library, Tab, Info)
             return
         end
 
-        local Tween = Library:PlayTween(Holder, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            GroupTransparency = 1,
-        })
-        Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        local Tween = Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Scale = 0.98,
         })
 
@@ -322,6 +362,19 @@ function VisualPreview.Create(Library, Tab, Info)
             if State == Enum.PlaybackState.Completed and Sequence == VisibilitySequence and not IsDisplayable() then
                 Holder.Visible = false
             end
+        end)
+    end
+
+    local VisibilityUpdateQueued = false
+    local function QueueVisibilityUpdate()
+        if VisibilityUpdateQueued then
+            return
+        end
+
+        VisibilityUpdateQueued = true
+        task.defer(function()
+            VisibilityUpdateQueued = false
+            UpdateVisibility()
         end)
     end
 
@@ -338,8 +391,9 @@ function VisualPreview.Create(Library, Tab, Info)
 
     table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(PositionPanel))
     table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(PositionPanel))
-    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateVisibility))
-    table.insert(Preview.Connections, Tab.Canvas:GetPropertyChangedSignal("Visible"):Connect(UpdateVisibility))
+    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
+    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("GroupTransparency"):Connect(QueueVisibilityUpdate))
+    table.insert(Preview.Connections, Tab.Canvas:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
     if workspace.CurrentCamera then
         table.insert(Preview.Connections, workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(PositionPanel))
     end

@@ -131,13 +131,13 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library.Scheme.BackgroundColor = Color3.fromRGB(18, 25, 34)
-Library.Scheme.MainColor = Color3.fromRGB(28, 39, 52)
-Library.Scheme.TopBarColor = Color3.fromRGB(34, 48, 65)
-Library.Scheme.AccentColor = Color3.fromRGB(119, 166, 209)
-Library.Scheme.OutlineColor = Color3.fromRGB(67, 89, 115)
-Library.Scheme.FontColor = Color3.fromRGB(238, 244, 250)
-Library.Scheme.WhiteColor = Color3.fromRGB(248, 251, 254)
+Library.Scheme.BackgroundColor = Color3.fromRGB(22, 24, 29)
+Library.Scheme.MainColor = Color3.fromRGB(33, 36, 43)
+Library.Scheme.TopBarColor = Color3.fromRGB(39, 42, 50)
+Library.Scheme.AccentColor = Color3.fromRGB(133, 141, 160)
+Library.Scheme.OutlineColor = Color3.fromRGB(65, 69, 80)
+Library.Scheme.FontColor = Color3.fromRGB(239, 241, 246)
+Library.Scheme.WhiteColor = Color3.fromRGB(248, 249, 252)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 Library.CornerRadius = 4
 Library.IsLightTheme = false
@@ -723,9 +723,9 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Azure uses layered blue-slate surfaces, a muted cool accent, and compact geometry.", true)
-StyleTab:AddButton("Reapply Azure", function()
-	Library:SetTheme("Azure")
+StyleTab:AddLabel("Graphite uses layered neutral-gray surfaces, a muted slate accent, and compact geometry.", true)
+StyleTab:AddButton("Reapply Graphite", function()
+	Library:SetTheme("Graphite")
 end)
 
 

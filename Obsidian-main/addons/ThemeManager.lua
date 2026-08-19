@@ -38,7 +38,7 @@ local ThemeManager = {
     BuiltInThemes = {
         ["Default"] = {
             1,
-            { FontColor = "eef4fa", MainColor = "1c2734", TopBarColor = "223041", AccentColor = "77a6d1", BackgroundColor = "121922", OutlineColor = "435973", BackgroundImage = "", FontFace = "Gotham" },
+            { FontColor = "eff1f6", MainColor = "21242b", TopBarColor = "272a32", AccentColor = "858da0", BackgroundColor = "16181d", OutlineColor = "414550", BackgroundImage = "", FontFace = "Gotham" },
         },
         ["BBot"] = {
             2,

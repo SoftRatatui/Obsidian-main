@@ -2,7 +2,7 @@ local Library = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
 ))()
 
-Library:SetTheme("Azure")
+Library:SetTheme("Graphite")
 Library:SetClickSound(92679954573730, 0.3)
 
 local App

@@ -2,7 +2,7 @@
 
 Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `ThemeManager`, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать.
 
-MonHub добавляет Azure-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, Watermark, интерактивный `ViewportFrame`, оптимизированный search и декларативный API.
+MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, Watermark, интерактивный `ViewportFrame`, оптимизированный search и декларативный API.
 
 ## Полезные ссылки
 
@@ -351,20 +351,20 @@ Options.Quality:SetValue("High")
 
 `Toggles` содержит toggle/checkbox. `Options` содержит input, slider, dropdown, key picker, color picker и другие option controls.
 
-## Azure-тема
+## Graphite-тема
 
-Azure используется по умолчанию:
+Graphite используется по умолчанию:
 
 ```luau
-Library:SetTheme("Azure")
+Library:SetTheme("Graphite")
 ```
 
 Верхняя панель имеет отдельный цвет `TopBarColor`. Он доступен в ThemeManager как `Top bar color`:
 
 ```luau
 Library:SetTheme({
-    MainColor = Color3.fromRGB(28, 39, 52),
-    TopBarColor = Color3.fromRGB(34, 48, 65),
+    MainColor = Color3.fromRGB(33, 36, 43),
+    TopBarColor = Color3.fromRGB(39, 42, 50),
 })
 ```
 
@@ -658,7 +658,7 @@ MonHub отключает зарегистрированные signals, удал
 local App = Library:Create({
     Title = "My Interface",
     Footer = "Ready",
-    Theme = "Azure",
+    Theme = "Graphite",
     Tabs = {
         {
             Name = "Main",
@@ -777,7 +777,7 @@ Window:FitToViewport()
 - [ ] Raw URL заменён на MonHub.
 - [ ] Library и addons взяты из одной версии.
 - [ ] Старые control IDs сохранены.
-- [ ] Azure применяется по умолчанию.
+- [ ] Graphite применяется по умолчанию.
 - [ ] Gotham не заменяется на Code.
 - [ ] Window помещается в desktop viewport.
 - [ ] Sidebar compact работает на mobile.

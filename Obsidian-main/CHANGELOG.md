@@ -11,6 +11,10 @@
 + Window closing now combines a short fade with a restrained scale settle instead of an abrupt transparency-only exit
 + Tab motion uses a smaller 8px offset for a cleaner, less distracting page transition
 
+[features]
++ Added addons/VisualPreview.lua with a local white R6 3D preview and configurable box, name, distance, health, tracer, highlight, and color overlays
++ Viewport controls now expose their Box and Frame for safe module-level overlays
+
 [performance]
 + Full executor profile keeps advanced UI features enabled while reusing the existing tween deduplication and coalesced resize pipeline
 

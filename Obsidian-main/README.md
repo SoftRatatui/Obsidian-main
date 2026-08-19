@@ -110,6 +110,25 @@ Supported control types: `Label`, `Button`, `Toggle`, `Checkbox`, `Input`, `Slid
 
 Use `Id` only when code needs to access an element later. `App:Get(Id)` returns the created element. `App:Toggle()`, `App:Notify(...)`, and `App:Destroy()` cover the common lifecycle operations.
 
+## Visual preview module
+
+`addons/VisualPreview.lua` creates an isolated white R6 `ViewportFrame` preview for a single tab. Its overlay can independently show a box, name, distance, health bar, tracer, highlight, and accent color. The preview never reads or changes players in the experience.
+
+```luau
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+))()
+
+local Preview = VisualPreview.Create(Tabs.Visuals, {
+    Name = "ESP preview",
+    Enabled = false,
+})
+
+Preview:SetEnabled(true)
+Preview:SetTracerVisible(true)
+Preview:SetColor(Color3.fromRGB(119, 166, 209))
+```
+
 ## Themes
 
 `Azure` is the default. `Graphite`, `BlackPurple`, and `Classic` remain available:

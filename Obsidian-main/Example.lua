@@ -120,6 +120,7 @@ end
 local Library, ActiveRepository = LoadModule("Library.lua", true)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
+local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -189,6 +190,7 @@ end
 local Tabs = {
 	Controls = Window:AddTab("Controls", "sliders-horizontal"),
 	Media = Window:AddTab("Media", "gallery-horizontal-end"),
+	Visuals = Window:AddTab("Visuals", "eye"),
 	Advanced = Window:AddTab("Advanced", "wand-sparkles"),
 	KeySystem = Window:AddKeyTab("Key System"),
 	Settings = Window:AddTab("UI Settings", "settings-2"),
@@ -454,6 +456,132 @@ MediaRight:AddUIPassthrough("CustomUI", {
 	Instance = CustomCard,
 	Height = 76,
 })
+
+
+local ESPPreview
+if VisualPreview then
+	local Created, PreviewOrError = pcall(VisualPreview.Create, Tabs.Visuals, {
+		Name = "ESP preview",
+		Icon = "scan-eye",
+		Id = "ESPPreviewViewport",
+		Height = 286,
+		Color = Color3.fromRGB(119, 166, 209),
+	})
+
+	if Created then
+		ESPPreview = PreviewOrError
+	else
+		warn("[MonHub Example] VisualPreview disabled: " .. tostring(PreviewOrError))
+	end
+end
+
+local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
+VisualControls:AddLabel("This local R6 preview is isolated from players and shows the selected ESP appearance.", true)
+
+local ESPEnabled = VisualControls:AddToggle("ESPEnabled", {
+	Text = "Enable ESP preview",
+	Default = false,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetEnabled(Value)
+		end
+	end,
+})
+
+ESPEnabled:AddColorPicker("ESPPreviewColor", {
+	Title = "ESP color",
+	Default = Color3.fromRGB(119, 166, 209),
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetColor(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPBox", {
+	Text = "Box",
+	Default = true,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetBoxVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPName", {
+	Text = "Name",
+	Default = true,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetNameVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPDistance", {
+	Text = "Distance",
+	Default = true,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetDistanceVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddSlider("ESPPreviewDistance", {
+	Text = "Preview distance",
+	Default = 86,
+	Min = 5,
+	Max = 500,
+	Rounding = 0,
+	Suffix = "m",
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetDistance(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPHealth", {
+	Text = "Health bar",
+	Default = true,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetHealthVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPTracer", {
+	Text = "Tracer",
+	Default = false,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetTracerVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPHighlight", {
+	Text = "Highlight",
+	Default = false,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetHighlightVisible(Value)
+		end
+	end,
+})
+
+if ESPPreview then
+	ESPPreview:SetEnabled(ESPEnabled.Value)
+	ESPPreview:SetBoxVisible(Toggles.ESPBox.Value)
+	ESPPreview:SetNameVisible(Toggles.ESPName.Value)
+	ESPPreview:SetDistanceVisible(Toggles.ESPDistance.Value)
+	ESPPreview:SetDistance(Options.ESPPreviewDistance.Value)
+	ESPPreview:SetHealthVisible(Toggles.ESPHealth.Value)
+	ESPPreview:SetTracerVisible(Toggles.ESPTracer.Value)
+	ESPPreview:SetHighlightVisible(Toggles.ESPHighlight.Value)
+end
 
 
 local AdvancedActions = Tabs.Advanced:AddLeftGroupbox("System actions", "blocks")
@@ -839,5 +967,6 @@ return {
 	Tabs = Tabs,
 	ThemeManager = ThemeManager,
 	SaveManager = SaveManager,
+	ESPPreview = ESPPreview,
 	Repository = ActiveRepository,
 }

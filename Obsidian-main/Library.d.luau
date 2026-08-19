@@ -609,6 +609,9 @@ export type Viewport = {
     Visible: boolean,
     Type: "Viewport",
     Holder: Frame,
+    Box: Frame,
+    Frame: ViewportFrame,
+    Holder: Frame,
 
     SetObject: (self: Viewport, Object: Instance, Clone: boolean?) -> (),
     SetHeight: (self: Viewport, Height: number) -> (),

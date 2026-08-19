@@ -8858,6 +8858,8 @@ do
         Groupbox:Resize()
 
         Viewport.Holder = Holder
+        Viewport.Box = Box
+        Viewport.Frame = ViewportFrame
         table.insert(Groupbox.Elements, Viewport)
 
         Options[Idx] = Viewport

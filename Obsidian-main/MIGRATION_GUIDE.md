@@ -456,7 +456,7 @@ Zoom ограничен относительно размера модели. `O
 
 ## ESP preview addon
 
-`addons/VisualPreview.lua` предназначен для вкладки с ESP-настройками. Он показывает изолированную R6-модель в отдельной фиксированной панели рядом с окном. Панель скрывается вместе с UI, не изменяет layout вкладки, не обращается к игрокам и показывает только те элементы, которые включены в ваших ESP controls.
+`addons/VisualPreview.lua` предназначен для вкладки с ESP-настройками. Он клонирует реального персонажа из `Target` в отдельную фиксированную панель рядом с окном: внешность, rig и аксессуары остаются настоящими, а оригинальный character не изменяется. Если `Target` не задан, используется `Players.LocalPlayer`. Панель скрывается вместе с UI, не изменяет layout вкладки и показывает только элементы, включённые в ESP controls.
 
 Загружайте addon из того же commit, что и `Library.lua`:
 
@@ -464,10 +464,12 @@ Zoom ограничен относительно размера модели. `O
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
 ))()
+local Players = game:GetService("Players")
 
 local Preview = VisualPreview.Create(Library, VisualsTab, {
     Name = "ESP preview",
     Window = Window,
+    Target = Players.LocalPlayer,
     Width = 300,
     Height = 420,
     Enabled = false,
@@ -504,7 +506,7 @@ local function SyncPreview()
 end
 ```
 
-`SetDistance(number)` задаёт тестовую дистанцию в метрах. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Actual ESP остаётся источником внешнего вида: верхняя строка preview отображает name/team, нижняя — weapon/distance, box использует тот же один или два gradient color, а R6 chams использует fill, outline и transparency из тех же controls.
+`Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Actual ESP остаётся источником внешнего вида: верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, box использует тот же один или два gradient color, а R6-only chams использует fill, outline и transparency из тех же controls.
 
 ## Image, Video и UIPassthrough
 

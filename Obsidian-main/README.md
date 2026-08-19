@@ -87,6 +87,12 @@ local App = Library:Create({
 App:Get("speed"):SetValue(50)
 ```
 
+## Current Graphite interface
+
+`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. Watermark is fixed to the top-right screen edge and does not display time.
+
+For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
+
 ## Full executor profile
 
 MonHub is tuned for full-featured executors with `request`, `loadstring`, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. This profile keeps every visual enhancement, local theme/config workflow, custom image support, cursor, and refined transitions enabled.
@@ -112,16 +118,18 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Visual preview module
 
-`addons/VisualPreview.lua` creates an isolated R6 preview for one regular tab. It opens beside the main window without changing the tab layout, stays inside the viewport, and hides whenever the main menu hides. Its box, text placement, gradient, health bar, tracer, and R6 chams mirror the supplied ESP settings instead of drawing decorative preview-only effects. The preview never reads or changes players in the experience.
+`addons/VisualPreview.lua` renders a clone of a real Roblox character inside a separate preview for one regular tab. Supply a `Player`, `Model`, or resolver function through `Target`; when omitted, it uses the current `LocalPlayer` character. It opens beside the main window without changing the tab layout, stays inside the viewport, and hides whenever the main menu hides. Its box, text placement, gradient, health bar, tracer, and R6-only chams mirror the supplied ESP settings. The preview never changes the original character.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
 ))()
+local Players = game:GetService("Players")
 
 local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
     Name = "ESP preview",
     Window = Window,
+    Target = Players.LocalPlayer,
     Width = 300,
     Height = 420,
     Enabled = false,
@@ -140,7 +148,7 @@ Preview:SetGradientEnabled(true)
 Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
 
-`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. Available synchronisation methods are `SetBoxVisible`, `SetNameVisible`, `SetTeamVisible`, `SetWeaponVisible`, `SetDistanceVisible`, `SetHealthVisible`, `SetTracerVisible`, `SetColor`, `SetGradientEnabled`, `SetGradientColor`, `SetChams`, `SetDistance`, `SetPosition`, and `SetPanelGap`.
+`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. Call `Preview:SetTarget(PlayerOrModel)` to follow another real character. Available synchronisation methods are `SetBoxVisible`, `SetNameVisible`, `SetTeamVisible`, `SetWeaponVisible`, `SetDistanceVisible`, `SetHealthVisible`, `SetTracerVisible`, `SetColor`, `SetGradientEnabled`, `SetGradientColor`, `SetChams`, `SetTarget`, `SetPosition`, and `SetPanelGap`.
 
 For a ready-to-use binding from real ESP controls, see the ESP preview section in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 

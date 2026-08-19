@@ -1,40 +1,62 @@
 local VisualPreview = {}
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
-local function CreatePart(Model, Name, Size, Position, Color)
-    local Part = Instance.new("Part")
-    Part.Name = Name
-    Part.Anchored = true
-    Part.CanCollide = false
-    Part.CastShadow = false
-    Part.Color = Color
-    Part.Material = Enum.Material.SmoothPlastic
-    Part.Size = Size
-    Part.CFrame = CFrame.new(Position)
-    Part.TopSurface = Enum.SurfaceType.Smooth
-    Part.BottomSurface = Enum.SurfaceType.Smooth
-    Part.Parent = Model
-    return Part
+local function ResolveCharacter(Source)
+    if type(Source) == "function" then
+        local Success, Result = pcall(Source)
+        if Success then
+            return ResolveCharacter(Result)
+        end
+        return nil
+    end
+
+    if typeof(Source) ~= "Instance" then
+        return nil
+    end
+
+    if Source:IsA("Player") then
+        return Source.Character
+    end
+
+    if Source:IsA("Model") then
+        return Source
+    end
+
+    return nil
 end
 
-function VisualPreview.CreateR6()
-    local Model = Instance.new("Model")
-    Model.Name = "MonHubVisualPreviewR6"
+local function CloneCharacter(Source)
+    local Character = ResolveCharacter(Source)
+    if not Character or not Character.Parent then
+        return nil
+    end
 
-    local BodyColor = Color3.fromRGB(226, 231, 238)
-    local Torso = CreatePart(Model, "Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), BodyColor)
-    local Head = CreatePart(Model, "Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), BodyColor)
-    CreatePart(Model, "Right Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), BodyColor)
-    CreatePart(Model, "Left Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, 0), BodyColor)
-    CreatePart(Model, "Right Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), BodyColor)
-    CreatePart(Model, "Left Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), BodyColor)
+    local PreviousArchivable = Character.Archivable
+    Character.Archivable = true
+    local Success, Clone = pcall(function()
+        return Character:Clone()
+    end)
+    Character.Archivable = PreviousArchivable
 
-    local HeadMesh = Instance.new("SpecialMesh")
-    HeadMesh.MeshType = Enum.MeshType.Head
-    HeadMesh.Scale = Vector3.new(1.18, 1.18, 1.18)
-    HeadMesh.Parent = Head
+    if not Success or not Clone then
+        return nil
+    end
 
-    Model.PrimaryPart = Torso
-    return Model
+    for _, Object in Clone:GetDescendants() do
+        if Object:IsA("Script") or Object:IsA("LocalScript") or Object:IsA("ModuleScript") then
+            Object:Destroy()
+        elseif Object:IsA("BasePart") then
+            Object.Anchored = true
+            Object.CanCollide = false
+            Object.CastShadow = false
+        elseif Object:IsA("Humanoid") then
+            Object.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+            Object.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+        end
+    end
+
+    return Clone
 end
 
 local function FocusCamera(Object, Camera)
@@ -90,23 +112,23 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     BoxGradient.Color = ColorSequence.new(AccentColor, AccentColor)
     BoxGradient.Parent = BoxStroke
 
-    local InfoTop = CreateText(Overlay, UDim2.new(0.5, 0, 0.33, 0), UDim2.new(0.9, 0, 0, 16), BaseZIndex + 3)
-    InfoTop.TextYAlignment = Enum.TextYAlignment.Bottom
+    local InfoTop = CreateText(Box, UDim2.new(0.5, 0, 0, -4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3)
+    InfoTop.AnchorPoint = Vector2.new(0.5, 1)
 
-    local InfoBottom = CreateText(Overlay, UDim2.new(0.5, 0, 0.79, 0), UDim2.new(0.9, 0, 0, 16), BaseZIndex + 3)
+    local InfoBottom = CreateText(Box, UDim2.new(0.5, 0, 1, 4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3)
+    InfoBottom.AnchorPoint = Vector2.new(0.5, 0)
     InfoBottom.TextColor3 = Color3.fromRGB(205, 225, 255)
     InfoBottom.TextSize = 11
-    InfoBottom.TextYAlignment = Enum.TextYAlignment.Top
 
     local HealthBack = Instance.new("Frame")
     HealthBack.AnchorPoint = Vector2.new(1, 0.5)
     HealthBack.BackgroundColor3 = Color3.fromRGB(8, 11, 15)
     HealthBack.BackgroundTransparency = 0.16
     HealthBack.BorderSizePixel = 0
-    HealthBack.Position = UDim2.new(0.27, -5, 0.56, 0)
-    HealthBack.Size = UDim2.new(0, 3, 0.42, 0)
+    HealthBack.Position = UDim2.new(0, -5, 0.5, 0)
+    HealthBack.Size = UDim2.new(0, 3, 1, 0)
     HealthBack.ZIndex = BaseZIndex + 2
-    HealthBack.Parent = Overlay
+    HealthBack.Parent = Box
 
     local Health = Instance.new("Frame")
     Health.AnchorPoint = Vector2.new(0, 1)
@@ -241,19 +263,16 @@ function VisualPreview.Create(Library, Tab, Info)
     Camera.Parent = ViewportFrame
     ViewportFrame.CurrentCamera = Camera
 
-    local Model = VisualPreview.CreateR6()
-    Model.Parent = ViewportFrame
-    FocusCamera(Model, Camera)
+    local Model
 
     local Chams = Instance.new("Highlight")
-    Chams.Adornee = Model
     Chams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     Chams.Enabled = false
     Chams.FillColor = Color3.fromRGB(119, 182, 255)
     Chams.FillTransparency = 0.25
     Chams.OutlineColor = Color3.fromRGB(235, 241, 248)
     Chams.OutlineTransparency = 0
-    Chams.Parent = Model
+    Chams.Parent = ViewportFrame
 
     local AccentColor = Info.Color or Library.Scheme.AccentColor
     local Overlay = CreateOverlay(Content, AccentColor, 12)
@@ -275,7 +294,13 @@ function VisualPreview.Create(Library, Tab, Info)
         TeamVisible = Info.Team == true,
         DistanceVisible = Info.Distance ~= false,
         WeaponVisible = Info.Weapon == true,
-        Distance = tonumber(Info.DistanceValue) or 86,
+        Distance = nil,
+        TargetName = "",
+        TeamName = "",
+        WeaponName = "",
+        Target = nil,
+        TargetConnection = nil,
+        ChamsEnabled = false,
         Connections = {},
     }
     local VisibilitySequence = 0
@@ -283,26 +308,83 @@ function VisualPreview.Create(Library, Tab, Info)
     local function UpdateInfoLabels()
         local Top = ""
         if Preview.NameVisible and Preview.TeamVisible then
-            Top = "Preview Player [Civilian]"
+            Top = string.format("%s [%s]", Preview.TargetName, Preview.TeamName)
         elseif Preview.NameVisible then
-            Top = "Preview Player"
+            Top = Preview.TargetName
         elseif Preview.TeamVisible then
-            Top = "[Civilian]"
+            Top = Preview.TeamName ~= "" and string.format("[%s]", Preview.TeamName) or ""
         end
 
         local Bottom = ""
-        if Preview.WeaponVisible and Preview.DistanceVisible then
-            Bottom = string.format("Tool | %dm", Preview.Distance)
+        local DistanceText = Preview.Distance and string.format("%dm", Preview.Distance) or ""
+        if Preview.WeaponVisible and Preview.DistanceVisible and Preview.WeaponName ~= "" and DistanceText ~= "" then
+            Bottom = string.format("%s | %s", Preview.WeaponName, DistanceText)
         elseif Preview.WeaponVisible then
-            Bottom = "Tool"
+            Bottom = Preview.WeaponName
         elseif Preview.DistanceVisible then
-            Bottom = string.format("%dm", Preview.Distance)
+            Bottom = DistanceText
         end
 
         Overlay.InfoTop.Text = Top
         Overlay.InfoTop.Visible = Top ~= ""
         Overlay.InfoBottom.Text = Bottom
         Overlay.InfoBottom.Visible = Bottom ~= ""
+    end
+
+    local function UpdateTargetInfo(Character)
+        local Player = Character and Players:GetPlayerFromCharacter(Character)
+        local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+        local CameraObject = workspace.CurrentCamera
+        Preview.TargetName = Player and Player.DisplayName or Character and Character.Name or ""
+        Preview.TeamName = Player and Player.Team and Player.Team.Name or ""
+        local Tool = Character and Character:FindFirstChildOfClass("Tool")
+        Preview.WeaponName = Tool and Tool.Name or ""
+        Preview.Distance = Root and CameraObject and math.max(0, math.floor((Root.Position - CameraObject.CFrame.Position).Magnitude + 0.5)) or nil
+        UpdateInfoLabels()
+    end
+
+    local function IsR6(ModelObject)
+        local Humanoid = ModelObject and ModelObject:FindFirstChildOfClass("Humanoid")
+        return Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R6
+    end
+
+    function Preview:SetTarget(Source)
+        if Preview.TargetConnection then
+            Preview.TargetConnection:Disconnect()
+            Preview.TargetConnection = nil
+        end
+
+        if Model then
+            Model:Destroy()
+            Model = nil
+        end
+
+        local Character = ResolveCharacter(Source)
+        local Clone = CloneCharacter(Character)
+        Preview.Target = Source
+        Preview.Model = Clone
+        Model = Clone
+        Chams.Adornee = Clone
+        Chams.Enabled = Preview.ChamsEnabled and IsR6(Clone)
+
+        if Clone then
+            Clone.Parent = ViewportFrame
+            FocusCamera(Clone, Camera)
+            local _, Bounds = Clone:GetBoundingBox()
+            local Height = 0.43
+            local Width = math.clamp(Height * Bounds.X / math.max(Bounds.Y, 0.01), 0.3, 0.66)
+            Overlay.Box.Size = UDim2.new(Width, 0, Height, 0)
+        end
+
+        UpdateTargetInfo(Character)
+
+        if typeof(Source) == "Instance" and Source:IsA("Player") then
+            Preview.TargetConnection = Source.CharacterAdded:Connect(function()
+                Preview:SetTarget(Source)
+            end)
+        end
+
+        return Clone ~= nil
     end
 
     local function PositionPanel()
@@ -385,6 +467,7 @@ function VisualPreview.Create(Library, Tab, Info)
         local Visible = IsDisplayable()
 
         if Visible then
+            UpdateTargetInfo(ResolveCharacter(Preview.Target))
             PositionPanel()
             if not Holder.Visible then
                 AnimationScale.Scale = 0.98
@@ -449,6 +532,18 @@ function VisualPreview.Create(Library, Tab, Info)
         table.insert(Preview.Connections, MainWindow.VisibilityChanged.Event:Connect(UpdateVisibility))
     end
     ConnectProperty(workspace.CurrentCamera, "ViewportSize", PositionPanel)
+    local NextTargetUpdate = 0
+    table.insert(Preview.Connections, RunService.Heartbeat:Connect(function()
+        if Preview.Destroyed or not Holder.Visible or not Preview.Enabled then
+            return
+        end
+
+        local Now = os.clock()
+        if Now >= NextTargetUpdate then
+            NextTargetUpdate = Now + 0.25
+            UpdateTargetInfo(ResolveCharacter(Preview.Target))
+        end
+    end))
 
     function Preview:SetEnabled(Enabled)
         Preview.Enabled = Enabled == true
@@ -533,7 +628,8 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     function Preview:SetHighlightVisible(Visible)
-        Chams.Enabled = Visible == true
+        Preview.ChamsEnabled = Visible == true
+        Chams.Enabled = Preview.ChamsEnabled and IsR6(Model)
     end
 
     function Preview:SetChams(Enabled, FillColor, OutlineColor, FillTransparency, OutlineTransparency)
@@ -545,7 +641,8 @@ function VisualPreview.Create(Library, Tab, Info)
         end
         Chams.FillTransparency = math.clamp(tonumber(FillTransparency) or Chams.FillTransparency, 0, 1)
         Chams.OutlineTransparency = math.clamp(tonumber(OutlineTransparency) or Chams.OutlineTransparency, 0, 1)
-        Chams.Enabled = Enabled == true
+        Preview.ChamsEnabled = Enabled == true
+        Chams.Enabled = Preview.ChamsEnabled and IsR6(Model)
     end
 
     function Preview:SetDistance(Value)
@@ -562,6 +659,10 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.Destroyed = true
+        if Preview.TargetConnection then
+            Preview.TargetConnection:Disconnect()
+            Preview.TargetConnection = nil
+        end
         for _, Connection in Preview.Connections do
             Connection:Disconnect()
         end
@@ -575,6 +676,7 @@ function VisualPreview.Create(Library, Tab, Info)
         Preview:Destroy()
     end)
 
+    Preview:SetTarget(Info.Target or Info.Player or Players.LocalPlayer)
     Preview:SetBoxVisible(Info.Box ~= false)
     Preview:SetNameVisible(Preview.NameVisible)
     Preview:SetDistanceVisible(Preview.DistanceVisible)

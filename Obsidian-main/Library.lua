@@ -1,4 +1,62 @@
-local cloneref = (cloneref or clonereference or function(instance: any)
+local function IsFunction(Value: any): boolean
+    return type(Value) == "function"
+end
+
+local ExecutorRequest = request or http_request or (syn and syn.request)
+
+local function RequestGet(URL: string): (boolean, string)
+    local RequestError
+
+    if IsFunction(ExecutorRequest) then
+        local Success, Response = pcall(ExecutorRequest, {
+            Url = URL,
+            Method = "GET",
+        })
+
+        if Success then
+            local Body = typeof(Response) == "table" and (Response.Body or Response.body) or Response
+            local StatusCode = typeof(Response) == "table" and (Response.StatusCode or Response.Status) or nil
+
+            if type(Body) == "string" and #Body > 0 and (type(StatusCode) ~= "number" or (StatusCode >= 200 and StatusCode < 300)) then
+                return true, Body
+            end
+
+            RequestError = string.format("request returned status %s", tostring(StatusCode or "unknown"))
+        else
+            RequestError = tostring(Response)
+        end
+    end
+
+    local Success, Response = pcall(game.HttpGet, game, URL)
+    if Success and type(Response) == "string" and #Response > 0 then
+        return true, Response
+    end
+
+    return false, RequestError or tostring(Response)
+end
+
+local NativeCloneRef = IsFunction(cloneref) and cloneref or (IsFunction(clonereference) and clonereference or nil)
+local NativeGetHui = IsFunction(gethui) and gethui or nil
+local NativeProtectGui = IsFunction(protectgui) and protectgui or (syn and IsFunction(syn.protect_gui) and syn.protect_gui or nil)
+local NativeSetClipboard = IsFunction(setclipboard) and setclipboard or nil
+local NativeSetHiddenProperty = IsFunction(sethiddenproperty) and sethiddenproperty or nil
+local NativeSetScriptable = IsFunction(setscriptable) and setscriptable or nil
+local NativeGetCustomAsset = IsFunction(getcustomasset) and getcustomasset or nil
+local NativeLoadString = IsFunction(loadstring) and loadstring or nil
+
+local CapabilityFlags = {
+    Request = IsFunction(ExecutorRequest),
+    LoadString = IsFunction(NativeLoadString),
+    FileSystem = IsFunction(isfolder) and IsFunction(isfile) and IsFunction(readfile) and IsFunction(writefile) and IsFunction(makefolder) and IsFunction(listfiles) and IsFunction(delfile),
+    CustomAssets = IsFunction(NativeGetCustomAsset),
+    Clipboard = IsFunction(NativeSetClipboard),
+    HiddenUI = IsFunction(NativeGetHui),
+    ProtectedUI = IsFunction(NativeProtectGui),
+    AlwaysOnTop = IsFunction(NativeSetHiddenProperty) or IsFunction(NativeSetScriptable),
+    CloneReference = IsFunction(NativeCloneRef),
+}
+
+local cloneref = (NativeCloneRef or function(instance: any)
     return instance
 end)
 local CoreGui: CoreGui = cloneref(game:GetService("CoreGui"))
@@ -10,12 +68,12 @@ local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
 
-local getgenv = getgenv or function()
-    return shared
+local getgenv = IsFunction(getgenv) and getgenv or function()
+    return if typeof(shared) == "table" then shared else _G
 end
-local setclipboard = setclipboard or nil
-local protectgui = protectgui or (syn and syn.protect_gui) or function() end
-local gethui = gethui or function()
+local setclipboard = NativeSetClipboard
+local protectgui = NativeProtectGui or function() end
+local gethui = NativeGetHui or function()
     return CoreGui
 end
 
@@ -148,7 +206,11 @@ do
         end
 
         local success, errorMessage = pcall(function()
-            writefile(AssetData.Path, game:HttpGet(AssetData.URL))
+            local Downloaded, Content = RequestGet(AssetData.URL)
+            if not Downloaded then
+                error(Content)
+            end
+            writefile(AssetData.Path, Content)
         end)
 
         return success, errorMessage
@@ -164,6 +226,8 @@ end
 local Library = {
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
+    Capabilities = CapabilityFlags,
+    CompatibilityMode = "Auto",
 
     
     DevicePlatform = nil,
@@ -299,6 +363,43 @@ local Library = {
 
     Notify = nil, Toggle = nil 
 }
+
+function Library:GetCapabilities()
+    return table.clone(CapabilityFlags)
+end
+
+function Library:Supports(Capability: string): boolean
+    return CapabilityFlags[Capability] == true
+end
+
+function Library:Fetch(URL: string): (boolean, string)
+    assert(type(URL) == "string" and #URL > 0, "Expected a non-empty URL")
+    return RequestGet(URL)
+end
+
+function Library:SetCompatibilityMode(Mode: string)
+    assert(Mode == "Auto" or Mode == "Safe" or Mode == "LowSpec", "Compatibility mode must be Auto, Safe, or LowSpec")
+    Library.CompatibilityMode = Mode
+end
+
+function Library:ApplyCompatibility(WindowInfo)
+    if not CapabilityFlags.AlwaysOnTop then
+        WindowInfo.AlwaysOnTop = false
+    end
+
+    if Library.CompatibilityMode == "LowSpec" then
+        WindowInfo.ShowCustomCursor = false
+        WindowInfo.Animations = {
+            ToggleWindow = false,
+            TabSwitch = false,
+            Groupbox = false,
+            Dropdown = false,
+            KeyPicker = false,
+        }
+    end
+
+    return WindowInfo
+end
 
 Library.DefaultTheme = "Graphite"
 Library.Themes = {
@@ -1379,7 +1480,11 @@ local FetchIcons, Icons = pcall(function()
     end
 
     if not Source then
-        Source = game:HttpGet(SourceURL)
+        local Downloaded, Result = RequestGet(SourceURL)
+        if not Downloaded then
+            error(Result)
+        end
+        Source = Result
 
         if writefile and isfolder and makefolder then
             pcall(function()
@@ -1396,8 +1501,12 @@ local FetchIcons, Icons = pcall(function()
 
     
     
+    if not CapabilityFlags.LoadString then
+        error("loadstring is unavailable")
+    end
+
     local FastSource = "local writefile, isfolder, makefolder, getcustomasset = nil, nil, nil, nil\n" .. Source
-    return ((loadstring(FastSource) :: () -> IconModule)())
+    return ((NativeLoadString(FastSource) :: () -> IconModule)())
 end)
 
 function Library:GetIcon(IconName: string)
@@ -9993,6 +10102,7 @@ end
 
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
+    WindowInfo = Library:ApplyCompatibility(WindowInfo)
     local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
     if RunService:IsStudio() and ViewportSize.X <= 5 and ViewportSize.Y <= 5 then
         repeat

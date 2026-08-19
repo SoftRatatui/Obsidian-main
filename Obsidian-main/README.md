@@ -22,9 +22,21 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 ### Executor
 
 ```luau
-local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
-))()
+local function Fetch(URL)
+    local Request = request or http_request or (syn and syn.request)
+    if type(Request) == "function" then
+        local Response = Request({ Url = URL, Method = "GET" })
+        local Body = type(Response) == "table" and (Response.Body or Response.body) or Response
+        if type(Body) == "string" and #Body > 0 then
+            return Body
+        end
+    end
+
+    return game:HttpGet(URL)
+end
+
+local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua")
+local Library = assert(loadstring(Source))()
 
 local App = Library:Create({
     Title = "MonHub",
@@ -73,6 +85,21 @@ local App = Library:Create({
 })
 
 App:Get("speed"):SetValue(50)
+```
+
+## Executor compatibility
+
+The core library works without `gethui`, `cloneref`, `clonefunction`, hidden-property APIs, or metamethod hooks. It falls back from `request` to `game:HttpGet`, from hidden UI parenting to `CoreGui` and then `PlayerGui`, and from local asset files to standard `rbxassetid` images.
+
+The supplied sUNC profile supports the complete configuration and custom-theme workflow: filesystem operations, `getcustomasset`, `setscriptable`, `request`, and `loadstring` are available. Clipboard copying is unavailable, so exported JSON remains in the interface input field instead of being copied automatically.
+
+Use `LowSpec` before creating a window when a device needs the lightest rendering path. It disables the custom cursor and all optional UI animations without removing any controls.
+
+```luau
+Library:SetCompatibilityMode("LowSpec")
+
+print(Library:Supports("FileSystem"))
+print(Library:Supports("AlwaysOnTop"))
 ```
 
 ### Wally / Roblox Studio

@@ -22,6 +22,14 @@
 + Responsive content columns that switch to a readable vertical layout on narrow windows and touch devices
 + Keybind panel filters out unassigned and invalid binds, hides when empty, and animates rows and visibility
 + Central motion controller deduplicates tab, groupbox, slider, dropdown, search, and button transitions
++ Runtime capability reporting with Library:GetCapabilities and Library:Supports
++ Auto, Safe, and LowSpec compatibility modes for restricted executor environments
+
+[compatibility]
++ Module, icon, and optional image downloads now prefer request and fall back to game:HttpGet
++ Core UI falls back safely when gethui, cloneref, clonefunction, hidden-property APIs, or getgenv are unavailable
++ ThemeManager and SaveManager no longer require clonefunction and report filesystem availability
++ Config export keeps JSON in the visible input when clipboard access is unavailable
 
 [optimizations]
 + Removed four blocking optional image downloads from module initialization

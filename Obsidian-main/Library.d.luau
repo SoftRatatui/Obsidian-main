@@ -25,6 +25,18 @@ export type Icon = {
     Custom: boolean?,
 }
 
+export type CapabilityFlags = {
+    Request: boolean,
+    LoadString: boolean,
+    FileSystem: boolean,
+    CustomAssets: boolean,
+    Clipboard: boolean,
+    HiddenUI: boolean,
+    ProtectedUI: boolean,
+    AlwaysOnTop: boolean,
+    CloneReference: boolean,
+}
+
 export type ContextMenu = {
     Active: boolean,
     Holder: GuiObject,
@@ -1019,6 +1031,8 @@ export type Library = {
     DevicePlatform: Enum.Platform?,
     IsMobile: boolean,
     IsRobloxFocused: boolean,
+    Capabilities: CapabilityFlags,
+    CompatibilityMode: "Auto" | "Safe" | "LowSpec",
     ScreenGui: ScreenGui?,
     Window: Window?,
     SearchText: string,
@@ -1090,6 +1104,11 @@ export type Library = {
         DownloadAsset: (AssetName: string, ForceRedownload: boolean?) -> nil,
         PreloadAssets: () -> (),
     },
+
+    GetCapabilities: (self: Library) -> CapabilityFlags,
+    Supports: (self: Library, Capability: string) -> boolean,
+    Fetch: (self: Library, URL: string) -> (boolean, string),
+    SetCompatibilityMode: (self: Library, Mode: "Auto" | "Safe" | "LowSpec") -> (),
 
     
     UpdateDependencyBoxes: (self: Library) -> (),

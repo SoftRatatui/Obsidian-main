@@ -15,6 +15,38 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local FALLBACK_REPOSITORY = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local ExecutorRequest = request or http_request or (syn and syn.request)
+
+local function DownloadSource(Url)
+	local RequestError
+
+	if type(ExecutorRequest) == "function" then
+		local Success, Response = pcall(ExecutorRequest, {
+			Url = Url,
+			Method = "GET",
+		})
+
+		if Success then
+			local Body = typeof(Response) == "table" and (Response.Body or Response.body) or Response
+			local StatusCode = typeof(Response) == "table" and (Response.StatusCode or Response.Status) or nil
+
+			if type(Body) == "string" and #Body > 0 and (type(StatusCode) ~= "number" or (StatusCode >= 200 and StatusCode < 300)) then
+				return true, Body
+			end
+
+			RequestError = string.format("request returned status %s", tostring(StatusCode or "unknown"))
+		else
+			RequestError = tostring(Response)
+		end
+	end
+
+	local Success, Response = pcall(game.HttpGet, game, Url)
+	if Success and type(Response) == "string" and #Response > 0 then
+		return true, Response
+	end
+
+	return false, RequestError or tostring(Response)
+end
 
 local function CleanPreview(Source)
 	local Preview = tostring(Source):sub(1, 120)
@@ -23,7 +55,7 @@ end
 
 local function TryModule(BaseUrl, Path)
 	local Url = BaseUrl .. Path
-	local Downloaded, Source = pcall(game.HttpGet, game, Url)
+	local Downloaded, Source = DownloadSource(Url)
 
 	if not Downloaded then
 		return nil, string.format("%s: download failed (%s)", Url, tostring(Source))

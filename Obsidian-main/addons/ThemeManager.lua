@@ -1,38 +1,34 @@
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
-local clonefunction = (clonefunction or copyfunction or function(func) 
-    return func 
-end)
-
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
+local getgenv = type(getgenv) == "function" and getgenv or function()
+    return if typeof(shared) == "table" then shared else _G
+end
 
+local NativeIsFolder, NativeIsFile, NativeListFiles = isfolder, isfile, listfiles
+local FileSystemAvailable = type(NativeIsFolder) == "function" and type(NativeIsFile) == "function" and type(NativeListFiles) == "function" and type(makefolder) == "function" and type(readfile) == "function" and type(writefile) == "function" and type(delfile) == "function"
 
-local isfolder, isfile, listfiles = isfolder, isfile, listfiles
-local isfolder_copy, isfile_copy, listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
-local isfolder_success, isfolder_error = pcall(function() return isfolder_copy("test" .. tostring(math.random(1000000, 9999999))) end)
+local function isfolder(Folder)
+    local Success, Result = pcall(NativeIsFolder, Folder)
+    return Success and Result == true
+end
 
-if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
-    isfolder = function(folder)
-        local success, data = pcall(isfolder_copy, folder)
-        return (if success then data else false)
-    end
+local function isfile(File)
+    local Success, Result = pcall(NativeIsFile, File)
+    return Success and Result == true
+end
 
-    isfile = function(file)
-        local success, data = pcall(isfile_copy, file)
-        return (if success then data else false)
-    end
-
-    listfiles = function(folder)
-        local success, data = pcall(listfiles_copy, folder)
-        return (if success then data else {})
-    end
+local function listfiles(Folder)
+    local Success, Result = pcall(NativeListFiles, Folder)
+    return if Success and typeof(Result) == "table" then Result else {}
 end
 
 
 local SchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 local ThemeManager = {
     Library = nil,
+    FileSystemAvailable = FileSystemAvailable,
 
     Folder = "ObsidianLibSettings",
 
@@ -191,6 +187,10 @@ function ThemeManager:GetPaths(): {string}
 end
 
 function ThemeManager:BuildFolderTree(SkipWhenCreated: boolean?)
+    if not ThemeManager.FileSystemAvailable then
+        return false
+    end
+
     local Paths = ThemeManager:GetPaths()
     if #Paths == 0 then
         return false

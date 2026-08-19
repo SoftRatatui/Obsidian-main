@@ -1,6 +1,7 @@
 local VisualPreview = {}
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local function ResolveCharacter(Source)
     if type(Source) == "function" then
@@ -59,11 +60,13 @@ local function CloneCharacter(Source)
     return Clone
 end
 
-local function FocusCamera(Object, Camera)
+local function FocusCamera(Object, Camera, Yaw, Pitch, Zoom)
     local _, Size = Object:GetBoundingBox()
     local Extent = math.max(Size.X, Size.Y, Size.Z)
     local Position = Object:GetPivot().Position + Vector3.new(0, Extent * 0.06, 0)
-    Camera.CFrame = CFrame.lookAt(Position + Vector3.new(0, 0, math.max(Extent * 1.9, 5)), Position)
+    local Rotation = CFrame.fromOrientation(Pitch or 0, Yaw or 0, 0)
+    local Distance = math.max(Extent * (Zoom or 1.9), 5)
+    Camera.CFrame = CFrame.lookAt(Position - Rotation.LookVector * Distance, Position)
 end
 
 local function CreateText(Parent, Position, Size, ZIndex)
@@ -83,7 +86,37 @@ local function CreateText(Parent, Position, Size, ZIndex)
     return Label
 end
 
-local function CreateOverlay(Parent, AccentColor, BaseZIndex)
+local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer)
+    if type(Renderer) == "function" then
+        local Success, Result = pcall(Renderer, Parent)
+        if Success and type(Result) == "table" and typeof(Result.Container) == "Instance" then
+            local Container = Result.Container
+            Container.AnchorPoint = Vector2.new(0.5, 0.5)
+            Container.BackgroundTransparency = 1
+            Container.Position = UDim2.new(0.5, 0, 0.56, 0)
+            Container.Size = UDim2.new(0.42, 0, 0.43, 0)
+            Container.ZIndex = BaseZIndex + 2
+
+            for _, Object in Container:GetDescendants() do
+                if Object:IsA("GuiObject") then
+                    Object.ZIndex = BaseZIndex + 3
+                end
+            end
+
+            return {
+                Overlay = Container,
+                Container = Container,
+                Box = Result.BoxFrame,
+                BoxStroke = Result.BoxStroke,
+                BoxGradient = Result.BoxGradient,
+                InfoTop = Result.InfoTop,
+                InfoBottom = Result.InfoBottom,
+                HealthBack = Result.HealthBack,
+                HealthFill = Result.HealthFill,
+            }
+        end
+    end
+
     local Overlay = Instance.new("Frame")
     Overlay.Name = "VisualPreviewOverlay"
     Overlay.BackgroundTransparency = 1
@@ -164,6 +197,7 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
         InfoTop = InfoTop,
         InfoBottom = InfoBottom,
         HealthBack = HealthBack,
+        HealthFill = Health,
         Tracer = Tracer,
     }
 end
@@ -252,6 +286,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
     local ViewportFrame = Instance.new("ViewportFrame")
     ViewportFrame.Ambient = Color3.fromRGB(154, 165, 178)
+    ViewportFrame.Active = true
     ViewportFrame.BackgroundTransparency = 1
     ViewportFrame.LightColor = Color3.fromRGB(238, 244, 252)
     ViewportFrame.LightDirection = Vector3.new(-1, -0.65, -1)
@@ -275,7 +310,7 @@ function VisualPreview.Create(Library, Tab, Info)
     Chams.Parent = ViewportFrame
 
     local AccentColor = Info.Color or Library.Scheme.AccentColor
-    local Overlay = CreateOverlay(Content, AccentColor, 12)
+    local Overlay = CreateOverlay(Content, AccentColor, 12, Info.Renderer)
     local Preview = {
         Holder = Holder,
         Frame = ViewportFrame,
@@ -301,6 +336,11 @@ function VisualPreview.Create(Library, Tab, Info)
         Target = nil,
         TargetConnection = nil,
         ChamsEnabled = false,
+        BoxScale = math.clamp(tonumber(Info.BoxScale) or 92, 70, 115),
+        DynamicBoxes = Info.DynamicBoxes == true,
+        Yaw = 0,
+        Pitch = 0,
+        Zoom = 1.9,
         Connections = {},
     }
     local VisibilitySequence = 0
@@ -334,18 +374,101 @@ function VisualPreview.Create(Library, Tab, Info)
     local function UpdateTargetInfo(Character)
         local Player = Character and Players:GetPlayerFromCharacter(Character)
         local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
         local CameraObject = workspace.CurrentCamera
         Preview.TargetName = Player and Player.DisplayName or Character and Character.Name or ""
         Preview.TeamName = Player and Player.Team and Player.Team.Name or ""
         local Tool = Character and Character:FindFirstChildOfClass("Tool")
         Preview.WeaponName = Tool and Tool.Name or ""
         Preview.Distance = Root and CameraObject and math.max(0, math.floor((Root.Position - CameraObject.CFrame.Position).Magnitude + 0.5)) or nil
+        if Overlay.HealthFill and Humanoid then
+            local Health = math.clamp(Humanoid.Health / math.max(Humanoid.MaxHealth, 100), 0, 1)
+            Overlay.HealthFill.Size = UDim2.new(1, 0, Health, 0)
+            Overlay.HealthFill.BackgroundColor3 = Color3.fromHSV(Health * 0.33, 0.9, 1)
+        end
         UpdateInfoLabels()
     end
 
     local function IsR6(ModelObject)
         local Humanoid = ModelObject and ModelObject:FindFirstChildOfClass("Humanoid")
         return Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R6
+    end
+
+    local function ProjectPoint(Point, ContentSize)
+        local CameraPoint = Camera.CFrame:PointToObjectSpace(Point)
+        local Depth = -CameraPoint.Z
+        if Depth <= 0.1 then
+            return nil
+        end
+
+        local PixelScale = ContentSize.Y / (2 * Depth * math.tan(math.rad(Camera.FieldOfView * 0.5)))
+        return ContentSize.X * 0.5 + CameraPoint.X * PixelScale, ContentSize.Y * 0.5 - CameraPoint.Y * PixelScale, Depth
+    end
+
+    local function UpdateOverlayBounds()
+        local Root = Model and (Model:FindFirstChild("HumanoidRootPart") or Model.PrimaryPart)
+        local ContentSize = Content.AbsoluteSize
+        if not Root or ContentSize.X <= 0 or ContentSize.Y <= 0 then
+            return
+        end
+
+        local CenterX, CenterY, Depth = ProjectPoint(Root.Position, ContentSize)
+        if not CenterX then
+            return
+        end
+
+        local TanFov = math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2
+        local RawHeight = (5 * (Preview.BoxScale / 100) * ContentSize.Y) / (Depth * TanFov)
+        local Height = math.clamp(RawHeight, 4, ContentSize.Y * 1.15)
+        local Width = math.max(Height * 0.58, 4)
+
+        if Preview.DynamicBoxes then
+            local BoundsFrame, BoundsSize = Model:GetBoundingBox()
+            local HalfX = BoundsSize.X * 0.5
+            local HalfY = BoundsSize.Y * 0.5
+            local HalfZ = BoundsSize.Z * 0.5
+            local MinimumX, MinimumY = math.huge, math.huge
+            local MaximumX, MaximumY = -math.huge, -math.huge
+            local Count = 0
+
+            for X = -1, 1, 2 do
+                for Y = -1, 1, 2 do
+                    for Z = -1, 1, 2 do
+                        local Point = BoundsFrame:PointToWorldSpace(Vector3.new(HalfX * X, HalfY * Y, HalfZ * Z))
+                        local ScreenX, ScreenY = ProjectPoint(Point, ContentSize)
+                        if ScreenX then
+                            MinimumX = math.min(MinimumX, ScreenX)
+                            MinimumY = math.min(MinimumY, ScreenY)
+                            MaximumX = math.max(MaximumX, ScreenX)
+                            MaximumY = math.max(MaximumY, ScreenY)
+                            Count += 1
+                        end
+                    end
+                end
+            end
+
+            local DynamicWidth = MaximumX - MinimumX
+            local DynamicHeight = MaximumY - MinimumY
+            if Count >= 4 and DynamicWidth >= 3 and DynamicHeight >= 3 then
+                local SafeHeight = math.clamp(DynamicHeight, RawHeight * 0.64, RawHeight * 1.14)
+                local SafeWidth = math.clamp(DynamicWidth, SafeHeight * 0.32, SafeHeight * 0.72)
+                CenterX = MinimumX + DynamicWidth * 0.5
+                CenterY = MinimumY + DynamicHeight * 0.5
+                Width = math.max(4, SafeWidth)
+                Height = math.max(4, SafeHeight)
+            end
+        end
+
+        local TargetBox = Overlay.Container or Overlay.Box
+        TargetBox.Position = UDim2.fromOffset(math.floor(CenterX + 0.5), math.floor(CenterY + 0.5))
+        TargetBox.Size = UDim2.fromOffset(math.floor(Width + 0.5), math.floor(Height + 0.5))
+    end
+
+    local function UpdateCamera()
+        if Model then
+            FocusCamera(Model, Camera, Preview.Yaw, Preview.Pitch, Preview.Zoom)
+            UpdateOverlayBounds()
+        end
     end
 
     function Preview:SetTarget(Source)
@@ -369,11 +492,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         if Clone then
             Clone.Parent = ViewportFrame
-            FocusCamera(Clone, Camera)
-            local _, Bounds = Clone:GetBoundingBox()
-            local Height = 0.43
-            local Width = math.clamp(Height * Bounds.X / math.max(Bounds.Y, 0.01), 0.3, 0.66)
-            Overlay.Box.Size = UDim2.new(Width, 0, Height, 0)
+            UpdateCamera()
         end
 
         UpdateTargetInfo(Character)
@@ -385,6 +504,24 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         return Clone ~= nil
+    end
+
+    function Preview:Rotate(DeltaX, DeltaY)
+        Preview.Yaw -= (tonumber(DeltaX) or 0) * 0.012
+        Preview.Pitch = math.clamp(Preview.Pitch - (tonumber(DeltaY) or 0) * 0.012, -1.15, 1.15)
+        UpdateCamera()
+    end
+
+    function Preview:SetZoom(Zoom)
+        Preview.Zoom = math.clamp(tonumber(Zoom) or Preview.Zoom, 1.2, 3.2)
+        UpdateCamera()
+    end
+
+    function Preview:ResetView()
+        Preview.Yaw = 0
+        Preview.Pitch = 0
+        Preview.Zoom = 1.9
+        UpdateCamera()
     end
 
     local function PositionPanel()
@@ -469,6 +606,7 @@ function VisualPreview.Create(Library, Tab, Info)
         if Visible then
             UpdateTargetInfo(ResolveCharacter(Preview.Target))
             PositionPanel()
+            UpdateCamera()
             if not Holder.Visible then
                 AnimationScale.Scale = 0.98
                 Holder.Visible = true
@@ -528,10 +666,48 @@ function VisualPreview.Create(Library, Tab, Info)
     ConnectProperty(MainFrame, "Visible", QueueVisibilityUpdate)
     ConnectProperty(MainFrame, "GroupTransparency", QueueVisibilityUpdate)
     ConnectProperty(TabCanvas, "Visible", QueueVisibilityUpdate)
+    ConnectProperty(Content, "AbsoluteSize", UpdateCamera)
     if MainWindow.VisibilityChanged then
         table.insert(Preview.Connections, MainWindow.VisibilityChanged.Event:Connect(UpdateVisibility))
     end
     ConnectProperty(workspace.CurrentCamera, "ViewportSize", PositionPanel)
+
+    local Rotating = false
+    local LastPointerPosition
+    table.insert(Preview.Connections, ViewportFrame.InputBegan:Connect(function(Input)
+        if not Holder.Visible then
+            return
+        end
+
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Rotating = true
+            LastPointerPosition = Input.Position
+        end
+    end))
+    table.insert(Preview.Connections, ViewportFrame.InputChanged:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseWheel and Holder.Visible then
+            Preview:SetZoom(Preview.Zoom - Input.Position.Z * 0.12)
+        end
+    end))
+    table.insert(Preview.Connections, UserInputService.InputChanged:Connect(function(Input)
+        if not Rotating or not Holder.Visible then
+            return
+        end
+
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            local Position = Input.Position
+            if LastPointerPosition then
+                Preview:Rotate(Position.X - LastPointerPosition.X, Position.Y - LastPointerPosition.Y)
+            end
+            LastPointerPosition = Position
+        end
+    end))
+    table.insert(Preview.Connections, UserInputService.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Rotating = false
+            LastPointerPosition = nil
+        end
+    end))
     local NextTargetUpdate = 0
     table.insert(Preview.Connections, RunService.Heartbeat:Connect(function()
         if Preview.Destroyed or not Holder.Visible or not Preview.Enabled then
@@ -559,7 +735,19 @@ function VisualPreview.Create(Library, Tab, Info)
         Preview.Color = Color
         Overlay.BoxStroke.Color = Color
         Overlay.BoxGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
-        Overlay.Tracer.BackgroundColor3 = Color
+        if Overlay.Tracer then
+            Overlay.Tracer.BackgroundColor3 = Color
+        end
+    end
+
+    function Preview:SetBoxScale(Scale)
+        Preview.BoxScale = math.clamp(tonumber(Scale) or Preview.BoxScale, 70, 115)
+        UpdateOverlayBounds()
+    end
+
+    function Preview:SetDynamicBoxes(Enabled)
+        Preview.DynamicBoxes = Enabled == true
+        UpdateOverlayBounds()
     end
 
     function Preview:SetBoxStyle()
@@ -620,7 +808,9 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     function Preview:SetTracerVisible(Visible)
-        Overlay.Tracer.Visible = Visible == true
+        if Overlay.Tracer then
+            Overlay.Tracer.Visible = Visible == true
+        end
     end
 
     function Preview:SetHealthVisible(Visible)

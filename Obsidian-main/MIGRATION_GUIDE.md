@@ -470,6 +470,7 @@ local Preview = VisualPreview.Create(Library, VisualsTab, {
     Name = "ESP preview",
     Window = Window,
     Target = Players.LocalPlayer,
+    Renderer = State.CreateESPPreview,
     Width = 300,
     Height = 420,
     Enabled = false,
@@ -506,7 +507,9 @@ local function SyncPreview()
 end
 ```
 
-`Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Actual ESP остаётся источником внешнего вида: верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, box использует тот же один или два gradient color, а R6-only chams использует fill, outline и transparency из тех же controls.
+В текущем MonHub-скрипте `State.CreateESPPreview` уже создаёт тот же набор UI objects, что использует live ESP. Передача его через `Renderer` убирает отдельную фейковую отрисовку preview: box, stroke, gradient, health и labels строятся одним renderer. `Box Scale` и `Dynamic Boxes` используют тот же FOV/depth calculation, что и live ESP. `Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, а R6-only chams использует fill, outline и transparency из тех же controls.
+
+Перетаскивайте character левой кнопкой мыши или touch-drag, чтобы вращать модель; mouse wheel меняет zoom. Для собственных controls доступны `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)` и `Preview:ResetView()`.
 
 ## Image, Video и UIPassthrough
 

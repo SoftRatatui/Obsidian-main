@@ -7,7 +7,7 @@ local function CreatePart(Model, Name, Size, Position, Color, Transparency)
     Part.Name = Name
     Part.Anchored = true
     Part.CanCollide = false
-    Part.CastShadow = true
+    Part.CastShadow = false
     Part.Color = Color
     Part.Material = Enum.Material.SmoothPlastic
     Part.Size = Size
@@ -24,7 +24,6 @@ function VisualPreview.CreateR6()
     Model.Name = "MonHubVisualPreviewR6"
 
     local White = Color3.fromRGB(244, 248, 252)
-    local Root = CreatePart(Model, "HumanoidRootPart", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), White, 1)
     local Torso = CreatePart(Model, "Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), White)
     local Head = CreatePart(Model, "Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), White)
     local RightArm = CreatePart(Model, "Right Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), White)
@@ -37,42 +36,7 @@ function VisualPreview.CreateR6()
     HeadMesh.Scale = Vector3.new(1.25, 1.25, 1.25)
     HeadMesh.Parent = Head
 
-    local Humanoid = Instance.new("Humanoid")
-    Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-    Humanoid.NameDisplayDistance = 0
-    Humanoid.HealthDisplayDistance = 0
-    Humanoid.Parent = Model
-
-    local function CreateJoint(Name, Part0, Part1)
-        local Joint = Instance.new("Motor6D")
-        Joint.Name = Name
-        Joint.Part0 = Part0
-        Joint.Part1 = Part1
-        Joint.C0 = Part0.CFrame:ToObjectSpace(Part1.CFrame)
-        Joint.Parent = Part0
-    end
-
-    CreateJoint("RootJoint", Root, Torso)
-    CreateJoint("Neck", Torso, Head)
-    CreateJoint("Right Shoulder", Torso, RightArm)
-    CreateJoint("Left Shoulder", Torso, LeftArm)
-    CreateJoint("Right Hip", Torso, RightLeg)
-    CreateJoint("Left Hip", Torso, LeftLeg)
-
-    local Platform = CreatePart(
-        Model,
-        "Platform",
-        Vector3.new(4.8, 0.3, 3.2),
-        Vector3.new(0, -0.2, 0),
-        Color3.fromRGB(25, 38, 52)
-    )
-    local Light = Instance.new("PointLight")
-    Light.Brightness = 0.65
-    Light.Color = Color3.fromRGB(170, 205, 234)
-    Light.Range = 8
-    Light.Parent = Platform
-
-    Model.PrimaryPart = Root
+    Model.PrimaryPart = Torso
     return Model
 end
 

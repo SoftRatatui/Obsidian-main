@@ -318,7 +318,7 @@ local function CreateR6Preview()
 		Part.Name = Name
 		Part.Anchored = true
 		Part.CanCollide = false
-		Part.CastShadow = true
+		Part.CastShadow = false
 		Part.Color = Color
 		Part.Material = Material or Enum.Material.SmoothPlastic
 		Part.Size = Size
@@ -333,7 +333,6 @@ local function CreateR6Preview()
 	local Skin = Color3.fromRGB(239, 196, 156)
 	local Shirt = Color3.fromRGB(86, 91, 105)
 	local Pants = Color3.fromRGB(39, 41, 47)
-	local Root = CreatePart("HumanoidRootPart", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Pants, nil, 1)
 	local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Shirt)
 	local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), Skin)
 	local RightArm = CreatePart("Right Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), Skin)
@@ -351,46 +350,9 @@ local function CreateR6Preview()
 	Face.Texture = "rbxasset://textures/face.png"
 	Face.Parent = Head
 
-	local Humanoid = Instance.new("Humanoid")
-	Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	Humanoid.NameDisplayDistance = 0
-	Humanoid.HealthDisplayDistance = 0
-	Humanoid.Parent = Model
-
-	local function CreateJoint(Name, Part0, Part1)
-		local Joint = Instance.new("Motor6D")
-		Joint.Name = Name
-		Joint.Part0 = Part0
-		Joint.Part1 = Part1
-		Joint.C0 = Part0.CFrame:ToObjectSpace(Part1.CFrame)
-		Joint.Parent = Part0
-	end
-
-	CreateJoint("RootJoint", Root, Torso)
-	CreateJoint("Neck", Torso, Head)
-	CreateJoint("Right Shoulder", Torso, RightArm)
-	CreateJoint("Left Shoulder", Torso, LeftArm)
-	CreateJoint("Right Hip", Torso, RightLeg)
-	CreateJoint("Left Hip", Torso, LeftLeg)
-
-	local Platform = CreatePart(
-		"Platform",
-		Vector3.new(4.8, 0.3, 3.2),
-		Vector3.new(0, -0.2, 0),
-		Color3.fromRGB(50, 52, 59),
-		Enum.Material.SmoothPlastic
-	)
-	local PlatformLight = Instance.new("PointLight")
-	PlatformLight.Brightness = 0.8
-	PlatformLight.Color = Color3.fromRGB(157, 164, 181)
-	PlatformLight.Range = 8
-	PlatformLight.Parent = Platform
-
-	Model.PrimaryPart = Root
+	Model.PrimaryPart = Torso
 	return Model
 end
-
-local PreviewModel = CreateR6Preview()
 
 local MediaLeft = Tabs.Media:AddLeftGroupbox("R6 character preview", "user-round")
 MediaLeft:AddImage("ShowcaseImage", {
@@ -402,8 +364,8 @@ MediaLeft:AddImage("ShowcaseImage", {
 })
 
 MediaLeft:AddViewport("ShowcaseViewport", {
-	Object = PreviewModel,
-	Clone = true,
+	Object = CreateR6Preview(),
+	Clone = false,
 	AutoFocus = true,
 	Interactive = true,
 	Height = 260,
@@ -943,14 +905,6 @@ if SaveManager then
 		warn("[MonHub Example] SaveManager disabled: " .. tostring(SaveError))
 	end
 end
-
-Library:OnUnload(function()
-	if PreviewModel then
-		PreviewModel:Destroy()
-	end
-
-	print("[MonHub Example] Interface unloaded and connections cleaned up.")
-end)
 
 Notify(
 	"MonHub started",

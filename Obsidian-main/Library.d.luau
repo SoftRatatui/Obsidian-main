@@ -1154,6 +1154,7 @@ export type Library = {
                 AnchorPoint: Vector2?,
                 TextSize: number?,
                 BackgroundColor: string | Color3?,
+                Draggable: boolean?,
             },
         Icon: string?,
         IconPosition: string?

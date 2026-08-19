@@ -2477,6 +2477,7 @@ function Library:AddDraggableLabel(...)
     local AnchorPoint = Vector2.zero
     local TextSize = 15
     local BackgroundColor = "BackgroundColor"
+    local Draggable = true
 
     if typeof(Params) == "table" then
         Text = Params.Text
@@ -2486,6 +2487,7 @@ function Library:AddDraggableLabel(...)
         AnchorPoint = Params.AnchorPoint or AnchorPoint
         TextSize = Params.TextSize or TextSize
         BackgroundColor = Params.BackgroundColor or BackgroundColor
+        Draggable = Params.Draggable ~= false
     elseif typeof(Params) == "string" then
         Text = Params
         Icon = select(2, ...)
@@ -2540,7 +2542,9 @@ function Library:AddDraggableLabel(...)
     )
 
     Library:AddOutline(Label)
-    Library:MakeDraggable(Label, Label, true)
+    if Draggable then
+        Library:MakeDraggable(Label, Label, true)
+    end
 
     function DraggableLabel:SetText(Text: string)
         Label.Text = Text
@@ -2595,17 +2599,27 @@ function Library:AddDraggableLabel(...)
     end
 
     function DraggableLabel:SetPosition(NewPosition: UDim2)
-        PositionDraggable(Label, NewPosition)
+        if Draggable then
+            PositionDraggable(Label, NewPosition)
+            return
+        end
+
+        Label.Position = NewPosition
+        ClampGuiToViewport(Label, 6)
     end
     
     DraggableLabel:SetIcon(Icon)
     DraggableLabel.Label = Label
 
-    if not table.find(Library.DraggableElements, Label) then
+    if Draggable and not table.find(Library.DraggableElements, Label) then
         table.insert(Library.DraggableElements, Label)
     end
 
-    PositionDraggable(Label, Label.Position)
+    if Draggable then
+        PositionDraggable(Label, Label.Position)
+    else
+        ClampGuiToViewport(Label, 6)
+    end
 
     function DraggableLabel:Destroy()
         DraggableLabel.Destroyed = true
@@ -3027,6 +3041,7 @@ do
         AnchorPoint = Vector2.new(1, 0),
         TextSize = 13,
         BackgroundColor = "MainColor",
+        Draggable = false,
     })
     WatermarkLabel:SetVisible(false)
     Library.Watermark = WatermarkLabel
@@ -3041,6 +3056,8 @@ do
         task.defer(function()
             ClampQueued = false
             if not Library.Unloaded and WatermarkLabel.Label and WatermarkLabel.Label.Parent then
+                WatermarkLabel.Label.AnchorPoint = Vector2.new(1, 0)
+                WatermarkLabel.Label.Position = UDim2.new(1, -8, 0, 8)
                 ClampGuiToViewport(WatermarkLabel.Label, 8)
             end
         end)

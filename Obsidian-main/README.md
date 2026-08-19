@@ -112,15 +112,17 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Visual preview module
 
-`addons/VisualPreview.lua` creates an isolated white R6 `ViewportFrame` preview for a single tab. Its overlay can independently show a box, name, distance, health bar, tracer, highlight, and accent color. The preview never reads or changes players in the experience.
+`addons/VisualPreview.lua` creates an isolated white R6 `ViewportFrame` preview for a single tab. It opens as a fixed floating panel, vertically centred beside the main window, so it never changes the tab layout. The overlay can independently show a box, name, distance, health bar, tracer, highlight, and accent color. The preview never reads or changes players in the experience.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
 ))()
 
-local Preview = VisualPreview.Create(Tabs.Visuals, {
+local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
     Name = "ESP preview",
+    Width = 348,
+    Height = 420,
     Enabled = false,
 })
 

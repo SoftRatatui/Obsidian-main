@@ -149,10 +149,10 @@ local Window = Library:CreateWindow({
 	NotifySide = "Right",
 	Center = true,
 	AutoShow = true,
-	Resizable = true,
+	Resizable = false,
 	GlobalSearch = true,
-	EnableSidebarResize = true,
-	ResponsiveLayout = true,
+	EnableSidebarResize = false,
+	ResponsiveLayout = false,
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
@@ -161,7 +161,7 @@ local Window = Library:CreateWindow({
 	TabTransitionTime = 0.2,
 	TabSwipeOffset = 8,
 	TabSwipeFrom = "bottom",
-	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
+	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
@@ -460,11 +460,10 @@ MediaRight:AddUIPassthrough("CustomUI", {
 
 local ESPPreview
 if VisualPreview then
-	local Created, PreviewOrError = pcall(VisualPreview.Create, Tabs.Visuals, {
+	local Created, PreviewOrError = pcall(VisualPreview.Create, Library, Tabs.Visuals, {
 		Name = "ESP preview",
-		Icon = "scan-eye",
-		Id = "ESPPreviewViewport",
-		Height = 286,
+		Width = 348,
+		Height = 420,
 		Color = Color3.fromRGB(119, 166, 209),
 	})
 

@@ -946,6 +946,7 @@ export type Dialog = {
 
 export type Window = {
     AlwaysOnTop: boolean,
+    Frame: CanvasGroup,
     IsSidebarCompacted: (self: Window) -> boolean,
     GetSidebarWidth: (self: Window) -> number,
     SetSidebarWidth: (self: Window, Width: number) -> (),

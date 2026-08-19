@@ -10569,7 +10569,9 @@ function Library:CreateWindow(WindowInfo)
     end
 
     
-    local Window = {}
+    local Window = {
+        Frame = MainFrame,
+    }
     local WindowTween
     local WindowScaleTween
     local WindowAnimationSequence = 0

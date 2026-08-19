@@ -1,3 +1,5 @@
+local UserInputService = game:GetService("UserInputService")
+
 local VisualPreview = {}
 
 local function CreatePart(Model, Name, Size, Position, Color, Transparency)
@@ -169,38 +171,223 @@ local function CreateOverlay(Parent, AccentColor)
         Name = Name,
         Distance = Distance,
         HealthBack = HealthBack,
-        Health = Health,
         Tracer = Tracer,
     }
 end
 
-function VisualPreview.Create(Tab, Info)
+local function FocusCamera(Object, Camera)
+    local _, Size = Object:GetBoundingBox()
+    local Extent = math.max(Size.X, Size.Y, Size.Z)
+    local Position = Object:GetPivot().Position + Vector3.new(0, Extent * 0.08, 0)
+    Camera.CFrame = CFrame.lookAt(Position + Vector3.new(0, 0, math.max(Extent * 1.8, 5)), Position)
+end
+
+function VisualPreview.Create(Library, Tab, Info)
+    assert(Library and Library.AddDraggableMenu and Library.Window, "VisualPreview requires an active MonHub library")
+    assert(Tab and Tab.Canvas, "VisualPreview requires a regular tab")
+
     Info = Info or {}
 
-    local Group = Tab:AddRightGroupbox(Info.Name or "ESP preview", Info.Icon or "scan-eye")
-    local Viewport = Group:AddViewport(Info.Id or "VisualPreviewViewport", {
-        Object = VisualPreview.CreateR6(),
-        Clone = false,
-        AutoFocus = true,
-        Interactive = true,
-        Height = Info.Height or 286,
+    local Holder, Container, AnimationScale = Library:AddDraggableMenu(Info.Name or "ESP preview")
+    Holder.Name = "MonHubVisualPreview"
+    Holder.AnchorPoint = Vector2.new(0, 0.5)
+    Holder.AutomaticSize = Enum.AutomaticSize.None
+    Holder.Size = UDim2.fromOffset(Info.Width or 348, Info.Height or 420)
+    Holder.Visible = false
+    AnimationScale.Scale = 0.98
+
+    for _, Child in Container:GetChildren() do
+        if Child:IsA("UIListLayout") or Child:IsA("UIPadding") then
+            Child:Destroy()
+        end
+    end
+
+    local Content = Instance.new("Frame")
+    Content.BackgroundTransparency = 1
+    Content.Size = UDim2.fromScale(1, 1)
+    Content.Parent = Container
+
+    local ViewportFrame = Instance.new("ViewportFrame")
+    ViewportFrame.Active = true
+    ViewportFrame.Ambient = Color3.fromRGB(156, 170, 184)
+    ViewportFrame.BackgroundColor3 = Library.Scheme.BackgroundColor
+    ViewportFrame.BackgroundTransparency = 0.03
+    ViewportFrame.LightColor = Color3.fromRGB(238, 246, 255)
+    ViewportFrame.LightDirection = Vector3.new(-1, -0.7, -1)
+    ViewportFrame.Size = UDim2.fromScale(1, 1)
+    ViewportFrame.ZIndex = 1
+    ViewportFrame.Parent = Content
+    Library:AddToRegistry(ViewportFrame, {
+        BackgroundColor3 = "BackgroundColor",
     })
-    local AccentColor = Info.Color or Color3.fromRGB(119, 166, 209)
-    local Overlay = CreateOverlay(Viewport.Box, AccentColor)
+
+    local Camera = Instance.new("Camera")
+    Camera.Parent = ViewportFrame
+    ViewportFrame.CurrentCamera = Camera
+
+    local Model = VisualPreview.CreateR6()
+    Model.Parent = ViewportFrame
+    FocusCamera(Model, Camera)
+
+    local AccentColor = Info.Color or Library.Scheme.AccentColor
+    local Overlay = CreateOverlay(Content, AccentColor)
     local Preview = {
-        Group = Group,
-        Viewport = Viewport,
+        Holder = Holder,
+        Frame = ViewportFrame,
+        Camera = Camera,
+        Model = Model,
         Overlay = Overlay,
         Enabled = false,
+        Destroyed = false,
+        Connections = {},
     }
+    local MainFrame = Library.Window.Frame
+    local Dragging = false
+    local LastPosition = nil
+    local ZoomDistance = math.max(select(2, Model:GetBoundingBox()).Magnitude * 0.78, 5)
+    local VisibilitySequence = 0
+
+    local function PositionPanel()
+        if Preview.Destroyed or not Holder.Parent then
+            return
+        end
+
+        local CameraObject = workspace.CurrentCamera
+        if not CameraObject or not MainFrame.Parent then
+            return
+        end
+
+        local MainPosition = MainFrame.AbsolutePosition
+        local MainSize = MainFrame.AbsoluteSize
+        local PanelWidth = math.max(Holder.AbsoluteSize.X, Info.Width or 348)
+        local ScreenSize = CameraObject.ViewportSize
+        local X = MainPosition.X + MainSize.X + 12
+        local AnchorPoint = Vector2.new(0, 0.5)
+
+        if X + PanelWidth > ScreenSize.X - 8 then
+            X = math.max(8, MainPosition.X - 12)
+            AnchorPoint = Vector2.new(1, 0.5)
+        end
+
+        Holder.AnchorPoint = AnchorPoint
+        Holder.Position = UDim2.fromOffset(math.floor(X + 0.5), math.floor(MainPosition.Y + MainSize.Y / 2 + 0.5))
+    end
+
+    local function IsDisplayable()
+        return Preview.Enabled and Tab.Canvas.Visible and MainFrame.Visible
+    end
+
+    local function UpdateVisibility()
+        if Preview.Destroyed then
+            return
+        end
+
+        VisibilitySequence += 1
+        local Sequence = VisibilitySequence
+        local Visible = IsDisplayable()
+
+        if Visible then
+            PositionPanel()
+            if not Holder.Visible then
+                Holder.GroupTransparency = 1
+                AnimationScale.Scale = 0.98
+                Holder.Visible = true
+            end
+            Library:PlayTween(Holder, "VisualPreviewVisibility", TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                GroupTransparency = 0,
+            })
+            Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Scale = 1,
+            })
+            return
+        end
+
+        if not Holder.Visible then
+            return
+        end
+
+        local Tween = Library:PlayTween(Holder, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            GroupTransparency = 1,
+        })
+        Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Scale = 0.98,
+        })
+
+        if not Tween then
+            Holder.Visible = false
+            return
+        end
+
+        Tween.Completed:Once(function(State)
+            if State == Enum.PlaybackState.Completed and Sequence == VisibilitySequence and not IsDisplayable() then
+                Holder.Visible = false
+            end
+        end)
+    end
+
+    local function Zoom(Amount)
+        local TargetDistance = math.clamp(ZoomDistance - Amount, 3.6, 13)
+        if TargetDistance == ZoomDistance then
+            return
+        end
+
+        ZoomDistance = TargetDistance
+        local Pivot = Model:GetPivot().Position + Vector3.new(0, 0.3, 0)
+        Camera.CFrame = CFrame.lookAt(Pivot + Camera.CFrame.LookVector * -ZoomDistance, Pivot)
+    end
+
+    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(PositionPanel))
+    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(PositionPanel))
+    table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateVisibility))
+    table.insert(Preview.Connections, Tab.Canvas:GetPropertyChangedSignal("Visible"):Connect(UpdateVisibility))
+    if workspace.CurrentCamera then
+        table.insert(Preview.Connections, workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(PositionPanel))
+    end
+    table.insert(Preview.Connections, ViewportFrame.InputBegan:Connect(function(Input)
+        if not Preview.Enabled then
+            return
+        end
+
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            LastPosition = Input.Position
+        end
+    end))
+    table.insert(Preview.Connections, UserInputService.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = false
+        end
+    end))
+    table.insert(Preview.Connections, UserInputService.InputChanged:Connect(function(Input)
+        if not Preview.Enabled or not Dragging then
+            return
+        end
+
+        if Input.UserInputType ~= Enum.UserInputType.MouseMovement and Input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local Delta = Input.Position - LastPosition
+        LastPosition = Input.Position
+        local Pivot = Model:GetPivot().Position + Vector3.new(0, 0.3, 0)
+        local RotationY = CFrame.fromAxisAngle(Vector3.new(0, 1, 0), -Delta.X * 0.01)
+        Camera.CFrame = CFrame.new(Pivot) * RotationY * CFrame.new(-Pivot) * Camera.CFrame
+        local RotationX = CFrame.fromAxisAngle(Camera.CFrame.RightVector, -Delta.Y * 0.01)
+        local Pitched = CFrame.new(Pivot) * RotationX * CFrame.new(-Pivot) * Camera.CFrame
+        if Pitched.UpVector.Y > 0.1 then
+            Camera.CFrame = Pitched
+        end
+    end))
+    table.insert(Preview.Connections, ViewportFrame.InputChanged:Connect(function(Input)
+        if Preview.Enabled and Input.UserInputType == Enum.UserInputType.MouseWheel then
+            Zoom(Input.Position.Z * 1.4)
+        end
+    end))
 
     function Preview:SetEnabled(Enabled)
         Preview.Enabled = Enabled == true
         Overlay.Overlay.Visible = Preview.Enabled
-        Group:SetVisible(Preview.Enabled)
-        if Group.Tab and Group.Tab.Resize then
-            Group.Tab:Resize()
-        end
+        UpdateVisibility()
     end
 
     function Preview:SetColor(Color)
@@ -243,18 +430,31 @@ function VisualPreview.Create(Tab, Info)
     end
 
     function Preview:Destroy()
-        if Preview.Group then
-            Preview.Group:Destroy()
+        if Preview.Destroyed then
+            return
+        end
+
+        Preview.Destroyed = true
+        for _, Connection in Preview.Connections do
+            Connection:Disconnect()
+        end
+        table.clear(Preview.Connections)
+        if Holder then
+            Holder:Destroy()
         end
     end
 
-    Preview:SetEnabled(Info.Enabled == true)
+    Library:OnUnload(function()
+        Preview:Destroy()
+    end)
+
     Preview:SetBoxVisible(Info.Box ~= false)
     Preview:SetNameVisible(Info.NameVisible ~= false)
     Preview:SetDistanceVisible(Info.Distance ~= false)
     Preview:SetTracerVisible(Info.Tracer == true)
     Preview:SetHealthVisible(Info.Health ~= false)
     Preview:SetHighlightVisible(Info.Highlight == true)
+    Preview:SetEnabled(Info.Enabled == true)
 
     return Preview
 end

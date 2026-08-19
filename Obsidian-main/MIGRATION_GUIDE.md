@@ -2,7 +2,7 @@
 
 Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `ThemeManager`, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать.
 
-MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, Watermark, интерактивный `ViewportFrame`, оптимизированный search и декларативный API.
+MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, фиксированный Watermark, R6 ESP preview, оптимизированный search и декларативный API.
 
 ## Полезные ссылки
 
@@ -14,6 +14,8 @@ MonHub добавляет Graphite-тему, Gotham, адаптивный sideba
 - [QuickStart.luau](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/QuickStart.luau)
 - [ThemeManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ThemeManager.lua)
 - [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
+- [VisualPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/VisualPreview.lua)
+- [Raw VisualPreview.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua)
 - [Library.d.luau с актуальными типами](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
 - [История изменений](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
 - [Оригинальный Obsidian](https://github.com/deividcomsono/Obsidian)
@@ -423,7 +425,7 @@ Library:SetWatermark("My Hub  |  Ready")
 Library:SetWatermarkVisibility(true)
 ```
 
-Watermark находится справа сверху, поддерживает drag и автоматически использует текущую theme/font.
+Watermark фиксирован в правом верхнем углу, автоматически остаётся внутри viewport и использует текущую theme/font. Он намеренно не поддерживает drag: это исключает случайное размещение за краем экрана.
 
 Готовая реализация настроек `Watermark`, `Show FPS` и `Show ping` находится в [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua). Она обновляет текст раз в 0.5 секунды, считает FPS лёгким `RenderStepped` counter и безопасно читает `Data Ping` через `Stats`.
 
@@ -451,6 +453,58 @@ PreviewGroup:AddViewport("CharacterViewport", {
 Zoom ограничен относительно размера модели. `Object` должен быть `BasePart` или `Model`.
 
 Рабочий R6 builder без внешней модели находится в полном [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua).
+
+## ESP preview addon
+
+`addons/VisualPreview.lua` предназначен для вкладки с ESP-настройками. Он показывает изолированную R6-модель в отдельной фиксированной панели рядом с окном. Панель скрывается вместе с UI, не изменяет layout вкладки, не обращается к игрокам и показывает только те элементы, которые включены в ваших ESP controls.
+
+Загружайте addon из того же commit, что и `Library.lua`:
+
+```luau
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+))()
+
+local Preview = VisualPreview.Create(Library, VisualsTab, {
+    Name = "ESP preview",
+    Window = Window,
+    Width = 300,
+    Height = 420,
+    Enabled = false,
+    Side = "Auto",
+    Alignment = "Center",
+    Gap = 12,
+})
+```
+
+`Window` обязателен для legacy API: передавайте результат `Library:CreateWindow`. `VisualsTab` должен быть обычным tab, созданным через `Window:AddTab`.
+
+Свяжите preview с теми же callbacks, которые меняют настоящий ESP:
+
+```luau
+local function SyncPreview()
+    Preview:SetEnabled(Config.ESPEnabled == true)
+    Preview:SetBoxVisible(Config.ESPBoxes == true)
+    Preview:SetNameVisible(Config.ESPNames == true)
+    Preview:SetTeamVisible(Config.ESPTeamText == true)
+    Preview:SetWeaponVisible(Config.ESPWeapons == true)
+    Preview:SetDistanceVisible(Config.ESPDistance == true)
+    Preview:SetHealthVisible(Config.ESPHealth == true)
+    Preview:SetTracerVisible(Config.TracersEnabled == true)
+    Preview:SetColor(Config.ESPGradient and Config.ESPGradientStart or Config.BoxColor)
+    Preview:SetGradientEnabled(Config.ESPGradient == true)
+    Preview:SetGradientColor(Config.ESPGradientEnd)
+    Preview:SetChams(
+        Config.ChamsEnabled == true,
+        Config.ChamsFillColor,
+        Config.ChamsOutlineColor,
+        Config.ChamsFillTrans,
+        Config.ChamsOutlineTrans
+    )
+end
+```
+
+`SetDistance(number)` задаёт тестовую дистанцию в метрах. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Actual ESP остаётся источником внешнего вида: верхняя строка preview отображает name/team, нижняя — weapon/distance, box использует тот же один или два gradient color, а R6 chams использует fill, outline и transparency из тех же controls.
 
 ## Image, Video и UIPassthrough
 

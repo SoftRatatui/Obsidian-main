@@ -14,7 +14,7 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 - Less work while typing and changing controls: search is debounced, text measurements are cached, dependency updates are batched, and unchanged values are ignored.
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
-- Centralized click sound, draggable Watermark, FPS/ping settings, interactive R6 viewport controls, and refined sliders.
+- Centralized click sound, fixed on-screen Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
 - Editable top-bar theme color with backwards-compatible fallback for existing themes.
 
 ## Quick start
@@ -112,7 +112,7 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Visual preview module
 
-`addons/VisualPreview.lua` creates an isolated white R6 `ViewportFrame` preview for a single tab. It opens as a fixed floating panel, vertically centred beside the main window, so it never changes the tab layout. The overlay can independently show a box, name, distance, health bar, tracer, highlight, and accent color. The preview never reads or changes players in the experience.
+`addons/VisualPreview.lua` creates an isolated R6 preview for one regular tab. It opens beside the main window without changing the tab layout, stays inside the viewport, and hides whenever the main menu hides. Its box, text placement, gradient, health bar, tracer, and R6 chams mirror the supplied ESP settings instead of drawing decorative preview-only effects. The preview never reads or changes players in the experience.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -121,15 +121,28 @@ local VisualPreview = loadstring(game:HttpGet(
 
 local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
     Name = "ESP preview",
+    Window = Window,
     Width = 300,
     Height = 420,
     Enabled = false,
+    Side = "Auto",
+    Alignment = "Center",
+    Gap = 12,
 })
 
 Preview:SetEnabled(true)
-Preview:SetTracerVisible(true)
-Preview:SetColor(Color3.fromRGB(119, 166, 209))
+Preview:SetBoxVisible(true)
+Preview:SetNameVisible(true)
+Preview:SetDistanceVisible(true)
+Preview:SetColor(Color3.fromRGB(119, 182, 255))
+Preview:SetGradientColor(Color3.fromRGB(186, 138, 255))
+Preview:SetGradientEnabled(true)
+Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
+
+`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. Available synchronisation methods are `SetBoxVisible`, `SetNameVisible`, `SetTeamVisible`, `SetWeaponVisible`, `SetDistanceVisible`, `SetHealthVisible`, `SetTracerVisible`, `SetColor`, `SetGradientEnabled`, `SetGradientColor`, `SetChams`, `SetDistance`, `SetPosition`, and `SetPanelGap`.
+
+For a ready-to-use binding from real ESP controls, see the ESP preview section in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
 ## Themes
 

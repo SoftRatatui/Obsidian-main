@@ -44,17 +44,21 @@ local function FocusCamera(Object, Camera)
     Camera.CFrame = CFrame.lookAt(Position + Vector3.new(0, 0, math.max(Extent * 1.9, 5)), Position)
 end
 
-local function CreateMark(Parent, Position, Size, Color, Transparency, ZIndex)
-    local Mark = Instance.new("Frame")
-    Mark.AnchorPoint = Vector2.new(0.5, 0.5)
-    Mark.BackgroundColor3 = Color
-    Mark.BackgroundTransparency = Transparency
-    Mark.BorderSizePixel = 0
-    Mark.Position = Position
-    Mark.Size = Size
-    Mark.ZIndex = ZIndex
-    Mark.Parent = Parent
-    return Mark
+local function CreateText(Parent, Position, Size, ZIndex)
+    local Label = Instance.new("TextLabel")
+    Label.AnchorPoint = Vector2.new(0.5, 0.5)
+    Label.BackgroundTransparency = 1
+    Label.FontFace = Font.fromEnum(Enum.Font.Gotham)
+    Label.Position = Position
+    Label.Size = Size
+    Label.TextColor3 = Color3.fromRGB(245, 247, 250)
+    Label.TextSize = 12
+    Label.TextStrokeColor3 = Color3.fromRGB(8, 10, 14)
+    Label.TextStrokeTransparency = 0.2
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ZIndex = ZIndex
+    Label.Parent = Parent
+    return Label
 end
 
 local function CreateOverlay(Parent, AccentColor, BaseZIndex)
@@ -65,85 +69,42 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     Overlay.ZIndex = BaseZIndex
     Overlay.Parent = Parent
 
-    local Target = Instance.new("Frame")
-    Target.AnchorPoint = Vector2.new(0.5, 0.5)
-    Target.BackgroundColor3 = AccentColor
-    Target.BackgroundTransparency = 0.93
-    Target.BorderSizePixel = 0
-    Target.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Target.Size = UDim2.new(0.4, 0, 0.58, 0)
-    Target.ZIndex = BaseZIndex + 1
-    Target.Parent = Overlay
-
-    local TargetCorner = Instance.new("UICorner")
-    TargetCorner.CornerRadius = UDim.new(0, 5)
-    TargetCorner.Parent = Target
-
-    local Glow = Instance.new("UIStroke")
-    Glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    Glow.Color = AccentColor
-    Glow.Thickness = 1
-    Glow.Transparency = 0.58
-    Glow.Parent = Target
-
-    local TargetGradient = Instance.new("UIGradient")
-    TargetGradient.Enabled = false
-    TargetGradient.Rotation = 90
-    TargetGradient.Color = ColorSequence.new(AccentColor, Color3.fromRGB(235, 241, 248))
-    TargetGradient.Parent = Target
-
     local Box = Instance.new("Frame")
     Box.AnchorPoint = Vector2.new(0.5, 0.5)
     Box.BackgroundTransparency = 1
-    Box.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Box.Size = UDim2.new(0.44, 0, 0.62, 0)
+    Box.Position = UDim2.new(0.5, 0, 0.56, 0)
+    Box.Size = UDim2.new(0.46, 0, 0.42, 0)
     Box.ZIndex = BaseZIndex + 2
     Box.Parent = Overlay
 
-    local FullBox = Instance.new("Frame")
-    FullBox.BackgroundTransparency = 1
-    FullBox.Size = UDim2.fromScale(1, 1)
-    FullBox.Visible = false
-    FullBox.ZIndex = BaseZIndex + 3
-    FullBox.Parent = Box
+    local BoxStroke = Instance.new("UIStroke")
+    BoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    BoxStroke.Color = AccentColor
+    BoxStroke.Thickness = 1
+    BoxStroke.Transparency = 0.04
+    BoxStroke.Parent = Box
 
-    local FullBoxStroke = Instance.new("UIStroke")
-    FullBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    FullBoxStroke.Color = AccentColor
-    FullBoxStroke.Thickness = 1
-    FullBoxStroke.Transparency = 0.08
-    FullBoxStroke.Parent = FullBox
+    local BoxGradient = Instance.new("UIGradient")
+    BoxGradient.Enabled = false
+    BoxGradient.Rotation = 90
+    BoxGradient.Color = ColorSequence.new(AccentColor, AccentColor)
+    BoxGradient.Parent = BoxStroke
 
-    local BoxParts = {}
-    local function AddBoxPart(Position, Size)
-        local Part = CreateMark(Box, Position, Size, AccentColor, 0.08, BaseZIndex + 3)
-        table.insert(BoxParts, Part)
-    end
+    local InfoTop = CreateText(Overlay, UDim2.new(0.5, 0, 0.33, 0), UDim2.new(0.9, 0, 0, 16), BaseZIndex + 3)
+    InfoTop.TextYAlignment = Enum.TextYAlignment.Bottom
 
-    AddBoxPart(UDim2.new(0, 6, 0, 1), UDim2.fromOffset(18, 2))
-    AddBoxPart(UDim2.new(0, 1, 0, 7), UDim2.fromOffset(2, 18))
-    AddBoxPart(UDim2.new(1, -6, 0, 1), UDim2.fromOffset(18, 2))
-    AddBoxPart(UDim2.new(1, -1, 0, 7), UDim2.fromOffset(2, 18))
-    AddBoxPart(UDim2.new(0, 6, 1, -1), UDim2.fromOffset(18, 2))
-    AddBoxPart(UDim2.new(0, 1, 1, -7), UDim2.fromOffset(2, 18))
-    AddBoxPart(UDim2.new(1, -6, 1, -1), UDim2.fromOffset(18, 2))
-    AddBoxPart(UDim2.new(1, -1, 1, -7), UDim2.fromOffset(2, 18))
-
-    local NameMark = CreateMark(Overlay, UDim2.new(0.5, 0, 0.16, 0), UDim2.fromOffset(44, 2), AccentColor, 0.15, BaseZIndex + 3)
-    local DistanceMark = CreateMark(Overlay, UDim2.new(0.5, 0, 0.85, 0), UDim2.fromOffset(26, 2), Color3.fromRGB(233, 238, 245), 0.2, BaseZIndex + 3)
-    local TeamMark = CreateMark(Overlay, UDim2.new(0.5, 0, 0.12, 0), UDim2.fromOffset(5, 5), AccentColor, 0.08, BaseZIndex + 3)
-    local TeamCorner = Instance.new("UICorner")
-    TeamCorner.CornerRadius = UDim.new(1, 0)
-    TeamCorner.Parent = TeamMark
-    local WeaponMark = CreateMark(Overlay, UDim2.new(0.5, 0, 0.81, 0), UDim2.fromOffset(12, 2), AccentColor, 0.16, BaseZIndex + 3)
+    local InfoBottom = CreateText(Overlay, UDim2.new(0.5, 0, 0.79, 0), UDim2.new(0.9, 0, 0, 16), BaseZIndex + 3)
+    InfoBottom.TextColor3 = Color3.fromRGB(205, 225, 255)
+    InfoBottom.TextSize = 11
+    InfoBottom.TextYAlignment = Enum.TextYAlignment.Top
 
     local HealthBack = Instance.new("Frame")
     HealthBack.AnchorPoint = Vector2.new(1, 0.5)
     HealthBack.BackgroundColor3 = Color3.fromRGB(8, 11, 15)
     HealthBack.BackgroundTransparency = 0.16
     HealthBack.BorderSizePixel = 0
-    HealthBack.Position = UDim2.new(0.275, -5, 0.5, 0)
-    HealthBack.Size = UDim2.new(0, 3, 0.58, 0)
+    HealthBack.Position = UDim2.new(0.27, -5, 0.56, 0)
+    HealthBack.Size = UDim2.new(0, 3, 0.42, 0)
     HealthBack.ZIndex = BaseZIndex + 2
     HealthBack.Parent = Overlay
 
@@ -175,27 +136,24 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
 
     return {
         Overlay = Overlay,
-        Target = Target,
-        TargetGradient = TargetGradient,
-        Glow = Glow,
         Box = Box,
-        BoxParts = BoxParts,
-        FullBox = FullBox,
-        FullBoxStroke = FullBoxStroke,
-        Name = NameMark,
-        Distance = DistanceMark,
-        Team = TeamMark,
-        Weapon = WeaponMark,
+        BoxStroke = BoxStroke,
+        BoxGradient = BoxGradient,
+        InfoTop = InfoTop,
+        InfoBottom = InfoBottom,
         HealthBack = HealthBack,
         Tracer = Tracer,
     }
 end
 
 function VisualPreview.Create(Library, Tab, Info)
-    assert(Library and Library.AddToRegistry and Library.Window and Library.ScreenGui, "VisualPreview requires an active MonHub library")
+    assert(Library and Library.AddToRegistry and Library.ScreenGui, "VisualPreview requires an active MonHub library")
     assert(Tab and Tab.Canvas, "VisualPreview requires a regular tab")
 
     Info = Info or {}
+    local MainWindow = Info.Window or Library.Window
+    assert(MainWindow and MainWindow.Frame, "VisualPreview requires a window with a frame")
+    local MainFrame = MainWindow.Frame
 
     local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
@@ -286,6 +244,16 @@ function VisualPreview.Create(Library, Tab, Info)
     Model.Parent = ViewportFrame
     FocusCamera(Model, Camera)
 
+    local Chams = Instance.new("Highlight")
+    Chams.Adornee = Model
+    Chams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    Chams.Enabled = false
+    Chams.FillColor = Color3.fromRGB(119, 182, 255)
+    Chams.FillTransparency = 0.25
+    Chams.OutlineColor = Color3.fromRGB(235, 241, 248)
+    Chams.OutlineTransparency = 0
+    Chams.Parent = Model
+
     local AccentColor = Info.Color or Library.Scheme.AccentColor
     local Overlay = CreateOverlay(Content, AccentColor, 12)
     local Preview = {
@@ -294,19 +262,47 @@ function VisualPreview.Create(Library, Tab, Info)
         Camera = Camera,
         Model = Model,
         Overlay = Overlay,
+        Chams = Chams,
         Side = Info.Side or "Auto",
         Alignment = Info.Alignment or "Center",
         Gap = math.clamp(tonumber(Info.Gap) or 12, 6, 32),
         Color = AccentColor,
-        GradientColor = Info.GradientColor or Color3.fromRGB(235, 241, 248),
-        Opacity = math.clamp(tonumber(Info.Opacity) or 0.72, 0.2, 1),
-        BoxStyle = Info.BoxStyle or "Corners",
+        GradientColor = Info.GradientColor or AccentColor,
         Enabled = false,
         Destroyed = false,
+        NameVisible = Info.NameVisible ~= false,
+        TeamVisible = Info.Team == true,
+        DistanceVisible = Info.Distance ~= false,
+        WeaponVisible = Info.Weapon == true,
+        Distance = tonumber(Info.DistanceValue) or 86,
         Connections = {},
     }
-    local MainFrame = Library.Window.Frame
     local VisibilitySequence = 0
+
+    local function UpdateInfoLabels()
+        local Top = ""
+        if Preview.NameVisible and Preview.TeamVisible then
+            Top = "Preview Player [Civilian]"
+        elseif Preview.NameVisible then
+            Top = "Preview Player"
+        elseif Preview.TeamVisible then
+            Top = "[Civilian]"
+        end
+
+        local Bottom = ""
+        if Preview.WeaponVisible and Preview.DistanceVisible then
+            Bottom = string.format("Tool | %dm", Preview.Distance)
+        elseif Preview.WeaponVisible then
+            Bottom = "Tool"
+        elseif Preview.DistanceVisible then
+            Bottom = string.format("%dm", Preview.Distance)
+        end
+
+        Overlay.InfoTop.Text = Top
+        Overlay.InfoTop.Visible = Top ~= ""
+        Overlay.InfoBottom.Text = Bottom
+        Overlay.InfoBottom.Visible = Bottom ~= ""
+    end
 
     local function PositionPanel()
         if Preview.Destroyed or not Holder.Parent then
@@ -421,8 +417,8 @@ function VisualPreview.Create(Library, Tab, Info)
     table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
     table.insert(Preview.Connections, MainFrame:GetPropertyChangedSignal("GroupTransparency"):Connect(QueueVisibilityUpdate))
     table.insert(Preview.Connections, Tab.Canvas:GetPropertyChangedSignal("Visible"):Connect(QueueVisibilityUpdate))
-    if Library.Window.VisibilityChanged then
-        table.insert(Preview.Connections, Library.Window.VisibilityChanged.Event:Connect(UpdateVisibility))
+    if MainWindow.VisibilityChanged then
+        table.insert(Preview.Connections, MainWindow.VisibilityChanged.Event:Connect(UpdateVisibility))
     end
     if workspace.CurrentCamera then
         table.insert(Preview.Connections, workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(PositionPanel))
@@ -440,30 +436,17 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.Color = Color
-        Overlay.Target.BackgroundColor3 = Color
-        Overlay.Glow.Color = Color
-        Overlay.TargetGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
-        Overlay.FullBoxStroke.Color = Color
-        Overlay.Name.BackgroundColor3 = Color
-        Overlay.Team.BackgroundColor3 = Color
-        Overlay.Weapon.BackgroundColor3 = Color
+        Overlay.BoxStroke.Color = Color
+        Overlay.BoxGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
         Overlay.Tracer.BackgroundColor3 = Color
-        for _, Part in Overlay.BoxParts do
-            Part.BackgroundColor3 = Color
-        end
     end
 
-    function Preview:SetBoxStyle(Style)
-        local Full = string.lower(tostring(Style)) == "full"
-        Preview.BoxStyle = Full and "Full" or "Corners"
-        Overlay.FullBox.Visible = Full
-        for _, Part in Overlay.BoxParts do
-            Part.Visible = not Full
-        end
+    function Preview:SetBoxStyle()
+        Overlay.Box.Visible = true
     end
 
     function Preview:SetGradientEnabled(Enabled)
-        Overlay.TargetGradient.Enabled = Enabled == true
+        Overlay.BoxGradient.Enabled = Enabled == true
     end
 
     function Preview:SetGradientColor(Color)
@@ -472,13 +455,10 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.GradientColor = Color
-        Overlay.TargetGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
+        Overlay.BoxGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
     end
 
-    function Preview:SetOpacity(Opacity)
-        Preview.Opacity = math.clamp(tonumber(Opacity) or Preview.Opacity, 0.2, 1)
-        Overlay.Target.BackgroundTransparency = 0.99 - Preview.Opacity * 0.085
-        Overlay.Glow.Transparency = 0.86 - Preview.Opacity * 0.4
+    function Preview:SetOpacity()
     end
 
     function Preview:SetPosition(Side, Alignment)
@@ -499,19 +479,23 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     function Preview:SetNameVisible(Visible)
-        Overlay.Name.Visible = Visible == true
+        Preview.NameVisible = Visible == true
+        UpdateInfoLabels()
     end
 
     function Preview:SetDistanceVisible(Visible)
-        Overlay.Distance.Visible = Visible == true
+        Preview.DistanceVisible = Visible == true
+        UpdateInfoLabels()
     end
 
     function Preview:SetTeamVisible(Visible)
-        Overlay.Team.Visible = Visible == true
+        Preview.TeamVisible = Visible == true
+        UpdateInfoLabels()
     end
 
     function Preview:SetWeaponVisible(Visible)
-        Overlay.Weapon.Visible = Visible == true
+        Preview.WeaponVisible = Visible == true
+        UpdateInfoLabels()
     end
 
     function Preview:SetTracerVisible(Visible)
@@ -523,13 +507,26 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     function Preview:SetHighlightVisible(Visible)
-        Overlay.Target.Visible = Visible == true
+        Chams.Enabled = Visible == true
+    end
+
+    function Preview:SetChams(Enabled, FillColor, OutlineColor, FillTransparency, OutlineTransparency)
+        if typeof(FillColor) == "Color3" then
+            Chams.FillColor = FillColor
+        end
+        if typeof(OutlineColor) == "Color3" then
+            Chams.OutlineColor = OutlineColor
+        end
+        Chams.FillTransparency = math.clamp(tonumber(FillTransparency) or Chams.FillTransparency, 0, 1)
+        Chams.OutlineTransparency = math.clamp(tonumber(OutlineTransparency) or Chams.OutlineTransparency, 0, 1)
+        Chams.Enabled = Enabled == true
     end
 
     function Preview:SetDistance(Value)
         local NumericValue = tonumber(Value)
         if NumericValue then
-            Overlay.Distance.Size = UDim2.fromOffset(math.clamp(math.floor(NumericValue / 20 + 18), 18, 46), 2)
+            Preview.Distance = math.max(0, math.floor(NumericValue + 0.5))
+            UpdateInfoLabels()
         end
     end
 
@@ -553,17 +550,15 @@ function VisualPreview.Create(Library, Tab, Info)
     end)
 
     Preview:SetBoxVisible(Info.Box ~= false)
-    Preview:SetBoxStyle(Info.BoxStyle or "Corners")
-    Preview:SetNameVisible(Info.NameVisible ~= false)
-    Preview:SetDistanceVisible(Info.Distance ~= false)
-    Preview:SetTeamVisible(Info.Team == true)
-    Preview:SetWeaponVisible(Info.Weapon == true)
+    Preview:SetNameVisible(Preview.NameVisible)
+    Preview:SetDistanceVisible(Preview.DistanceVisible)
+    Preview:SetTeamVisible(Preview.TeamVisible)
+    Preview:SetWeaponVisible(Preview.WeaponVisible)
     Preview:SetTracerVisible(Info.Tracer == true)
     Preview:SetHealthVisible(Info.Health ~= false)
-    Preview:SetHighlightVisible(Info.Highlight == true)
+    Preview:SetChams(Info.Highlight == true, Info.ChamsFillColor, Info.ChamsOutlineColor, Info.ChamsFillTransparency, Info.ChamsOutlineTransparency)
     Preview:SetGradientColor(Preview.GradientColor)
     Preview:SetGradientEnabled(Info.Gradient == true)
-    Preview:SetOpacity(Preview.Opacity)
     Preview:SetPosition(Preview.Side, Preview.Alignment)
     Preview:SetEnabled(Info.Enabled == true)
 

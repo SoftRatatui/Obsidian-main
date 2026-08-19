@@ -306,6 +306,7 @@ local Library = {
     NotifyOnError = false,
     ShowCustomCursor = true,
     ForceCheckbox = false,
+    TooltipsEnabled = false,
 
     CantDragForced = false,
     DraggableElements = {},
@@ -328,7 +329,7 @@ local Library = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = Font.fromEnum(Enum.Font.BuilderSans),
+        Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
@@ -364,7 +365,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(119, 166, 209),
         OutlineColor = Color3.fromRGB(67, 89, 115),
         FontColor = Color3.fromRGB(238, 244, 250),
-        Font = Font.fromEnum(Enum.Font.BuilderSans),
+        Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 251, 254),
         CornerRadius = 4,
         IsLight = false,
@@ -376,7 +377,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = Font.fromEnum(Enum.Font.BuilderSans),
+        Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         CornerRadius = 4,
         IsLight = false,
@@ -388,7 +389,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(116, 82, 178),
         OutlineColor = Color3.fromRGB(43, 38, 53),
         FontColor = Color3.fromRGB(232, 229, 238),
-        Font = Font.fromEnum(Enum.Font.BuilderSans),
+        Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(232, 229, 238),
         CornerRadius = 4,
         IsLight = false,
@@ -400,7 +401,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(125, 85, 255),
         OutlineColor = Color3.fromRGB(40, 40, 40),
         FontColor = Color3.new(1, 1, 1),
-        Font = Font.fromEnum(Enum.Font.BuilderSans),
+        Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.new(1, 1, 1),
         CornerRadius = 3,
         IsLight = false,
@@ -491,7 +492,7 @@ local Templates = {
         NotifySide = "Right",
         ShowCustomCursor = true,
 
-        Font = Enum.Font.BuilderSans,
+        Font = Enum.Font.Gotham,
         ToggleKeybind = Enum.KeyCode.RightControl,
 
         ShowMobileButtons = true,
@@ -3054,11 +3055,12 @@ do
 
         ClampQueued = true
         task.defer(function()
+            RunService.Heartbeat:Wait()
             ClampQueued = false
-            if not Library.Unloaded and WatermarkLabel.Label and WatermarkLabel.Label.Parent then
-                WatermarkLabel.Label.AnchorPoint = Vector2.new(1, 0)
-                WatermarkLabel.Label.Position = UDim2.new(1, -8, 0, 8)
-                ClampGuiToViewport(WatermarkLabel.Label, 8)
+            local Label = WatermarkLabel.Label
+            if not Library.Unloaded and Label and Label.Parent and Label.Visible and Label.AbsoluteSize.X > 0 then
+                Label.AnchorPoint = Vector2.new(1, 0)
+                WatermarkLabel:SetPosition(UDim2.new(1, -8, 0, 8))
             end
         end)
     end
@@ -3076,6 +3078,8 @@ do
     end
 
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
+    Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))
+    Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("Visible"):Connect(QueueWatermarkClamp))
     if workspace.CurrentCamera then
         Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(QueueWatermarkClamp))
     end
@@ -3471,6 +3475,11 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
         Hovering = false,
         Signals = {},
     }
+
+    if Library.TooltipsEnabled ~= true then
+        function TooltipTable:Destroy() end
+        return TooltipTable
+    end
 
     local function DoHover()
         if

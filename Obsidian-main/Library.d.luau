@@ -1072,6 +1072,7 @@ export type Library = {
     NotifySide: "Right" | "Left",
     ShowCustomCursor: boolean,
     ForceCheckbox: boolean,
+    TooltipsEnabled: boolean,
     ShowToggleFrameInKeybinds: boolean,
     NotifyOnError: boolean,
     CantDragForced: boolean,

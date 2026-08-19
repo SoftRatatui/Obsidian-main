@@ -86,6 +86,12 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     Glow.Transparency = 0.58
     Glow.Parent = Target
 
+    local TargetGradient = Instance.new("UIGradient")
+    TargetGradient.Enabled = false
+    TargetGradient.Rotation = 90
+    TargetGradient.Color = ColorSequence.new(AccentColor, Color3.fromRGB(235, 241, 248))
+    TargetGradient.Parent = Target
+
     local Box = Instance.new("Frame")
     Box.AnchorPoint = Vector2.new(0.5, 0.5)
     Box.BackgroundTransparency = 1
@@ -93,6 +99,20 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     Box.Size = UDim2.new(0.44, 0, 0.62, 0)
     Box.ZIndex = BaseZIndex + 2
     Box.Parent = Overlay
+
+    local FullBox = Instance.new("Frame")
+    FullBox.BackgroundTransparency = 1
+    FullBox.Size = UDim2.fromScale(1, 1)
+    FullBox.Visible = false
+    FullBox.ZIndex = BaseZIndex + 3
+    FullBox.Parent = Box
+
+    local FullBoxStroke = Instance.new("UIStroke")
+    FullBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    FullBoxStroke.Color = AccentColor
+    FullBoxStroke.Thickness = 1
+    FullBoxStroke.Transparency = 0.08
+    FullBoxStroke.Parent = FullBox
 
     local BoxParts = {}
     local function AddBoxPart(Position, Size)
@@ -156,9 +176,12 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex)
     return {
         Overlay = Overlay,
         Target = Target,
+        TargetGradient = TargetGradient,
         Glow = Glow,
         Box = Box,
         BoxParts = BoxParts,
+        FullBox = FullBox,
+        FullBoxStroke = FullBoxStroke,
         Name = NameMark,
         Distance = DistanceMark,
         Team = TeamMark,
@@ -271,6 +294,13 @@ function VisualPreview.Create(Library, Tab, Info)
         Camera = Camera,
         Model = Model,
         Overlay = Overlay,
+        Side = Info.Side or "Auto",
+        Alignment = Info.Alignment or "Center",
+        Gap = math.clamp(tonumber(Info.Gap) or 12, 6, 32),
+        Color = AccentColor,
+        GradientColor = Info.GradientColor or Color3.fromRGB(235, 241, 248),
+        Opacity = math.clamp(tonumber(Info.Opacity) or 0.72, 0.2, 1),
+        BoxStyle = Info.BoxStyle or "Corners",
         Enabled = false,
         Destroyed = false,
         Connections = {},
@@ -291,21 +321,41 @@ function VisualPreview.Create(Library, Tab, Info)
         local MainPosition = MainFrame.AbsolutePosition
         local MainSize = MainFrame.AbsoluteSize
         local PanelWidth = math.max(Holder.AbsoluteSize.X, Info.Width or 300)
+        local PanelHeight = math.max(Holder.AbsoluteSize.Y, Info.Height or 420)
         local ScreenSize = CameraObject.ViewportSize
-        local X = MainPosition.X + MainSize.X + 12
-        local AnchorPoint = Vector2.new(0, 0.5)
+        local Gap = Preview.Gap
+        local Side = string.lower(tostring(Preview.Side))
+        local Alignment = string.lower(tostring(Preview.Alignment))
+        local UseLeft = Side == "left"
 
-        if X + PanelWidth > ScreenSize.X - 8 then
-            X = MainPosition.X - 12
-            AnchorPoint = Vector2.new(1, 0.5)
+        if Side == "auto" then
+            UseLeft = MainPosition.X + MainSize.X + Gap + PanelWidth > ScreenSize.X - 8
+        elseif Side == "right" and MainPosition.X + MainSize.X + Gap + PanelWidth > ScreenSize.X - 8 then
+            UseLeft = MainPosition.X - Gap - PanelWidth >= 8
         end
 
-        local MinimumX = AnchorPoint.X == 1 and PanelWidth + 8 or 8
-        local MaximumX = AnchorPoint.X == 1 and ScreenSize.X - 8 or math.max(8, ScreenSize.X - PanelWidth - 8)
-        X = math.clamp(X, MinimumX, MaximumX)
+        local AnchorX = UseLeft and 1 or 0
+        local X = UseLeft and MainPosition.X - Gap or MainPosition.X + MainSize.X + Gap
+        local AnchorY = 0.5
+        local Y = MainPosition.Y + MainSize.Y * 0.5
 
-        Holder.AnchorPoint = AnchorPoint
-        Holder.Position = UDim2.fromOffset(math.floor(X + 0.5), math.floor(MainPosition.Y + MainSize.Y / 2 + 0.5))
+        if Alignment == "top" then
+            AnchorY = 0
+            Y = MainPosition.Y
+        elseif Alignment == "bottom" then
+            AnchorY = 1
+            Y = MainPosition.Y + MainSize.Y
+        end
+
+        local MinimumX = 8 + PanelWidth * AnchorX
+        local MaximumX = ScreenSize.X - 8 - PanelWidth * (1 - AnchorX)
+        local MinimumY = 8 + PanelHeight * AnchorY
+        local MaximumY = ScreenSize.Y - 8 - PanelHeight * (1 - AnchorY)
+        X = math.clamp(X, math.min(MinimumX, MaximumX), math.max(MinimumX, MaximumX))
+        Y = math.clamp(Y, math.min(MinimumY, MaximumY), math.max(MinimumY, MaximumY))
+
+        Holder.AnchorPoint = Vector2.new(AnchorX, AnchorY)
+        Holder.Position = UDim2.fromOffset(math.floor(X + 0.5), math.floor(Y + 0.5))
     end
 
     local function IsDisplayable()
@@ -389,8 +439,11 @@ function VisualPreview.Create(Library, Tab, Info)
             return
         end
 
+        Preview.Color = Color
         Overlay.Target.BackgroundColor3 = Color
         Overlay.Glow.Color = Color
+        Overlay.TargetGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
+        Overlay.FullBoxStroke.Color = Color
         Overlay.Name.BackgroundColor3 = Color
         Overlay.Team.BackgroundColor3 = Color
         Overlay.Weapon.BackgroundColor3 = Color
@@ -398,6 +451,47 @@ function VisualPreview.Create(Library, Tab, Info)
         for _, Part in Overlay.BoxParts do
             Part.BackgroundColor3 = Color
         end
+    end
+
+    function Preview:SetBoxStyle(Style)
+        local Full = string.lower(tostring(Style)) == "full"
+        Preview.BoxStyle = Full and "Full" or "Corners"
+        Overlay.FullBox.Visible = Full
+        for _, Part in Overlay.BoxParts do
+            Part.Visible = not Full
+        end
+    end
+
+    function Preview:SetGradientEnabled(Enabled)
+        Overlay.TargetGradient.Enabled = Enabled == true
+    end
+
+    function Preview:SetGradientColor(Color)
+        if typeof(Color) ~= "Color3" then
+            return
+        end
+
+        Preview.GradientColor = Color
+        Overlay.TargetGradient.Color = ColorSequence.new(Preview.Color, Preview.GradientColor)
+    end
+
+    function Preview:SetOpacity(Opacity)
+        Preview.Opacity = math.clamp(tonumber(Opacity) or Preview.Opacity, 0.2, 1)
+        Overlay.Target.BackgroundTransparency = 0.99 - Preview.Opacity * 0.085
+        Overlay.Glow.Transparency = 0.86 - Preview.Opacity * 0.4
+    end
+
+    function Preview:SetPosition(Side, Alignment)
+        local NormalizedSide = string.lower(tostring(Side or Preview.Side))
+        local NormalizedAlignment = string.lower(tostring(Alignment or Preview.Alignment))
+        Preview.Side = NormalizedSide == "left" and "Left" or NormalizedSide == "right" and "Right" or "Auto"
+        Preview.Alignment = NormalizedAlignment == "top" and "Top" or NormalizedAlignment == "bottom" and "Bottom" or "Center"
+        PositionPanel()
+    end
+
+    function Preview:SetPanelGap(Gap)
+        Preview.Gap = math.clamp(tonumber(Gap) or Preview.Gap, 6, 32)
+        PositionPanel()
     end
 
     function Preview:SetBoxVisible(Visible)
@@ -459,6 +553,7 @@ function VisualPreview.Create(Library, Tab, Info)
     end)
 
     Preview:SetBoxVisible(Info.Box ~= false)
+    Preview:SetBoxStyle(Info.BoxStyle or "Corners")
     Preview:SetNameVisible(Info.NameVisible ~= false)
     Preview:SetDistanceVisible(Info.Distance ~= false)
     Preview:SetTeamVisible(Info.Team == true)
@@ -466,6 +561,10 @@ function VisualPreview.Create(Library, Tab, Info)
     Preview:SetTracerVisible(Info.Tracer == true)
     Preview:SetHealthVisible(Info.Health ~= false)
     Preview:SetHighlightVisible(Info.Highlight == true)
+    Preview:SetGradientColor(Preview.GradientColor)
+    Preview:SetGradientEnabled(Info.Gradient == true)
+    Preview:SetOpacity(Preview.Opacity)
+    Preview:SetPosition(Preview.Side, Preview.Alignment)
     Preview:SetEnabled(Info.Enabled == true)
 
     return Preview

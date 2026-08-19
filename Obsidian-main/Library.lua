@@ -211,17 +211,6 @@ do
     end
 end
 
-local function GetTahomaFont()
-    local Success, Tahoma = pcall(Font.fromName, "Tahoma", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
-    if Success then
-        return Tahoma
-    end
-
-    return Font.fromEnum(Enum.Font.Arial)
-end
-
-local TahomaFont = GetTahomaFont()
-
 local Library = {
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
@@ -339,7 +328,7 @@ local Library = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = TahomaFont,
+        Font = Font.fromEnum(Enum.Font.BuilderSans),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
@@ -375,7 +364,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(119, 166, 209),
         OutlineColor = Color3.fromRGB(67, 89, 115),
         FontColor = Color3.fromRGB(238, 244, 250),
-        Font = TahomaFont,
+        Font = Font.fromEnum(Enum.Font.BuilderSans),
         WhiteColor = Color3.fromRGB(248, 251, 254),
         CornerRadius = 4,
         IsLight = false,
@@ -387,7 +376,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
-        Font = TahomaFont,
+        Font = Font.fromEnum(Enum.Font.BuilderSans),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         CornerRadius = 4,
         IsLight = false,
@@ -399,7 +388,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(116, 82, 178),
         OutlineColor = Color3.fromRGB(43, 38, 53),
         FontColor = Color3.fromRGB(232, 229, 238),
-        Font = TahomaFont,
+        Font = Font.fromEnum(Enum.Font.BuilderSans),
         WhiteColor = Color3.fromRGB(232, 229, 238),
         CornerRadius = 4,
         IsLight = false,
@@ -411,7 +400,7 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(125, 85, 255),
         OutlineColor = Color3.fromRGB(40, 40, 40),
         FontColor = Color3.new(1, 1, 1),
-        Font = TahomaFont,
+        Font = Font.fromEnum(Enum.Font.BuilderSans),
         WhiteColor = Color3.new(1, 1, 1),
         CornerRadius = 3,
         IsLight = false,
@@ -502,7 +491,7 @@ local Templates = {
         NotifySide = "Right",
         ShowCustomCursor = true,
 
-        Font = Enum.Font.Gotham,
+        Font = Enum.Font.BuilderSans,
         ToggleKeybind = Enum.KeyCode.RightControl,
 
         ShowMobileButtons = true,

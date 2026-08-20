@@ -137,6 +137,8 @@ Library.Scheme.TopBarColor = Color3.fromRGB(39, 42, 50)
 Library.Scheme.AccentColor = Color3.fromRGB(133, 141, 160)
 Library.Scheme.OutlineColor = Color3.fromRGB(65, 69, 80)
 Library.Scheme.FontColor = Color3.fromRGB(239, 241, 246)
+Library.Scheme.WarningColor = Color3.fromRGB(208, 157, 80)
+Library.Scheme.DestructiveColor = Color3.fromRGB(196, 58, 76)
 Library.Scheme.WhiteColor = Color3.fromRGB(248, 249, 252)
 Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 Library.CornerRadius = 4
@@ -683,13 +685,27 @@ ButtonStyles:AddButton({
 })
 
 ButtonStyles:AddButton({
-	Text = "Danger action",
+    Text = "Danger action",
 	Variant = "Danger",
 	Icon = "octagon-x",
 	DoubleClick = true,
 	Func = function()
 		Notify("Danger action", "The confirmation was accepted.")
-	end,
+    end,
+})
+
+ButtonStyles:AddDivider()
+
+ButtonStyles:AddToggle("WarningToggleStyle", {
+    Text = "Warning toggle",
+    Default = true,
+    Variant = "Warning",
+})
+
+ButtonStyles:AddToggle("DangerToggleStyle", {
+    Text = "Danger toggle",
+    Default = false,
+    Variant = "Danger",
 })
 
 local DraggableLabel
@@ -937,8 +953,7 @@ Library.ToggleKeybind = Options.MenuKeybind
 
 MenuGroup:AddButton({
 	Text = "Unload interface",
-	Risky = true,
-	DoubleClick = true,
+	Variant = "Danger",
 	Func = function()
 		Library:Unload()
 	end,

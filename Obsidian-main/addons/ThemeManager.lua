@@ -25,7 +25,7 @@ local function listfiles(Folder)
 end
 
 
-local SchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+local SchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor", "WarningColor", "DestructiveColor" }
 local ThemeManager = {
     Library = nil,
     FileSystemAvailable = FileSystemAvailable,
@@ -38,7 +38,7 @@ local ThemeManager = {
     BuiltInThemes = {
         ["Default"] = {
             1,
-            { FontColor = "eff1f6", MainColor = "21242b", TopBarColor = "272a32", AccentColor = "858da0", BackgroundColor = "16181d", OutlineColor = "414550", BackgroundImage = "", FontFace = "Gotham" },
+            { FontColor = "eff1f6", MainColor = "21242b", TopBarColor = "272a32", AccentColor = "858da0", BackgroundColor = "16181d", OutlineColor = "414550", WarningColor = "d09d50", DestructiveColor = "c43a4c", BackgroundImage = "", FontFace = "Gotham" },
         },
         ["BBot"] = {
             2,
@@ -114,6 +114,8 @@ local ThemeManager = {
 for _, ThemeInfo in ThemeManager.BuiltInThemes do
     local ThemeData = ThemeInfo[2]
     ThemeData.TopBarColor = ThemeData.TopBarColor or ThemeData.MainColor
+    ThemeData.WarningColor = ThemeData.WarningColor or "d09d50"
+    ThemeData.DestructiveColor = ThemeData.DestructiveColor or "c43a4c"
 end
 
 function ThemeManager:SetLibrary(Library)
@@ -412,7 +414,7 @@ function ThemeManager:SetDefaultTheme(Theme: any)
     end
 
     
-    for _, DefaultSchemeColor in { "RedColor", "DestructiveColor", "DarkColor", "WhiteColor" } do
+    for _, DefaultSchemeColor in { "RedColor", "DarkColor", "WhiteColor" } do
         LibraryScheme[DefaultSchemeColor] = Library.Scheme[DefaultSchemeColor]
     end
 
@@ -523,9 +525,12 @@ function ThemeManager:ApplyTheme(ThemeName: string)
     local SchemeData = Data[2]
     local ThemeData = CustomThemeData or SchemeData
 
-    if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
+    if ThemeData.TopBarColor == nil or ThemeData.WarningColor == nil or ThemeData.DestructiveColor == nil then
         ThemeData = table.clone(ThemeData)
-        ThemeData.TopBarColor = ThemeData.MainColor
+        ThemeData.TopBarColor = ThemeData.TopBarColor or ThemeData.MainColor
+        local DefaultThemeData = ThemeManager.BuiltInThemes["Default"][2]
+        ThemeData.WarningColor = ThemeData.WarningColor or DefaultThemeData.WarningColor
+        ThemeData.DestructiveColor = ThemeData.DestructiveColor or DefaultThemeData.DestructiveColor
     end
 
     for Index, Value in ThemeData do
@@ -640,6 +645,8 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     local AccentColor = CreateColorOption("Accent color", "AccentColor")
     local OutlineColor = CreateColorOption("Outline color", "OutlineColor")
     local FontColor = CreateColorOption("Font color", "FontColor")
+    local WarningColor = CreateColorOption("Warning color", "WarningColor")
+    local DestructiveColor = CreateColorOption("Danger color", "DestructiveColor")
     
     local FontFaces = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "RobotoMono", "Roboto", "SourceSans" }
     local CurrentFontFace = "Gotham"
@@ -899,6 +906,8 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     AccentColor:OnChanged(UpdateTheme)
     OutlineColor:OnChanged(UpdateTheme)
     FontColor:OnChanged(UpdateTheme)
+    WarningColor:OnChanged(UpdateTheme)
+    DestructiveColor:OnChanged(UpdateTheme)
     FontFace:OnChanged(function(Value) ThemeManager.Library:SetFont(Enum.Font[Value]) end)
     BackgroundImage:OnChanged(function(Value) ThemeManager.Library:SetBackgroundImage(Value) end)
 

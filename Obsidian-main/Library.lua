@@ -347,6 +347,7 @@ local Library = {
 
     
 	Registry = setmetatable({}, { __mode = "k" }),
+	ColorRevision = 0,
 	Scales = {},
 	ScalesOffset = {},
 
@@ -371,6 +372,8 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(119, 166, 209),
         OutlineColor = Color3.fromRGB(67, 89, 115),
         FontColor = Color3.fromRGB(238, 244, 250),
+        WarningColor = Color3.fromRGB(214, 169, 94),
+        DestructiveColor = Color3.fromRGB(211, 79, 92),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 251, 254),
         CornerRadius = 4,
@@ -383,6 +386,8 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(133, 141, 160),
         OutlineColor = Color3.fromRGB(65, 69, 80),
         FontColor = Color3.fromRGB(239, 241, 246),
+        WarningColor = Color3.fromRGB(208, 157, 80),
+        DestructiveColor = Color3.fromRGB(196, 58, 76),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         CornerRadius = 4,
@@ -395,6 +400,8 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(116, 82, 178),
         OutlineColor = Color3.fromRGB(43, 38, 53),
         FontColor = Color3.fromRGB(232, 229, 238),
+        WarningColor = Color3.fromRGB(202, 151, 82),
+        DestructiveColor = Color3.fromRGB(191, 62, 85),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(232, 229, 238),
         CornerRadius = 4,
@@ -407,6 +414,8 @@ Library.Themes = {
         AccentColor = Color3.fromRGB(125, 85, 255),
         OutlineColor = Color3.fromRGB(40, 40, 40),
         FontColor = Color3.new(1, 1, 1),
+        WarningColor = Color3.fromRGB(221, 170, 74),
+        DestructiveColor = Color3.fromRGB(210, 63, 80),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.new(1, 1, 1),
         CornerRadius = 3,
@@ -1368,8 +1377,35 @@ function Library:RemoveFromRegistry(Instance)
     Library.Registry[Instance] = nil
 end
 
+local function CancelThemeTweens(Instance: Instance, Properties)
+    local TweenSlots = Library.ActiveTweens[Instance]
+    if not TweenSlots then
+        return
+    end
+
+    local Slots = {}
+    for Slot, ActiveTween in TweenSlots do
+        for Property in Properties do
+            if ActiveTween.Properties[Property] ~= nil then
+                table.insert(Slots, Slot)
+                break
+            end
+        end
+    end
+
+    for _, Slot in Slots do
+        local ActiveTween = TweenSlots[Slot]
+        if ActiveTween then
+            StopTween(ActiveTween.Tween, true)
+            TweenSlots[Slot] = nil
+        end
+    end
+end
+
 function Library:UpdateColorsUsingRegistry()
+    Library.ColorRevision += 1
     for Instance, Properties in Library.Registry do
+        CancelThemeTweens(Instance, Properties)
         for Property, Index in Properties do
             local SchemeValue = GetSchemeValue(Index)
             local Value = SchemeValue
@@ -1824,6 +1860,10 @@ function Library:GetAccentSurfaceColor(Strength: number?): Color3
     return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.12, 0, 1))
 end
 
+local function GetTopBarSurfaceColor(Strength: number?): Color3
+    return Library.Scheme.TopBarColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.08, 0, 1))
+end
+
 local ButtonVariantAliases = {
     Default = "Default",
     Secondary = "Default",
@@ -1913,6 +1953,68 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
     return Style
 end
 
+local function GetCachedButtonStyle(Button)
+    if Button.StyleCacheRevision ~= Library.ColorRevision
+        or Button.StyleCacheVariant ~= Button.Variant
+        or Button.StyleCacheDisabled ~= Button.Disabled
+    then
+        Button.StyleCache = Library:GetButtonStyle(Button.Variant, Button.Disabled)
+        Button.StyleCacheRevision = Library.ColorRevision
+        Button.StyleCacheVariant = Button.Variant
+        Button.StyleCacheDisabled = Button.Disabled
+    end
+
+    return Button.StyleCache
+end
+
+local function NormalizeToggleVariant(Variant: string?, Risky: boolean?): string
+    local Normalized = Library:NormalizeButtonVariant(Variant, Risky)
+    if Normalized == "Warning" or Normalized == "Danger" then
+        return Normalized
+    end
+
+    return "Default"
+end
+
+local function GetToggleAccentColor(Variant: string): Color3
+    if Variant == "Warning" then
+        return Library.Scheme.WarningColor or Library.Scheme.AccentColor
+    end
+    if Variant == "Danger" then
+        return Library.Scheme.DestructiveColor or Library.Scheme.AccentColor
+    end
+
+    return Library.Scheme.AccentColor
+end
+
+local function GetToggleLabelColor(Variant: string, Active: boolean): Color3
+    if Active and (Variant == "Warning" or Variant == "Danger") then
+        return Library.Scheme.FontColor:Lerp(GetToggleAccentColor(Variant), 0.52)
+    end
+
+    return Library.Scheme.FontColor
+end
+
+local function RegisterToggleTheme(Toggle, Surface: GuiObject, Stroke: UIStroke, Label: TextLabel)
+    local SurfaceRegistry = Library.Registry[Surface] or {}
+    SurfaceRegistry.BackgroundColor3 = function()
+        return Toggle.Value and GetToggleAccentColor(Toggle.StyleVariant) or Library.Scheme.MainColor
+    end
+    Library.Registry[Surface] = SurfaceRegistry
+
+    local StrokeRegistry = Library.Registry[Stroke] or {}
+    StrokeRegistry.Color = function()
+        return Toggle.Value and GetToggleAccentColor(Toggle.StyleVariant) or Library.Scheme.OutlineColor
+    end
+    Library.Registry[Stroke] = StrokeRegistry
+
+    local LabelRegistry = Library.Registry[Label] or {}
+    LabelRegistry.TextColor3 = function()
+        return GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
+    end
+    Library.Registry[Label] = LabelRegistry
+end
+
 local function ResolveButtonIcon(Variant: string?, Icon: string | number | boolean?)
     local RequestedIcon = Icon
     if RequestedIcon == nil then
@@ -1952,9 +2054,10 @@ local function ApplyButtonVisual(
     Disabled: boolean?,
     Hovered: boolean?,
     Animate: boolean?,
-    TweenKey: string?
+    TweenKey: string?,
+    StyleOverride
 )
-    local Style = Library:GetButtonStyle(Variant, Disabled)
+    local Style = StyleOverride or Library:GetButtonStyle(Variant, Disabled)
     local UseHover = Hovered == true and not Disabled
     local BackgroundColor = UseHover and Style.HoverBackgroundColor or Style.BackgroundColor
     local BackgroundTransparency = UseHover and Style.HoverBackgroundTransparency or Style.BackgroundTransparency
@@ -6243,7 +6346,7 @@ do
                 return
             end
 
-            local Style = Library:GetButtonStyle(Button.Variant, Button.Disabled)
+            local Style = GetCachedButtonStyle(Button)
             local UseHover = Hovered == true and not Button.Disabled
             local Color = Button.Disabled and Style.TextColor or Button.IconColor or (UseHover and Style.HoverTextColor or Style.TextColor)
             local Transparency = UseHover and Style.HoverTextTransparency or Style.TextTransparency
@@ -6264,44 +6367,44 @@ do
         local function UpdateButtonStyleRegistry(Button)
             local BaseRegistry = Library.Registry[Button.Base] or {}
             BaseRegistry.BackgroundColor3 = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).BackgroundColor
+                return GetCachedButtonStyle(Button).BackgroundColor
             end
             BaseRegistry.BackgroundTransparency = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).BackgroundTransparency
+                return GetCachedButtonStyle(Button).BackgroundTransparency
             end
             Library.Registry[Button.Base] = BaseRegistry
 
             local LabelRegistry = Library.Registry[Button.Label] or {}
             LabelRegistry.TextColor3 = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextColor
+                return GetCachedButtonStyle(Button).TextColor
             end
             LabelRegistry.TextTransparency = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextTransparency
+                return GetCachedButtonStyle(Button).TextTransparency
             end
             Library.Registry[Button.Label] = LabelRegistry
 
             local IconRegistry = Library.Registry[Button.IconImage] or {}
             IconRegistry.ImageColor3 = function()
-                local Style = Library:GetButtonStyle(Button.Variant, Button.Disabled)
+                local Style = GetCachedButtonStyle(Button)
                 return Button.Disabled and Style.TextColor or Button.IconColor or Style.TextColor
             end
             IconRegistry.ImageTransparency = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextTransparency
+                return GetCachedButtonStyle(Button).TextTransparency
             end
             Library.Registry[Button.IconImage] = IconRegistry
 
             local StrokeRegistry = Library.Registry[Button.Stroke] or {}
             StrokeRegistry.Color = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).OutlineColor
+                return GetCachedButtonStyle(Button).OutlineColor
             end
             StrokeRegistry.Transparency = function()
-                return Library:GetButtonStyle(Button.Variant, Button.Disabled).OutlineTransparency
+                return GetCachedButtonStyle(Button).OutlineTransparency
             end
             Library.Registry[Button.Stroke] = StrokeRegistry
         end
 
         local function ApplyButtonStyle(Button, Hovered: boolean?, Animate: boolean?)
-            UpdateButtonStyleRegistry(Button)
+            local Style = GetCachedButtonStyle(Button)
             ApplyButtonVisual(
                 Button.Base,
                 Button.Stroke,
@@ -6310,7 +6413,8 @@ do
                 Button.Disabled,
                 Hovered,
                 Animate,
-                "Button"
+                "Button",
+                Style
             )
             ApplyButtonIconStyle(Button, Hovered, Animate)
         end
@@ -6361,6 +6465,7 @@ do
         end
 
         Button.Base, Button.Stroke, Button.Label, Button.IconImage = CreateButton(Button)
+        UpdateButtonStyleRegistry(Button)
         InitEvents(Button)
 
         function Button:AddButton(...)
@@ -6391,6 +6496,7 @@ do
 
             Button.SubButton = SubButton
             SubButton.Base, SubButton.Stroke, SubButton.Label, SubButton.IconImage = CreateButton(SubButton)
+            UpdateButtonStyleRegistry(SubButton)
             InitEvents(SubButton)
 
             function SubButton:UpdateColors()
@@ -6625,6 +6731,8 @@ do
             Disabled = Info.Disabled,
             Visible = Info.Visible,
 
+            StyleVariant = NormalizeToggleVariant(Info.Variant, Info.Risky),
+
             Addons = {},
             AnyKeyPickerPicking = false,
 
@@ -6686,6 +6794,8 @@ do
             Parent = Checkbox,
         })
 
+        RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
+
         function Toggle:UpdateColors()
             Toggle:Display()
         end
@@ -6695,17 +6805,17 @@ do
                 return
             end
 
-            local BackgroundColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.MainColor
-            local StrokeColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-
-            Library.Registry[Checkbox].BackgroundColor3 = Toggle.Value and "AccentColor" or "MainColor"
-            Library.Registry[CheckboxStroke].Color = Toggle.Value and "AccentColor" or "OutlineColor"
+            local AccentColor = GetToggleAccentColor(Toggle.StyleVariant)
+            local BackgroundColor = Toggle.Value and AccentColor or Library.Scheme.MainColor
+            local StrokeColor = Toggle.Value and AccentColor or Library.Scheme.OutlineColor
+            local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
 
             if Toggle.Disabled then
                 Library:CancelTween(Checkbox, "CheckboxColor")
                 Library:CancelTween(CheckboxStroke, "CheckboxStroke")
                 Library:CancelTween(Label, "CheckboxLabel")
                 Library:CancelTween(CheckImage, "CheckboxIcon")
+                Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
                 CheckImage.ImageTransparency = Toggle.Value and 0.65 or 1
                 Checkbox.BackgroundColor3 = BackgroundColor
@@ -6726,6 +6836,7 @@ do
                 Color = StrokeColor,
             })
             Library:PlayTween(Label, "CheckboxLabel", Library.TweenInfo, {
+                TextColor3 = LabelColor,
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(CheckImage, "CheckboxIcon", Library.TweenInfo, {
@@ -6790,6 +6901,11 @@ do
             Toggle:Display()
         end
 
+        function Toggle:SetVariant(Variant: string)
+            Toggle.StyleVariant = NormalizeToggleVariant(Variant, Toggle.Risky)
+            Toggle:Display()
+        end
+
         function Toggle:SetVisible(Visible: boolean)
             if Toggle.Visible == Visible then
                 return
@@ -6817,11 +6933,6 @@ do
         if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
             Toggle.TooltipTable = Library:AddTooltip(Toggle.Tooltip, Toggle.DisabledTooltip, Button)
             Toggle.TooltipTable.Disabled = Toggle.Disabled
-        end
-
-        if Toggle.Risky then
-            Label.TextColor3 = Library.Scheme.RedColor
-            Library.Registry[Label].TextColor3 = "RedColor"
         end
 
         Toggle:Display()
@@ -6913,6 +7024,8 @@ do
             Disabled = Info.Disabled,
             Visible = Info.Visible,
 
+            StyleVariant = NormalizeToggleVariant(Info.Variant, Info.Risky),
+
             Addons = {},
             AnyKeyPickerPicking = false,
 
@@ -6980,6 +7093,13 @@ do
             Parent = Ball,
         })
 
+        RegisterToggleTheme(Toggle, Switch, SwitchStroke, Label)
+        local BallRegistry = Library.Registry[Ball] or {}
+        BallRegistry.BackgroundColor3 = function()
+            return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
+        end
+        Library.Registry[Ball] = BallRegistry
+
         function Toggle:UpdateColors()
             Toggle:Display()
         end
@@ -6990,14 +7110,13 @@ do
             end
 
             local Offset = Toggle.Value and 1 or 0
-            local SwitchColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.MainColor
-            local StrokeColor = Toggle.Value and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+            local AccentColor = GetToggleAccentColor(Toggle.StyleVariant)
+            local SwitchColor = Toggle.Value and AccentColor or Library.Scheme.MainColor
+            local StrokeColor = Toggle.Value and AccentColor or Library.Scheme.OutlineColor
+            local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
 
             Switch.BackgroundTransparency = Toggle.Disabled and 0.75 or 0
             SwitchStroke.Transparency = Toggle.Disabled and 0.75 or 0
-
-            Library.Registry[Switch].BackgroundColor3 = Toggle.Value and "AccentColor" or "MainColor"
-            Library.Registry[SwitchStroke].Color = Toggle.Value and "AccentColor" or "OutlineColor"
 
             if Toggle.Disabled then
                 Library:CancelTween(Switch, "SwitchColor")
@@ -7006,14 +7125,12 @@ do
                 Library:CancelTween(Ball, "SwitchBall")
                 Switch.BackgroundColor3 = SwitchColor
                 SwitchStroke.Color = StrokeColor
+                Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
                 Ball.AnchorPoint = Vector2.new(Offset, 0)
                 Ball.Position = UDim2.fromScale(Offset, 0)
 
                 Ball.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
-                Library.Registry[Ball].BackgroundColor3 = function()
-                    return Library:GetDarkerColor(Library.Scheme.FontColor)
-                end
 
                 return
             end
@@ -7025,6 +7142,7 @@ do
                 Color = StrokeColor,
             })
             Library:PlayTween(Label, "SwitchLabel", Library.TweenInfo, {
+                TextColor3 = LabelColor,
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(Ball, "SwitchBall", Library.TweenInfo, {
@@ -7033,7 +7151,6 @@ do
                 BackgroundColor3 = Library.Scheme.FontColor,
             })
 
-            Library.Registry[Ball].BackgroundColor3 = "FontColor"
         end
 
         function Toggle:OnChanged(Func)
@@ -7093,6 +7210,11 @@ do
             Toggle:Display()
         end
 
+        function Toggle:SetVariant(Variant: string)
+            Toggle.StyleVariant = NormalizeToggleVariant(Variant, Toggle.Risky)
+            Toggle:Display()
+        end
+
         function Toggle:SetVisible(Visible: boolean)
             if Toggle.Visible == Visible then
                 return
@@ -7120,11 +7242,6 @@ do
         if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
             Toggle.TooltipTable = Library:AddTooltip(Toggle.Tooltip, Toggle.DisabledTooltip, Button)
             Toggle.TooltipTable.Disabled = Toggle.Disabled
-        end
-
-        if Toggle.Risky then
-            Label.TextColor3 = Library.Scheme.RedColor
-            Library.Registry[Label].TextColor3 = "RedColor"
         end
 
         Toggle:Display()
@@ -10819,7 +10936,7 @@ function Library:CreateWindow(WindowInfo)
 
         SearchBox = New("TextBox", {
             BackgroundColor3 = function()
-                return Library:GetAccentSurfaceColor(0.065)
+                return GetTopBarSurfaceColor(0.065)
             end,
             PlaceholderText = "Search",
             Size = WindowInfo.SearchbarSize,
@@ -10884,7 +11001,7 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = Vector2.new(0.5, 0.5),
             AutoButtonColor = false,
             BackgroundColor3 = function()
-                return Library:GetAccentSurfaceColor(0.06)
+                return GetTopBarSurfaceColor(0.06)
             end,
             BackgroundTransparency = 1,
             Position = UDim2.new(1, WindowInfo.ShowCompactLauncher and -58 or -24, 0.5, 0),
@@ -10935,7 +11052,7 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 AutoButtonColor = false,
                 BackgroundColor3 = function()
-                    return Library:GetAccentSurfaceColor(0.06)
+                    return GetTopBarSurfaceColor(0.06)
                 end,
                 BackgroundTransparency = 1,
                 Position = UDim2.new(1, -24, 0.5, 0),
@@ -11134,6 +11251,8 @@ function Library:CreateWindow(WindowInfo)
     local CompactLauncherPressPosition
     local CompactLauncherMoved = false
     local CompactLauncherRelease
+    local CompactLauncherHoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local CompactLauncherVisibilityTweenInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
     local function SetCompactLauncherIcon(Icon: string | number)
         if not CompactLauncherIcon then
@@ -11158,15 +11277,15 @@ function Library:CreateWindow(WindowInfo)
         local StrokeTransparency = CompactLauncherHovered and 0.2 or 0.45
 
         if Animate then
-            Library:PlayTween(CompactLauncher, "CompactLauncherSurface", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Library:PlayTween(CompactLauncher, "CompactLauncherSurface", CompactLauncherHoverTweenInfo, {
                 BackgroundColor3 = BackgroundColor,
                 BackgroundTransparency = BackgroundTransparency,
             })
-            Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", CompactLauncherHoverTweenInfo, {
                 ImageColor3 = Library.Scheme.FontColor,
                 ImageTransparency = IconTransparency,
             })
-            Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", CompactLauncherHoverTweenInfo, {
                 Color = StrokeColor,
                 Transparency = StrokeTransparency,
             })
@@ -11190,7 +11309,7 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = WindowInfo.CompactLauncherAnchorPoint,
             AutoButtonColor = false,
             BackgroundColor3 = function()
-                return Library:GetAccentSurfaceColor(0.1)
+                return Library:GetAccentSurfaceColor(CompactLauncherHovered and 0.18 or 0.1)
             end,
             BackgroundTransparency = 1,
             Position = WindowInfo.CompactLauncherPosition,
@@ -11215,7 +11334,7 @@ function Library:CreateWindow(WindowInfo)
         )
         CompactLauncherStroke = New("UIStroke", {
             Color = function()
-                return Library.Scheme.OutlineColor
+                return CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
             end,
             Transparency = 1,
             Parent = CompactLauncher,
@@ -11321,13 +11440,13 @@ function Library:CreateWindow(WindowInfo)
             return
         end
 
-        Library:PlayTween(CompactLauncher, "CompactLauncherSurface", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Library:PlayTween(CompactLauncher, "CompactLauncherSurface", CompactLauncherVisibilityTweenInfo, {
             BackgroundTransparency = 1,
         })
-        local IconTween = Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        local IconTween = Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", CompactLauncherVisibilityTweenInfo, {
             ImageTransparency = 1,
         })
-        Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", CompactLauncherVisibilityTweenInfo, {
             Transparency = 1,
         })
         if not IconTween then
@@ -11966,7 +12085,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, -4, 0, 14),
                 Text = "",
-                TextColor3 = Color3.fromRGB(255, 50, 50),
+                TextColor3 = "DestructiveColor",
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = WarningBoxScrollingFrame,
@@ -11974,7 +12093,10 @@ function Library:CreateWindow(WindowInfo)
 
             WarningStroke = New("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-                Color = Color3.fromRGB(169, 0, 0),
+                Color = function()
+                    local DestructiveColor = Library.Scheme.DestructiveColor or Library.Scheme.RedColor
+                    return DestructiveColor:Lerp(Library.Scheme.DarkColor, 0.42)
+                end,
                 LineJoinMode = Enum.LineJoinMode.Miter,
                 Parent = WarningTitle,
             })
@@ -11997,6 +12119,22 @@ function Library:CreateWindow(WindowInfo)
                 LineJoinMode = Enum.LineJoinMode.Miter,
                 Parent = WarningText,
             })
+        end
+
+        local function GetWarningBoxDestructiveColor()
+            return Library.Scheme.DestructiveColor or Library.Scheme.RedColor
+        end
+
+        local function GetWarningBoxSurfaceColor()
+            return Library.Scheme.BackgroundColor:Lerp(GetWarningBoxDestructiveColor(), 0.34)
+        end
+
+        local function GetWarningBoxShadowColor()
+            return Library.Scheme.DarkColor:Lerp(GetWarningBoxDestructiveColor(), 0.28)
+        end
+
+        local function GetWarningBoxStrokeColor()
+            return GetWarningBoxDestructiveColor():Lerp(Library.Scheme.DarkColor, 0.42)
         end
 
         
@@ -12048,17 +12186,17 @@ function Library:CreateWindow(WindowInfo)
             Tab:Resize(true)
 
             WarningBox.BackgroundColor3 = Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor
-                or Color3.fromRGB(127, 0, 0)
+                or GetWarningBoxSurfaceColor()
 
             WarningBoxShadowOutline.Color = Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor
-                or Color3.fromRGB(85, 0, 0)
+                or GetWarningBoxShadowColor()
             WarningBoxOutline.Color = Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor
-                or Color3.fromRGB(255, 50, 50)
+                or GetWarningBoxDestructiveColor()
 
             WarningTitle.TextColor3 = Tab.WarningBox.IsNormal == true and Library.Scheme.FontColor
-                or Color3.fromRGB(255, 50, 50)
+                or GetWarningBoxDestructiveColor()
             WarningStroke.Color = Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor
-                or Color3.fromRGB(169, 0, 0)
+                or GetWarningBoxStrokeColor()
 
             if not Library.Registry[WarningBox] then
                 Library:AddToRegistry(WarningBox, {})
@@ -12077,23 +12215,23 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Library.Registry[WarningBox].BackgroundColor3 = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor or Color3.fromRGB(127, 0, 0)
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor or GetWarningBoxSurfaceColor()
             end
 
             Library.Registry[WarningBoxShadowOutline].Color = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor or Color3.fromRGB(85, 0, 0)
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor or GetWarningBoxShadowColor()
             end
 
             Library.Registry[WarningBoxOutline].Color = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(255, 50, 50)
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or GetWarningBoxDestructiveColor()
             end
 
             Library.Registry[WarningTitle].TextColor3 = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.FontColor or Color3.fromRGB(255, 50, 50)
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.FontColor or GetWarningBoxDestructiveColor()
             end
 
             Library.Registry[WarningStroke].Color = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(169, 0, 0)
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or GetWarningBoxStrokeColor()
             end
         end
 

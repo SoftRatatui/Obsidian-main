@@ -108,6 +108,7 @@ export type DraggableImageButton = {
 
 
 export type ButtonVariant = "Default" | "Primary" | "Warning" | "Danger" | "Ghost" | "Secondary" | "Caution" | "Destructive"
+export type ToggleVariant = "Default" | "Warning" | "Danger" | "Caution" | "Destructive"
 
 export type ButtonInfo = {
     Text: string,
@@ -126,6 +127,7 @@ export type ButtonInfo = {
 export type ToggleInfo = {
     Text: string,
     Default: boolean?,
+    Variant: ToggleVariant?,
     Callback: ((boolean) -> ())?,
     Changed: ((boolean) -> ())?,
     Tooltip: string?,
@@ -492,6 +494,8 @@ export type Toggle = {
     Risky: boolean,
     Disabled: boolean,
     Visible: boolean,
+    Variant: "Checkbox" | "Switch",
+    StyleVariant: ToggleVariant,
     Addons: { [number]: Addon },
     Type: "Toggle",
     TextLabel: TextLabel,
@@ -503,6 +507,7 @@ export type Toggle = {
     OnChanged: (self: Toggle, Func: (Value: boolean) -> ()) -> (),
     SetValue: (self: Toggle, Value: boolean) -> (),
     SetDisabled: (self: Toggle, Disabled: boolean) -> (),
+    SetVariant: (self: Toggle, Variant: ToggleVariant) -> (),
     SetVisible: (self: Toggle, Visible: boolean) -> (),
     SetText: (self: Toggle, Text: string) -> (),
 
@@ -1118,6 +1123,7 @@ export type Library = {
     DefaultTheme: string,
     Themes: { [string]: ThemePreset },
     Registry: { [Instance]: { [string]: string | () -> any } },
+    ColorRevision: number,
     Scales: { [GuiObject]: { [string]: any } },
     ScalesOffset: { [GuiObject]: { [string]: any } },
     CopiedColor: { Color3 | number }?,

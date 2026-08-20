@@ -96,6 +96,8 @@ For a mobile-first size, use `Library.IsMobile` when creating the window. The li
 
 Buttons support `Default`, `Primary`, `Warning`, `Danger`, and `Ghost` variants. `Warning` and `Danger` receive restrained semantic icons by default; pass `Icon = "..."` to replace one or `Icon = false` to remove it. `Library:SetButtonVariantIcon("Danger", "trash-2")` changes the default for new and existing semantic danger buttons. `Risky = true` remains supported and maps to `Danger` when no explicit variant is provided. `Secondary`, `Caution`, and `Destructive` remain accepted as legacy aliases for `Default`, `Warning`, and `Danger`.
 
+Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`. Theme Manager now includes dedicated `Warning color` and `Danger color` controls, and all header surfaces follow `TopBarColor`.
+
 Use `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow` to configure the launcher. It stays outside the main window, remains inside the viewport, and uses a movement threshold so dragging never triggers an accidental reopen.
 
 ## Full executor profile

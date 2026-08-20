@@ -73,6 +73,7 @@ local App = Library:Create({
                         {
                             Type = "Button",
                             Text = "Run action",
+                            Variant = "Primary",
                             OnClick = function()
                                 print("Clicked")
                             end,
@@ -89,9 +90,13 @@ App:Get("speed"):SetValue(50)
 
 ## Current Graphite interface
 
-`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. Watermark starts in the top-right corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a small draggable launcher, so mouse control never depends only on a keybind. Watermark starts in the top-right corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
+
+Buttons support `Default`, `Primary`, `Warning`, `Danger`, and `Ghost` variants. `Warning` and `Danger` receive restrained semantic icons by default; pass `Icon = "..."` to replace one or `Icon = false` to remove it. `Library:SetButtonVariantIcon("Danger", "trash-2")` changes the default for new and existing semantic danger buttons. `Risky = true` remains supported and maps to `Danger` when no explicit variant is provided. `Secondary`, `Caution`, and `Destructive` remain accepted as legacy aliases for `Default`, `Warning`, and `Danger`.
+
+Use `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow` to configure the launcher. It stays outside the main window, remains inside the viewport, and uses a movement threshold so dragging never triggers an accidental reopen.
 
 ## Full executor profile
 

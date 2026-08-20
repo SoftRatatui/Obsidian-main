@@ -12,6 +12,7 @@ export type Scheme = {
     FontColor: Color3,
     Font: Font,
     RedColor: Color3,
+    WarningColor: Color3,
     DestructiveColor: Color3,
     DarkColor: Color3,
     WhiteColor: Color3,
@@ -106,10 +107,15 @@ export type DraggableImageButton = {
 }
 
 
+export type ButtonVariant = "Default" | "Primary" | "Warning" | "Danger" | "Ghost" | "Secondary" | "Caution" | "Destructive"
+
 export type ButtonInfo = {
     Text: string,
     Func: (FromKeyPicker: boolean?) -> (),
     DoubleClick: boolean?,
+    Variant: ButtonVariant?,
+    Icon: string | number | boolean?,
+    IconColor: Color3?,
     Tooltip: string?,
     DisabledTooltip: string?,
     Risky: boolean?,
@@ -277,6 +283,7 @@ export type ThemePreset = {
     FontColor: Color3?,
     Font: Font | Enum.Font?,
     RedColor: Color3?,
+    WarningColor: Color3?,
     DestructiveColor: Color3?,
     DarkColor: Color3?,
     WhiteColor: Color3?,
@@ -415,6 +422,9 @@ export type Button = {
     Text: string,
     Func: (FromKeyPicker: boolean?) -> (),
     DoubleClick: boolean?,
+    Variant: ButtonVariant,
+    Icon: string | number | boolean?,
+    IconColor: Color3?,
     Tooltip: string?,
     DisabledTooltip: string?,
     TooltipTable: Tooltip?,
@@ -425,12 +435,17 @@ export type Button = {
     Type: "Button",
     Base: TextButton,
     Stroke: UIStroke,
+    Label: TextLabel,
+    IconImage: ImageLabel,
     Holder: Frame,
     SubButton: SubButton?,
 
     AddButton: (self: Button, Info: ButtonInfo | string, Func: (() -> ())?, Idx: string?) -> SubButton,
     UpdateColors: (self: Button) -> (),
+    UpdateIcon: (self: Button) -> (),
     SetDisabled: (self: Button, Disabled: boolean) -> (),
+    SetVariant: (self: Button, Variant: ButtonVariant) -> (),
+    SetIcon: (self: Button, Icon: string | number | boolean?, IconColor: Color3?) -> (),
     SetVisible: (self: Button, Visible: boolean) -> (),
     SetText: (self: Button, Text: string) -> (),
     Destroy: (self: Button) -> (),
@@ -440,6 +455,9 @@ export type SubButton = {
     Text: string,
     Func: (FromKeyPicker: boolean?) -> (),
     DoubleClick: boolean?,
+    Variant: ButtonVariant,
+    Icon: string | number | boolean?,
+    IconColor: Color3?,
     Tooltip: string?,
     DisabledTooltip: string?,
     TooltipTable: Tooltip?,
@@ -450,9 +468,14 @@ export type SubButton = {
     Type: "SubButton",
     Base: TextButton,
     Stroke: UIStroke,
+    Label: TextLabel,
+    IconImage: ImageLabel,
 
     UpdateColors: (self: SubButton) -> (),
+    UpdateIcon: (self: SubButton) -> (),
     SetDisabled: (self: SubButton, Disabled: boolean) -> (),
+    SetVariant: (self: SubButton, Variant: ButtonVariant) -> (),
+    SetIcon: (self: SubButton, Icon: string | number | boolean?, IconColor: Color3?) -> (),
     SetVisible: (self: SubButton, Visible: boolean) -> (),
     SetText: (self: SubButton, Text: string) -> (),
     Destroy: (self: SubButton) -> (),
@@ -866,7 +889,7 @@ export type KeyTab = BaseGroupbox & {
 
 export type LoadingErrorButtonInfo = {
     Title: string?,
-    Variant: "Primary" | "Secondary" | "Destructive" | "Ghost"?,
+    Variant: ButtonVariant?,
     Callback: ((Loading) -> ())?,
 }
 
@@ -927,7 +950,7 @@ export type Loading = {
 
 export type DialogButtonInfo = {
     Title: string,
-    Variant: "Primary" | "Secondary" | "Destructive" | "Ghost"?,
+    Variant: ButtonVariant?,
     WaitTime: number?,
     Order: number?,
     Callback: ((Dialog) -> ())?,
@@ -947,6 +970,7 @@ export type Dialog = {
 export type Window = {
     AlwaysOnTop: boolean,
     Frame: CanvasGroup,
+    CompactLauncher: TextButton?,
     VisibilityChanged: BindableEvent,
     IsSidebarCompacted: (self: Window) -> boolean,
     GetSidebarWidth: (self: Window) -> number,
@@ -998,6 +1022,10 @@ export type Window = {
         TabSwipeOffset: number?,
         TabSwipeFrom: ("left" | "right" | "top" | "bottom" | string)?
     ) -> (),
+    RefreshCompactLauncher: (self: Window, Animate: boolean?) -> (),
+    SetCompactLauncherIcon: (self: Window, Icon: string | number) -> (),
+    SetCompactLauncherPosition: (self: Window, Position: UDim2) -> (),
+    SetCompactLauncherDraggable: (self: Window, Draggable: boolean) -> (),
     Toggle: (self: Window, Value: boolean?) -> (),
 }
 
@@ -1086,6 +1114,7 @@ export type Library = {
     CornerRadius: number,
     IsLightTheme: boolean,
     Scheme: Scheme,
+    ButtonIcons: { Warning: string | number | boolean?, Danger: string | number | boolean? },
     DefaultTheme: string,
     Themes: { [string]: ThemePreset },
     Registry: { [Instance]: { [string]: string | () -> any } },
@@ -1220,6 +1249,7 @@ export type Library = {
     OnUnload: (self: Library, Callback: () -> ()) -> (),
     Unload: (self: Library) -> (),
     SetIconModule: (self: Library, module: any) -> (),
+    SetButtonVariantIcon: (self: Library, Variant: ButtonVariant, Icon: string | number | boolean?) -> (),
     SetTheme: (self: Library, Theme: string | ThemePreset) -> Library,
     SetFont: (self: Library, FontFace: Font | Enum.Font) -> (),
     SetNotifySide: (self: Library, Side: "Left" | "Right") -> (),
@@ -1266,6 +1296,12 @@ export type Library = {
             AlwaysOnTop: boolean?,
             Font: Font | Enum.Font?,
             ToggleKeybind: Enum.KeyCode?,
+            ShowCompactLauncher: boolean?,
+            CompactLauncherIcon: string | number?,
+            CompactLauncherSize: number?,
+            CompactLauncherPosition: UDim2?,
+            CompactLauncherAnchorPoint: Vector2?,
+            CompactLauncherDraggable: boolean?,
             ShowMobileButtons: boolean?,
             MobileButtonsSide: "Left" | "Right"?,
             UnlockMouseWhileOpen: boolean?,

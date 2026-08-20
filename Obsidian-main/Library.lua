@@ -272,9 +272,9 @@ local Library = {
     TabSwipeOffset = 8,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+    WindowAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DropdownTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
@@ -332,11 +332,17 @@ local Library = {
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
+        WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         DarkColor = Color3.new(0, 0, 0),
         WhiteColor = Color3.fromRGB(248, 249, 252),
 
         BackgroundImage = ""
+    },
+
+    ButtonIcons = {
+        Warning = "triangle-alert",
+        Danger = "octagon-x",
     },
 
     
@@ -494,6 +500,13 @@ local Templates = {
 
         Font = Enum.Font.Gotham,
         ToggleKeybind = Enum.KeyCode.RightControl,
+
+        ShowCompactLauncher = true,
+        CompactLauncherIcon = "maximize-2",
+        CompactLauncherSize = 34,
+        CompactLauncherPosition = UDim2.new(1, -10, 0.5, 0),
+        CompactLauncherAnchorPoint = Vector2.new(1, 0.5),
+        CompactLauncherDraggable = true,
 
         ShowMobileButtons = true,
         MobileButtonsSide = "Left",
@@ -1809,6 +1822,188 @@ end
 
 function Library:GetAccentSurfaceColor(Strength: number?): Color3
     return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.12, 0, 1))
+end
+
+local ButtonVariantAliases = {
+    Default = "Default",
+    Secondary = "Default",
+    Primary = "Primary",
+    Warning = "Warning",
+    Caution = "Warning",
+    Danger = "Danger",
+    Destructive = "Danger",
+    Ghost = "Ghost",
+}
+
+function Library:NormalizeButtonVariant(Variant: string?, Risky: boolean?): string
+    local Normalized = typeof(Variant) == "string" and ButtonVariantAliases[Variant] or nil
+    if Normalized then
+        return Normalized
+    end
+
+    return Risky and "Danger" or "Default"
+end
+
+function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
+    local Scheme = Library.Scheme
+    local Normalized = Library:NormalizeButtonVariant(Variant)
+    local Style = {
+        BackgroundColor = Scheme.MainColor,
+        BackgroundTransparency = 0,
+        OutlineColor = Scheme.OutlineColor,
+        OutlineTransparency = 0,
+        TextColor = Scheme.FontColor,
+        TextTransparency = 0.12,
+        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 5),
+        HoverBackgroundTransparency = 0,
+        HoverOutlineColor = Library:GetLighterColor(Scheme.OutlineColor),
+        HoverOutlineTransparency = 0,
+        HoverTextColor = Scheme.FontColor,
+        HoverTextTransparency = 0,
+    }
+
+    if Normalized == "Primary" then
+        Style.BackgroundColor = Library:GetAccentSurfaceColor(0.2)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.45)
+        Style.TextTransparency = 0.03
+        Style.HoverBackgroundColor = Library:GetAccentSurfaceColor(0.3)
+        Style.HoverOutlineColor = Scheme.AccentColor
+    elseif Normalized == "Warning" then
+        Style.BackgroundColor = Scheme.MainColor:Lerp(Scheme.WarningColor, 0.18)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.WarningColor, 0.52)
+        Style.TextTransparency = 0.05
+        Style.HoverBackgroundColor = Scheme.MainColor:Lerp(Scheme.WarningColor, 0.28)
+        Style.HoverOutlineColor = Scheme.WarningColor
+    elseif Normalized == "Danger" then
+        Style.BackgroundColor = Scheme.MainColor:Lerp(Scheme.DestructiveColor, 0.2)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.DestructiveColor, 0.55)
+        Style.TextColor = Scheme.WhiteColor
+        Style.TextTransparency = 0.05
+        Style.HoverBackgroundColor = Scheme.MainColor:Lerp(Scheme.DestructiveColor, 0.3)
+        Style.HoverOutlineColor = Scheme.DestructiveColor
+        Style.HoverTextColor = Scheme.WhiteColor
+    elseif Normalized == "Ghost" then
+        Style.BackgroundColor = Scheme.BackgroundColor
+        Style.BackgroundTransparency = 0.34
+        Style.OutlineColor = Scheme.OutlineColor
+        Style.OutlineTransparency = 0.58
+        Style.TextTransparency = 0.2
+        Style.HoverBackgroundColor = Scheme.MainColor
+        Style.HoverBackgroundTransparency = 0.06
+        Style.HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.25)
+        Style.HoverOutlineTransparency = 0.12
+    end
+
+    if Disabled then
+        Style.BackgroundColor = Scheme.BackgroundColor
+        Style.BackgroundTransparency = 0.32
+        Style.OutlineColor = Scheme.OutlineColor
+        Style.OutlineTransparency = 0.58
+        Style.TextColor = Scheme.FontColor
+        Style.TextTransparency = 0.64
+        Style.HoverBackgroundColor = Style.BackgroundColor
+        Style.HoverBackgroundTransparency = Style.BackgroundTransparency
+        Style.HoverOutlineColor = Style.OutlineColor
+        Style.HoverOutlineTransparency = Style.OutlineTransparency
+        Style.HoverTextColor = Style.TextColor
+        Style.HoverTextTransparency = Style.TextTransparency
+    end
+
+    Style.Variant = Normalized
+    return Style
+end
+
+local function ResolveButtonIcon(Variant: string?, Icon: string | number | boolean?)
+    local RequestedIcon = Icon
+    if RequestedIcon == nil then
+        RequestedIcon = Library.ButtonIcons[Library:NormalizeButtonVariant(Variant)]
+    end
+
+    if RequestedIcon == false or RequestedIcon == nil or RequestedIcon == "" then
+        return nil
+    end
+
+    if typeof(RequestedIcon) ~= "string" and typeof(RequestedIcon) ~= "number" then
+        return nil
+    end
+
+    return Library:GetCustomIcon(RequestedIcon)
+end
+
+function Library:SetButtonVariantIcon(Variant: string, Icon: string | number | boolean?)
+    local Normalized = Library:NormalizeButtonVariant(Variant)
+    assert(Normalized == "Warning" or Normalized == "Danger", "Only Warning and Danger variants have semantic icons.")
+
+    Library.ButtonIcons[Normalized] = Icon
+
+    for _, Button in Buttons do
+        if Button and Button.Variant == Normalized and Button.Icon == nil and Button.UpdateIcon then
+            Button:UpdateIcon()
+            Button:UpdateColors()
+        end
+    end
+end
+
+local function ApplyButtonVisual(
+    Button: TextButton,
+    Stroke: UIStroke?,
+    TextObject: TextLabel | TextButton?,
+    Variant: string?,
+    Disabled: boolean?,
+    Hovered: boolean?,
+    Animate: boolean?,
+    TweenKey: string?
+)
+    local Style = Library:GetButtonStyle(Variant, Disabled)
+    local UseHover = Hovered == true and not Disabled
+    local BackgroundColor = UseHover and Style.HoverBackgroundColor or Style.BackgroundColor
+    local BackgroundTransparency = UseHover and Style.HoverBackgroundTransparency or Style.BackgroundTransparency
+    local OutlineColor = UseHover and Style.HoverOutlineColor or Style.OutlineColor
+    local OutlineTransparency = UseHover and Style.HoverOutlineTransparency or Style.OutlineTransparency
+    local TextColor = UseHover and Style.HoverTextColor or Style.TextColor
+    local TextTransparency = UseHover and Style.HoverTextTransparency or Style.TextTransparency
+    local Key = TweenKey or "Button"
+    local ButtonGoals = {
+        BackgroundColor3 = BackgroundColor,
+        BackgroundTransparency = BackgroundTransparency,
+    }
+
+    if TextObject == Button then
+        ButtonGoals.TextColor3 = TextColor
+        ButtonGoals.TextTransparency = TextTransparency
+    end
+
+    if Animate then
+        Library:PlayTween(Button, Key .. "Surface", Library.TweenInfo, ButtonGoals)
+        if TextObject and TextObject ~= Button then
+            Library:PlayTween(TextObject, Key .. "Text", Library.TweenInfo, {
+                TextColor3 = TextColor,
+                TextTransparency = TextTransparency,
+            })
+        end
+        if Stroke then
+            Library:PlayTween(Stroke, Key .. "Stroke", Library.TweenInfo, {
+                Color = OutlineColor,
+                Transparency = OutlineTransparency,
+            })
+        end
+    else
+        Library:CancelTween(Button, Key .. "Surface")
+        Button.BackgroundColor3 = BackgroundColor
+        Button.BackgroundTransparency = BackgroundTransparency
+        if TextObject then
+            Library:CancelTween(TextObject, Key .. "Text")
+            TextObject.TextColor3 = TextColor
+            TextObject.TextTransparency = TextTransparency
+        end
+        if Stroke then
+            Library:CancelTween(Stroke, Key .. "Stroke")
+            Stroke.Color = OutlineColor
+            Stroke.Transparency = OutlineTransparency
+        end
+    end
+
+    return Style
 end
 
 function Library:GetLighterColor(Color: Color3): Color3
@@ -5897,18 +6092,24 @@ do
                 Info.Text = Params.Text or ""
                 Info.Func = Params.Func or Params.Callback or function() end
                 Info.DoubleClick = Params.DoubleClick
+                Info.Variant = Params.Variant
+                Info.Icon = Params.Icon
+                Info.IconColor = Params.IconColor
 
                 Info.Tooltip = Params.Tooltip
                 Info.DisabledTooltip = Params.DisabledTooltip
 
                 Info.Risky = Params.Risky or false
                 Info.Disabled = Params.Disabled or false
-                Info.Visible = Params.Visible or true
+                Info.Visible = Params.Visible ~= false
                 Info.Idx = typeof(Second) == "table" and First or nil
             else
                 Info.Text = First or ""
                 Info.Func = Second or function() end
                 Info.DoubleClick = false
+                Info.Variant = nil
+                Info.Icon = nil
+                Info.IconColor = nil
 
                 Info.Tooltip = nil
                 Info.DisabledTooltip = nil
@@ -5933,6 +6134,9 @@ do
             Text = Info.Text,
             Func = Info.Func,
             DoubleClick = Info.DoubleClick,
+            Variant = Library:NormalizeButtonVariant(Info.Variant, Info.Risky),
+            Icon = Info.Icon,
+            IconColor = Info.IconColor,
 
             Tooltip = Info.Tooltip,
             DisabledTooltip = Info.DisabledTooltip,
@@ -5963,10 +6167,9 @@ do
             local Base = New("TextButton", {
                 Active = not Button.Disabled,
                 BackgroundColor3 = Button.Disabled and "BackgroundColor" or "MainColor",
+                ClipsDescendants = true,
                 Size = UDim2.fromScale(1, 1),
-                Text = Button.Text,
-                TextSize = 14,
-                TextTransparency = 0.4,
+                Text = "",
                 Visible = Button.Visible,
                 Parent = Holder,
             })
@@ -5985,7 +6188,131 @@ do
                 })
             )
 
-            return Base, Stroke
+            local Content = New("Frame", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundTransparency = 1,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(0, 14),
+                Parent = Base,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Padding = UDim.new(0, 6),
+                Parent = Content,
+            })
+            local IconImage = New("ImageLabel", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Size = UDim2.fromOffset(14, 14),
+                Visible = false,
+                Parent = Content,
+            })
+            local Label = New("TextLabel", {
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundTransparency = 1,
+                LayoutOrder = 2,
+                Size = UDim2.fromOffset(0, 14),
+                Text = Button.Text,
+                TextSize = 14,
+                TextTransparency = 0.12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Content,
+            })
+
+            return Base, Stroke, Label, IconImage
+        end
+
+        local function UpdateButtonIcon(Button)
+            local IconData = ResolveButtonIcon(Button.Variant, Button.Icon)
+            if not IconData then
+                Button.IconImage.Visible = false
+                return
+            end
+
+            Button.IconImage.Image = IconData.Url
+            Button.IconImage.ImageRectOffset = IconData.ImageRectOffset
+            Button.IconImage.ImageRectSize = IconData.ImageRectSize
+            Button.IconImage.Visible = true
+        end
+
+        local function ApplyButtonIconStyle(Button, Hovered: boolean?, Animate: boolean?)
+            if not Button.IconImage.Visible then
+                return
+            end
+
+            local Style = Library:GetButtonStyle(Button.Variant, Button.Disabled)
+            local UseHover = Hovered == true and not Button.Disabled
+            local Color = Button.Disabled and Style.TextColor or Button.IconColor or (UseHover and Style.HoverTextColor or Style.TextColor)
+            local Transparency = UseHover and Style.HoverTextTransparency or Style.TextTransparency
+
+            if Animate then
+                Library:PlayTween(Button.IconImage, "ButtonIcon", Library.TweenInfo, {
+                    ImageColor3 = Color,
+                    ImageTransparency = Transparency,
+                })
+                return
+            end
+
+            Library:CancelTween(Button.IconImage, "ButtonIcon")
+            Button.IconImage.ImageColor3 = Color
+            Button.IconImage.ImageTransparency = Transparency
+        end
+
+        local function UpdateButtonStyleRegistry(Button)
+            local BaseRegistry = Library.Registry[Button.Base] or {}
+            BaseRegistry.BackgroundColor3 = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).BackgroundColor
+            end
+            BaseRegistry.BackgroundTransparency = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).BackgroundTransparency
+            end
+            Library.Registry[Button.Base] = BaseRegistry
+
+            local LabelRegistry = Library.Registry[Button.Label] or {}
+            LabelRegistry.TextColor3 = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextColor
+            end
+            LabelRegistry.TextTransparency = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextTransparency
+            end
+            Library.Registry[Button.Label] = LabelRegistry
+
+            local IconRegistry = Library.Registry[Button.IconImage] or {}
+            IconRegistry.ImageColor3 = function()
+                local Style = Library:GetButtonStyle(Button.Variant, Button.Disabled)
+                return Button.Disabled and Style.TextColor or Button.IconColor or Style.TextColor
+            end
+            IconRegistry.ImageTransparency = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).TextTransparency
+            end
+            Library.Registry[Button.IconImage] = IconRegistry
+
+            local StrokeRegistry = Library.Registry[Button.Stroke] or {}
+            StrokeRegistry.Color = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).OutlineColor
+            end
+            StrokeRegistry.Transparency = function()
+                return Library:GetButtonStyle(Button.Variant, Button.Disabled).OutlineTransparency
+            end
+            Library.Registry[Button.Stroke] = StrokeRegistry
+        end
+
+        local function ApplyButtonStyle(Button, Hovered: boolean?, Animate: boolean?)
+            UpdateButtonStyleRegistry(Button)
+            ApplyButtonVisual(
+                Button.Base,
+                Button.Stroke,
+                Button.Label,
+                Button.Variant,
+                Button.Disabled,
+                Hovered,
+                Animate,
+                "Button"
+            )
+            ApplyButtonIconStyle(Button, Hovered, Animate)
         end
 
         local function InitEvents(Button)
@@ -5994,18 +6321,14 @@ do
                     return
                 end
 
-                Library:PlayTween(Button.Base, "ButtonHover", Library.TweenInfo, {
-                    TextTransparency = 0,
-                })
+                ApplyButtonStyle(Button, true, true)
             end)
             Button.Base.MouseLeave:Connect(function()
                 if Button.Disabled then
                     return
                 end
 
-                Library:PlayTween(Button.Base, "ButtonHover", Library.TweenInfo, {
-                    TextTransparency = 0.4,
-                })
+                ApplyButtonStyle(Button, false, true)
             end)
 
             Button.Base.MouseButton1Click:Connect(function()
@@ -6016,15 +6339,13 @@ do
                 if Button.DoubleClick then
                     Button.Locked = true
 
-                    Button.Base.Text = "Are you sure?"
-                    Button.Base.TextColor3 = Library.Scheme.AccentColor
-                    Library.Registry[Button.Base].TextColor3 = "AccentColor"
+                    Button.Label.Text = "Are you sure?"
+                    Button.Label.TextColor3 = Library.Scheme.AccentColor
 
                     local Clicked = WaitForEvent(Button.Base.MouseButton1Click, 0.5)
 
-                    Button.Base.Text = Button.Text
-                    Button.Base.TextColor3 = Button.Risky and Library.Scheme.RedColor or Library.Scheme.FontColor
-                    Library.Registry[Button.Base].TextColor3 = Button.Risky and "RedColor" or "FontColor"
+                    Button.Label.Text = Button.Text
+                    Button:UpdateColors()
 
                     if Clicked then
                         Library:SafeCallback(Button.Func)
@@ -6039,7 +6360,7 @@ do
             end)
         end
 
-        Button.Base, Button.Stroke = CreateButton(Button)
+        Button.Base, Button.Stroke, Button.Label, Button.IconImage = CreateButton(Button)
         InitEvents(Button)
 
         function Button:AddButton(...)
@@ -6052,6 +6373,9 @@ do
                 Text = Info.Text,
                 Func = Info.Func,
                 DoubleClick = Info.DoubleClick,
+                Variant = Library:NormalizeButtonVariant(Info.Variant, Info.Risky),
+                Icon = Info.Icon,
+                IconColor = Info.IconColor,
 
                 Tooltip = Info.Tooltip,
                 DisabledTooltip = Info.DisabledTooltip,
@@ -6066,7 +6390,7 @@ do
             }
 
             Button.SubButton = SubButton
-            SubButton.Base, SubButton.Stroke = CreateButton(SubButton)
+            SubButton.Base, SubButton.Stroke, SubButton.Label, SubButton.IconImage = CreateButton(SubButton)
             InitEvents(SubButton)
 
             function SubButton:UpdateColors()
@@ -6074,15 +6398,7 @@ do
                     return
                 end
 
-                StopTween(SubButton.Tween)
-
-                SubButton.Base.BackgroundColor3 = SubButton.Disabled and Library.Scheme.BackgroundColor
-                    or Library.Scheme.MainColor
-                SubButton.Base.TextTransparency = SubButton.Disabled and 0.8 or 0.4
-                SubButton.Stroke.Transparency = SubButton.Disabled and 0.5 or 0
-
-                Library.Registry[SubButton.Base].BackgroundColor3 = SubButton.Disabled and "BackgroundColor"
-                    or "MainColor"
+                ApplyButtonStyle(SubButton, false, false)
             end
 
             function SubButton:SetDisabled(Disabled: boolean)
@@ -6096,6 +6412,12 @@ do
                 SubButton:UpdateColors()
             end
 
+            function SubButton:SetVariant(Variant: string)
+                SubButton.Variant = Library:NormalizeButtonVariant(Variant, SubButton.Risky)
+                SubButton:UpdateIcon()
+                SubButton:UpdateColors()
+            end
+
             function SubButton:SetVisible(Visible: boolean)
                 SubButton.Visible = Visible
 
@@ -6105,7 +6427,7 @@ do
 
             function SubButton:SetText(Text: string)
                 SubButton.Text = Text
-                SubButton.Base.Text = Text
+                SubButton.Label.Text = Text
             end
 
             if typeof(SubButton.Tooltip) == "string" or typeof(SubButton.DisabledTooltip) == "string" then
@@ -6114,11 +6436,20 @@ do
                 SubButton.TooltipTable.Disabled = SubButton.Disabled
             end
 
-            if SubButton.Risky then
-                SubButton.Base.TextColor3 = Library.Scheme.RedColor
-                Library.Registry[SubButton.Base].TextColor3 = "RedColor"
+            function SubButton:UpdateIcon()
+                UpdateButtonIcon(SubButton)
             end
 
+            function SubButton:SetIcon(Icon: string | number | boolean?, IconColor: Color3?)
+                SubButton.Icon = Icon
+                if IconColor ~= nil then
+                    SubButton.IconColor = IconColor
+                end
+                SubButton:UpdateIcon()
+                SubButton:UpdateColors()
+            end
+
+            SubButton:UpdateIcon()
             SubButton:UpdateColors()
 
             if Info.Idx then
@@ -6163,14 +6494,7 @@ do
                 return
             end
 
-            StopTween(Button.Tween)
-
-            Button.Base.BackgroundColor3 = Button.Disabled and Library.Scheme.BackgroundColor
-                or Library.Scheme.MainColor
-            Button.Base.TextTransparency = Button.Disabled and 0.8 or 0.4
-            Button.Stroke.Transparency = Button.Disabled and 0.5 or 0
-
-            Library.Registry[Button.Base].BackgroundColor3 = Button.Disabled and "BackgroundColor" or "MainColor"
+            ApplyButtonStyle(Button, false, false)
         end
 
         function Button:SetDisabled(Disabled: boolean)
@@ -6184,6 +6508,12 @@ do
             Button:UpdateColors()
         end
 
+        function Button:SetVariant(Variant: string)
+            Button.Variant = Library:NormalizeButtonVariant(Variant, Button.Risky)
+            Button:UpdateIcon()
+            Button:UpdateColors()
+        end
+
         function Button:SetVisible(Visible: boolean)
             Button.Visible = Visible
 
@@ -6193,7 +6523,20 @@ do
 
         function Button:SetText(Text: string)
             Button.Text = Text
-            Button.Base.Text = Text
+            Button.Label.Text = Text
+        end
+
+        function Button:UpdateIcon()
+            UpdateButtonIcon(Button)
+        end
+
+        function Button:SetIcon(Icon: string | number | boolean?, IconColor: Color3?)
+            Button.Icon = Icon
+            if IconColor ~= nil then
+                Button.IconColor = IconColor
+            end
+            Button:UpdateIcon()
+            Button:UpdateColors()
         end
 
         if typeof(Button.Tooltip) == "string" or typeof(Button.DisabledTooltip) == "string" then
@@ -6201,11 +6544,7 @@ do
             Button.TooltipTable.Disabled = Button.Disabled
         end
 
-        if Button.Risky then
-            Button.Base.TextColor3 = Library.Scheme.RedColor
-            Library.Registry[Button.Base].TextColor3 = "RedColor"
-        end
-
+        Button:UpdateIcon()
         Button:UpdateColors()
         Groupbox:Resize()
 
@@ -6913,7 +7252,7 @@ do
             Size = UDim2.new(1, 0, 0, 21),
             Text = Input.Value,
             TextEditable = not Input.Disabled,
-            TextScaled = true,
+            TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Holder,
         })
@@ -7038,16 +7377,16 @@ do
             end
 
             Library.Registry[BoxStroke].Color = "AccentColor"
-            TweenService:Create(BoxStroke, Library.TweenInfo, {
+            Library:PlayTween(BoxStroke, "InputFocus", Library.TweenInfo, {
                 Color = Library.Scheme.AccentColor,
-            }):Play()
+            })
         end))
 
         table.insert(Input.Connections, Box.FocusLost:Connect(function()
             Library.Registry[BoxStroke].Color = "OutlineColor"
-            TweenService:Create(BoxStroke, Library.TweenInfo, {
+            Library:PlayTween(BoxStroke, "InputFocus", Library.TweenInfo, {
                 Color = Library.Scheme.OutlineColor,
-            }):Play()
+            })
         end))
 
         if typeof(Input.Tooltip) == "string" or typeof(Input.DisabledTooltip) == "string" then
@@ -9733,6 +10072,7 @@ function Library:SetTheme(Theme)
         "OutlineColor",
         "FontColor",
         "RedColor",
+        "WarningColor",
         "DestructiveColor",
         "DarkColor",
         "WhiteColor",
@@ -10214,6 +10554,18 @@ function Library:CreateWindow(WindowInfo)
     WindowInfo.CompactWidthActivation = math.max(48, WindowInfo.CompactWidthActivation)
     WindowInfo.SingleColumnWidth = math.max(240, WindowInfo.SingleColumnWidth)
     WindowInfo.HideSearchAtWidth = math.max(120, WindowInfo.HideSearchAtWidth)
+    WindowInfo.ShowCompactLauncher = WindowInfo.ShowCompactLauncher ~= false
+    WindowInfo.CompactLauncherSize = math.clamp(math.floor(tonumber(WindowInfo.CompactLauncherSize) or 34), 26, 44)
+    WindowInfo.CompactLauncherDraggable = WindowInfo.CompactLauncherDraggable ~= false
+    if typeof(WindowInfo.CompactLauncherPosition) ~= "UDim2" then
+        WindowInfo.CompactLauncherPosition = UDim2.new(1, -10, 0.5, 0)
+    end
+    if typeof(WindowInfo.CompactLauncherAnchorPoint) ~= "Vector2" then
+        WindowInfo.CompactLauncherAnchorPoint = Vector2.new(1, 0.5)
+    end
+    if typeof(WindowInfo.CompactLauncherIcon) ~= "string" and typeof(WindowInfo.CompactLauncherIcon) ~= "number" then
+        WindowInfo.CompactLauncherIcon = "maximize-2"
+    end
 
     Library.CornerRadius = WindowInfo.CornerRadius
     Library:SetNotifySide(WindowInfo.NotifySide)
@@ -10250,6 +10602,10 @@ function Library:CreateWindow(WindowInfo)
     local BottomBackground
     local FooterLabel
     local TopBar
+    local MinimizeButton
+    local CompactLauncher
+    local CompactLauncherIcon
+    local CompactLauncherStroke
     local BottomBarHeight = 20
 
     local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
@@ -10260,6 +10616,7 @@ function Library:CreateWindow(WindowInfo)
     local NavigationIconX = 10
     local NavigationLabelX = 36
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
+    local HeaderControlWidth = WindowInfo.ShowCompactLauncher and 84 or 50
 
     do
         Library.KeybindFrame, Library.KeybindContainer, Library.KeybindAnimationScale = Library:AddDraggableMenu("Keybinds")
@@ -10398,8 +10755,8 @@ function Library:CreateWindow(WindowInfo)
         RightWrapper = New("Frame", {
             AnchorPoint = Vector2.new(1, 0.5),
             BackgroundTransparency = 1,
-            Position = UDim2.new(1, -49, 0.5, 0),
-            Size = UDim2.new(1, -InitialLeftWidth - 57 - 1, 1, -16),
+            Position = UDim2.new(1, -HeaderControlWidth, 0.5, 0),
+            Size = UDim2.new(1, -InitialLeftWidth - HeaderControlWidth - 8, 1, -16),
             Parent = TopBar,
         })
 
@@ -10530,7 +10887,7 @@ function Library:CreateWindow(WindowInfo)
                 return Library:GetAccentSurfaceColor(0.06)
             end,
             BackgroundTransparency = 1,
-            Position = UDim2.new(1, -24, 0.5, 0),
+            Position = UDim2.new(1, WindowInfo.ShowCompactLauncher and -58 or -24, 0.5, 0),
             Size = UDim2.fromOffset(30, 30),
             Text = "",
             ZIndex = 4,
@@ -10572,6 +10929,64 @@ function Library:CreateWindow(WindowInfo)
             })
         end)
         Library:MakeDraggable(MainFrame, MoveButton, false, true)
+
+        if WindowInfo.ShowCompactLauncher then
+            MinimizeButton = New("TextButton", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                AutoButtonColor = false,
+                BackgroundColor3 = function()
+                    return Library:GetAccentSurfaceColor(0.06)
+                end,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, -24, 0.5, 0),
+                Size = UDim2.fromOffset(30, 30),
+                Text = "",
+                ZIndex = 4,
+                Parent = TopBar,
+            })
+            table.insert(
+                Library.Corners,
+                New("UICorner", {
+                    CornerRadius = UDim.new(0, math.max(3, math.floor(WindowInfo.CornerRadius * 0.5))),
+                    Parent = MinimizeButton,
+                })
+            )
+            local MinimizeStroke = New("UIStroke", {
+                Color = "OutlineColor",
+                Transparency = 0.74,
+                Parent = MinimizeButton,
+            })
+            local MinimizeIcon = Library:GetIcon("minus")
+            New("ImageLabel", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundTransparency = 1,
+                Image = MinimizeIcon and MinimizeIcon.Url or "",
+                ImageColor3 = "FontColor",
+                ImageRectOffset = MinimizeIcon and MinimizeIcon.ImageRectOffset or Vector2.zero,
+                ImageRectSize = MinimizeIcon and MinimizeIcon.ImageRectSize or Vector2.zero,
+                ImageTransparency = 0.42,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(16, 16),
+                ZIndex = 5,
+                Parent = MinimizeButton,
+            })
+            MinimizeButton.MouseEnter:Connect(function()
+                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 0.78,
+                })
+                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Transparency = 0.48,
+                })
+            end)
+            MinimizeButton.MouseLeave:Connect(function()
+                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 1,
+                })
+                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Transparency = 0.74,
+                })
+            end)
+        end
 
         
         BottomBackground = New("Frame", {
@@ -10708,13 +11123,245 @@ function Library:CreateWindow(WindowInfo)
         VisibilityChanged = VisibilityChanged,
     }
     local WindowTween
-    local WindowScaleTween
     local WindowAnimationSequence = 0
     local IsNarrowLayout = false
     local IsUltraNarrowLayout = false
     local TabInfoRequested = false
     local ResponsiveLayoutQueued = false
     local ViewportFitQueued = false
+    local CompactLauncherHovered = false
+    local CompactLauncherSequence = 0
+    local CompactLauncherPressPosition
+    local CompactLauncherMoved = false
+    local CompactLauncherRelease
+
+    local function SetCompactLauncherIcon(Icon: string | number)
+        if not CompactLauncherIcon then
+            return
+        end
+
+        local IconData = Library:GetCustomIcon(Icon) or Library:GetIcon("maximize-2")
+        CompactLauncherIcon.Image = IconData and IconData.Url or ""
+        CompactLauncherIcon.ImageRectOffset = IconData and IconData.ImageRectOffset or Vector2.zero
+        CompactLauncherIcon.ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero
+    end
+
+    local function ApplyCompactLauncherStyle(Animate: boolean?)
+        if not CompactLauncher or not CompactLauncherIcon or not CompactLauncherStroke then
+            return
+        end
+
+        local BackgroundColor = Library:GetAccentSurfaceColor(CompactLauncherHovered and 0.18 or 0.1)
+        local BackgroundTransparency = CompactLauncherHovered and 0 or 0.08
+        local IconTransparency = CompactLauncherHovered and 0.04 or 0.2
+        local StrokeColor = CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+        local StrokeTransparency = CompactLauncherHovered and 0.2 or 0.45
+
+        if Animate then
+            Library:PlayTween(CompactLauncher, "CompactLauncherSurface", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = BackgroundColor,
+                BackgroundTransparency = BackgroundTransparency,
+            })
+            Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                ImageColor3 = Library.Scheme.FontColor,
+                ImageTransparency = IconTransparency,
+            })
+            Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Color = StrokeColor,
+                Transparency = StrokeTransparency,
+            })
+            return
+        end
+
+        Library:CancelTween(CompactLauncher, "CompactLauncherSurface")
+        Library:CancelTween(CompactLauncherIcon, "CompactLauncherIcon")
+        Library:CancelTween(CompactLauncherStroke, "CompactLauncherStroke")
+        CompactLauncher.BackgroundColor3 = BackgroundColor
+        CompactLauncher.BackgroundTransparency = BackgroundTransparency
+        CompactLauncherIcon.ImageColor3 = Library.Scheme.FontColor
+        CompactLauncherIcon.ImageTransparency = IconTransparency
+        CompactLauncherStroke.Color = StrokeColor
+        CompactLauncherStroke.Transparency = StrokeTransparency
+    end
+
+    if WindowInfo.ShowCompactLauncher then
+        CompactLauncher = New("TextButton", {
+            Active = true,
+            AnchorPoint = WindowInfo.CompactLauncherAnchorPoint,
+            AutoButtonColor = false,
+            BackgroundColor3 = function()
+                return Library:GetAccentSurfaceColor(0.1)
+            end,
+            BackgroundTransparency = 1,
+            Position = WindowInfo.CompactLauncherPosition,
+            Size = UDim2.fromOffset(WindowInfo.CompactLauncherSize, WindowInfo.CompactLauncherSize),
+            Text = "",
+            Visible = false,
+            ZIndex = 20,
+            Parent = ScreenGui,
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, math.max(4, math.floor(WindowInfo.CornerRadius * 0.75))),
+                Parent = CompactLauncher,
+            })
+        )
+        table.insert(
+            Library.Scales,
+            New("UIScale", {
+                Parent = CompactLauncher,
+            })
+        )
+        CompactLauncherStroke = New("UIStroke", {
+            Color = function()
+                return Library.Scheme.OutlineColor
+            end,
+            Transparency = 1,
+            Parent = CompactLauncher,
+        })
+        CompactLauncherIcon = New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            ImageColor3 = "FontColor",
+            ImageTransparency = 1,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(16, 16),
+            ZIndex = 21,
+            Parent = CompactLauncher,
+        })
+        SetCompactLauncherIcon(WindowInfo.CompactLauncherIcon)
+        Library:MakeDraggable(CompactLauncher, CompactLauncher, true, false, function()
+            return WindowInfo.CompactLauncherDraggable
+        end)
+        Library:GiveSignal(CompactLauncher.MouseEnter:Connect(function()
+            CompactLauncherHovered = true
+            if CompactLauncher.Visible then
+                ApplyCompactLauncherStyle(true)
+            end
+        end))
+        Library:GiveSignal(CompactLauncher.MouseLeave:Connect(function()
+            CompactLauncherHovered = false
+            if CompactLauncher.Visible then
+                ApplyCompactLauncherStyle(true)
+            end
+        end))
+        Library:GiveSignal(CompactLauncher.InputBegan:Connect(function(Input: InputObject)
+            if not IsClickInput(Input) or not CompactLauncher.Visible then
+                return
+            end
+
+            CompactLauncherPressPosition = Input.Position
+            CompactLauncherMoved = false
+            if CompactLauncherRelease and CompactLauncherRelease.Connected then
+                CompactLauncherRelease:Disconnect()
+            end
+            CompactLauncherRelease = Input.Changed:Connect(function()
+                if Input.UserInputState ~= Enum.UserInputState.End then
+                    return
+                end
+
+                if not CompactLauncherMoved and CompactLauncher.Visible and not Library.Toggled then
+                    Window:Toggle(true)
+                end
+                CompactLauncherPressPosition = nil
+                if CompactLauncherRelease and CompactLauncherRelease.Connected then
+                    CompactLauncherRelease:Disconnect()
+                    CompactLauncherRelease = nil
+                end
+            end)
+        end))
+        Library:GiveSignal(UserInputService.InputChanged:Connect(function(Input: InputObject)
+            if WindowInfo.CompactLauncherDraggable and CompactLauncherPressPosition and IsHoverInput(Input) and (Input.Position - CompactLauncherPressPosition).Magnitude > 6 then
+                CompactLauncherMoved = true
+            end
+        end))
+        CompactLauncher.Destroying:Connect(function()
+            if CompactLauncherRelease and CompactLauncherRelease.Connected then
+                CompactLauncherRelease:Disconnect()
+                CompactLauncherRelease = nil
+            end
+        end)
+        task.defer(function()
+            if CompactLauncher and CompactLauncher.Parent then
+                ClampGuiToViewport(CompactLauncher, 8)
+            end
+        end)
+    end
+
+    function Window:RefreshCompactLauncher(Animate: boolean?)
+        if not CompactLauncher then
+            return
+        end
+
+        CompactLauncherSequence += 1
+        local Sequence = CompactLauncherSequence
+        local ShouldShow = WindowInfo.ShowCompactLauncher and not Library.Toggled
+
+        if ShouldShow then
+            if not CompactLauncher.Visible then
+                CompactLauncher.Visible = true
+                CompactLauncher.BackgroundTransparency = 1
+                CompactLauncherIcon.ImageTransparency = 1
+                CompactLauncherStroke.Transparency = 1
+            end
+            ApplyCompactLauncherStyle(Animate == true)
+            return
+        end
+
+        if not CompactLauncher.Visible then
+            return
+        end
+
+        if Animate ~= true then
+            CompactLauncher.Visible = false
+            CompactLauncher.BackgroundTransparency = 1
+            CompactLauncherIcon.ImageTransparency = 1
+            CompactLauncherStroke.Transparency = 1
+            return
+        end
+
+        Library:PlayTween(CompactLauncher, "CompactLauncherSurface", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 1,
+        })
+        local IconTween = Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            ImageTransparency = 1,
+        })
+        Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Transparency = 1,
+        })
+        if not IconTween then
+            CompactLauncher.Visible = false
+            return
+        end
+
+        IconTween.Completed:Once(function(State)
+            if State == Enum.PlaybackState.Completed and Sequence == CompactLauncherSequence and (Library.Toggled or not WindowInfo.ShowCompactLauncher) and CompactLauncher.Parent then
+                CompactLauncher.Visible = false
+            end
+        end)
+    end
+
+    function Window:SetCompactLauncherIcon(Icon: string | number)
+        assert(typeof(Icon) == "string" or typeof(Icon) == "number", "Compact launcher icon must be a Lucide name, asset id, or asset URL.")
+        WindowInfo.CompactLauncherIcon = Icon
+        SetCompactLauncherIcon(Icon)
+    end
+
+    function Window:SetCompactLauncherPosition(Position: UDim2)
+        assert(typeof(Position) == "UDim2", "UDim2 expected.")
+        WindowInfo.CompactLauncherPosition = Position
+        if CompactLauncher then
+            CompactLauncher.Position = Position
+            ClampGuiToViewport(CompactLauncher, 8)
+        end
+    end
+
+    function Window:SetCompactLauncherDraggable(Draggable: boolean)
+        WindowInfo.CompactLauncherDraggable = Draggable == true
+    end
+
+    Window.CompactLauncher = CompactLauncher
 
     local function GetContentWidth()
         local Scale = math.max(Library.DPIScale or 1, 0.01)
@@ -11000,7 +11647,7 @@ function Library:CreateWindow(WindowInfo)
         DividerLine.Position = UDim2.fromOffset(Width, 0)
 
         TitleHolder.Size = UDim2.new(0, Width, 1, 0)
-        RightWrapper.Size = UDim2.new(1, -Width - 57 - 1, 1, -16)
+        RightWrapper.Size = UDim2.new(1, -Width - HeaderControlWidth - 8, 1, -16)
         Tabs.Size = UDim2.new(0, Width, 1, -(50 + BottomBarHeight))
         Container.Size = UDim2.new(1, -Width - 1, 1, -(50 + BottomBarHeight))
 
@@ -12902,35 +13549,20 @@ function Library:CreateWindow(WindowInfo)
                 Parent = ButtonsHolder,
             })
             
-            local BtnColor = "MainColor"
-            local BtnOutline = "OutlineColor"
-            local Variant = ButtonInfo.Variant or "Primary"
-            
-            if Variant == "Primary" then
-                BtnColor = "FontColor"
-                BtnOutline = "FontColor"
-            elseif Variant == "Secondary" then
-                BtnColor = "MainColor"
-                BtnOutline = "OutlineColor"
-            elseif Variant == "Destructive" then
-                BtnColor = "DestructiveColor"
-                BtnOutline = "DestructiveColor"
-            elseif Variant == "Ghost" then
-                BtnColor = "BackgroundColor"
-                BtnOutline = "BackgroundColor"
-            end
+            local Variant = Library:NormalizeButtonVariant(ButtonInfo.Variant)
+            local InitialStyle = Library:GetButtonStyle(Variant, WaitTime > 0)
 
             local TextBtn = New("TextButton", {
-                BackgroundColor3 = BtnColor,
-                BorderColor3 = BtnOutline,
-                BackgroundTransparency = WaitTime > 0 and 0.5 or 0,
+                BackgroundColor3 = InitialStyle.BackgroundColor,
+                BorderColor3 = InitialStyle.OutlineColor,
+                BackgroundTransparency = InitialStyle.BackgroundTransparency,
                 Size = UDim2.fromOffset(0, 26),
                 Text = "",
                 AutoButtonColor = false,
                 ZIndex = 9002,
                 Parent = ButtonContainer,
             })
-            Library:AddOutline(TextBtn)
+            local OutlineStroke = Library:AddOutline(TextBtn)
             table.insert(
                 Library.Corners,
                 New("UICorner", { 
@@ -12945,19 +13577,12 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TextBtn,
             })
 
-            local TextColor = Library.Scheme.FontColor
-            if Variant == "Primary" then
-                TextColor = Library.Scheme.BackgroundColor
-            elseif Variant == "Destructive" then
-                TextColor = Color3.new(1, 1, 1)
-            end
-            
             local BtnLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
                 Text = ButtonInfo.Title or ButtonIdx,
-                TextColor3 = TextColor,
-                TextTransparency = WaitTime > 0 and 0.5 or 0,
+                TextColor3 = InitialStyle.TextColor,
+                TextTransparency = InitialStyle.TextTransparency,
                 TextSize = 14,
                 ZIndex = 9002,
                 Parent = TextBtn,
@@ -12988,34 +13613,66 @@ function Library:CreateWindow(WindowInfo)
 
             local IsActive = WaitTime <= 0
 
+            local function UpdateFooterButtonStyleRegistry()
+                local BaseRegistry = Library.Registry[TextBtn] or {}
+                BaseRegistry.BackgroundColor3 = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).BackgroundColor
+                end
+                BaseRegistry.BackgroundTransparency = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).BackgroundTransparency
+                end
+                Library.Registry[TextBtn] = BaseRegistry
+
+                local LabelRegistry = Library.Registry[BtnLabel] or {}
+                LabelRegistry.TextColor3 = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).TextColor
+                end
+                LabelRegistry.TextTransparency = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).TextTransparency
+                end
+                Library.Registry[BtnLabel] = LabelRegistry
+
+                local StrokeRegistry = Library.Registry[OutlineStroke] or {}
+                StrokeRegistry.Color = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).OutlineColor
+                end
+                StrokeRegistry.Transparency = function()
+                    return Library:GetButtonStyle(Variant, not IsActive).OutlineTransparency
+                end
+                Library.Registry[OutlineStroke] = StrokeRegistry
+            end
+
+            local function ApplyFooterButtonStyle(Hovered: boolean?, Disabled: boolean?, Animate: boolean?)
+                UpdateFooterButtonStyleRegistry()
+                ApplyButtonVisual(
+                    TextBtn,
+                    OutlineStroke,
+                    BtnLabel,
+                    Variant,
+                    Disabled,
+                    Hovered,
+                    Animate,
+                    "DialogFooter"
+                )
+            end
+
+            ApplyFooterButtonStyle(false, not IsActive, false)
+
             local ButtonWrap = {
                 Container = ButtonContainer,
                 SetDisabled = function(self, Disabled)
                     IsActive = not Disabled
-                    if Disabled then
-                        TweenService:Create(TextBtn, Library.TweenInfo, { BackgroundTransparency = 0.5 }):Play()
-                        TweenService:Create(BtnLabel, Library.TweenInfo, { TextTransparency = 0.5 }):Play()
-                    else
-                        TweenService:Create(TextBtn, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
-                        TweenService:Create(BtnLabel, Library.TweenInfo, { TextTransparency = 0 }):Play()
-                    end
+                    ApplyFooterButtonStyle(false, Disabled, true)
                 end
             }
 
-            local ActiveColor = typeof(BtnColor) == "Color3" and BtnColor or Library.Scheme[BtnColor]
-            local HoverColor = Variant == "Ghost" and Library.Scheme.MainColor or Library:GetBetterColor(ActiveColor, 10)
-
             TextBtn.MouseEnter:Connect(function()
                 if not IsActive then return end
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = HoverColor
-                }):Play()
+                ApplyFooterButtonStyle(true, false, true)
             end)
             TextBtn.MouseLeave:Connect(function()
                 if not IsActive then return end
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = ActiveColor
-                }):Play()
+                ApplyFooterButtonStyle(false, false, true)
             end)
 
             TextBtn.MouseButton1Click:Connect(function()
@@ -13081,6 +13738,7 @@ function Library:CreateWindow(WindowInfo)
             Library.Toggled = not Library.Toggled
         end
         VisibilityChanged:Fire(Library.Toggled)
+        Window:RefreshCompactLauncher(Library.Animations and Library.Animations.ToggleWindow == true)
 
         WindowAnimationSequence += 1
         local AnimationSequence = WindowAnimationSequence
@@ -13090,16 +13748,13 @@ function Library:CreateWindow(WindowInfo)
             WindowTween = nil
         end
 
-        if WindowScaleTween then
-            StopTween(WindowScaleTween, true)
-            WindowScaleTween = nil
-        end
-
         if Library.Animations and Library.Animations.ToggleWindow == true then
             local TargetScale = math.max(Library.DPIScale or 1, 0.01)
             local AnimationInfo = Library.Toggled
                 and (Library.WindowOpenAnimationInfo or Library.WindowAnimationInfo)
                 or (Library.WindowCloseAnimationInfo or Library.WindowAnimationInfo)
+
+            WindowScale.Scale = TargetScale
 
             if Library.Toggled then
                 local WasVisible = MainFrame.Visible
@@ -13107,19 +13762,14 @@ function Library:CreateWindow(WindowInfo)
 
                 if not WasVisible then
                     MainFrame.GroupTransparency = 1
-                    WindowScale.Scale = TargetScale * 0.985
                 end
             end
 
             WindowTween = TweenService:Create(MainFrame, AnimationInfo, {
                 GroupTransparency = Library.Toggled and 0 or 1,
             })
-            WindowScaleTween = TweenService:Create(WindowScale, AnimationInfo, {
-                Scale = Library.Toggled and TargetScale or TargetScale * 0.992,
-            })
 
             local ActiveWindowTween = WindowTween
-            local ActiveScaleTween = WindowScaleTween
 
             WindowTween.Completed:Once(function(PlaybackState)
                 if PlaybackState ~= Enum.PlaybackState.Completed or AnimationSequence ~= WindowAnimationSequence then
@@ -13133,16 +13783,8 @@ function Library:CreateWindow(WindowInfo)
                 if WindowTween == ActiveWindowTween then
                     WindowTween = nil
                 end
-
-                if WindowScaleTween == ActiveScaleTween then
-                    WindowScaleTween = nil
-                end
             end)
             WindowTween:Play()
-
-            if WindowScaleTween then
-                WindowScaleTween:Play()
-            end
         else
             MainFrame.GroupTransparency = Library.Toggled and 0 or 1
             MainFrame.Visible = Library.Toggled
@@ -13187,6 +13829,14 @@ function Library:CreateWindow(WindowInfo)
 
     function Library:Toggle(Value: boolean?)
         return Window:Toggle(Value)
+    end
+
+    if MinimizeButton then
+        Library:GiveSignal(MinimizeButton.MouseButton1Click:Connect(function()
+            if Library.Toggled then
+                Window:Toggle(false)
+            end
+        end))
     end
 
     if WindowInfo.EnableSidebarResize then
@@ -13278,6 +13928,9 @@ function Library:CreateWindow(WindowInfo)
     if workspace.CurrentCamera then
         Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
             Window:QueueFitToViewport()
+            if CompactLauncher and CompactLauncher.Parent then
+                ClampGuiToViewport(CompactLauncher, 8)
+            end
         end))
     end
 
@@ -13286,11 +13939,14 @@ function Library:CreateWindow(WindowInfo)
     if WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile) then
         Window:SetSidebarWidth(WindowInfo.SidebarCompactWidth)
     end
+    if not WindowInfo.AutoShow or Library.ActiveLoading then
+        Window:RefreshCompactLauncher(false)
+    end
     if WindowInfo.AutoShow and not Library.ActiveLoading then
         task.spawn(Library.Toggle)
     end
 
-    if Library.IsMobile then
+    if Library.IsMobile and not WindowInfo.ShowCompactLauncher then
         local ToggleButton = Library:AddDraggableButton("Toggle", function()
             Library:Toggle()
         end, true, true)
@@ -13920,33 +14576,18 @@ function Library:CreateLoading(LoadingInfo)
                 Parent = ErrorButtonsHolder,
             })
             
-            local BtnColor = "MainColor"
-            local BtnOutline = "OutlineColor"
-            local Variant = ButtonInfo.Variant or "Primary"
-            
-            if Variant == "Primary" then
-                BtnColor = "FontColor"
-                BtnOutline = "FontColor"
-            elseif Variant == "Secondary" then
-                BtnColor = "MainColor"
-                BtnOutline = "OutlineColor"
-            elseif Variant == "Destructive" then
-                BtnColor = "DestructiveColor"
-                BtnOutline = "DestructiveColor"
-            elseif Variant == "Ghost" then
-                BtnColor = "BackgroundColor"
-                BtnOutline = "BackgroundColor"
-            end
+            local Variant = Library:NormalizeButtonVariant(ButtonInfo.Variant)
+            local InitialStyle = Library:GetButtonStyle(Variant)
 
             local TextBtn = New("TextButton", {
-                BackgroundColor3 = BtnColor,
-                BorderColor3 = BtnOutline,
+                BackgroundColor3 = InitialStyle.BackgroundColor,
+                BorderColor3 = InitialStyle.OutlineColor,
                 Size = UDim2.fromOffset(0, 26),
                 Text = "",
                 AutoButtonColor = false,
                 Parent = ButtonContainer,
             })
-            Library:AddOutline(TextBtn)
+            local OutlineStroke = Library:AddOutline(TextBtn)
             table.insert(
                 Library.Corners,
                 New("UICorner", { 
@@ -13961,18 +14602,12 @@ function Library:CreateLoading(LoadingInfo)
                 Parent = TextBtn,
             })
 
-            local TextColor = Library.Scheme.FontColor
-            if Variant == "Primary" then
-                TextColor = Library.Scheme.BackgroundColor
-            elseif Variant == "Destructive" then
-                TextColor = Color3.new(1, 1, 1)
-            end
-
             local BtnLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
                 Text = ButtonInfo.Title or Idx,
-                TextColor3 = TextColor,
+                TextColor3 = InitialStyle.TextColor,
+                TextTransparency = InitialStyle.TextTransparency,
                 TextSize = 14,
                 Parent = TextBtn,
             })
@@ -13981,18 +14616,56 @@ function Library:CreateLoading(LoadingInfo)
             ButtonContainer.Size = UDim2.fromOffset(LabelX + 30, 26)
             TextBtn.Size = UDim2.fromOffset(LabelX + 30, 26)
 
-            local ActiveColor = typeof(BtnColor) == "Color3" and BtnColor or Library.Scheme[BtnColor]
-            local HoverColor = Variant == "Ghost" and Library.Scheme.MainColor or Library:GetBetterColor(ActiveColor, 10)
+            local function UpdateErrorButtonStyleRegistry()
+                local BaseRegistry = Library.Registry[TextBtn] or {}
+                BaseRegistry.BackgroundColor3 = function()
+                    return Library:GetButtonStyle(Variant).BackgroundColor
+                end
+                BaseRegistry.BackgroundTransparency = function()
+                    return Library:GetButtonStyle(Variant).BackgroundTransparency
+                end
+                Library.Registry[TextBtn] = BaseRegistry
+
+                local LabelRegistry = Library.Registry[BtnLabel] or {}
+                LabelRegistry.TextColor3 = function()
+                    return Library:GetButtonStyle(Variant).TextColor
+                end
+                LabelRegistry.TextTransparency = function()
+                    return Library:GetButtonStyle(Variant).TextTransparency
+                end
+                Library.Registry[BtnLabel] = LabelRegistry
+
+                local StrokeRegistry = Library.Registry[OutlineStroke] or {}
+                StrokeRegistry.Color = function()
+                    return Library:GetButtonStyle(Variant).OutlineColor
+                end
+                StrokeRegistry.Transparency = function()
+                    return Library:GetButtonStyle(Variant).OutlineTransparency
+                end
+                Library.Registry[OutlineStroke] = StrokeRegistry
+            end
+
+            local function ApplyErrorButtonStyle(Hovered: boolean?, Animate: boolean?)
+                UpdateErrorButtonStyleRegistry()
+                ApplyButtonVisual(
+                    TextBtn,
+                    OutlineStroke,
+                    BtnLabel,
+                    Variant,
+                    false,
+                    Hovered,
+                    Animate,
+                    "LoadingError"
+                )
+            end
+
+            ApplyErrorButtonStyle(false, false)
 
             TextBtn.MouseEnter:Connect(function()
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = HoverColor
-                }):Play()
+                ApplyErrorButtonStyle(true, true)
             end)
             TextBtn.MouseLeave:Connect(function()
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = ActiveColor
-                }):Play()
+                ApplyErrorButtonStyle(false, true)
             end)
 
             TextBtn.MouseButton1Click:Connect(function()

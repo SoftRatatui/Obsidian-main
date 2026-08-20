@@ -158,6 +158,11 @@ local Window = Library:CreateWindow({
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
 	CornerRadius = 4,
+	ShowCompactLauncher = true,
+	CompactLauncherIcon = "maximize-2",
+	CompactLauncherSize = 34,
+	CompactLauncherPosition = UDim2.new(1, -10, 0.5, 0),
+	CompactLauncherDraggable = true,
 	TabTransitionTime = 0.2,
 	TabSwipeOffset = 8,
 	TabSwipeFrom = "bottom",
@@ -547,9 +552,13 @@ end
 
 local AdvancedActions = Tabs.Advanced:AddLeftGroupbox("System actions", "blocks")
 
-AdvancedActions:AddButton("Show notification", function()
-	Notify("MonHub is ready", "Notifications support a title, description, and duration.")
-end)
+AdvancedActions:AddButton({
+	Text = "Show notification",
+	Variant = "Primary",
+	Func = function()
+		Notify("MonHub is ready", "Notifications support a title, description, and duration.")
+	end,
+})
 
 AdvancedActions:AddButton("Open dialog", function()
 	local Dialog = Window:AddDialog("ShowcaseDialog", {
@@ -637,6 +646,51 @@ AdvancedActions:AddButton("Run loading test", function()
 		Notify("Loading complete", "The loading screen passed the smoke test.")
 	end)
 end)
+
+local ButtonStyles = Tabs.Advanced:AddRightGroupbox("Button styles", "mouse-pointer-click")
+
+ButtonStyles:AddButton({
+	Text = "Default action",
+	Variant = "Default",
+	Func = function()
+		Notify("Default action", "Neutral actions use the standard surface.")
+	end,
+})
+
+ButtonStyles:AddButton({
+	Text = "Primary action",
+	Variant = "Primary",
+	Func = function()
+		Notify("Primary action", "Primary actions use a restrained accent surface.")
+	end,
+})
+
+ButtonStyles:AddButton({
+	Text = "Ghost action",
+	Variant = "Ghost",
+	Func = function()
+		Notify("Ghost action", "Secondary actions stay visually quiet.")
+	end,
+})
+
+ButtonStyles:AddButton({
+	Text = "Warning action",
+	Variant = "Warning",
+	Icon = "triangle-alert",
+	Func = function()
+		Notify("Warning action", "Warning actions use a separate semantic icon.")
+	end,
+})
+
+ButtonStyles:AddButton({
+	Text = "Danger action",
+	Variant = "Danger",
+	Icon = "octagon-x",
+	DoubleClick = true,
+	Func = function()
+		Notify("Danger action", "The confirmation was accepted.")
+	end,
+})
 
 local DraggableLabel
 AdvancedActions:AddButton("Create draggable label", function()

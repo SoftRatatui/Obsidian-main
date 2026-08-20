@@ -404,6 +404,18 @@ CardText.TextSize = 14
 CardText.TextWrapped = true
 CardText.Parent = CustomCard
 
+Library:AddToRegistry(CustomCard, {
+	BackgroundColor3 = function()
+		return Library:GetAccentSurfaceColor(0.06)
+	end,
+})
+Library:AddToRegistry(CardStroke, {
+	Color = "OutlineColor",
+})
+Library:AddToRegistry(CardText, {
+	TextColor3 = "FontColor",
+})
+
 local MediaRight = Tabs.Media:AddRightGroupbox("Video and custom UI", "video")
 local ShowcaseVideo = MediaRight:AddVideo("ShowcaseVideo", {
 	Video = "rbxassetid://5608324215",
@@ -759,7 +771,11 @@ RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = tru
 local StyleTab = AdvancedTabbox:AddTab("Style")
 StyleTab:AddLabel("Graphite uses layered neutral-gray surfaces, a muted slate accent, and compact geometry.", true)
 StyleTab:AddButton("Reapply Graphite", function()
-	Library:SetTheme("Graphite")
+	if ThemeManager and ThemeManager.ApplyTheme then
+		ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName or "Default")
+	else
+		Library:SetTheme("Graphite")
+	end
 end)
 
 

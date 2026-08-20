@@ -562,7 +562,7 @@ ThemeGroup:SetOrder(0)
 
 Новая версия корректно определяет Gotham и не сбрасывает font dropdown на Code.
 
-Если старый default theme сохранён на диске, он может применить старые цвета или font. Удалите старый default через ThemeManager UI либо выберите Graphite и сохраните его как новый default.
+ThemeManager использует versioned default marker `default-v2.txt`. Старый `default.txt` остаётся на диске, но больше не применяется автоматически, поэтому не может вернуть Ubuntu, старый font или отдельные цвета. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
 
 ## SaveManager
 

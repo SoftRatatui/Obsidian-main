@@ -292,7 +292,7 @@ end
 
 function SaveManager:IgnoreThemeSettings()
     SaveManager:SetIgnoreIndexes({
-        "BackgroundColor", "MainColor", "AccentColor", "OutlineColor", "FontColor", "FontFace", "BackgroundImage",
+        "BackgroundColor", "MainColor", "TopBarColor", "AccentColor", "OutlineColor", "FontColor", "WarningColor", "DestructiveColor", "FontFace", "BackgroundImage",
         "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName"
     })
 end

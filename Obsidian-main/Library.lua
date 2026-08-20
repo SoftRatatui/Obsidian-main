@@ -5603,27 +5603,27 @@ do
         local PasteColorResetId = 0
 
         table.insert(ColorPicker.Connections, CopyColorButton.MouseEnter:Connect(function()
-            TweenService:Create(CopyColorButton, Library.TweenInfo, {
+            Library:PlayTween(CopyColorButton, "CopyColorHover", Library.TweenInfo, {
                 BackgroundColor3 = Library:GetBetterColor(Library.Scheme.MainColor, 10),
-            }):Play()
+            })
         end))
 
         table.insert(ColorPicker.Connections, CopyColorButton.MouseLeave:Connect(function()
-            TweenService:Create(CopyColorButton, Library.TweenInfo, {
+            Library:PlayTween(CopyColorButton, "CopyColorHover", Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.MainColor,
-            }):Play()
+            })
         end))
 
         table.insert(ColorPicker.Connections, PasteColorButton.MouseEnter:Connect(function()
-            TweenService:Create(PasteColorButton, Library.TweenInfo, {
+            Library:PlayTween(PasteColorButton, "PasteColorHover", Library.TweenInfo, {
                 BackgroundColor3 = Library:GetBetterColor(Library.Scheme.MainColor, 10),
-            }):Play()
+            })
         end))
 
         table.insert(ColorPicker.Connections, PasteColorButton.MouseLeave:Connect(function()
-            TweenService:Create(PasteColorButton, Library.TweenInfo, {
+            Library:PlayTween(PasteColorButton, "PasteColorHover", Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.MainColor,
-            }):Play()
+            })
         end))
 
         table.insert(ColorPicker.Connections, CopyColorButton.MouseButton1Click:Connect(function()
@@ -5827,16 +5827,16 @@ do
 
             table.insert(ColorPicker.Connections, TextBoxInstance.Focused:Connect(function()
                 Library.Registry[Stroke].Color = "AccentColor"
-                TweenService:Create(Stroke, Library.TweenInfo, {
+                Library:PlayTween(Stroke, "ColorPickerInputStroke", Library.TweenInfo, {
                     Color = Library.Scheme.AccentColor,
-                }):Play()
+                })
             end))
 
             table.insert(ColorPicker.Connections, TextBoxInstance.FocusLost:Connect(function()
                 Library.Registry[Stroke].Color = "OutlineColor"
-                TweenService:Create(Stroke, Library.TweenInfo, {
+                Library:PlayTween(Stroke, "ColorPickerInputStroke", Library.TweenInfo, {
                     Color = Library.Scheme.OutlineColor,
-                }):Play()
+                })
             end))
         end
 
@@ -9341,15 +9341,23 @@ do
         })
 
         local ViewportFrame = New("ViewportFrame", {
-            Ambient = Color3.fromRGB(156, 160, 170),
-            BackgroundColor3 = Color3.fromRGB(23, 24, 28),
+            Ambient = Library.Scheme.MainColor:Lerp(Library.Scheme.FontColor, 0.58),
+            BackgroundColor3 = Library.Scheme.BackgroundColor,
             BackgroundTransparency = 0.08,
-            LightColor = Color3.fromRGB(235, 237, 242),
+            LightColor = Library.Scheme.FontColor,
             LightDirection = Vector3.new(-1, -0.7, -1),
             Size = UDim2.fromScale(1, 1),
             Parent = Box,
             CurrentCamera = Viewport.Camera,
             Active = Viewport.Interactive,
+        })
+
+        Library:AddToRegistry(ViewportFrame, {
+            Ambient = function()
+                return Library.Scheme.MainColor:Lerp(Library.Scheme.FontColor, 0.58)
+            end,
+            BackgroundColor3 = "BackgroundColor",
+            LightColor = "FontColor",
         })
 
         table.insert(Viewport.Connections, ViewportFrame.MouseEnter:Connect(function()
@@ -10283,7 +10291,8 @@ end
 
 function Library:SetTheme(Theme)
     local ThemeData = Theme
-    if typeof(Theme) == "string" then
+    local IsPreset = typeof(Theme) == "string"
+    if IsPreset then
         ThemeData = Library.Themes[Theme]
         assert(ThemeData, string.format("Unknown theme %q", Theme))
     end
@@ -10293,6 +10302,11 @@ function Library:SetTheme(Theme)
     if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
         ThemeData = table.clone(ThemeData)
         ThemeData.TopBarColor = ThemeData.MainColor
+    end
+
+    if IsPreset and ThemeData.BackgroundImage == nil then
+        ThemeData = table.clone(ThemeData)
+        ThemeData.BackgroundImage = ""
     end
 
     for _, Index in {
@@ -10333,6 +10347,10 @@ function Library:SetTheme(Theme)
 
     if ThemeData.BackgroundImage ~= nil then
         Library:SetBackgroundImage(ThemeData.BackgroundImage)
+    end
+
+    if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
+        Library.ThemeManager:SyncFromLibrary()
     end
 
     return Library
@@ -14116,17 +14134,17 @@ function Library:CreateWindow(WindowInfo)
             Parent = DividerLine,
         })
         SidebarGrabber.MouseEnter:Connect(function()
-            TweenService:Create(DividerLine, Library.TweenInfo, {
+            Library:PlayTween(DividerLine, "SidebarResizeHover", Library.TweenInfo, {
                 BackgroundColor3 = Library:GetLighterColor(Library.Scheme.OutlineColor),
-            }):Play()
+            })
         end)
         SidebarGrabber.MouseLeave:Connect(function()
             if Dragging then
                 return
             end
-            TweenService:Create(DividerLine, Library.TweenInfo, {
+            Library:PlayTween(DividerLine, "SidebarResizeHover", Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.OutlineColor,
-            }):Play()
+            })
         end)
 
         SidebarGrabber.InputBegan:Connect(function(Input: InputObject)
@@ -14146,9 +14164,9 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 Library.CantDragForced = false
-                TweenService:Create(DividerLine, Library.TweenInfo, {
+                Library:PlayTween(DividerLine, "SidebarResizeHover", Library.TweenInfo, {
                     BackgroundColor3 = Library.Scheme.OutlineColor,
-                }):Play()
+                })
 
                 Dragging = false
                 if Changed and Changed.Connected then

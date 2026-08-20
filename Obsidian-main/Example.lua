@@ -146,8 +146,8 @@ Library.IsLightTheme = false
 Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
-	Title = "MonHub",
-	Footer = "Beta",
+	Title = "MonHub Private",
+	Footer = "Beta v0.0.1",
 	NotifySide = "Right",
 	Center = true,
 	AutoShow = true,
@@ -706,6 +706,8 @@ ButtonStyles:AddToggle("DangerToggleStyle", {
     Text = "Danger toggle",
     Default = false,
     Variant = "Danger",
+    ConfirmTitle = "Enable danger toggle?",
+    ConfirmDescription = "This change may affect your session.",
 })
 
 local DraggableLabel

@@ -275,6 +275,10 @@ local Library = {
     WindowAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     WindowOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     WindowCloseAnimationInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogOverlayOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogOpenAnimationInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DropdownTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
@@ -592,6 +596,7 @@ local Templates = {
         Changed = function() end,
 
         Risky = false,
+        ConfirmDanger = true,
         Disabled = false,
         Visible = true,
     },
@@ -4673,7 +4678,7 @@ do
 			end
 			
 			if Library.ToggleKeybind == KeyPicker and Library.Toggle then
-                Library:Toggle()
+                Library:Toggle(nil, "Keybind")
             end
 
             if KeyPicker.Mode == "Press" then
@@ -5894,6 +5899,77 @@ local BaseGroupbox = {}
 do
     local Funcs = {}
 
+    local function CancelToggleConfirmation(Toggle)
+        local Dialog = Toggle.ConfirmationDialog
+        Toggle.ConfirmationPending = false
+        Toggle.ConfirmationDialog = nil
+
+        if Dialog and not Dialog.Destroyed then
+            Dialog:Dismiss()
+        end
+    end
+
+    local function RequestToggleValue(Toggle, Groupbox, Value)
+        if Toggle.Disabled or Toggle.Destroyed then
+            return
+        end
+
+        Value = Value == true
+        if Toggle.Value == Value then
+            return
+        end
+
+        local NeedsConfirmation = Value and Toggle.StyleVariant == "Danger" and Toggle.ConfirmDanger ~= false
+        if not NeedsConfirmation then
+            Toggle:SetValue(Value)
+            return
+        end
+
+        local Window = Groupbox.Tab and Groupbox.Tab.Window
+        if Toggle.ConfirmationPending or Library.ActiveDialog or not Window then
+            return
+        end
+
+        Toggle.ConfirmationPending = true
+        local Dialog = Window:AddDialog("DangerToggle:" .. tostring(Toggle), {
+            Title = Toggle.ConfirmTitle or ("Enable " .. Toggle.Text .. "?"),
+            Description = Toggle.ConfirmDescription or "This change may affect your session.",
+            Icon = "triangle-alert",
+            TitleColor = "DestructiveColor",
+            AutoDismiss = true,
+            OutsideClickDismiss = false,
+            OnDismiss = function()
+                Toggle.ConfirmationPending = false
+                Toggle.ConfirmationDialog = nil
+            end,
+            FooterButtons = {
+                Cancel = {
+                    Title = "Cancel",
+                    Variant = "Ghost",
+                    Order = 1,
+                },
+                Continue = {
+                    Title = "Continue",
+                    Variant = "Danger",
+                    Order = 2,
+                    Callback = function()
+                        Toggle.ConfirmationPending = false
+                        Toggle.ConfirmationDialog = nil
+
+                        if not Toggle.Destroyed and not Toggle.Disabled and Toggle.StyleVariant == "Danger" and not Toggle.Value then
+                            Toggle:SetValue(true)
+                        end
+                    end,
+                },
+            },
+        })
+
+        Toggle.ConfirmationDialog = Dialog
+        if not Dialog then
+            Toggle.ConfirmationPending = false
+        end
+    end
+
     function Funcs:AddDivider(...)
         if self.Destroyed then return nil end
 
@@ -6728,6 +6804,11 @@ do
             Changed = Info.Changed,
 
             Risky = Info.Risky,
+            ConfirmDanger = Info.ConfirmDanger,
+            ConfirmTitle = Info.ConfirmTitle,
+            ConfirmDescription = Info.ConfirmDescription,
+            ConfirmationPending = false,
+            ConfirmationDialog = nil,
             Disabled = Info.Disabled,
             Visible = Info.Visible,
 
@@ -6863,6 +6944,10 @@ do
                 return
             end
 
+            if Toggle.ConfirmationPending then
+                CancelToggleConfirmation(Toggle)
+            end
+
             Toggle.Value = Value
             Toggle:Display()
 
@@ -6885,6 +6970,10 @@ do
                 return
             end
 
+            if Disabled then
+                CancelToggleConfirmation(Toggle)
+            end
+
             Toggle.Disabled = Disabled
 
             if Toggle.TooltipTable then
@@ -6902,6 +6991,7 @@ do
         end
 
         function Toggle:SetVariant(Variant: string)
+            CancelToggleConfirmation(Toggle)
             Toggle.StyleVariant = NormalizeToggleVariant(Variant, Toggle.Risky)
             Toggle:Display()
         end
@@ -6912,6 +7002,10 @@ do
             end
 
             Toggle.Visible = Visible
+
+            if not Toggle.Visible then
+                CancelToggleConfirmation(Toggle)
+            end
 
             Button.Visible = Toggle.Visible
             Groupbox:Resize()
@@ -6927,7 +7021,7 @@ do
                 return
             end
 
-            Toggle:SetValue(not Toggle.Value)
+            RequestToggleValue(Toggle, Groupbox, not Toggle.Value)
         end))
 
         if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
@@ -6950,6 +7044,7 @@ do
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
+            CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
             for _, TweenName in { "CheckboxTween", "CheckboxStrokeTween", "CheckboxLabelTween", "CheckboxIconTween" } do
@@ -7021,6 +7116,11 @@ do
             Changed = Info.Changed,
 
             Risky = Info.Risky,
+            ConfirmDanger = Info.ConfirmDanger,
+            ConfirmTitle = Info.ConfirmTitle,
+            ConfirmDescription = Info.ConfirmDescription,
+            ConfirmationPending = false,
+            ConfirmationDialog = nil,
             Disabled = Info.Disabled,
             Visible = Info.Visible,
 
@@ -7172,6 +7272,10 @@ do
                 return
             end
 
+            if Toggle.ConfirmationPending then
+                CancelToggleConfirmation(Toggle)
+            end
+
             Toggle.Value = Value
             Toggle:Display()
 
@@ -7194,6 +7298,10 @@ do
                 return
             end
 
+            if Disabled then
+                CancelToggleConfirmation(Toggle)
+            end
+
             Toggle.Disabled = Disabled
 
             if Toggle.TooltipTable then
@@ -7211,6 +7319,7 @@ do
         end
 
         function Toggle:SetVariant(Variant: string)
+            CancelToggleConfirmation(Toggle)
             Toggle.StyleVariant = NormalizeToggleVariant(Variant, Toggle.Risky)
             Toggle:Display()
         end
@@ -7221,6 +7330,10 @@ do
             end
 
             Toggle.Visible = Visible
+
+            if not Toggle.Visible then
+                CancelToggleConfirmation(Toggle)
+            end
 
             Button.Visible = Toggle.Visible
             Groupbox:Resize()
@@ -7236,7 +7349,7 @@ do
                 return
             end
 
-            Toggle:SetValue(not Toggle.Value)
+            RequestToggleValue(Toggle, Groupbox, not Toggle.Value)
         end))
 
         if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
@@ -7259,6 +7372,7 @@ do
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
+            CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
             for _, TweenName in { "SwitchTween", "StrokeTween", "LabelTween", "BallTween" } do
@@ -11238,6 +11352,7 @@ function Library:CreateWindow(WindowInfo)
     local Window = {
         Frame = MainFrame,
         VisibilityChanged = VisibilityChanged,
+        LastHideReason = nil,
     }
     local WindowTween
     local WindowAnimationSequence = 0
@@ -11415,7 +11530,7 @@ function Library:CreateWindow(WindowInfo)
 
         CompactLauncherSequence += 1
         local Sequence = CompactLauncherSequence
-        local ShouldShow = WindowInfo.ShowCompactLauncher and not Library.Toggled
+        local ShouldShow = WindowInfo.ShowCompactLauncher and not Library.Toggled and Window.LastHideReason ~= "Keybind"
 
         if ShouldShow then
             if not CompactLauncher.Visible then
@@ -11455,7 +11570,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         IconTween.Completed:Once(function(State)
-            if State == Enum.PlaybackState.Completed and Sequence == CompactLauncherSequence and (Library.Toggled or not WindowInfo.ShowCompactLauncher) and CompactLauncher.Parent then
+            if State == Enum.PlaybackState.Completed and Sequence == CompactLauncherSequence and not ShouldShow and CompactLauncher.Parent then
                 CompactLauncher.Visible = false
             end
         end)
@@ -13387,9 +13502,9 @@ function Library:CreateWindow(WindowInfo)
             Visible = true,
             Parent = MainFrame,
         })
-        TweenService:Create(DialogOverlay, Library.TweenInfo, {
+        Library:PlayTween(DialogOverlay, "DialogOverlayFade", Library.DialogOverlayOpenAnimationInfo, {
             BackgroundTransparency = 0.5,
-        }):Play()
+        })
 
         DialogFrame = New("TextButton", {
             AnchorPoint = Vector2.new(0.5, 0.5),
@@ -13419,12 +13534,12 @@ function Library:CreateWindow(WindowInfo)
             Parent = DialogFrame,
         })
         local DialogScale = New("UIScale", {
-            Scale = 0.95,
+            Scale = 0.975,
             Parent = DialogFrame,
         })
-        TweenService:Create(DialogScale, Library.TweenInfo, {
-            Scale = 1
-        }):Play()
+        Library:PlayTween(DialogScale, "DialogScale", Library.DialogOpenAnimationInfo, {
+            Scale = 1,
+        })
         local _InnerPadding = New("UIPadding", {
             PaddingBottom = UDim.new(0, 15),
             PaddingLeft = UDim.new(0, 15),
@@ -13631,6 +13746,8 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveDialog = nil
             end
 
+            Library:SafeCallback(Info.OnDismiss, Dialog)
+
             for Index = #Dialog.Elements, 1, -1 do
                 local Element = Dialog.Elements[Index]
                 if Element and Element.Destroy then
@@ -13639,12 +13756,17 @@ function Library:CreateWindow(WindowInfo)
             end
             table.clear(Dialog.Elements)
 
-            local CloseTween = TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 0.95 })
-            TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
-            CloseTween:Play()
+            Library:PlayTween(DialogOverlay, "DialogOverlayFade", Library.DialogOverlayCloseAnimationInfo, {
+                BackgroundTransparency = 1,
+            })
+            Library:PlayTween(DialogScale, "DialogScale", Library.DialogCloseAnimationInfo, {
+                Scale = 0.985,
+            })
             
-            task.delay(Library.TweenInfo.Time, function()
-                DialogOverlay:Destroy()
+            task.delay(Library.DialogCloseAnimationInfo.Time, function()
+                if DialogOverlay and DialogOverlay.Parent then
+                    DialogOverlay:Destroy()
+                end
             end)
             Library.Dialogues[Idx] = nil
         end
@@ -13855,7 +13977,7 @@ function Library:CreateWindow(WindowInfo)
         return Dialog
     end
 
-    function Window:Toggle(Value: boolean?)
+    function Window:Toggle(Value: boolean?, Source: string?)
         if typeof(Value) == "boolean" and Value == Library.Toggled then
             return
         end
@@ -13870,10 +13992,12 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        if typeof(Value) == "boolean" then
-            Library.Toggled = Value
+        local TargetState = typeof(Value) == "boolean" and Value or not Library.Toggled
+        Library.Toggled = TargetState
+        if TargetState then
+            Window.LastHideReason = nil
         else
-            Library.Toggled = not Library.Toggled
+            Window.LastHideReason = Source
         end
         VisibilityChanged:Fire(Library.Toggled)
         Window:RefreshCompactLauncher(Library.Animations and Library.Animations.ToggleWindow == true)
@@ -13965,14 +14089,14 @@ function Library:CreateWindow(WindowInfo)
         end
     end
 
-    function Library:Toggle(Value: boolean?)
-        return Window:Toggle(Value)
+    function Library:Toggle(Value: boolean?, Source: string?)
+        return Window:Toggle(Value, Source)
     end
 
     if MinimizeButton then
         Library:GiveSignal(MinimizeButton.MouseButton1Click:Connect(function()
             if Library.Toggled then
-                Window:Toggle(false)
+                Window:Toggle(false, "Minimize")
             end
         end))
     end
@@ -14129,7 +14253,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         if Input.KeyCode == Library.ToggleKeybind then
-            Library:Toggle()
+            Library:Toggle(nil, "Keybind")
         end
     end))
 

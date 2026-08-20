@@ -133,6 +133,9 @@ export type ToggleInfo = {
     Tooltip: string?,
     DisabledTooltip: string?,
     Risky: boolean?,
+    ConfirmDanger: boolean?,
+    ConfirmTitle: string?,
+    ConfirmDescription: string?,
     Disabled: boolean?,
     Visible: boolean?,
 }
@@ -492,6 +495,10 @@ export type Toggle = {
     Callback: (Value: boolean) -> (),
     Changed: (Value: boolean) -> (),
     Risky: boolean,
+    ConfirmDanger: boolean,
+    ConfirmTitle: string?,
+    ConfirmDescription: string?,
+    ConfirmationPending: boolean,
     Disabled: boolean,
     Visible: boolean,
     Variant: "Checkbox" | "Switch",
@@ -1008,10 +1015,11 @@ export type Window = {
             Title: string,
             Description: string?,
             Icon: string?,
-            TitleColor: Color3?,
-            DescriptionColor: Color3?,
+            TitleColor: Color3 | string?,
+            DescriptionColor: Color3 | string?,
             AutoDismiss: boolean?,
             OutsideClickDismiss: boolean?,
+            OnDismiss: ((Dialog) -> ())?,
             FooterButtons: { [string]: DialogButtonInfo }?,
         }
     ) -> Dialog,
@@ -1031,7 +1039,7 @@ export type Window = {
     SetCompactLauncherIcon: (self: Window, Icon: string | number) -> (),
     SetCompactLauncherPosition: (self: Window, Position: UDim2) -> (),
     SetCompactLauncherDraggable: (self: Window, Draggable: boolean) -> (),
-    Toggle: (self: Window, Value: boolean?) -> (),
+    Toggle: (self: Window, Value: boolean?, Source: string?) -> (),
 }
 
 export type App = {
@@ -1339,7 +1347,7 @@ export type Library = {
     Mount: (self: Library, AppInfo: AppInfo) -> App,
     create: (AppInfo: AppInfo) -> App,
     mount: (AppInfo: AppInfo) -> App,
-    Toggle: (self: Library, Value: boolean?) -> (),
+    Toggle: (self: Library, Value: boolean?, Source: string?) -> (),
 }
 
 return nil

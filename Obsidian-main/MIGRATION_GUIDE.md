@@ -305,9 +305,9 @@ end)
 
 Доступны варианты `Default`, `Primary`, `Warning`, `Danger` и `Ghost`. У `Warning` и `Danger` есть отдельные иконки по умолчанию; `Icon = "triangle-alert"` или `Icon = "octagon-x"` заменяет иконку, а `Icon = false` отключает её. `Library:SetButtonVariantIcon("Danger", "trash-2")` задаёт общий icon для semantic danger-кнопок. Старый `Risky = true` сохраняет совместимость и использует `Danger`, если `Variant` не задан. `Secondary`, `Caution` и `Destructive` остаются алиасами для `Default`, `Warning` и `Danger`.
 
-Toggle также принимает `Variant = "Warning"` или `Variant = "Danger"`. В активном состоянии меняются только track и outline, поэтому строки с key picker не сдвигаются и остаются ровными. Для compatibility `Caution` и `Destructive` работают как алиасы, а `Risky = true` без явного `Variant` становится `Danger`.
+Toggle также принимает `Variant = "Warning"` или `Variant = "Danger"`. В активном состоянии меняются только track и outline, поэтому строки с key picker не сдвигаются и остаются ровными. При включении `Danger` toggle появляется короткий dialog с `Cancel` и `Continue`; выключение остаётся мгновенным, чтобы функцию можно было быстро остановить. `ConfirmDanger = false` отключает это подтверждение, а `ConfirmTitle` и `ConfirmDescription` меняют его текст. Для compatibility `Caution` и `Destructive` работают как алиасы, а `Risky = true` без явного `Variant` становится `Danger`.
 
-У окна есть mouse-first compact launcher: кнопка `−` в верхней панели сворачивает UI, а маленькая draggable-кнопка возвращает его. Настройки `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition` и `CompactLauncherDraggable` передаются в `CreateWindow`.
+У окна есть mouse-first compact launcher: кнопка `−` в верхней панели сворачивает UI, а маленькая draggable-кнопка возвращает его. При скрытии через keybind launcher не появляется: UI возвращается тем же биндом и не перекрывает игру. Настройки `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition` и `CompactLauncherDraggable` передаются в `CreateWindow`.
 
 ## ColorPicker и KeyPicker addons
 

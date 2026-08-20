@@ -1043,6 +1043,8 @@ export type Library = {
     KeybindMenuVisible: boolean,
     Notifications: { [GuiObject]: Notification },
     Watermark: DraggableLabel?,
+    WatermarkSide: "Left" | "Right",
+    WatermarkDraggable: boolean,
     ClickSound: Sound?,
     ClickSounds: boolean,
     ClickSoundId: string,
@@ -1133,7 +1135,8 @@ export type Library = {
         UI: GuiObject,
         DragFrame: GuiObject,
         IgnoreToggled: boolean?,
-        IsMainWindow: boolean?
+        IsMainWindow: boolean?,
+        CanDrag: (() -> boolean)?
     ) -> (),
     MakeResizable: (self: Library, UI: GuiObject, DragFrame: GuiObject, Callback: (() -> ())?) -> (),
     MakeCover: (self: Library, Holder: GuiObject, Place: string) -> Frame,
@@ -1203,6 +1206,8 @@ export type Library = {
     AnimateTabSelection: (self: Library, Button: TextButton, Label: TextLabel, Indicator: Frame, Icon: ImageLabel?, Selected: boolean) -> (),
     SetWatermarkVisibility: (self: Library, Visible: boolean) -> (),
     SetWatermark: (self: Library, Text: string) -> (),
+    SetWatermarkSide: (self: Library, Side: "Left" | "Right") -> (),
+    SetWatermarkDraggable: (self: Library, Draggable: boolean) -> (),
     AddContextMenu: (
         self: Library,
         Holder: GuiObject,

@@ -111,6 +111,8 @@ GeneralGroup:AddToggle("Enabled", {
 | `SaveManager` | Поддерживается | Обновить файл |
 | `Library:SetWatermark` | Поддерживается | Можно использовать |
 | `Library:SetWatermarkVisibility` | Поддерживается | Можно использовать |
+| `Library:SetWatermarkSide` | Поддерживается | `"Left"` или `"Right"` |
+| `Library:SetWatermarkDraggable` | Поддерживается | Включает или отключает drag |
 
 Изменился внешний вид controls, но их основные методы сохранены. `SetValue` больше не вызывает callback повторно, если значение не изменилось: это убирает лишние зависимости, tweens и вычисления.
 
@@ -423,9 +425,11 @@ Library:SetClickSound(false)
 ```luau
 Library:SetWatermark("My Hub  |  Ready")
 Library:SetWatermarkVisibility(true)
+Library:SetWatermarkSide("Right")
+Library:SetWatermarkDraggable(true)
 ```
 
-Watermark фиксирован в правом верхнем углу, автоматически остаётся внутри viewport и использует текущую theme/font. Он намеренно не поддерживает drag: это исключает случайное размещение за краем экрана.
+Watermark по умолчанию находится справа сверху. Его можно перетащить мышью или touch, либо явно установить через `SetWatermarkSide("Left")` и `SetWatermarkSide("Right")`. Даже после drag, изменения текста и смены размера экрана он остаётся внутри viewport.
 
 Готовая реализация настроек `Watermark`, `Show FPS` и `Show ping` находится в [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua). Она обновляет текст раз в 0.5 секунды, считает FPS лёгким `RenderStepped` counter и безопасно читает `Data Ping` через `Stats`.
 

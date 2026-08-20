@@ -14,7 +14,7 @@ Migrating from the original Obsidian: read the complete [migration guide](MIGRAT
 - Less work while typing and changing controls: search is debounced, text measurements are cached, dependency updates are batched, and unchanged values are ignored.
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
-- Centralized click sound, fixed on-screen Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
+- Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
 - Editable top-bar theme color with backwards-compatible fallback for existing themes.
 
 ## Quick start
@@ -89,7 +89,7 @@ App:Get("speed"):SetValue(50)
 
 ## Current Graphite interface
 
-`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. Watermark is fixed to the top-right screen edge and does not display time.
+`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. Watermark starts in the top-right corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 

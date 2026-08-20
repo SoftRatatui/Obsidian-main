@@ -2074,7 +2074,7 @@ local function ConfigureAutoScrollbar(ScrollFrame: ScrollingFrame, IdleTranspare
     task.defer(Refresh, false)
 end
 
-function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggled: boolean?, IsMainWindow: boolean?)
+function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggled: boolean?, IsMainWindow: boolean?, CanDrag: (() -> boolean)?)
     local StartPos
     local FramePos
     local Dragging = false
@@ -2082,8 +2082,17 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
     local InputBegan
     local InputChanged
 
+    local function DragAllowed()
+        if not CanDrag then
+            return true
+        end
+
+        local Success, Allowed = pcall(CanDrag)
+        return Success and Allowed == true
+    end
+
     InputBegan = DragFrame.InputBegan:Connect(function(Input: InputObject)
-        if not IsClickInput(Input) or IsMainWindow and Library.CantDragForced then
+        if not IsClickInput(Input) or not DragAllowed() or IsMainWindow and Library.CantDragForced then
             return
         end
 
@@ -2110,6 +2119,16 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
             or (IsMainWindow and Library.CantDragForced)
             or not (ScreenGui and ScreenGui.Parent)
         then
+            Dragging = false
+            if Changed and Changed.Connected then
+                Changed:Disconnect()
+                Changed = nil
+            end
+
+            return
+        end
+
+        if Dragging and not DragAllowed() then
             Dragging = false
             if Changed and Changed.Connected then
                 Changed:Disconnect()
@@ -3035,6 +3054,8 @@ end
 
 
 do
+    local WatermarkSide = "Right"
+    local WatermarkDraggable = true
     local WatermarkLabel = Library:AddDraggableLabel({
         Text = "",
         Icon = "activity",
@@ -3046,7 +3067,33 @@ do
     })
     WatermarkLabel:SetVisible(false)
     Library.Watermark = WatermarkLabel
+    Library.WatermarkSide = WatermarkSide
+    Library.WatermarkDraggable = WatermarkDraggable
+    WatermarkLabel.Label.Active = true
+    Library:MakeDraggable(WatermarkLabel.Label, WatermarkLabel.Label, true, false, function()
+        return WatermarkDraggable
+    end)
+    if not table.find(Library.DraggableElements, WatermarkLabel.Label) then
+        table.insert(Library.DraggableElements, WatermarkLabel.Label)
+    end
     local ClampQueued = false
+
+    local function ApplyWatermarkSide()
+        local Label = WatermarkLabel.Label
+        if not Label or not Label.Parent then
+            return
+        end
+
+        if WatermarkSide == "Left" then
+            Label.AnchorPoint = Vector2.zero
+            Label.Position = UDim2.new(0, 8, 0, 8)
+        else
+            Label.AnchorPoint = Vector2.new(1, 0)
+            Label.Position = UDim2.new(1, -8, 0, 8)
+        end
+
+        ClampGuiToViewport(Label, 8)
+    end
 
     local function QueueWatermarkClamp()
         if ClampQueued then
@@ -3059,8 +3106,7 @@ do
             ClampQueued = false
             local Label = WatermarkLabel.Label
             if not Library.Unloaded and Label and Label.Parent and Label.Visible and Label.AbsoluteSize.X > 0 then
-                Label.AnchorPoint = Vector2.new(1, 0)
-                WatermarkLabel:SetPosition(UDim2.new(1, -8, 0, 8))
+                ClampGuiToViewport(Label, 8)
             end
         end)
     end
@@ -3077,9 +3123,28 @@ do
         end
     end
 
+    function Library:SetWatermarkSide(Side: "Left" | "Right")
+        local Normalized = string.lower(tostring(Side))
+        assert(Normalized == "left" or Normalized == "right", "Watermark side must be Left or Right.")
+        WatermarkSide = Normalized == "left" and "Left" or "Right"
+        Library.WatermarkSide = WatermarkSide
+        ApplyWatermarkSide()
+    end
+
+    function Library:SetWatermarkDraggable(Draggable: boolean)
+        WatermarkDraggable = Draggable == true
+        Library.WatermarkDraggable = WatermarkDraggable
+        WatermarkLabel.Label.Active = WatermarkDraggable
+    end
+
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("Visible"):Connect(QueueWatermarkClamp))
+    Library:GiveSignal(WatermarkLabel.Label.InputEnded:Connect(function(Input)
+        if IsClickInput(Input) then
+            QueueWatermarkClamp()
+        end
+    end))
     if workspace.CurrentCamera then
         Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(QueueWatermarkClamp))
     end

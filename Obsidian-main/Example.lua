@@ -770,6 +770,21 @@ WatermarkSettings:AddToggle("WatermarkPing", {
 		RefreshWatermark()
 	end,
 })
+WatermarkSettings:AddDropdown("WatermarkSide", {
+	Text = "Watermark side",
+	Values = { "Left", "Right" },
+	Default = "Right",
+	Callback = function(Value)
+		Library:SetWatermarkSide(Value)
+	end,
+})
+WatermarkSettings:AddToggle("WatermarkDraggable", {
+	Text = "Draggable watermark",
+	Default = true,
+	Callback = function(Value)
+		Library:SetWatermarkDraggable(Value)
+	end,
+})
 WatermarkSettings:SetupDependencies({ { WatermarkToggle, true } })
 
 Library:GiveSignal(RunService.RenderStepped:Connect(function(DeltaTime)

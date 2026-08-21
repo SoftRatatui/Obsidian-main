@@ -42,7 +42,7 @@ local ThemeManager = {
 
     AppliedToTab = false,
     DefaultThemeName = nil,
-    DefaultThemeFileName = "default-v3.txt",
+    DefaultThemeFileName = "default-v4.txt",
     FallbackThemeName = "Default",
     FallbackThemeLabel = "Graphite",
     ApplyingTheme = false,
@@ -52,7 +52,7 @@ local ThemeManager = {
     BuiltInThemes = {
         ["Default"] = {
             1,
-            { FontColor = "eff1f6", MainColor = "21242b", TopBarColor = "272a32", AccentColor = "858da0", BackgroundColor = "16181d", OutlineColor = "414550", WarningColor = "d09d50", DestructiveColor = "c43a4c", BackgroundImage = "", FontFace = "Gotham" },
+            { FontColor = "f1f2f7", MainColor = "1c1e25", TopBarColor = "191b22", AccentColor = "847dda", BackgroundColor = "121318", OutlineColor = "3d414d", WarningColor = "d5a65d", DestructiveColor = "dd586b", RedColor = "ec6174", DarkColor = "08090c", WhiteColor = "fafafe", BackgroundImage = "", FontFace = "Gotham" },
         },
         ["BBot"] = {
             2,

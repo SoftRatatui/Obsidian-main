@@ -148,7 +148,7 @@ local Window = Library:CreateWindow({
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
 	Font = Enum.Font.Gotham,
-	CornerRadius = 4,
+	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
 	CompactLauncherSize = 36,
@@ -372,16 +372,17 @@ MediaLeft:AddLabel("Left or right drag to rotate. Use the mouse wheel or pinch t
 
 local CustomCard = Instance.new("Frame")
 CustomCard.Name = "CustomPassthroughCard"
-CustomCard.BackgroundColor3 = Color3.fromRGB(35, 37, 43)
+CustomCard.BackgroundColor3 = Library:GetAccentSurfaceColor(0.06)
 CustomCard.BorderSizePixel = 0
 CustomCard.Size = UDim2.fromScale(1, 1)
 
 local CardCorner = Instance.new("UICorner")
-CardCorner.CornerRadius = UDim.new(0, 4)
+CardCorner.CornerRadius = UDim.new(0, 6)
 CardCorner.Parent = CustomCard
 
 local CardStroke = Instance.new("UIStroke")
-CardStroke.Color = Color3.fromRGB(66, 69, 78)
+CardStroke.Color = Library.Scheme.OutlineColor
+CardStroke.Transparency = 0.25
 CardStroke.Parent = CustomCard
 
 local CardText = Instance.new("TextLabel")
@@ -390,7 +391,7 @@ CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
 CardText.Font = Enum.Font.Gotham
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
-CardText.TextColor3 = Color3.fromRGB(232, 234, 239)
+CardText.TextColor3 = Library.Scheme.FontColor
 CardText.TextSize = 14
 CardText.TextWrapped = true
 CardText.Parent = CustomCard

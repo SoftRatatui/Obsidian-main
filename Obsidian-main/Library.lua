@@ -253,6 +253,7 @@ local Library = {
     Notifications = {},
     NotifySide = "Right",
     NotifyTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    NotifyCloseTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
     
     Dialogues = {},
@@ -267,6 +268,7 @@ local Library = {
 
     
     TweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    HoverTweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
     TabTransitionInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TabSwipeOffset = 8,
@@ -322,24 +324,24 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 4,
+    CornerRadius = 6,
 
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
+        BackgroundColor = Color3.fromRGB(18, 19, 24),
+        MainColor = Color3.fromRGB(28, 30, 37),
+        TopBarColor = Color3.fromRGB(25, 27, 34),
+        AccentColor = Color3.fromRGB(132, 125, 218),
+        OutlineColor = Color3.fromRGB(61, 65, 77),
+        FontColor = Color3.fromRGB(241, 242, 247),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
-        RedColor = Color3.fromRGB(232, 83, 103),
-        WarningColor = Color3.fromRGB(208, 157, 80),
-        DestructiveColor = Color3.fromRGB(196, 58, 76),
-        DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(248, 249, 252),
+        RedColor = Color3.fromRGB(236, 97, 116),
+        WarningColor = Color3.fromRGB(213, 166, 93),
+        DestructiveColor = Color3.fromRGB(221, 88, 107),
+        DarkColor = Color3.fromRGB(8, 9, 12),
+        WhiteColor = Color3.fromRGB(250, 250, 254),
 
         BackgroundImage = ""
     },
@@ -384,20 +386,20 @@ Library.Themes = {
         IsLight = false,
     },
     Graphite = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
-        WarningColor = Color3.fromRGB(208, 157, 80),
-        DestructiveColor = Color3.fromRGB(196, 58, 76),
-        RedColor = Color3.fromRGB(232, 83, 103),
-        DarkColor = Color3.new(0, 0, 0),
+        BackgroundColor = Color3.fromRGB(18, 19, 24),
+        MainColor = Color3.fromRGB(28, 30, 37),
+        TopBarColor = Color3.fromRGB(25, 27, 34),
+        AccentColor = Color3.fromRGB(132, 125, 218),
+        OutlineColor = Color3.fromRGB(61, 65, 77),
+        FontColor = Color3.fromRGB(241, 242, 247),
+        WarningColor = Color3.fromRGB(213, 166, 93),
+        DestructiveColor = Color3.fromRGB(221, 88, 107),
+        RedColor = Color3.fromRGB(236, 97, 116),
+        DarkColor = Color3.fromRGB(8, 9, 12),
         Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(248, 249, 252),
+        WhiteColor = Color3.fromRGB(250, 250, 254),
         BackgroundImage = "",
-        CornerRadius = 4,
+        CornerRadius = 6,
         IsLight = false,
     },
     BlackPurple = {
@@ -510,7 +512,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 4,
+        CornerRadius = 6,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -1442,6 +1444,7 @@ function Library:SetDPIScale(DPIScale: number)
     Library.MinSize = Library.OriginalMinSize * Library.DPIScale
 
 	for _, UIScale in Library.Scales do
+        Library:CancelTween(UIScale, "WindowVisibilityScale")
         UIScale.Scale = Library.DPIScale - (tonumber(Library.ScalesOffset[UIScale]) or 0)
     end
 
@@ -1869,7 +1872,7 @@ function Library:GetBetterColor(Color: Color3, Add: number): Color3
 end
 
 function Library:GetAccentSurfaceColor(Strength: number?): Color3
-    return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.12, 0, 1))
+    return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.1, 0, 1))
 end
 
 local function GetTopBarSurfaceColor(Strength: number?): Color3
@@ -1903,13 +1906,13 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         BackgroundColor = Scheme.MainColor,
         BackgroundTransparency = 0,
         OutlineColor = Scheme.OutlineColor,
-        OutlineTransparency = 0,
+        OutlineTransparency = 0.24,
         TextColor = Scheme.FontColor,
         TextTransparency = 0.12,
-        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 5),
+        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3),
         HoverBackgroundTransparency = 0,
-        HoverOutlineColor = Library:GetLighterColor(Scheme.OutlineColor),
-        HoverOutlineTransparency = 0,
+        HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.18),
+        HoverOutlineTransparency = 0.08,
         HoverTextColor = Scheme.FontColor,
         HoverTextTransparency = 0,
     }
@@ -2009,7 +2012,7 @@ end
 
 local function GetToggleSurfaceColor(Toggle): Color3
     if Toggle.Value then
-        return GetToggleAccentColor(Toggle.StyleVariant)
+        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.72)
     end
 
     return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.22)
@@ -2017,7 +2020,7 @@ end
 
 local function GetToggleStrokeColor(Toggle): Color3
     if Toggle.Value then
-        return GetToggleAccentColor(Toggle.StyleVariant)
+        return Library.Scheme.OutlineColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.72)
     end
 
     return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.12)
@@ -2374,9 +2377,9 @@ local function ConfigureAutoScrollbar(ScrollFrame: ScrollingFrame, IdleTranspare
         local Transparency = IsScrollable and (Hovering and HoverTransparency or IdleTransparency) or 1
 
         if Animate then
-            TweenService:Create(ScrollFrame, Library.TweenInfo, {
+            Library:PlayTween(ScrollFrame, "ScrollbarHover", Library.HoverTweenInfo, {
                 ScrollBarImageTransparency = Transparency,
-            }):Play()
+            })
         else
             ScrollFrame.ScrollBarImageTransparency = Transparency
         end
@@ -2625,6 +2628,7 @@ function Library:MakeLine(Frame: GuiObject, Info)
     local Line = New("Frame", {
         AnchorPoint = Info.AnchorPoint or Vector2.zero,
         BackgroundColor3 = Info.Color or "OutlineColor",
+        BackgroundTransparency = Info.Transparency or 0,
         Position = Info.Position,
         Size = Info.Size,
         ZIndex = Info.ZIndex or Frame.ZIndex,
@@ -2638,14 +2642,14 @@ function Library:AddOutline(Frame: GuiObject)
     local OutlineStroke = New("UIStroke", {
         Color = "OutlineColor",
         Thickness = 1,
-        Transparency = 0.08,
+        Transparency = 0.28,
         ZIndex = 2,
         Parent = Frame,
     })
     local ShadowStroke = New("UIStroke", {
         Color = "DarkColor",
         Thickness = 1,
-        Transparency = 0.62,
+        Transparency = 0.84,
         ZIndex = 1,
         Parent = Frame,
     })
@@ -2887,7 +2891,9 @@ function Library:AddDraggableLabel(...)
         })
     )
 
-    Library:AddOutline(Label)
+    local _, LabelShadow = Library:AddOutline(Label)
+    LabelShadow.Thickness = 2
+    LabelShadow.Transparency = 0.84
     if Draggable then
         Library:MakeDraggable(Label, Label, true)
     end
@@ -3108,7 +3114,9 @@ end
 function Library:AddDraggableMenu(Name: string)
     local Holder = New("CanvasGroup", {
         AutomaticSize = Enum.AutomaticSize.XY,
-        BackgroundColor3 = "BackgroundColor",
+        BackgroundColor3 = function()
+            return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+        end,
         GroupTransparency = 1,
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.fromOffset(0, 0),
@@ -3137,6 +3145,7 @@ function Library:AddDraggableMenu(Name: string)
     Library:MakeLine(Holder, {
         Position = UDim2.fromOffset(0, 34),
         Size = UDim2.new(1, 0, 0, 1),
+        Transparency = 0.42,
     })
 
     local Label = New("TextLabel", {
@@ -3211,7 +3220,7 @@ function Library:RefreshKeybindMenu()
         Frame.Visible = true
         Library.UpdatingKeybindMenuVisibility = false
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.96
+        AnimationScale.Scale = 0.98
 
         Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
             GroupTransparency = 0,
@@ -3224,7 +3233,7 @@ function Library:RefreshKeybindMenu()
 
     if not Frame.Visible then
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.96
+        AnimationScale.Scale = 0.98
         return
     end
 
@@ -3232,7 +3241,7 @@ function Library:RefreshKeybindMenu()
         GroupTransparency = 1,
     })
     Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
-        Scale = 0.96,
+        Scale = 0.98,
     })
 
     local Tween = Library.KeybindMenuTween
@@ -3499,7 +3508,9 @@ function Library:AddContextMenu(
         Menu = New("ScrollingFrame", {
             AutomaticCanvasSize = Enum.AutomaticSize.None,
             AutomaticSize = List == 1 and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
-            BackgroundColor3 = "BackgroundColor",
+            BackgroundColor3 = function()
+                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+            end,
             BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
             CanvasSize = UDim2.fromOffset(0, 0),
             ScrollBarImageColor3 = "OutlineColor",
@@ -3512,7 +3523,9 @@ function Library:AddContextMenu(
         })
     else
         Menu = New("Frame", {
-            BackgroundColor3 = "BackgroundColor",
+            BackgroundColor3 = function()
+                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+            end,
             Size = typeof(Size) == "function" and Size() or Size,
             Visible = false,
             ZIndex = MenuZIndex,
@@ -3528,6 +3541,7 @@ function Library:AddContextMenu(
 
     New("UIStroke", {
         Color = "OutlineColor",
+        Transparency = 0.25,
         Parent = Menu,
     })
 
@@ -4198,7 +4212,7 @@ do
             end
 
             if SlideBackTween then
-                SlideForwardTween(SlideBackTween, true)
+                StopTween(SlideBackTween, true)
                 SlideBackTween = nil
             end
         end
@@ -4491,10 +4505,10 @@ do
                     return
                 end
 
-                TweenService:Create(Button, Library.TweenInfo, {
+                Library:PlayTween(Button, "KeyPickerModeHover", Library.HoverTweenInfo, {
                     BackgroundTransparency = 0.7,
                     TextTransparency = 0.1,
-                }):Play()
+                })
             end)
 
             Button.MouseLeave:Connect(function()
@@ -4502,10 +4516,10 @@ do
                     return
                 end
 
-                TweenService:Create(Button, Library.TweenInfo, {
+                Library:PlayTween(Button, "KeyPickerModeHover", Library.HoverTweenInfo, {
                     BackgroundTransparency = 1,
                     TextTransparency = 0.5,
-                }):Play()
+                })
             end)
 
             if KeyPicker.Mode == Mode then
@@ -5529,15 +5543,15 @@ do
                 end)
 
                 Button.MouseEnter:Connect(function()
-                    TweenService:Create(Button, Library.TweenInfo, {
+                    Library:PlayTween(Button, "ColorContextHover", Library.HoverTweenInfo, {
                         BackgroundTransparency = 0.7,
-                    }):Play()
+                    })
                 end)
 
                 Button.MouseLeave:Connect(function()
-                    TweenService:Create(Button, Library.TweenInfo, {
+                    Library:PlayTween(Button, "ColorContextHover", Library.HoverTweenInfo, {
                         BackgroundTransparency = 1,
-                    }):Play()
+                    })
                 end)
             end
 
@@ -6884,6 +6898,7 @@ do
 
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
+            Transparency = 0.18,
             Parent = Checkbox,
         })
 
@@ -6931,7 +6946,7 @@ do
             end
 
             Checkbox.BackgroundTransparency = 0
-            CheckboxStroke.Transparency = 0
+            CheckboxStroke.Transparency = Toggle.Value and 0.04 or 0.18
 
             Library:PlayTween(Checkbox, "CheckboxColor", Library.TweenInfo, {
                 BackgroundColor3 = BackgroundColor,
@@ -7202,6 +7217,7 @@ do
             Color = function()
                 return GetToggleStrokeColor(Toggle)
             end,
+            Transparency = 0.18,
             Parent = Switch,
         })
 
@@ -7242,7 +7258,7 @@ do
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
 
             Switch.BackgroundTransparency = Toggle.Disabled and 0.75 or 0
-            SwitchStroke.Transparency = Toggle.Disabled and 0.75 or 0
+            SwitchStroke.Transparency = Toggle.Disabled and 0.75 or (Toggle.Value and 0.04 or 0.18)
 
             if Toggle.Disabled then
                 Library:CancelTween(Switch, "SwitchColor")
@@ -7528,6 +7544,7 @@ do
 
         local BoxStroke = New("UIStroke", {
             Color = "OutlineColor",
+            Transparency = 0.25,
             Parent = Box,
         })
 
@@ -7769,16 +7786,16 @@ do
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "MainColor",
             Position = UDim2.new(0, 5, 0.5, 0),
-            Size = UDim2.new(1, -10, 0, 4),
+            Size = UDim2.new(1, -10, 0, 5),
             Parent = Bar,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 2),
+            CornerRadius = UDim.new(0, 3),
             Parent = Track,
         })
         New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.12,
+            Transparency = 0.55,
             Parent = Track,
         })
 
@@ -7818,7 +7835,7 @@ do
             Parent = Track,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 2),
+            CornerRadius = UDim.new(0, 3),
             Parent = Fill,
         })
 
@@ -8240,6 +8257,7 @@ do
 
         New("UIStroke", {
             Color = "OutlineColor",
+            Transparency = 0.25,
             Parent = DisplayContainer,
         })
 
@@ -10450,9 +10468,9 @@ function Library:UpdateNotificationPositions(Snap: boolean?)
             Data.PositionInitialized = true
 
         elseif FakeBackground.Position ~= Target then
-            TweenService:Create(FakeBackground, Library.NotifyTweenInfo, {
+            Library:PlayTween(FakeBackground, "NotifyPosition", Library.NotifyTweenInfo, {
                 Position = Target,
-            }):Play()
+            })
         end
 
         RunningY = RunningY + FakeBackground.AbsoluteSize.Y + 8
@@ -10530,9 +10548,10 @@ function Library:Notify(...)
         Parent = NotificationArea,
     })
 
-    local Holder = New("Frame", {
+    local Holder = New("CanvasGroup", {
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = "MainColor",
+        GroupTransparency = 1,
         Position = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2),
         Size = UDim2.fromScale(1, 1),
         ZIndex = 5,
@@ -10557,6 +10576,10 @@ function Library:Notify(...)
         Parent = Holder,
     })
     Library:AddOutline(Holder)
+    local NotificationScale = New("UIScale", {
+        Scale = 0.975,
+        Parent = Holder,
+    })
 
     local ContentContainer = New("Frame", {
         BackgroundTransparency = 1,
@@ -10716,6 +10739,10 @@ function Library:Notify(...)
     end
 
     function Data:Destroy()
+        if Data.Destroyed then
+            return
+        end
+
         Data.Destroyed = true
 
         if typeof(Data.Time) == "Instance" then
@@ -10735,13 +10762,19 @@ function Library:Notify(...)
 
         Library:UpdateNotificationPositions()
 
-        TweenService
-            :Create(Holder, Library.NotifyTweenInfo, {
-                Position = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2),
-            })
-            :Play()
+        local ExitPosition = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2)
+        Library:CancelTween(Holder, "NotifyEnterPosition")
+        Library:PlayTween(Holder, "NotifyExitPosition", Library.NotifyCloseTweenInfo, {
+            Position = ExitPosition,
+        })
+        Library:PlayTween(Holder, "NotifyVisibility", Library.NotifyCloseTweenInfo, {
+            GroupTransparency = 1,
+        })
+        Library:PlayTween(NotificationScale, "NotifyVisibility", Library.NotifyCloseTweenInfo, {
+            Scale = 0.985,
+        })
 
-        task.delay(Library.NotifyTweenInfo.Time, function()
+        task.delay(Library.NotifyCloseTweenInfo.Time, function()
             Library.Notifications[FakeBackground] = nil
             FakeBackground:Destroy()
         end)
@@ -10794,9 +10827,16 @@ function Library:Notify(...)
     Library:UpdateNotificationPositions()
 
     FakeBackground.Visible = true
-    TweenService:Create(Holder, Library.NotifyTweenInfo, {
+    Library:CancelTween(Holder, "NotifyExitPosition")
+    Library:PlayTween(Holder, "NotifyEnterPosition", Library.NotifyTweenInfo, {
         Position = UDim2.fromOffset(0, 0),
-    }):Play()
+    })
+    Library:PlayTween(Holder, "NotifyVisibility", Library.NotifyTweenInfo, {
+        GroupTransparency = 0,
+    })
+    Library:PlayTween(NotificationScale, "NotifyVisibility", Library.NotifyTweenInfo, {
+        Scale = 1,
+    })
 
     task.delay(Library.NotifyTweenInfo.Time, function()
         if Data.Persist then
@@ -10922,6 +10962,7 @@ function Library:CreateWindow(WindowInfo)
     local CompactLauncherIcon
     local CompactLauncherTitleLabel
     local CompactLauncherStroke
+    local CompactLauncherMotionScale
     local BottomBarHeight = 20
 
     local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
@@ -10974,14 +11015,16 @@ function Library:CreateWindow(WindowInfo)
         Library:AddOutline(MainFrame)
         Library:MakeLine(MainFrame, {
             Color = function()
-                return Library:GetAccentSurfaceColor(0.32)
+                return Library:GetAccentSurfaceColor(0.2)
             end,
             Position = UDim2.fromOffset(0, 48),
             Size = UDim2.new(1, 0, 0, 1),
+            Transparency = 0.35,
         })
 
         DividerLine = New("Frame", {
             BackgroundColor3 = "OutlineColor",
+            BackgroundTransparency = 0.35,
             Position = UDim2.fromOffset(InitialLeftWidth, 0),
             Size = UDim2.new(0, 1, 1, -(BottomBarHeight + 1)),
             Parent = MainFrame,
@@ -11163,7 +11206,7 @@ function Library:CreateWindow(WindowInfo)
         })
         local SearchStroke = New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.15,
+            Transparency = 0.25,
             Parent = SearchBox,
         })
         SearchBox.Focused:Connect(function()
@@ -11177,7 +11220,7 @@ function Library:CreateWindow(WindowInfo)
             Library.Registry[SearchStroke].Color = "OutlineColor"
             Library:PlayTween(SearchStroke, "SearchFocus", Library.TweenInfo, {
                 Color = Library.Scheme.OutlineColor,
-                Transparency = 0.15,
+                Transparency = 0.25,
             })
         end)
 
@@ -11319,6 +11362,7 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 8, 1, -BottomBarHeight),
             Size = UDim2.new(1, -16, 0, 1),
+            Transparency = 0.45,
             ZIndex = 4,
         })
 
@@ -11480,12 +11524,12 @@ function Library:CreateWindow(WindowInfo)
             return
         end
 
-        local BackgroundColor = GetTopBarSurfaceColor(CompactLauncherHovered and 0.15 or 0.08)
-        local BackgroundTransparency = CompactLauncherHovered and 0 or 0.02
-        local IconTransparency = CompactLauncherHovered and 0.02 or 0.12
-        local TitleTransparency = CompactLauncherHovered and 0.02 or 0.12
+        local BackgroundColor = GetTopBarSurfaceColor(CompactLauncherHovered and 0.11 or 0.055)
+        local BackgroundTransparency = CompactLauncherHovered and 0.02 or 0.08
+        local IconTransparency = CompactLauncherHovered and 0.02 or 0.16
+        local TitleTransparency = CompactLauncherHovered and 0.02 or 0.16
         local StrokeColor = CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.1)
-        local StrokeTransparency = CompactLauncherHovered and 0.12 or 0.3
+        local StrokeTransparency = CompactLauncherHovered and 0.2 or 0.38
 
         if Animate then
             Library:PlayTween(CompactLauncher, "CompactLauncherSurface", CompactLauncherHoverTweenInfo, {
@@ -11525,7 +11569,7 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = WindowInfo.CompactLauncherAnchorPoint,
             AutoButtonColor = false,
             BackgroundColor3 = function()
-                return GetTopBarSurfaceColor(CompactLauncherHovered and 0.15 or 0.08)
+                return GetTopBarSurfaceColor(CompactLauncherHovered and 0.11 or 0.055)
             end,
             BackgroundTransparency = 1,
             Position = WindowInfo.CompactLauncherPosition,
@@ -11548,6 +11592,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = CompactLauncher,
             })
         )
+        CompactLauncherMotionScale = New("UIScale", {
+            Scale = 0.975,
+            Parent = CompactLauncher,
+        })
         CompactLauncherStroke = New("UIStroke", {
             Color = function()
                 return CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.1)
@@ -11641,8 +11689,16 @@ function Library:CreateWindow(WindowInfo)
                 CompactLauncherIcon.ImageTransparency = 1
                 CompactLauncherTitleLabel.TextTransparency = 1
                 CompactLauncherStroke.Transparency = 1
+                CompactLauncherMotionScale.Scale = 0.965
             end
             ApplyCompactLauncherStyle(Animate == true)
+            if Animate then
+                Library:PlayTween(CompactLauncherMotionScale, "CompactLauncherVisibility", CompactLauncherVisibilityTweenInfo, {
+                    Scale = 1,
+                })
+            else
+                CompactLauncherMotionScale.Scale = 1
+            end
             return
         end
 
@@ -11656,6 +11712,7 @@ function Library:CreateWindow(WindowInfo)
             CompactLauncherIcon.ImageTransparency = 1
             CompactLauncherTitleLabel.TextTransparency = 1
             CompactLauncherStroke.Transparency = 1
+            CompactLauncherMotionScale.Scale = 0.975
             return
         end
 
@@ -11670,6 +11727,9 @@ function Library:CreateWindow(WindowInfo)
         })
         Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", CompactLauncherVisibilityTweenInfo, {
             Transparency = 1,
+        })
+        Library:PlayTween(CompactLauncherMotionScale, "CompactLauncherVisibility", CompactLauncherVisibilityTweenInfo, {
+            Scale = 0.975,
         })
         if not IconTween then
             CompactLauncher.Visible = false
@@ -12120,7 +12180,7 @@ function Library:CreateWindow(WindowInfo)
         do
             TabButton = New("TextButton", {
                 BackgroundColor3 = function()
-                    return Library:GetAccentSurfaceColor(0.16)
+                    return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, -18, 0, 34),
@@ -12136,8 +12196,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 14),
+                Position = UDim2.new(0, 4, 0.5, 0),
+                Size = UDim2.fromOffset(3, 18),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -12907,7 +12967,7 @@ function Library:CreateWindow(WindowInfo)
             do
                 GroupboxHolder = New("Frame", {
                     BackgroundColor3 = function()
-                        return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.AccentColor, 0.045)
+                        return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.MainColor, 0.48)
                     end,
                     ClipsDescendants = true,
                     Size = UDim2.fromScale(1, 0),
@@ -12924,10 +12984,11 @@ function Library:CreateWindow(WindowInfo)
 
                 GroupboxLine = Library:MakeLine(GroupboxHolder, {
                     Color = function()
-                        return Library:GetAccentSurfaceColor(0.12)
+                        return Library:GetAccentSurfaceColor(0.1)
                     end,
                     Position = UDim2.fromOffset(0, 34),
                     Size = UDim2.new(1, 0, 0, 1),
+                    Transparency = 0.42,
                 })
 
                 local BoxIcon = Library:GetCustomIcon(Info.IconName)
@@ -13337,7 +13398,7 @@ function Library:CreateWindow(WindowInfo)
         do
             TabButton = New("TextButton", {
                 BackgroundColor3 = function()
-                    return Library:GetAccentSurfaceColor(0.16)
+                    return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, -18, 0, 34),
@@ -13352,8 +13413,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 14),
+                Position = UDim2.new(0, 4, 0.5, 0),
+                Size = UDim2.fromOffset(3, 18),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -13632,12 +13693,14 @@ function Library:CreateWindow(WindowInfo)
             Parent = MainFrame,
         })
         Library:PlayTween(DialogOverlay, "DialogOverlayFade", Library.DialogOverlayOpenAnimationInfo, {
-            BackgroundTransparency = 0.5,
+            BackgroundTransparency = 0.58,
         })
 
         DialogFrame = New("TextButton", {
             AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundColor3 = "BackgroundColor",
+            BackgroundColor3 = function()
+                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+            end,
             Position = UDim2.fromScale(0.5, 0.5),
             Size = UDim2.fromOffset(300, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -13653,7 +13716,10 @@ function Library:CreateWindow(WindowInfo)
                 Parent = DialogFrame,
             })
         )
-        Library:AddOutline(DialogFrame)
+        local DialogOutline, DialogShadow = Library:AddOutline(DialogFrame)
+        DialogOutline.Transparency = 0.16
+        DialogShadow.Thickness = 2
+        DialogShadow.Transparency = 0.78
 
         local InnerContainer = New("Frame", {
             BackgroundTransparency = 1,
@@ -13781,7 +13847,7 @@ function Library:CreateWindow(WindowInfo)
         
         local _Sep2 = New("Frame", {
             BackgroundColor3 = "OutlineColor",
-            BackgroundTransparency = 0,
+            BackgroundTransparency = 0.45,
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 1),
             LayoutOrder = 5,
@@ -14138,6 +14204,7 @@ function Library:CreateWindow(WindowInfo)
             StopTween(WindowTween, true)
             WindowTween = nil
         end
+        Library:CancelTween(WindowScale, "WindowVisibilityScale")
 
         if Library.Animations and Library.Animations.ToggleWindow == true then
             local TargetScale = math.max(Library.DPIScale or 1, 0.01)
@@ -14145,7 +14212,7 @@ function Library:CreateWindow(WindowInfo)
                 and (Library.WindowOpenAnimationInfo or Library.WindowAnimationInfo)
                 or (Library.WindowCloseAnimationInfo or Library.WindowAnimationInfo)
 
-            WindowScale.Scale = TargetScale
+            WindowScale.Scale = Library.Toggled and TargetScale * 0.985 or TargetScale
 
             if Library.Toggled then
                 local WasVisible = MainFrame.Visible
@@ -14161,6 +14228,12 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local ActiveWindowTween = WindowTween
+
+            if Library.Toggled then
+                Library:PlayTween(WindowScale, "WindowVisibilityScale", AnimationInfo, {
+                    Scale = TargetScale,
+                })
+            end
 
             WindowTween.Completed:Once(function(PlaybackState)
                 if PlaybackState ~= Enum.PlaybackState.Completed or AnimationSequence ~= WindowAnimationSequence then

@@ -1038,6 +1038,8 @@ export type Window = {
     RefreshCompactLauncher: (self: Window, Animate: boolean?) -> (),
     SetCompactLauncherIcon: (self: Window, Icon: string | number) -> (),
     SetCompactLauncherPosition: (self: Window, Position: UDim2) -> (),
+    SetCompactLauncherTitle: (self: Window, Title: string?) -> (),
+    SetCompactLauncherWidth: (self: Window, Width: number) -> (),
     SetCompactLauncherDraggable: (self: Window, Draggable: boolean) -> (),
     Toggle: (self: Window, Value: boolean?, Source: string?) -> (),
 }
@@ -1313,6 +1315,8 @@ export type Library = {
             ShowCompactLauncher: boolean?,
             CompactLauncherIcon: string | number?,
             CompactLauncherSize: number?,
+            CompactLauncherWidth: number?,
+            CompactLauncherTitle: string?,
             CompactLauncherPosition: UDim2?,
             CompactLauncherAnchorPoint: Vector2?,
             CompactLauncherDraggable: boolean?,

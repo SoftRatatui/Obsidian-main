@@ -90,7 +90,7 @@ App:Get("speed"):SetValue(50)
 
 ## Current Graphite interface
 
-`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Theme Manager uses a versioned default marker, so legacy `default.txt` files remain untouched and cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a small draggable launcher; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-right corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Graphite` is the default profile. It uses neutral gray surfaces, a muted slate accent, Gotham typography, square checkboxes, compact 4px geometry, and a fixed footer. Theme Manager uses a versioned default marker, so legacy `default.txt` files remain untouched and cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-right corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
@@ -98,7 +98,7 @@ Buttons support `Default`, `Primary`, `Warning`, `Danger`, and `Ghost` variants.
 
 Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. Activating a `Danger` toggle opens a short `Cancel` / `Continue` confirmation; turning it off stays immediate for a quick exit. Set `ConfirmDanger = false` to opt out, or provide `ConfirmTitle` and `ConfirmDescription` for the dialog copy. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`. Theme Manager now includes dedicated `Warning color` and `Danger color` controls, and all header surfaces follow `TopBarColor`.
 
-Use `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow` to configure the launcher. It stays outside the main window, remains inside the viewport, and uses a movement threshold so dragging never triggers an accidental reopen.
+Use `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow` to configure the launcher. It stays outside the main window, remains inside the viewport, and uses a movement threshold so dragging never triggers an accidental reopen.
 
 ## Full executor profile
 

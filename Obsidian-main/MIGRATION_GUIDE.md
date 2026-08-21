@@ -307,7 +307,7 @@ end)
 
 Toggle также принимает `Variant = "Warning"` или `Variant = "Danger"`. В активном состоянии меняются только track и outline, поэтому строки с key picker не сдвигаются и остаются ровными. При включении `Danger` toggle появляется короткий dialog с `Cancel` и `Continue`; выключение остаётся мгновенным, чтобы функцию можно было быстро остановить. `ConfirmDanger = false` отключает это подтверждение, а `ConfirmTitle` и `ConfirmDescription` меняют его текст. Для compatibility `Caution` и `Destructive` работают как алиасы, а `Risky = true` без явного `Variant` становится `Danger`.
 
-У окна есть mouse-first compact launcher: кнопка `−` в верхней панели сворачивает UI, а маленькая draggable-кнопка возвращает его. При скрытии через keybind launcher не появляется: UI возвращается тем же биндом и не перекрывает игру. Настройки `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherPosition` и `CompactLauncherDraggable` передаются в `CreateWindow`.
+У окна есть mouse-first compact launcher: кнопка `−` в верхней панели сворачивает UI, а центральная draggable-панель с названием скрипта возвращает его. При скрытии через keybind launcher не появляется: UI возвращается тем же биндом и не перекрывает игру. Настройки `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition` и `CompactLauncherDraggable` передаются в `CreateWindow`.
 
 ## ColorPicker и KeyPicker addons
 

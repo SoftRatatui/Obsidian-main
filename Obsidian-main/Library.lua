@@ -516,9 +516,11 @@ local Templates = {
 
         ShowCompactLauncher = true,
         CompactLauncherIcon = "maximize-2",
-        CompactLauncherSize = 34,
-        CompactLauncherPosition = UDim2.new(1, -10, 0.5, 0),
-        CompactLauncherAnchorPoint = Vector2.new(1, 0.5),
+        CompactLauncherSize = 36,
+        CompactLauncherWidth = 172,
+        CompactLauncherTitle = nil,
+        CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
+        CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
         CompactLauncherDraggable = true,
 
         ShowMobileButtons = true,
@@ -2000,16 +2002,32 @@ local function GetToggleLabelColor(Variant: string, Active: boolean): Color3
     return Library.Scheme.FontColor
 end
 
+local function GetToggleSurfaceColor(Toggle): Color3
+    if Toggle.Value then
+        return GetToggleAccentColor(Toggle.StyleVariant)
+    end
+
+    return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.22)
+end
+
+local function GetToggleStrokeColor(Toggle): Color3
+    if Toggle.Value then
+        return GetToggleAccentColor(Toggle.StyleVariant)
+    end
+
+    return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.12)
+end
+
 local function RegisterToggleTheme(Toggle, Surface: GuiObject, Stroke: UIStroke, Label: TextLabel)
     local SurfaceRegistry = Library.Registry[Surface] or {}
     SurfaceRegistry.BackgroundColor3 = function()
-        return Toggle.Value and GetToggleAccentColor(Toggle.StyleVariant) or Library.Scheme.MainColor
+        return GetToggleSurfaceColor(Toggle)
     end
     Library.Registry[Surface] = SurfaceRegistry
 
     local StrokeRegistry = Library.Registry[Stroke] or {}
     StrokeRegistry.Color = function()
-        return Toggle.Value and GetToggleAccentColor(Toggle.StyleVariant) or Library.Scheme.OutlineColor
+        return GetToggleStrokeColor(Toggle)
     end
     Library.Registry[Stroke] = StrokeRegistry
 
@@ -3980,7 +3998,7 @@ do
             Whitelisted = Info.Whitelisted,
             WhitelistedModifiers = Info.WhitelistedModifiers,
 
-            Toggled = false,
+            Toggled = Info.SyncToggleState and ParentObj.Type == "Toggle" and ParentObj.Value == true or false,
             Mode = Info.Mode,
             SyncToggleState = Info.SyncToggleState,
 
@@ -6886,15 +6904,15 @@ do
                 return
             end
 
-            local AccentColor = GetToggleAccentColor(Toggle.StyleVariant)
-            local BackgroundColor = Toggle.Value and AccentColor or Library.Scheme.MainColor
-            local StrokeColor = Toggle.Value and AccentColor or Library.Scheme.OutlineColor
+            local BackgroundColor = GetToggleSurfaceColor(Toggle)
+            local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
 
             if Toggle.Disabled then
                 Library:CancelTween(Checkbox, "CheckboxColor")
                 Library:CancelTween(CheckboxStroke, "CheckboxStroke")
-                Library:CancelTween(Label, "CheckboxLabel")
+                Library:CancelTween(Label, "CheckboxLabelColor")
+                Library:CancelTween(Label, "CheckboxLabelTransparency")
                 Library:CancelTween(CheckImage, "CheckboxIcon")
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
@@ -6916,8 +6934,10 @@ do
             Library:PlayTween(CheckboxStroke, "CheckboxStroke", Library.TweenInfo, {
                 Color = StrokeColor,
             })
-            Library:PlayTween(Label, "CheckboxLabel", Library.TweenInfo, {
+            Library:PlayTween(Label, "CheckboxLabelColor", Library.TweenInfo, {
                 TextColor3 = LabelColor,
+            })
+            Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(CheckImage, "CheckboxIcon", Library.TweenInfo, {
@@ -7016,7 +7036,7 @@ do
             Label.Text = Text
         end
 
-        table.insert(Toggle.Connections, Button.MouseButton1Click:Connect(function()
+        table.insert(Toggle.Connections, Button.Activated:Connect(function()
             if Toggle.Disabled then
                 return
             end
@@ -7047,12 +7067,11 @@ do
             CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
-            for _, TweenName in { "CheckboxTween", "CheckboxStrokeTween", "CheckboxLabelTween", "CheckboxIconTween" } do
-                if Toggle[TweenName] then
-                    StopTween(Toggle[TweenName], true)
-                    Toggle[TweenName] = nil
-                end
-            end
+            Library:CancelTween(Checkbox, "CheckboxColor")
+            Library:CancelTween(CheckboxStroke, "CheckboxStroke")
+            Library:CancelTween(Label, "CheckboxLabelColor")
+            Library:CancelTween(Label, "CheckboxLabelTransparency")
+            Library:CancelTween(CheckImage, "CheckboxIcon")
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -7136,7 +7155,7 @@ do
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 18),
+            Size = UDim2.new(1, 0, 0, 20),
             Text = "",
             Visible = Toggle.Visible,
             Parent = Container,
@@ -7144,7 +7163,7 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -40, 1, 0),
+            Size = UDim2.new(1, -44, 1, 0),
             Text = Toggle.Text,
             TextSize = 14,
             TextTransparency = 0.4,
@@ -7161,9 +7180,11 @@ do
 
         local Switch = New("Frame", {
             AnchorPoint = Vector2.new(1, 0),
-            BackgroundColor3 = "MainColor",
+            BackgroundColor3 = function()
+                return GetToggleSurfaceColor(Toggle)
+            end,
             Position = UDim2.fromScale(1, 0),
-            Size = UDim2.fromOffset(32, 18),
+            Size = UDim2.fromOffset(36, 20),
             Parent = Button,
         })
         New("UICorner", {
@@ -7178,7 +7199,9 @@ do
             Parent = Switch,
         })
         local SwitchStroke = New("UIStroke", {
-            Color = "OutlineColor",
+            Color = function()
+                return GetToggleStrokeColor(Toggle)
+            end,
             Parent = Switch,
         })
 
@@ -7189,7 +7212,7 @@ do
             Parent = Switch,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
+            CornerRadius = UDim.new(0, 4),
             Parent = Ball,
         })
 
@@ -7197,6 +7220,12 @@ do
         local BallRegistry = Library.Registry[Ball] or {}
         BallRegistry.BackgroundColor3 = function()
             return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
+        end
+        BallRegistry.AnchorPoint = function()
+            return Vector2.new(Toggle.Value and 1 or 0, 0)
+        end
+        BallRegistry.Position = function()
+            return UDim2.fromScale(Toggle.Value and 1 or 0, 0)
         end
         Library.Registry[Ball] = BallRegistry
 
@@ -7210,9 +7239,8 @@ do
             end
 
             local Offset = Toggle.Value and 1 or 0
-            local AccentColor = GetToggleAccentColor(Toggle.StyleVariant)
-            local SwitchColor = Toggle.Value and AccentColor or Library.Scheme.MainColor
-            local StrokeColor = Toggle.Value and AccentColor or Library.Scheme.OutlineColor
+            local SwitchColor = GetToggleSurfaceColor(Toggle)
+            local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
 
             Switch.BackgroundTransparency = Toggle.Disabled and 0.75 or 0
@@ -7221,8 +7249,10 @@ do
             if Toggle.Disabled then
                 Library:CancelTween(Switch, "SwitchColor")
                 Library:CancelTween(SwitchStroke, "SwitchStroke")
-                Library:CancelTween(Label, "SwitchLabel")
-                Library:CancelTween(Ball, "SwitchBall")
+                Library:CancelTween(Label, "SwitchLabelColor")
+                Library:CancelTween(Label, "SwitchLabelTransparency")
+                Library:CancelTween(Ball, "SwitchBallPosition")
+                Library:CancelTween(Ball, "SwitchBallColor")
                 Switch.BackgroundColor3 = SwitchColor
                 SwitchStroke.Color = StrokeColor
                 Label.TextColor3 = LabelColor
@@ -7241,13 +7271,17 @@ do
             Library:PlayTween(SwitchStroke, "SwitchStroke", Library.TweenInfo, {
                 Color = StrokeColor,
             })
-            Library:PlayTween(Label, "SwitchLabel", Library.TweenInfo, {
+            Library:PlayTween(Label, "SwitchLabelColor", Library.TweenInfo, {
                 TextColor3 = LabelColor,
+            })
+            Library:PlayTween(Label, "SwitchLabelTransparency", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
-            Library:PlayTween(Ball, "SwitchBall", Library.TweenInfo, {
+            Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
                 AnchorPoint = Vector2.new(Offset, 0),
                 Position = UDim2.fromScale(Offset, 0),
+            })
+            Library:PlayTween(Ball, "SwitchBallColor", Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.FontColor,
             })
 
@@ -7344,7 +7378,7 @@ do
             Label.Text = Text
         end
 
-        table.insert(Toggle.Connections, Button.MouseButton1Click:Connect(function()
+        table.insert(Toggle.Connections, Button.Activated:Connect(function()
             if Toggle.Disabled then
                 return
             end
@@ -7375,12 +7409,12 @@ do
             CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
-            for _, TweenName in { "SwitchTween", "StrokeTween", "LabelTween", "BallTween" } do
-                if Toggle[TweenName] then
-                    StopTween(Toggle[TweenName], true)
-                    Toggle[TweenName] = nil
-                end
-            end
+            Library:CancelTween(Switch, "SwitchColor")
+            Library:CancelTween(SwitchStroke, "SwitchStroke")
+            Library:CancelTween(Label, "SwitchLabelColor")
+            Library:CancelTween(Label, "SwitchLabelTransparency")
+            Library:CancelTween(Ball, "SwitchBallPosition")
+            Library:CancelTween(Ball, "SwitchBallColor")
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -10804,16 +10838,24 @@ function Library:CreateWindow(WindowInfo)
     WindowInfo.SingleColumnWidth = math.max(240, WindowInfo.SingleColumnWidth)
     WindowInfo.HideSearchAtWidth = math.max(120, WindowInfo.HideSearchAtWidth)
     WindowInfo.ShowCompactLauncher = WindowInfo.ShowCompactLauncher ~= false
-    WindowInfo.CompactLauncherSize = math.clamp(math.floor(tonumber(WindowInfo.CompactLauncherSize) or 34), 26, 44)
+    WindowInfo.CompactLauncherSize = math.clamp(math.floor(tonumber(WindowInfo.CompactLauncherSize) or 36), 30, 48)
+    WindowInfo.CompactLauncherWidth = math.clamp(
+        math.floor(tonumber(WindowInfo.CompactLauncherWidth) or 172),
+        math.max(128, WindowInfo.CompactLauncherSize * 3),
+        280
+    )
     WindowInfo.CompactLauncherDraggable = WindowInfo.CompactLauncherDraggable ~= false
     if typeof(WindowInfo.CompactLauncherPosition) ~= "UDim2" then
-        WindowInfo.CompactLauncherPosition = UDim2.new(1, -10, 0.5, 0)
+        WindowInfo.CompactLauncherPosition = UDim2.fromScale(0.5, 0.5)
     end
     if typeof(WindowInfo.CompactLauncherAnchorPoint) ~= "Vector2" then
-        WindowInfo.CompactLauncherAnchorPoint = Vector2.new(1, 0.5)
+        WindowInfo.CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5)
     end
     if typeof(WindowInfo.CompactLauncherIcon) ~= "string" and typeof(WindowInfo.CompactLauncherIcon) ~= "number" then
         WindowInfo.CompactLauncherIcon = "maximize-2"
+    end
+    if typeof(WindowInfo.CompactLauncherTitle) ~= "string" then
+        WindowInfo.CompactLauncherTitle = nil
     end
 
     Library.CornerRadius = WindowInfo.CornerRadius
@@ -10854,6 +10896,7 @@ function Library:CreateWindow(WindowInfo)
     local MinimizeButton
     local CompactLauncher
     local CompactLauncherIcon
+    local CompactLauncherTitleLabel
     local CompactLauncherStroke
     local BottomBarHeight = 20
 
@@ -11383,7 +11426,7 @@ function Library:CreateWindow(WindowInfo)
     local CompactLauncherSequence = 0
     local CompactLauncherPressPosition
     local CompactLauncherMoved = false
-    local CompactLauncherRelease
+    local CompactLauncherDragThreshold = 8
     local CompactLauncherHoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local CompactLauncherVisibilityTweenInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
@@ -11398,16 +11441,27 @@ function Library:CreateWindow(WindowInfo)
         CompactLauncherIcon.ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero
     end
 
+    local function GetCompactLauncherTitle()
+        return WindowInfo.CompactLauncherTitle or WindowInfo.Title
+    end
+
+    local function RefreshCompactLauncherTitle()
+        if CompactLauncherTitleLabel then
+            CompactLauncherTitleLabel.Text = GetCompactLauncherTitle()
+        end
+    end
+
     local function ApplyCompactLauncherStyle(Animate: boolean?)
-        if not CompactLauncher or not CompactLauncherIcon or not CompactLauncherStroke then
+        if not CompactLauncher or not CompactLauncherIcon or not CompactLauncherTitleLabel or not CompactLauncherStroke then
             return
         end
 
-        local BackgroundColor = Library:GetAccentSurfaceColor(CompactLauncherHovered and 0.18 or 0.1)
-        local BackgroundTransparency = CompactLauncherHovered and 0 or 0.08
-        local IconTransparency = CompactLauncherHovered and 0.04 or 0.2
-        local StrokeColor = CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-        local StrokeTransparency = CompactLauncherHovered and 0.2 or 0.45
+        local BackgroundColor = GetTopBarSurfaceColor(CompactLauncherHovered and 0.15 or 0.08)
+        local BackgroundTransparency = CompactLauncherHovered and 0 or 0.02
+        local IconTransparency = CompactLauncherHovered and 0.02 or 0.12
+        local TitleTransparency = CompactLauncherHovered and 0.02 or 0.12
+        local StrokeColor = CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.1)
+        local StrokeTransparency = CompactLauncherHovered and 0.12 or 0.3
 
         if Animate then
             Library:PlayTween(CompactLauncher, "CompactLauncherSurface", CompactLauncherHoverTweenInfo, {
@@ -11418,6 +11472,9 @@ function Library:CreateWindow(WindowInfo)
                 ImageColor3 = Library.Scheme.FontColor,
                 ImageTransparency = IconTransparency,
             })
+            Library:PlayTween(CompactLauncherTitleLabel, "CompactLauncherTitle", CompactLauncherHoverTweenInfo, {
+                TextTransparency = TitleTransparency,
+            })
             Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", CompactLauncherHoverTweenInfo, {
                 Color = StrokeColor,
                 Transparency = StrokeTransparency,
@@ -11427,11 +11484,13 @@ function Library:CreateWindow(WindowInfo)
 
         Library:CancelTween(CompactLauncher, "CompactLauncherSurface")
         Library:CancelTween(CompactLauncherIcon, "CompactLauncherIcon")
+        Library:CancelTween(CompactLauncherTitleLabel, "CompactLauncherTitle")
         Library:CancelTween(CompactLauncherStroke, "CompactLauncherStroke")
         CompactLauncher.BackgroundColor3 = BackgroundColor
         CompactLauncher.BackgroundTransparency = BackgroundTransparency
         CompactLauncherIcon.ImageColor3 = Library.Scheme.FontColor
         CompactLauncherIcon.ImageTransparency = IconTransparency
+        CompactLauncherTitleLabel.TextTransparency = TitleTransparency
         CompactLauncherStroke.Color = StrokeColor
         CompactLauncherStroke.Transparency = StrokeTransparency
     end
@@ -11442,11 +11501,11 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = WindowInfo.CompactLauncherAnchorPoint,
             AutoButtonColor = false,
             BackgroundColor3 = function()
-                return Library:GetAccentSurfaceColor(CompactLauncherHovered and 0.18 or 0.1)
+                return GetTopBarSurfaceColor(CompactLauncherHovered and 0.15 or 0.08)
             end,
             BackgroundTransparency = 1,
             Position = WindowInfo.CompactLauncherPosition,
-            Size = UDim2.fromOffset(WindowInfo.CompactLauncherSize, WindowInfo.CompactLauncherSize),
+            Size = UDim2.fromOffset(WindowInfo.CompactLauncherWidth, WindowInfo.CompactLauncherSize),
             Text = "",
             Visible = false,
             ZIndex = 20,
@@ -11467,18 +11526,30 @@ function Library:CreateWindow(WindowInfo)
         )
         CompactLauncherStroke = New("UIStroke", {
             Color = function()
-                return CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+                return CompactLauncherHovered and Library.Scheme.AccentColor or Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.1)
             end,
             Transparency = 1,
             Parent = CompactLauncher,
         })
         CompactLauncherIcon = New("ImageLabel", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
+            AnchorPoint = Vector2.new(0, 0.5),
             BackgroundTransparency = 1,
             ImageColor3 = "FontColor",
             ImageTransparency = 1,
-            Position = UDim2.fromScale(0.5, 0.5),
+            Position = UDim2.fromOffset(11, WindowInfo.CompactLauncherSize / 2),
             Size = UDim2.fromOffset(16, 16),
+            ZIndex = 21,
+            Parent = CompactLauncher,
+        })
+        CompactLauncherTitleLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(37, 0),
+            Size = UDim2.new(1, -47, 1, 0),
+            Text = GetCompactLauncherTitle(),
+            TextSize = 14,
+            TextTransparency = 1,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 21,
             Parent = CompactLauncher,
         })
@@ -11505,35 +11576,24 @@ function Library:CreateWindow(WindowInfo)
 
             CompactLauncherPressPosition = Input.Position
             CompactLauncherMoved = false
-            if CompactLauncherRelease and CompactLauncherRelease.Connected then
-                CompactLauncherRelease:Disconnect()
-            end
-            CompactLauncherRelease = Input.Changed:Connect(function()
-                if Input.UserInputState ~= Enum.UserInputState.End then
-                    return
-                end
-
-                if not CompactLauncherMoved and CompactLauncher.Visible and not Library.Toggled then
-                    Window:Toggle(true)
-                end
-                CompactLauncherPressPosition = nil
-                if CompactLauncherRelease and CompactLauncherRelease.Connected then
-                    CompactLauncherRelease:Disconnect()
-                    CompactLauncherRelease = nil
-                end
-            end)
         end))
         Library:GiveSignal(UserInputService.InputChanged:Connect(function(Input: InputObject)
-            if WindowInfo.CompactLauncherDraggable and CompactLauncherPressPosition and IsHoverInput(Input) and (Input.Position - CompactLauncherPressPosition).Magnitude > 6 then
+            if WindowInfo.CompactLauncherDraggable and CompactLauncherPressPosition and IsHoverInput(Input) and (Input.Position - CompactLauncherPressPosition).Magnitude > CompactLauncherDragThreshold then
                 CompactLauncherMoved = true
             end
         end))
-        CompactLauncher.Destroying:Connect(function()
-            if CompactLauncherRelease and CompactLauncherRelease.Connected then
-                CompactLauncherRelease:Disconnect()
-                CompactLauncherRelease = nil
+        Library:GiveSignal(UserInputService.InputEnded:Connect(function(Input: InputObject)
+            if IsMouseInput(Input) then
+                CompactLauncherPressPosition = nil
             end
-        end)
+        end))
+        Library:GiveSignal(CompactLauncher.Activated:Connect(function()
+            if CompactLauncherMoved or not CompactLauncher.Visible or Library.Toggled then
+                return
+            end
+
+            Window:Toggle(true, "Launcher")
+        end))
         task.defer(function()
             if CompactLauncher and CompactLauncher.Parent then
                 ClampGuiToViewport(CompactLauncher, 8)
@@ -11555,6 +11615,7 @@ function Library:CreateWindow(WindowInfo)
                 CompactLauncher.Visible = true
                 CompactLauncher.BackgroundTransparency = 1
                 CompactLauncherIcon.ImageTransparency = 1
+                CompactLauncherTitleLabel.TextTransparency = 1
                 CompactLauncherStroke.Transparency = 1
             end
             ApplyCompactLauncherStyle(Animate == true)
@@ -11569,6 +11630,7 @@ function Library:CreateWindow(WindowInfo)
             CompactLauncher.Visible = false
             CompactLauncher.BackgroundTransparency = 1
             CompactLauncherIcon.ImageTransparency = 1
+            CompactLauncherTitleLabel.TextTransparency = 1
             CompactLauncherStroke.Transparency = 1
             return
         end
@@ -11578,6 +11640,9 @@ function Library:CreateWindow(WindowInfo)
         })
         local IconTween = Library:PlayTween(CompactLauncherIcon, "CompactLauncherIcon", CompactLauncherVisibilityTweenInfo, {
             ImageTransparency = 1,
+        })
+        Library:PlayTween(CompactLauncherTitleLabel, "CompactLauncherTitle", CompactLauncherVisibilityTweenInfo, {
+            TextTransparency = 1,
         })
         Library:PlayTween(CompactLauncherStroke, "CompactLauncherStroke", CompactLauncherVisibilityTweenInfo, {
             Transparency = 1,
@@ -11605,6 +11670,25 @@ function Library:CreateWindow(WindowInfo)
         WindowInfo.CompactLauncherPosition = Position
         if CompactLauncher then
             CompactLauncher.Position = Position
+            ClampGuiToViewport(CompactLauncher, 8)
+        end
+    end
+
+    function Window:SetCompactLauncherTitle(Title: string?)
+        assert(Title == nil or typeof(Title) == "string", "Compact launcher title must be a string or nil.")
+        WindowInfo.CompactLauncherTitle = Title
+        RefreshCompactLauncherTitle()
+    end
+
+    function Window:SetCompactLauncherWidth(Width: number)
+        assert(typeof(Width) == "number", "Compact launcher width must be a number.")
+        WindowInfo.CompactLauncherWidth = math.clamp(
+            math.floor(Width),
+            math.max(128, WindowInfo.CompactLauncherSize * 3),
+            280
+        )
+        if CompactLauncher then
+            CompactLauncher.Size = UDim2.fromOffset(WindowInfo.CompactLauncherWidth, WindowInfo.CompactLauncherSize)
             ClampGuiToViewport(CompactLauncher, 8)
         end
     end
@@ -11698,6 +11782,9 @@ function Library:CreateWindow(WindowInfo)
 
         WindowTitle.Text = title
         WindowInfo.Title = title
+        if WindowInfo.CompactLauncherTitle == nil then
+            RefreshCompactLauncherTitle()
+        end
     end
 
     function Window:SetBackgroundImage(Image: string)

@@ -2,7 +2,7 @@
 
 A polished Roblox UI library with a premium Graphite default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
-Migrating from the original Obsidian: read the complete [migration guide](MIGRATION_GUIDE.md).
+Read the canonical [complete guide](GUIDE.md) for installation, API usage, themes, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
@@ -137,7 +137,6 @@ local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
     Name = "ESP preview",
     Window = Window,
     Target = Players.LocalPlayer,
-    Renderer = State.CreateESPPreview,
     Width = 300,
     Height = 420,
     Enabled = false,
@@ -156,7 +155,7 @@ Preview:SetGradientEnabled(true)
 Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
 
-`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. `Renderer` is optional for generic projects; in the supplied MonHub script it points to `State.CreateESPPreview`, which builds the preview with the exact same Frame, UIStroke, UIGradient, health, and text objects used by the live ESP. Box Scale and Dynamic Boxes use the same FOV/depth calculation as the live renderer. Call `Preview:SetTarget(PlayerOrModel)` to follow another real character.
+`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. `Renderer` is optional; provide it only when your own project exposes a function that builds the same objects as its live ESP. The generic module clones and previews a real target character without it. Box Scale and Dynamic Boxes use the same FOV/depth calculation as the live renderer. Call `Preview:SetTarget(PlayerOrModel)` to follow another real character.
 
 Drag the character with the left mouse button or touch to rotate it. Use the mouse wheel to zoom. `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 

@@ -1,0 +1,725 @@
+# MonHub UI — Complete Guide
+
+`GUIDE.md` is the canonical guide for this build. When the public API, default visual behavior, addons, or configuration format changes, update this file in the same change.
+
+## Contents
+
+1. [Which version is running](#which-version-is-running)
+2. [Installation and first window](#installation-and-first-window)
+3. [Window, tabs, and layout](#window-tabs-and-layout)
+4. [Controls](#controls)
+5. [Values, callbacks, and dependencies](#values-callbacks-and-dependencies)
+6. [Dialogs, notifications, and loading](#dialogs-notifications-and-loading)
+7. [Themes and configuration](#themes-and-configuration)
+8. [Watermark, keybinds, launcher, and sound](#watermark-keybinds-launcher-and-sound)
+9. [Media and ESP preview](#media-and-esp-preview)
+10. [Declarative API](#declarative-api)
+11. [Advanced utilities](#advanced-utilities)
+12. [Motion, performance, and lifecycle](#motion-performance-and-lifecycle)
+13. [Troubleshooting](#troubleshooting)
+14. [Release checklist](#release-checklist)
+
+## Which version is running
+
+The most common testing mistake is changing a local `Library.lua` while the script still downloads an older copy from GitHub. Restarting the script does not load local edits when it uses a remote URL.
+
+Use the local loader while testing files from this repository:
+
+```luau
+local Library = loadstring(readfile("Library.lua"))()
+```
+
+Use the raw GitHub URL only after the changes are published:
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+))()
+```
+
+Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produces `Expected ident` on line 1. Keep `Library.lua` and every addon from the same commit or folder. `Example.lua` is a complete showcase, but it intentionally uses a fixed non-responsive desktop layout; it is not the only recommended window configuration.
+
+## Installation and first window
+
+The full visual profile targets executors that provide `loadstring`, HTTP requests, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. The library itself can still run without optional addons, but custom themes, saved configs, and local image assets need the relevant executor APIs.
+
+Create a small legacy-style interface first:
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+))()
+
+Library:SetTheme("Graphite")
+Library:SetClickSound(92679954573730, 0.3)
+
+local Window = Library:CreateWindow({
+    Title = "MonHub Private",
+    Footer = "Beta v0.0.1",
+    Size = UDim2.fromOffset(760, 660),
+    Center = true,
+    AutoShow = true,
+    GlobalSearch = true,
+    Font = Enum.Font.Gotham,
+    CornerRadius = 4,
+})
+
+local MainTab = Window:AddTab("Main", "house")
+local MainGroup = MainTab:AddLeftGroupbox("General", "settings-2")
+
+MainGroup:AddToggle("Enabled", {
+    Text = "Enabled",
+    Default = false,
+    Callback = function(Value)
+        print("Enabled:", Value)
+    end,
+})
+```
+
+For a local test, replace the first two lines with the `readfile` loader from the previous section. `QuickStart.luau` contains a short declarative equivalent, and `Example.lua` contains a wider real-world showcase.
+
+## Window, tabs, and layout
+
+### Important window settings
+
+```luau
+local Window = Library:CreateWindow({
+    Title = "MonHub Private",
+    Footer = "Beta v0.0.1",
+    Size = UDim2.fromOffset(760, 660),
+    Position = UDim2.fromScale(0.5, 0.5),
+    Center = true,
+    AutoShow = true,
+    Resizable = false,
+    GlobalSearch = true,
+    NotifySide = "Right",
+    Font = Enum.Font.Gotham,
+    CornerRadius = 4,
+    ShowCustomCursor = true,
+    AlwaysOnTop = false,
+    ToggleKeybind = Enum.KeyCode.RightShift,
+
+    ResponsiveLayout = true,
+    SingleColumnWidth = 540,
+    HideSearchAtWidth = 210,
+    EnableSidebarResize = false,
+
+    ShowCompactLauncher = true,
+    CompactLauncherIcon = "maximize-2",
+    CompactLauncherSize = 36,
+    CompactLauncherWidth = 172,
+    CompactLauncherTitle = "MonHub Private",
+    CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
+    CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
+    CompactLauncherDraggable = true,
+
+    Animations = {
+        ToggleWindow = true,
+        TabSwitch = true,
+        Groupbox = true,
+        Dropdown = true,
+        KeyPicker = true,
+    },
+    TabTransitionTime = 0.2,
+    TabSwipeOffset = 8,
+    TabSwipeFrom = "bottom",
+})
+```
+
+`Graphite`, Gotham, a 4px corner radius, a compact switch style, and a footer are the normal MonHub profile. The window is clamped to the viewport. The top-right move icon repositions the main window.
+
+Runtime window setters are available when a value needs to change after construction:
+
+```luau
+Window:ChangeTitle("MonHub Private")
+Window:SetFooter("Beta v0.0.1")
+Window:SetCornerRadius(4)
+Window:SetAlwaysOnTop(true)
+Window:SetResponsiveLayoutEnabled(true)
+Window:FitToViewport()
+```
+
+### Tabs and groupboxes
+
+```luau
+local Controls = Window:AddTab("Controls", "sliders-horizontal")
+local Visuals = Window:AddTab({
+    Name = "Visuals",
+    Icon = "eye",
+    Description = "ESP and display settings",
+    Order = 2,
+})
+
+local Left = Controls:AddLeftGroupbox("Movement", "move")
+local Right = Controls:AddRightGroupbox("Actions", "zap")
+
+Left:SetOrder(1)
+Right:SetOrder(2)
+```
+
+Use left and right groupboxes for desktop pages. With `ResponsiveLayout = true`, a narrow window changes the page into one readable column. A `Tabbox` creates a smaller tab container inside a groupbox:
+
+```luau
+local Tabbox = Right:AddTabbox("Modes")
+local Normal = Tabbox:AddTab("Normal")
+local Advanced = Tabbox:AddTab("Advanced")
+
+Normal:AddLabel("Normal settings")
+Advanced:AddLabel("Advanced settings")
+```
+
+## Controls
+
+Every named control is available through `Library.Options` or `Library.Toggles`. Prefer unique IDs. All callback text and labels shown to users should be English if the rest of the client is English.
+
+### Toggle and checkbox
+
+```luau
+local Enabled = Left:AddToggle("Enabled", {
+    Text = "Enable feature",
+    Default = false,
+    Variant = "Default",
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+
+local SafeMode = Left:AddCheckbox("SafeMode", {
+    Text = "Safe mode",
+    Default = true,
+})
+```
+
+`AddToggle` uses a 28×16 compact switch inside a 20px interaction row. `AddCheckbox` uses a square checkbox. The fixed 2px inset and position-only thumb animation keep the geometry aligned on different DPI scales while the row remains easy to press on desktop and touch devices.
+
+Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
+
+```luau
+local Reset = Left:AddToggle("ResetEverything", {
+    Text = "Reset everything",
+    Variant = "Danger",
+    ConfirmDanger = true,
+    ConfirmTitle = "Enable reset?",
+    ConfirmDescription = "This action may affect your session.",
+    Callback = function(Value)
+        if Value then
+            print("Confirmed")
+        end
+    end,
+})
+```
+
+Enabling a danger toggle through the UI opens a short `Cancel` / `Continue` dialog. Turning it off remains immediate. `SetValue(true)` is intentionally immediate for programmatic code and configuration loading. Use `ConfirmDanger = false` only when your control already has its own confirmation flow.
+
+### Button variants
+
+```luau
+Left:AddButton({
+    Text = "Apply",
+    Variant = "Primary",
+    Icon = "check",
+    Func = function()
+        print("Applied")
+    end,
+})
+
+Left:AddButton({
+    Text = "Reset",
+    Variant = "Danger",
+    Func = function()
+        print("Reset")
+    end,
+})
+
+Left:AddButton({
+    Text = "Open help",
+    Variant = "Ghost",
+    Func = function()
+        print("Help")
+    end,
+})
+```
+
+Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
+
+```luau
+Library:SetButtonVariantIcon("Danger", "trash-2")
+```
+
+### Input, slider, and dropdown
+
+```luau
+Left:AddInput("ProfileName", {
+    Text = "Profile name",
+    Default = "Default profile",
+    Finished = true,
+    ClearTextOnFocus = false,
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+
+Left:AddSlider("Power", {
+    Text = "Power",
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Suffix = "%",
+})
+
+Left:AddDropdown("Mode", {
+    Text = "Mode",
+    Values = { "Balanced", "Fast", "Quality" },
+    Default = "Balanced",
+    AllowNull = false,
+    Searchable = true,
+})
+```
+
+Useful slider settings: `Prefix`, `Suffix`, `Compact`, `HideMax`, `FormatDisplayValue`, and `AllowRightClickInput`. Dropdowns support `Multi`, `DisabledValues`, `ValueImages`, `DragSelect`, `MaxVisibleDropdownItems`, `SpecialType = "Player" | "Team"`, `ExcludeLocalPlayer`, and custom display formatters.
+
+### Labels, dividers, and nested buttons
+
+```luau
+Left:AddLabel("A short explanation")
+Left:AddLabel({ Text = "<b>Rich text</b> is supported", DoesWrap = true })
+Left:AddDivider()
+
+local Parent = Left:AddButton("More actions", function()
+    print("Parent action")
+end)
+
+Parent:AddButton("Secondary action", function()
+    print("Secondary action")
+end)
+```
+
+### KeyPicker and ColorPicker addons
+
+Add keybinds and colors to a label or a toggle:
+
+```luau
+local Feature = Left:AddToggle("Feature", {
+    Text = "Feature",
+    Default = false,
+})
+
+Feature:AddKeyPicker("FeatureKey", {
+    Default = "H",
+    Mode = "Toggle",
+    SyncToggleState = true,
+    Text = "Feature key",
+})
+
+Feature:AddColorPicker("FeatureColor", {
+    Default = Color3.fromRGB(119, 182, 255),
+    Transparency = 0,
+    Title = "Feature color",
+})
+```
+
+KeyPicker modes are `Always`, `Toggle`, `Hold`, and `Press`. Use `NoUI = true` for a menu keybind that should not appear in the keybind menu. Only controls with a real keybind appear in that menu.
+
+### Media controls
+
+```luau
+local Media = Visuals:AddLeftGroupbox("Media", "image")
+
+Media:AddImage("Logo", {
+    Image = "sparkles",
+    Color = Color3.fromRGB(184, 189, 201),
+    Height = 82,
+})
+
+Media:AddVideo("Trailer", {
+    Video = "rbxassetid://5608324215",
+    Looped = true,
+    Playing = false,
+    Volume = 0,
+    Height = 175,
+})
+
+Media:AddUIPassthrough("Custom", {
+    Instance = someGuiObject,
+    Height = 110,
+})
+```
+
+`AddViewport` accepts a `BasePart` or `Model`. Set `Clone = true` for an isolated copy, `AutoFocus = true` to fit it, and `Interactive = true` for mouse/touch rotation.
+
+## Values, callbacks, and dependencies
+
+Controls expose `SetValue`, `SetVisible`, `SetDisabled`, `SetText`, `OnChanged`, and `Destroy` where appropriate.
+
+```luau
+Library.Toggles.Enabled:SetValue(true)
+Library.Options.Power:SetValue(75)
+Library.Options.Mode:SetValue("Quality")
+
+Library.Toggles.Enabled:OnChanged(function(Value)
+    print("Enabled is now", Value)
+end)
+```
+
+Use a dependency box to hide settings until a requirement is met:
+
+```luau
+local Extra = Left:AddDependencyBox()
+Extra:AddSlider("AdvancedPower", {
+    Text = "Advanced power",
+    Min = 0,
+    Max = 50,
+    Default = 25,
+})
+
+Extra:SetupDependencies({
+    { Library.Toggles.Enabled, true },
+})
+```
+
+Dependency refreshes are batched and unchanged values are ignored. Do not create a polling loop just to update control visibility.
+
+## Dialogs, notifications, and loading
+
+Use a dialog for a deliberate destructive action. `Ghost`, `Primary`, `Warning`, and `Danger` footer variants follow the same component system as ordinary buttons.
+
+```luau
+Window:AddDialog("ClearConfig", {
+    Title = "Clear configuration?",
+    Description = "This cannot be undone.",
+    Icon = "triangle-alert",
+    AutoDismiss = true,
+    OutsideClickDismiss = false,
+    FooterButtons = {
+        Cancel = {
+            Title = "Cancel",
+            Variant = "Ghost",
+            Order = 1,
+            Callback = function() end,
+        },
+        Continue = {
+            Title = "Continue",
+            Variant = "Danger",
+            Order = 2,
+            Callback = function()
+                print("Cleared")
+            end,
+        },
+    },
+})
+```
+
+Use notifications for non-blocking feedback:
+
+```luau
+Library:Notify({
+    Title = "Saved",
+    Description = "Configuration updated.",
+    Time = 3,
+    Icon = "check",
+})
+```
+
+For startup or asynchronous work, use a loading screen:
+
+```luau
+local Loading = Library:CreateLoading({
+    Title = "MonHub Private",
+    CurrentStep = 1,
+    TotalSteps = 3,
+    ShowSidebar = false,
+})
+
+Loading:SetDescription("Loading modules")
+Loading:SetCurrentStep(2)
+Loading:Continue()
+```
+
+`Loading:ShowErrorPage(true)`, `SetErrorMessage`, and `SetErrorButtons` provide a clean recovery screen. Always call `Destroy()` if a loading instance will not continue.
+
+## Themes and configuration
+
+### Built-in and custom palettes
+
+```luau
+Library:SetTheme("Graphite")
+Library:SetTheme("Azure")
+Library:SetTheme("BlackPurple")
+Library:SetTheme("Classic")
+```
+
+Graphite is the default: neutral gray surfaces, a muted slate accent, Gotham, 4px geometry, and semantic warning/danger colors. The theme registry updates ordinary UI surfaces, the header, dialogs, launcher, and preview lighting together.
+
+Passing a table to `Library:SetTheme` is a deliberate patch operation. It changes only the fields you provide:
+
+```luau
+Library:SetTheme({
+    MainColor = Color3.fromRGB(37, 40, 48),
+    TopBarColor = Color3.fromRGB(42, 46, 55),
+})
+```
+
+For a full independent palette, include every color you rely on: `BackgroundColor`, `MainColor`, `TopBarColor`, `AccentColor`, `OutlineColor`, `FontColor`, `WarningColor`, `DestructiveColor`, `RedColor`, `DarkColor`, `WhiteColor`, `Font`, `BackgroundImage`, `CornerRadius`, and `IsLight`.
+
+### ThemeManager
+
+Load addons from the same repository revision as `Library.lua`:
+
+```luau
+local ThemeManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua"
+))()
+
+ThemeManager:SetLibrary(Library)
+ThemeManager:SetFolder("MonHub")
+local ThemeGroup = ThemeManager:ApplyToTab(Tabs.Settings)
+ThemeGroup:SetOrder(0)
+```
+
+ThemeManager applies themes atomically. It resets all internal semantic colors, synchronizes the Font Face and background image, and prevents an old palette from leaving isolated elements behind. Theme controls use IDs such as `ThemeManager_BackgroundColor`; do not reuse that prefix for your own controls.
+
+The default marker is `default-v3.txt`. Older markers are intentionally ignored, so an older saved Ubuntu or partial theme cannot override Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
+
+Call `ThemeManager:SetDefaultTheme(table)` only before `ApplyToTab`. It replaces the session fallback palette used by ThemeManager.
+
+### SaveManager
+
+Initialize ThemeManager first, build every control, then load configurations:
+
+```luau
+local SaveManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua"
+))()
+
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+SaveManager:SetFolder("MonHub")
+SaveManager:SetSubFolder(tostring(game.PlaceId))
+
+local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
+ConfigGroup:SetOrder(-100)
+SaveManager:LoadAutoloadConfig()
+```
+
+`IgnoreThemeSettings()` is recommended when ThemeManager owns the palette. If a project intentionally stores `ThemeManager_` options in a config, the current SaveManager batches them and applies one final palette instead of showing intermediate mixed colors. Configuration parser errors now return an error instead of silently reporting a successful load.
+
+## Watermark, keybinds, launcher, and sound
+
+### Watermark
+
+```luau
+Library:SetWatermark("MonHub  |  120 FPS  |  42 ms")
+Library:SetWatermarkVisibility(true)
+Library:SetWatermarkSide("Left")
+Library:SetWatermarkDraggable(true)
+```
+
+The default watermark starts at the top-left, has no clock, can be dragged with mouse or touch, and stays inside the viewport after text, theme, or screen-size changes. `SetWatermarkSide("Right")` snaps it to the top-right. The library does not automatically save a dragged pixel position; save a side preference through your own config control when needed.
+
+### Menu keybind and keybind menu
+
+```luau
+Library.ToggleKeybind = Enum.KeyCode.RightShift
+Library:SetKeybindMenuVisible(true)
+```
+
+Set `Library.ToggleKeybind` to the menu keybind or point it at an `AddKeyPicker` option. The keybind menu intentionally displays only entries with actual configured binds. Use `NoUI = true` for the menu keybind itself.
+
+### Centered compact launcher
+
+The minimize icon hides the main window and leaves a small centered, draggable launcher with the script title. Clicking it restores the window. Hiding the UI with the keybind deliberately does not create a launcher, keeping gameplay and the camera clear; press the same keybind to reopen.
+
+```luau
+Window:SetCompactLauncherTitle("MonHub Private")
+Window:SetCompactLauncherIcon("maximize-2")
+Window:SetCompactLauncherWidth(172)
+Window:SetCompactLauncherPosition(UDim2.fromScale(0.5, 0.5))
+Window:SetCompactLauncherDraggable(true)
+```
+
+### Click sound
+
+```luau
+Library:SetClickSound(92679954573730, 0.3)
+```
+
+The first argument is the asset ID and the second is volume from `0` to `1`.
+
+## Media and ESP preview
+
+`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and uses the UI theme for its surface and lighting.
+
+```luau
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+))()
+local Players = game:GetService("Players")
+
+local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
+    Name = "ESP preview",
+    Window = Window,
+    Target = Players.LocalPlayer,
+    Width = 300,
+    Height = 420,
+    Enabled = false,
+    Side = "Auto",
+    Alignment = "Center",
+    Gap = 12,
+})
+
+Preview:SetEnabled(true)
+Preview:SetBoxVisible(true)
+Preview:SetNameVisible(true)
+Preview:SetDistanceVisible(true)
+Preview:SetColor(Color3.fromRGB(119, 182, 255))
+Preview:SetGradientColor(Color3.fromRGB(186, 138, 255))
+Preview:SetGradientEnabled(true)
+Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
+```
+
+Use `Preview:SetTarget(PlayerOrModel)`, `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` for custom controls. `Renderer` is optional and must be a function from your own script that builds the same rendering objects as your live ESP. Do not paste an undefined `State.CreateESPPreview` placeholder into a project.
+
+## Declarative API
+
+For an interface described by data rather than sequential calls, use `Library:Create`:
+
+```luau
+local App = Library:Create({
+    Title = "MonHub",
+    Footer = "Ready",
+    Theme = "Graphite",
+    Window = {
+        Size = UDim2.fromOffset(760, 660),
+        Center = true,
+    },
+    Tabs = {
+        {
+            Name = "Dashboard",
+            Icon = "house",
+            Sections = {
+                {
+                    Name = "General",
+                    Side = "Left",
+                    Controls = {
+                        {
+                            Type = "Toggle",
+                            Id = "active",
+                            Text = "Active",
+                            Default = true,
+                            OnChanged = function(Value)
+                                print(Value)
+                            end,
+                        },
+                        {
+                            Type = "Slider",
+                            Id = "intensity",
+                            Text = "Intensity",
+                            Min = 0,
+                            Max = 100,
+                            Default = 40,
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
+App:Get("intensity"):SetValue(60)
+App:Notify({ Title = "MonHub", Description = "Ready", Time = 3 })
+```
+
+Supported element types are `Label`, `Button`, `Toggle`, `Checkbox`, `Input`, `Slider`, `Dropdown`, `Divider`, `Viewport`, `Image`, `Video`, and `UIPassthrough`. Add `KeyPicker` and `ColorPicker` objects through an element’s `Addons` array. `App:Toggle()` controls visibility and `App:Destroy()` cleans up the app.
+
+## Advanced utilities
+
+Use these lower-level helpers only when the standard window and controls do not cover the integration:
+
+```luau
+Library:SetDPIScale(1)
+Library:SetNotifySide("Left")
+Library:SetIconModule(CustomIconModule)
+
+Library:AddToRegistry(CustomFrame, {
+    BackgroundColor3 = "MainColor",
+    BorderColor3 = "OutlineColor",
+})
+```
+
+`AddToRegistry` makes a custom `Instance` follow the active palette. Values may be Scheme field names or resolver functions. Call `RemoveFromRegistry(CustomFrame)` before replacing an externally owned GUI object. Use `GiveSignal(connection)` for connections that should be cleaned automatically by `Library:Unload()`.
+
+`AddDraggableLabel`, `AddDraggableButton`, `AddDraggableImageButton`, and `AddDraggableMenu` create clamped reusable overlays. `AddContextMenu` and `AddTooltip` are available for custom controls. Keep custom overlays small and viewport-clamped so they do not block gameplay input.
+
+## Motion, performance, and lifecycle
+
+The library coalesces viewport fitting, search, dependency updates, and motion. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+
+```luau
+Window:SetAnimations({
+    ToggleWindow = true,
+    TabSwitch = true,
+    Groupbox = true,
+    Dropdown = true,
+    KeyPicker = true,
+}, 0.2, 8, "bottom")
+
+Library:Notify({
+    Title = "Saved",
+    Description = "Configuration updated.",
+    Time = 3,
+    Icon = "check",
+})
+
+Library:OnUnload(function()
+    print("UI cleaned up")
+end)
+
+Library:Unload()
+```
+
+Window hide and restore animations are intentionally short and opacity-led so text does not scale or change appearance during close. `Unload()` cancels managed tweens, disconnects signals, destroys UI, and clears library references. Call it once from the user-facing unload action; it does not need a double click.
+
+## Troubleshooting
+
+### Changes do not appear after restarting
+
+You are probably loading `Library.lua` from GitHub while editing a local copy. Test with `loadstring(readfile("Library.lua"))()` or publish the changed files, then use the raw URL. Update the library and addons together.
+
+### `Expected ident` on line 1
+
+The loader received HTML or another non-Luau response. Use a raw GitHub URL, not a browser `blob` URL, and verify the URL in a browser before executing it.
+
+### The UI starts with an old Ubuntu or mixed theme
+
+Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Old default markers are ignored by `default-v3.txt`. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
+
+### A theme control changes only part of the UI
+
+Do not reuse `ThemeManager_` option IDs. Use `ThemeManager` for full palette management rather than manually setting a few unrelated theme options. If an external custom `GuiObject` needs to follow the palette, register it through the library’s standard constructors or refresh it explicitly in your own theme callback.
+
+### A config does not load
+
+Create all tabs and controls before `LoadAutoloadConfig()`. Call `SaveManager:IgnoreThemeSettings()` if ThemeManager owns the palette. Inspect the returned error from `SaveManager:Load(name)` or `LoadJSON(content)` instead of assuming a failed parser succeeded.
+
+### The watermark is on the right
+
+New sessions start on the left. A saved config may deliberately restore a previous `WatermarkSide = "Right"` choice. Select Left in UI Settings or call `Library:SetWatermarkSide("Left")`.
+
+### The preview rotates but no character is visible
+
+Pass a real `Player` or `Model` as `Target`, create it after the target character exists, and keep the preview addon from the same revision as Library. The generic preview needs no `Renderer`; only use one when your project provides it.
+
+## Release checklist
+
+- [ ] `Library.lua`, `ThemeManager.lua`, `SaveManager.lua`, and optional addons come from one commit.
+- [ ] Local changes are tested with a local loader before publishing.
+- [ ] All user-facing labels and notifications are English.
+- [ ] The window is readable at desktop and narrow/mobile widths.
+- [ ] Every danger control has a clear confirmation or an intentional opt-out.
+- [ ] ThemeManager is initialized before SaveManager autoload.
+- [ ] Watermark, keybind menu, compact launcher, and unload are tested.
+- [ ] This `GUIDE.md` is updated for every public API or behavior change.
+
+For historical Obsidian migration notes, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md). For a working feature showcase, see [Example.lua](Example.lua). For exact type signatures, see [Library.d.luau](Library.d.luau).

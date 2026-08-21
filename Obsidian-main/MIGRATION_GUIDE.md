@@ -1,8 +1,10 @@
 # Переход с Obsidian на MonHub UI
 
+Актуальная полная документация находится в [GUIDE.md](GUIDE.md). Этот файл посвящён именно переносу существующего проекта с Obsidian.
+
 Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `ThemeManager`, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать.
 
-MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, фиксированный Watermark, R6 ESP preview, оптимизированный search и декларативный API.
+MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, draggable Watermark с viewport clamp, R6 ESP preview, оптимизированный search и декларативный API.
 
 ## Полезные ссылки
 
@@ -481,7 +483,6 @@ local Preview = VisualPreview.Create(Library, VisualsTab, {
     Name = "ESP preview",
     Window = Window,
     Target = Players.LocalPlayer,
-    Renderer = State.CreateESPPreview,
     Width = 300,
     Height = 420,
     Enabled = false,
@@ -518,7 +519,7 @@ local function SyncPreview()
 end
 ```
 
-В текущем MonHub-скрипте `State.CreateESPPreview` уже создаёт тот же набор UI objects, что использует live ESP. Передача его через `Renderer` убирает отдельную фейковую отрисовку preview: box, stroke, gradient, health и labels строятся одним renderer. `Box Scale` и `Dynamic Boxes` используют тот же FOV/depth calculation, что и live ESP. `Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, а R6-only chams использует fill, outline и transparency из тех же controls.
+`Renderer` необязателен: передавайте его только если ваш собственный скрипт предоставляет функцию, которая строит те же объекты, что и live ESP. Без него addon сам клонирует реального персонажа и строит preview. `Box Scale` и `Dynamic Boxes` используют тот же FOV/depth calculation, что и live renderer. `Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, а R6-only chams использует fill, outline и transparency из тех же controls.
 
 Перетаскивайте character левой кнопкой мыши или touch-drag, чтобы вращать модель; mouse wheel меняет zoom. Для собственных controls доступны `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)` и `Preview:ResetView()`.
 

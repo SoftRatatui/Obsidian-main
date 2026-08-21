@@ -7168,7 +7168,7 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -40, 1, 0),
+            Size = UDim2.new(1, -36, 1, 0),
             Text = Toggle.Text,
             TextSize = 14,
             TextTransparency = 0.4,
@@ -7191,18 +7191,11 @@ do
             end,
             ClipsDescendants = true,
             Position = UDim2.fromScale(1, 0.5),
-            Size = UDim2.fromOffset(32, 18),
+            Size = UDim2.fromOffset(28, 16),
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 5),
-            Parent = Switch,
-        })
-        New("UIPadding", {
-            PaddingBottom = UDim.new(0, 2),
-            PaddingLeft = UDim.new(0, 2),
-            PaddingRight = UDim.new(0, 2),
-            PaddingTop = UDim.new(0, 2),
+            CornerRadius = UDim.new(0, 4),
             Parent = Switch,
         })
         local SwitchStroke = New("UIStroke", {
@@ -7213,14 +7206,14 @@ do
         })
 
         local Ball = New("Frame", {
-            AnchorPoint = Vector2.new(Toggle.Value and 1 or 0, 0.5),
+            AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "FontColor",
-            Position = UDim2.new(Toggle.Value and 1 or 0, Toggle.Value and -2 or 2, 0.5, 0),
-            Size = UDim2.fromOffset(14, 14),
+            Position = UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0),
+            Size = UDim2.fromOffset(12, 12),
             Parent = Switch,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 4),
+            CornerRadius = UDim.new(0, 3),
             Parent = Ball,
         })
 
@@ -7229,11 +7222,8 @@ do
         BallRegistry.BackgroundColor3 = function()
             return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
         end
-        BallRegistry.AnchorPoint = function()
-            return Vector2.new(Toggle.Value and 1 or 0, 0.5)
-        end
         BallRegistry.Position = function()
-            return UDim2.new(Toggle.Value and 1 or 0, Toggle.Value and -2 or 2, 0.5, 0)
+            return UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0)
         end
         Library.Registry[Ball] = BallRegistry
 
@@ -7246,8 +7236,7 @@ do
                 return
             end
 
-            local Offset = Toggle.Value and 1 or 0
-            local BallPosition = UDim2.new(Offset, Toggle.Value and -2 or 2, 0.5, 0)
+            local BallPosition = UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0)
             local SwitchColor = GetToggleSurfaceColor(Toggle)
             local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
@@ -7266,7 +7255,6 @@ do
                 SwitchStroke.Color = StrokeColor
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
-                Ball.AnchorPoint = Vector2.new(Offset, 0.5)
                 Ball.Position = BallPosition
 
                 Ball.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
@@ -7287,7 +7275,6 @@ do
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
-                AnchorPoint = Vector2.new(Offset, 0.5),
                 Position = BallPosition,
             })
             Library:PlayTween(Ball, "SwitchBallColor", Library.TweenInfo, {

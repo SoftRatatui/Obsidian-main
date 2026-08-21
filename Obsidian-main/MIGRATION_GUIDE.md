@@ -576,7 +576,6 @@ local SaveManager = loadstring(game:HttpGet(
 
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
 SaveManager:SetFolder("MonHub")
 SaveManager:SetSubFolder(tostring(game.PlaceId))
 local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
@@ -591,6 +590,7 @@ SaveManager:LoadAutoloadConfig()
 3. Чтобы начать с чистой конфигурации, используйте новую папку `MonHub`.
 4. Не вызывайте `LoadAutoloadConfig` до создания всех controls.
 5. ThemeManager подключайте до загрузки autoload config.
+6. Menu KeyPicker сохраняется вместе с конфигом по умолчанию. Добавляйте его в `SetIgnoreIndexes()` только если bind должен быть общим для всех configs.
 
 ## UI Settings
 

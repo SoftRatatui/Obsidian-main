@@ -494,7 +494,6 @@ local SaveManager = loadstring(game:HttpGet(
 
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
 SaveManager:SetFolder("MonHub")
 SaveManager:SetSubFolder(tostring(game.PlaceId))
 
@@ -521,11 +520,19 @@ The default watermark starts at the top-left, has no clock, can be dragged with 
 ### Menu keybind and keybind menu
 
 ```luau
-Library.ToggleKeybind = Enum.KeyCode.RightShift
+MenuGroup:AddLabel("Menu keybind"):AddKeyPicker("MenuKeybind", {
+    Default = "RightShift",
+    NoUI = true,
+    Text = "Show or hide the menu",
+})
+
+Library.ToggleKeybind = Library.Options.MenuKeybind
 Library:SetKeybindMenuVisible(true)
 ```
 
-Set `Library.ToggleKeybind` to the menu keybind or point it at an `AddKeyPicker` option. The keybind menu intentionally displays only entries with actual configured binds. Use `NoUI = true` for the menu keybind itself.
+Set `Library.ToggleKeybind` to the menu keybind or point it at an `AddKeyPicker` option. A menu `KeyPicker` is saved with normal configurations by default and restored safely during config loading; `SetValue` never opens or closes the window. The keybind menu intentionally displays only entries with actual configured binds. Use `NoUI = true` for the menu keybind itself.
+
+Only add the menu key picker to `SaveManager:SetIgnoreIndexes()` when the bind must remain global and independent from every configuration. The keybind overlay visibility and position are also stored with each configuration.
 
 ### Centered compact launcher
 

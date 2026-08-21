@@ -987,7 +987,6 @@ if SaveManager then
 	local SaveReady, SaveError = pcall(function()
 		SaveManager:SetLibrary(Library)
 		SaveManager:IgnoreThemeSettings()
-		SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
 		SaveManager:SetFolder("MonHub")
 		SaveManager:SetSubFolder(tostring(game.PlaceId))
 		local ConfigurationBox = SaveManager:BuildConfigSection(Tabs.Settings)

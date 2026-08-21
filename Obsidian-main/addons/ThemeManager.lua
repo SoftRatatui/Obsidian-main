@@ -26,7 +26,14 @@ end
 
 
 local SchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor", "WarningColor", "DestructiveColor" }
+local InternalSchemeIndexes = { "RedColor", "DarkColor", "WhiteColor" }
+local AllSchemeIndexes = { "FontColor", "MainColor", "TopBarColor", "AccentColor", "BackgroundColor", "OutlineColor", "WarningColor", "DestructiveColor", "RedColor", "DarkColor", "WhiteColor" }
+local ThemeOptionPrefix = "ThemeManager_"
 local SupportedFontFaces = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "RobotoMono", "Roboto", "SourceSans" }
+
+local function GetThemeOptionId(SchemeIndex: string): string
+    return ThemeOptionPrefix .. SchemeIndex
+end
 local ThemeManager = {
     Library = nil,
     FileSystemAvailable = FileSystemAvailable,
@@ -35,10 +42,12 @@ local ThemeManager = {
 
     AppliedToTab = false,
     DefaultThemeName = nil,
-    DefaultThemeFileName = "default-v2.txt",
+    DefaultThemeFileName = "default-v3.txt",
     FallbackThemeName = "Default",
     FallbackThemeLabel = "Graphite",
     ApplyingTheme = false,
+    ConfigLoadDepth = 0,
+    ConfigLoadOptions = {},
 
     BuiltInThemes = {
         ["Default"] = {
@@ -123,7 +132,12 @@ for _, ThemeInfo in ThemeManager.BuiltInThemes do
     ThemeData.DestructiveColor = ThemeData.DestructiveColor or "c43a4c"
 end
 
-local BaseThemeData = table.clone(ThemeManager.BuiltInThemes[ThemeManager.FallbackThemeName][2])
+local GraphiteThemeData = table.clone(ThemeManager.BuiltInThemes[ThemeManager.FallbackThemeName][2])
+GraphiteThemeData.RedColor = GraphiteThemeData.RedColor or "e85367"
+GraphiteThemeData.DarkColor = GraphiteThemeData.DarkColor or "000000"
+GraphiteThemeData.WhiteColor = GraphiteThemeData.WhiteColor or "f8f9fc"
+
+local BaseThemeData = table.clone(GraphiteThemeData)
 
 local function NormalizeThemeData(ThemeData)
     local Normalized = table.clone(BaseThemeData)
@@ -143,6 +157,16 @@ local function NormalizeThemeData(ThemeData)
 
     if Source and Source.FontFace == nil and Source.Font ~= nil then
         Normalized.FontFace = Source.Font
+    end
+
+    if Source and Source.RedColor == nil and Source.Red ~= nil then
+        Normalized.RedColor = Source.Red
+    end
+    if Source and Source.DarkColor == nil and Source.Dark ~= nil then
+        Normalized.DarkColor = Source.Dark
+    end
+    if Source and Source.WhiteColor == nil and Source.White ~= nil then
+        Normalized.WhiteColor = Source.White
     end
 
     Normalized.TopBarColor = Normalized.TopBarColor or Normalized.MainColor
@@ -194,47 +218,66 @@ end
 
 local function ApplyThemeData(ThemeData, SynchronizeOptions)
     local Library = ThemeManager.Library
+    if not Library then
+        return false, "Library is not set"
+    end
+
     local Normalized = NormalizeThemeData(ThemeData)
     ThemeManager.ApplyingTheme = true
+    local Success, ErrorMessage = pcall(function()
+        local function ApplySchemeColor(SchemeIndex: string, SynchronizeOption: boolean)
+            local Fallback = ResolveThemeColor(BaseThemeData[SchemeIndex], Color3.new(1, 1, 1))
+            local Color = ResolveThemeColor(Normalized[SchemeIndex], Fallback)
+            Library.Scheme[SchemeIndex] = Color
 
-    for _, SchemeIndex in SchemeIndexes do
-        local Fallback = ResolveThemeColor(BaseThemeData[SchemeIndex], Color3.new(1, 1, 1))
-        local Color = ResolveThemeColor(Normalized[SchemeIndex], Fallback)
-        Library.Scheme[SchemeIndex] = Color
-
-        local Element = Library.Options[SchemeIndex]
-        if SynchronizeOptions and Element then
-            Element:SetValue(Color)
+            if SynchronizeOptions and SynchronizeOption then
+                local Element = Library.Options[GetThemeOptionId(SchemeIndex)]
+                if Element then
+                    Element:SetValue(Color)
+                end
+            end
         end
-    end
 
-    local FontFace, FontName = ResolveThemeFont(Normalized.FontFace)
-    Library.Scheme.Font = FontFace
-    if Library.ClearTextBoundsCache then
-        Library:ClearTextBoundsCache()
-    end
+        for _, SchemeIndex in SchemeIndexes do
+            ApplySchemeColor(SchemeIndex, true)
+        end
 
-    if SynchronizeOptions and Library.Options.FontFace then
-        Library.Options.FontFace:SetValue(FontName)
-    end
+        for _, SchemeIndex in InternalSchemeIndexes do
+            ApplySchemeColor(SchemeIndex, false)
+        end
 
-    local BackgroundImage = Normalized.BackgroundImage
-    if typeof(BackgroundImage) ~= "string" and typeof(BackgroundImage) ~= "number" then
-        BackgroundImage = ""
-    end
+        local FontFace, FontName = ResolveThemeFont(Normalized.FontFace)
+        Library:SetFont(FontFace, true)
 
-    Library.Scheme.BackgroundImage = BackgroundImage
-    if Library.Window then
-        Library.Window:SetBackgroundImage(BackgroundImage)
-    end
+        if SynchronizeOptions and Library.Options.ThemeManager_FontFace then
+            Library.Options.ThemeManager_FontFace:SetValue(FontName)
+        end
 
-    if SynchronizeOptions and Library.Options.BackgroundImage then
-        Library.Options.BackgroundImage:SetValue(tostring(BackgroundImage))
-    end
+        local BackgroundImage = Normalized.BackgroundImage
+        if typeof(BackgroundImage) ~= "string" and typeof(BackgroundImage) ~= "number" then
+            BackgroundImage = ""
+        end
 
-    Library.IsLightTheme = Normalized.IsLight == true
+        Library.Scheme.BackgroundImage = BackgroundImage
+        if Library.Window then
+            Library.Window:SetBackgroundImage(BackgroundImage)
+        end
+
+        if SynchronizeOptions and Library.Options.ThemeManager_BackgroundImage then
+            Library.Options.ThemeManager_BackgroundImage:SetValue(tostring(BackgroundImage))
+        end
+
+        Library.IsLightTheme = Normalized.IsLight == true
+        Library.Scheme.Red = nil
+        Library.Scheme.Dark = nil
+        Library.Scheme.White = nil
+        Library:UpdateColorsUsingRegistry()
+    end)
     ThemeManager.ApplyingTheme = false
-    Library:UpdateColorsUsingRegistry()
+
+    if not Success then
+        return false, tostring(ErrorMessage)
+    end
 
     return true
 end
@@ -245,30 +288,36 @@ function ThemeManager:SetLibrary(Library)
 end
 
 function ThemeManager:SyncFromLibrary()
-    if not ThemeManager.AppliedToTab or ThemeManager.ApplyingTheme then
+    if not ThemeManager.AppliedToTab or ThemeManager.ApplyingTheme or ThemeManager.ConfigLoadDepth > 0 then
         return
     end
 
     local Library = ThemeManager.Library
     ThemeManager.ApplyingTheme = true
-
-    for _, SchemeIndex in SchemeIndexes do
-        local Element = Library.Options[SchemeIndex]
-        if Element then
-            Element:SetValue(Library.Scheme[SchemeIndex])
+    local Success, ErrorMessage = pcall(function()
+        for _, SchemeIndex in SchemeIndexes do
+            local Element = Library.Options[GetThemeOptionId(SchemeIndex)]
+            if Element then
+                Element:SetValue(Library.Scheme[SchemeIndex])
+            end
         end
-    end
 
-    local _FontFace, FontName = ResolveThemeFont(Library.Scheme.Font)
-    if Library.Options.FontFace then
-        Library.Options.FontFace:SetValue(FontName)
-    end
+        local _FontFace, FontName = ResolveThemeFont(Library.Scheme.Font)
+        if Library.Options.ThemeManager_FontFace then
+            Library.Options.ThemeManager_FontFace:SetValue(FontName)
+        end
 
-    if Library.Options.BackgroundImage then
-        Library.Options.BackgroundImage:SetValue(tostring(Library.Scheme.BackgroundImage or ""))
-    end
-
+        if Library.Options.ThemeManager_BackgroundImage then
+            Library.Options.ThemeManager_BackgroundImage:SetValue(tostring(Library.Scheme.BackgroundImage or ""))
+        end
+    end)
     ThemeManager.ApplyingTheme = false
+
+    if not Success then
+        return false, tostring(ErrorMessage)
+    end
+
+    return true
 end
 
 
@@ -278,6 +327,100 @@ end
 
 local function IsStringEmpty(String: string): boolean
     return if typeof(String) == "string" then Trim(String) == "" else true
+end
+
+function ThemeManager:BeginConfigLoad()
+    ThemeManager.ConfigLoadDepth += 1
+    if ThemeManager.ConfigLoadDepth == 1 then
+        ThemeManager.ConfigLoadOptions = {}
+    end
+
+    return true
+end
+
+function ThemeManager:MarkConfigOptionLoaded(OptionId: string)
+    if ThemeManager.ConfigLoadDepth > 0 and typeof(OptionId) == "string" then
+        ThemeManager.ConfigLoadOptions[OptionId] = true
+    end
+end
+
+function ThemeManager:EndConfigLoad()
+    if ThemeManager.ConfigLoadDepth <= 0 then
+        return false, "No theme config load is in progress"
+    end
+
+    ThemeManager.ConfigLoadDepth -= 1
+    if ThemeManager.ConfigLoadDepth > 0 then
+        return true
+    end
+
+    local LoadedOptions = ThemeManager.ConfigLoadOptions
+    ThemeManager.ConfigLoadOptions = {}
+
+    local Library = ThemeManager.Library
+    if not Library then
+        return false, "Library is not set"
+    end
+
+    local ThemeData = nil
+    local ThemeListId = "ThemeManager_ThemeList"
+    if LoadedOptions[ThemeListId] then
+        local ThemeList = Library.Options[ThemeListId]
+        local ThemeName = ThemeList and ThemeList.Value
+        if not IsStringEmpty(ThemeName) then
+            local CustomThemeData = ThemeManager:GetCustomTheme(ThemeName)
+            local BuiltInTheme = ThemeManager.BuiltInThemes[ThemeName]
+            ThemeData = CustomThemeData or (BuiltInTheme and BuiltInTheme[2])
+        end
+    end
+
+    local ShouldApply = ThemeData ~= nil
+    if not ThemeData then
+        ThemeData = {
+            FontFace = Library.Scheme.Font,
+            BackgroundImage = Library.Scheme.BackgroundImage,
+            IsLight = Library.IsLightTheme
+        }
+
+        for _, SchemeIndex in AllSchemeIndexes do
+            ThemeData[SchemeIndex] = Library.Scheme[SchemeIndex]
+        end
+    else
+        ThemeData = table.clone(ThemeData)
+    end
+
+    for _, SchemeIndex in SchemeIndexes do
+        local OptionId = GetThemeOptionId(SchemeIndex)
+        if LoadedOptions[OptionId] then
+            local Option = Library.Options[OptionId]
+            if Option then
+                ThemeData[SchemeIndex] = Option.Value
+                ShouldApply = true
+            end
+        end
+    end
+
+    if LoadedOptions.ThemeManager_FontFace then
+        local FontFace = Library.Options.ThemeManager_FontFace
+        if FontFace then
+            ThemeData.FontFace = FontFace.Value
+            ShouldApply = true
+        end
+    end
+
+    if LoadedOptions.ThemeManager_BackgroundImage then
+        local BackgroundImage = Library.Options.ThemeManager_BackgroundImage
+        if BackgroundImage then
+            ThemeData.BackgroundImage = BackgroundImage.Value
+            ShouldApply = true
+        end
+    end
+
+    if not ShouldApply then
+        return true
+    end
+
+    return ApplyThemeData(ThemeData, true)
 end
 
 local function IsValidFolderPath(Name: string): boolean
@@ -453,13 +596,15 @@ function ThemeManager:SaveCustomTheme(ThemeName: string): any
     ThemeManager:CheckFolderTree()
 
     local Library = ThemeManager.Library
+    local _FontFace, FontName = ResolveThemeFont(Library.Scheme.Font)
     local ThemeData = {
-        FontFace = Library.Options.FontFace.Value,
-        BackgroundImage = Library.Options.BackgroundImage.Value
+        FontFace = FontName,
+        BackgroundImage = Library.Scheme.BackgroundImage or ""
     }
 
-    for _, SchemeIndex in SchemeIndexes do
-        ThemeData[SchemeIndex] = Library.Options[SchemeIndex].Value:ToHex()
+    for _, SchemeIndex in AllSchemeIndexes do
+        local Fallback = ResolveThemeColor(BaseThemeData[SchemeIndex], Color3.new(1, 1, 1))
+        ThemeData[SchemeIndex] = ResolveThemeColor(Library.Scheme[SchemeIndex], Fallback):ToHex()
     end
 
     local SuccessEncode, EncodedData = pcall(HttpService.JSONEncode, HttpService, ThemeData)
@@ -539,9 +684,12 @@ function ThemeManager:SetDefaultTheme(Theme: any)
     local _, FontName = ResolveThemeFont(DefaultTheme.FontFace)
     DefaultTheme.FontFace = FontName
     DefaultTheme.Font = nil
+    DefaultTheme.Red = nil
+    DefaultTheme.Dark = nil
+    DefaultTheme.White = nil
 
-    for _, SchemeIndex in SchemeIndexes do
-        local Fallback = ResolveThemeColor(BaseThemeData[SchemeIndex], Color3.new(1, 1, 1))
+    for _, SchemeIndex in AllSchemeIndexes do
+        local Fallback = ResolveThemeColor(GraphiteThemeData[SchemeIndex], Color3.new(1, 1, 1))
         DefaultTheme[SchemeIndex] = ResolveThemeColor(DefaultTheme[SchemeIndex], Fallback):ToHex()
     end
 
@@ -551,6 +699,7 @@ function ThemeManager:SetDefaultTheme(Theme: any)
 
     local ExistingTheme = ThemeManager.BuiltInThemes[ThemeManager.FallbackThemeName]
     ThemeManager.BuiltInThemes[ThemeManager.FallbackThemeName] = { ExistingTheme[1], DefaultTheme }
+    BaseThemeData = table.clone(DefaultTheme)
 
     return ApplyThemeData(DefaultTheme, false)
 end
@@ -583,29 +732,43 @@ end
 function ThemeManager:LoadDefault()
     local ThemeName, Success, FetchErrorMessage = ThemeManager:GetDefaultTheme()
     if not Success then
-        if FetchErrorMessage == "Default theme is not set" then
-            local ThemeList = ThemeManager.Library.Options.ThemeManager_ThemeList
-            if ThemeList then
-                ThemeList:SetValue(ThemeManager.FallbackThemeName)
-                return true
+        local Applied, ApplyErrorMessage = ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+        if Applied then
+            if FetchErrorMessage ~= "Default theme is not set" then
+                ThemeManager:SaveDefault(ThemeManager.FallbackThemeName)
             end
 
-            return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+            local ThemeList = ThemeManager.Library.Options.ThemeManager_ThemeList
+            if ThemeList then
+                ThemeManager.ApplyingTheme = true
+                ThemeList:SetValue(ThemeManager.FallbackThemeName)
+                ThemeManager.ApplyingTheme = false
+            end
         end
 
-        ThemeManager.Library:Notify(string.format("Failed to apply default theme: %s", FetchErrorMessage))
-        return false, FetchErrorMessage
-    end
+        if FetchErrorMessage ~= "Default theme is not set" then
+            ThemeManager.Library:Notify(string.format("Default theme was unavailable. Applied %s instead.", ThemeManager.FallbackThemeLabel))
+        end
 
-    if not ThemeManager:GetCustomTheme(ThemeName) then
-        ThemeManager.Library.Options.ThemeManager_ThemeList:SetValue(ThemeName)
-        return true
+        return Applied, ApplyErrorMessage
     end
 
     local SuccessLoad, LoadErrorMessage = ThemeManager:ApplyTheme(ThemeName)
     if not SuccessLoad then
-        ThemeManager.Library:Notify(string.format("Failed to apply default theme: %s", LoadErrorMessage))
-        return false, LoadErrorMessage
+        local FallbackSuccess, FallbackErrorMessage = ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+        if FallbackSuccess then
+            ThemeManager:SaveDefault(ThemeManager.FallbackThemeName)
+        end
+        ThemeManager.Library:Notify(string.format("Failed to apply default theme. Applied %s instead.", ThemeManager.FallbackThemeLabel))
+        return FallbackSuccess, FallbackErrorMessage or LoadErrorMessage
+    end
+
+    local SelectorId = ThemeManager:GetCustomTheme(ThemeName) and "ThemeManager_CustomThemeList" or "ThemeManager_ThemeList"
+    local Selector = ThemeManager.Library.Options[SelectorId]
+    if Selector then
+        ThemeManager.ApplyingTheme = true
+        Selector:SetValue(ThemeName)
+        ThemeManager.ApplyingTheme = false
     end
 
     ThemeManager.Library:Notify(string.format("Successfully applied default theme %q", ThemeName))
@@ -635,14 +798,14 @@ end
 
 
 function ThemeManager:ThemeUpdate()
-    if ThemeManager.ApplyingTheme then
+    if ThemeManager.ApplyingTheme or ThemeManager.ConfigLoadDepth > 0 then
         return
     end
 
     local Library = ThemeManager.Library
 
     for _, SchemeIndex in SchemeIndexes do
-        local Element = Library.Options[SchemeIndex]
+        local Element = Library.Options[GetThemeOptionId(SchemeIndex)]
         if not Element then continue end
 
         Library.Scheme[SchemeIndex] = Element.Value
@@ -721,6 +884,13 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     end
 
     local CustomThemeList, CustomThemeName, ThemeList, FontFace, BackgroundImage, DefaultThemeLabel
+    local function FormatBuiltInThemeName(Value: any): any
+        if Value == ThemeManager.FallbackThemeName then
+            return ThemeManager.FallbackThemeLabel
+        end
+
+        return Value
+    end
     local function RefreshList()
         CustomThemeList:SetValues(ThemeManager:ReloadCustomThemes())
         CustomThemeList:SetValue(nil)
@@ -731,6 +901,8 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     local function RefreshDefaultThemeLabel()
         local DefaultThemeName, Success, ErrorMessage = ThemeManager:GetDefaultTheme()
         if not Success and ErrorMessage == "Default theme is not set" then
+            DefaultThemeName = ThemeManager.FallbackThemeLabel
+        elseif DefaultThemeName == ThemeManager.FallbackThemeName then
             DefaultThemeName = ThemeManager.FallbackThemeLabel
         end
 
@@ -743,11 +915,12 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     end)
 
     local function CreateColorOption(Text, SchemeIndex)
-        Themesbox:AddLabel(Text):AddColorPicker(SchemeIndex, {
+        local OptionId = GetThemeOptionId(SchemeIndex)
+        Themesbox:AddLabel(Text):AddColorPicker(OptionId, {
             Default = ThemeManager.Library.Scheme[SchemeIndex]
         })
 
-        return ThemeManager.Library.Options[SchemeIndex]
+        return ThemeManager.Library.Options[OptionId]
     end
 
     local BackgroundColor = CreateColorOption("Background color", "BackgroundColor")
@@ -772,7 +945,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         end
     end
 
-    Themesbox:AddDropdown("FontFace", {
+    Themesbox:AddDropdown("ThemeManager_FontFace", {
         Text = "Font Face",
         Default = CurrentFontFace,
         
@@ -781,10 +954,10 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         Multi = false
     })
     
-    Themesbox:AddInput("BackgroundImage", { 
+    Themesbox:AddInput("ThemeManager_BackgroundImage", {
         Text = "Background Image",
 
-        Default = "",
+        Default = tostring(ThemeManager.Library.Scheme.BackgroundImage or ""),
         Finished = true,
         ClearTextOnFocus = false,
         ClearTextOnBlur = false
@@ -800,18 +973,20 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         Multi = false,
 
         FormatDisplayValue = function(Value: any)
-            if Value ~= "Default" and Value == ThemeManager.DefaultThemeName then
-                return string.format("%s (default)", Value)
+            local DisplayName = FormatBuiltInThemeName(Value)
+            if Value == ThemeManager.DefaultThemeName then
+                return string.format("%s (default)", DisplayName)
             end
 
-            return Value
+            return DisplayName
         end,
         FormatListValue = function(Value: any)
-            if Value ~= "Default" and Value == ThemeManager.DefaultThemeName then
-                return string.format("%s (default)", Value)
+            local DisplayName = FormatBuiltInThemeName(Value)
+            if Value == ThemeManager.DefaultThemeName then
+                return string.format("%s (default)", DisplayName)
             end
 
-            return Value
+            return DisplayName
         end
     })
 
@@ -1008,11 +1183,15 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         ThemeManager.Library.Options.ThemeManager_CustomThemeList,
         ThemeManager.Library.Options.ThemeManager_CustomThemeName,
         ThemeManager.Library.Options.ThemeManager_ThemeList,
-        ThemeManager.Library.Options.FontFace,
-        ThemeManager.Library.Options.BackgroundImage;
+        ThemeManager.Library.Options.ThemeManager_FontFace,
+        ThemeManager.Library.Options.ThemeManager_BackgroundImage;
 
     
     ThemeList:OnChanged(function()
+        if ThemeManager.ApplyingTheme or ThemeManager.ConfigLoadDepth > 0 then
+            return
+        end
+
         ThemeManager:ApplyTheme(ThemeList.Value)
     end)
 
@@ -1033,14 +1212,14 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     WarningColor:OnChanged(UpdateTheme)
     DestructiveColor:OnChanged(UpdateTheme)
     FontFace:OnChanged(function(Value)
-        if ThemeManager.ApplyingTheme then
+        if ThemeManager.ApplyingTheme or ThemeManager.ConfigLoadDepth > 0 then
             return
         end
 
         ThemeManager.Library:SetFont(Enum.Font[Value])
     end)
     BackgroundImage:OnChanged(function(Value)
-        if ThemeManager.ApplyingTheme then
+        if ThemeManager.ApplyingTheme or ThemeManager.ConfigLoadDepth > 0 then
             return
         end
 

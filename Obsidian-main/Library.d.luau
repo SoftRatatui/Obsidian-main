@@ -1267,7 +1267,7 @@ export type Library = {
     SetIconModule: (self: Library, module: any) -> (),
     SetButtonVariantIcon: (self: Library, Variant: ButtonVariant, Icon: string | number | boolean?) -> (),
     SetTheme: (self: Library, Theme: string | ThemePreset) -> Library,
-    SetFont: (self: Library, FontFace: Font | Enum.Font) -> (),
+    SetFont: (self: Library, FontFace: Font | Enum.Font, SkipRegistryUpdate: boolean?) -> (),
     SetNotifySide: (self: Library, Side: "Left" | "Right") -> (),
     UpdateNotificationPositions: (self: Library, Snap: boolean?) -> (),
     Notify: (

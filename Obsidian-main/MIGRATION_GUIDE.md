@@ -432,11 +432,11 @@ Library:SetClickSound(false)
 ```luau
 Library:SetWatermark("My Hub  |  Ready")
 Library:SetWatermarkVisibility(true)
-Library:SetWatermarkSide("Right")
+Library:SetWatermarkSide("Left")
 Library:SetWatermarkDraggable(true)
 ```
 
-Watermark по умолчанию находится справа сверху. Его можно перетащить мышью или touch, либо явно установить через `SetWatermarkSide("Left")` и `SetWatermarkSide("Right")`. Даже после drag, изменения текста и смены размера экрана он остаётся внутри viewport.
+Watermark по умолчанию находится слева сверху. Его можно перетащить мышью или touch, либо явно установить через `SetWatermarkSide("Left")` и `SetWatermarkSide("Right")`. Даже после drag, изменения текста и смены размера экрана он остаётся внутри viewport.
 
 Готовая реализация настроек `Watermark`, `Show FPS` и `Show ping` находится в [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua). Она обновляет текст раз в 0.5 секунды, считает FPS лёгким `RenderStepped` counter и безопасно читает `Data Ping` через `Stats`.
 
@@ -562,7 +562,9 @@ ThemeGroup:SetOrder(0)
 
 Новая версия корректно определяет Gotham и не сбрасывает font dropdown на Code.
 
-ThemeManager использует versioned default marker `default-v2.txt`. Старый `default.txt` остаётся на диске, но больше не применяется автоматически, поэтому не может вернуть Ubuntu, старый font или отдельные цвета. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
+Опции ThemeManager теперь имеют префикс `ThemeManager_`, например `ThemeManager_BackgroundColor`. Это исключает конфликты с ID ваших элементов.
+
+ThemeManager использует versioned default marker `default-v3.txt`. Старые markers остаются на диске, но больше не применяются автоматически, поэтому не могут вернуть Ubuntu, старый font или отдельные цвета. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
 
 ## SaveManager
 

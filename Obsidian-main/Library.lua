@@ -392,8 +392,11 @@ Library.Themes = {
         FontColor = Color3.fromRGB(239, 241, 246),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
+        RedColor = Color3.fromRGB(232, 83, 103),
+        DarkColor = Color3.new(0, 0, 0),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 249, 252),
+        BackgroundImage = "",
         CornerRadius = 4,
         IsLight = false,
     },
@@ -746,7 +749,7 @@ local function GetSchemeValue(Index)
     end
 
     local ReplaceAliasIndex = SchemeReplaceAlias[Index]
-    if ReplaceAliasIndex and Library.Scheme[ReplaceAliasIndex] ~= nil then
+    if ReplaceAliasIndex and Library.Scheme[Index] == nil and Library.Scheme[ReplaceAliasIndex] ~= nil then
         Library.Scheme[Index] = Library.Scheme[ReplaceAliasIndex]
         Library.Scheme[ReplaceAliasIndex] = nil
 
@@ -1412,18 +1415,20 @@ end
 function Library:UpdateColorsUsingRegistry()
     Library.ColorRevision += 1
     for Instance, Properties in Library.Registry do
-        CancelThemeTweens(Instance, Properties)
-        for Property, Index in Properties do
-            local SchemeValue = GetSchemeValue(Index)
-            local Value = SchemeValue
-            if Value == nil and typeof(Index) == "function" then
-                Value = Index()
-            end
+        pcall(function()
+            CancelThemeTweens(Instance, Properties)
+            for Property, Index in Properties do
+                local SchemeValue = GetSchemeValue(Index)
+                local Value = SchemeValue
+                if Value == nil and typeof(Index) == "function" then
+                    Value = Index()
+                end
 
-            if Value ~= nil and Instance[Property] ~= Value then
-                Instance[Property] = Value
+                if Value ~= nil and Instance[Property] ~= Value then
+                    Instance[Property] = Value
+                end
             end
-        end
+        end)
     end
 end
 
@@ -3375,13 +3380,13 @@ end
 
 
 do
-    local WatermarkSide = "Right"
+    local WatermarkSide = "Left"
     local WatermarkDraggable = true
     local WatermarkLabel = Library:AddDraggableLabel({
         Text = "",
         Icon = "activity",
-        Position = UDim2.new(1, -8, 0, 8),
-        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(0, 8, 0, 8),
+        AnchorPoint = Vector2.zero,
         TextSize = 13,
         BackgroundColor = "MainColor",
         Draggable = false,
@@ -3462,7 +3467,7 @@ do
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("Visible"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label.InputEnded:Connect(function(Input)
-        if IsClickInput(Input) then
+        if IsMouseInput(Input) then
             QueueWatermarkClamp()
         end
     end))
@@ -7163,7 +7168,7 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -44, 1, 0),
+            Size = UDim2.new(1, -40, 1, 0),
             Text = Toggle.Text,
             TextSize = 14,
             TextTransparency = 0.4,
@@ -7174,17 +7179,19 @@ do
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
             HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
             Padding = UDim.new(0, 6),
             Parent = Label,
         })
 
         local Switch = New("Frame", {
-            AnchorPoint = Vector2.new(1, 0),
+            AnchorPoint = Vector2.new(1, 0.5),
             BackgroundColor3 = function()
                 return GetToggleSurfaceColor(Toggle)
             end,
-            Position = UDim2.fromScale(1, 0),
-            Size = UDim2.fromOffset(36, 20),
+            ClipsDescendants = true,
+            Position = UDim2.fromScale(1, 0.5),
+            Size = UDim2.fromOffset(32, 18),
             Parent = Button,
         })
         New("UICorner", {
@@ -7206,9 +7213,10 @@ do
         })
 
         local Ball = New("Frame", {
+            AnchorPoint = Vector2.new(Toggle.Value and 1 or 0, 0.5),
             BackgroundColor3 = "FontColor",
-            Size = UDim2.fromScale(1, 1),
-            SizeConstraint = Enum.SizeConstraint.RelativeYY,
+            Position = UDim2.new(Toggle.Value and 1 or 0, Toggle.Value and -2 or 2, 0.5, 0),
+            Size = UDim2.fromOffset(14, 14),
             Parent = Switch,
         })
         New("UICorner", {
@@ -7222,10 +7230,10 @@ do
             return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
         end
         BallRegistry.AnchorPoint = function()
-            return Vector2.new(Toggle.Value and 1 or 0, 0)
+            return Vector2.new(Toggle.Value and 1 or 0, 0.5)
         end
         BallRegistry.Position = function()
-            return UDim2.fromScale(Toggle.Value and 1 or 0, 0)
+            return UDim2.new(Toggle.Value and 1 or 0, Toggle.Value and -2 or 2, 0.5, 0)
         end
         Library.Registry[Ball] = BallRegistry
 
@@ -7239,6 +7247,7 @@ do
             end
 
             local Offset = Toggle.Value and 1 or 0
+            local BallPosition = UDim2.new(Offset, Toggle.Value and -2 or 2, 0.5, 0)
             local SwitchColor = GetToggleSurfaceColor(Toggle)
             local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
@@ -7257,8 +7266,8 @@ do
                 SwitchStroke.Color = StrokeColor
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
-                Ball.AnchorPoint = Vector2.new(Offset, 0)
-                Ball.Position = UDim2.fromScale(Offset, 0)
+                Ball.AnchorPoint = Vector2.new(Offset, 0.5)
+                Ball.Position = BallPosition
 
                 Ball.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
 
@@ -7278,8 +7287,8 @@ do
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
-                AnchorPoint = Vector2.new(Offset, 0),
-                Position = UDim2.fromScale(Offset, 0),
+                AnchorPoint = Vector2.new(Offset, 0.5),
+                Position = BallPosition,
             })
             Library:PlayTween(Ball, "SwitchBallColor", Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.FontColor,
@@ -10333,13 +10342,32 @@ function Library:SetTheme(Theme)
 
     assert(typeof(ThemeData) == "table", "Theme must be a preset name or a table")
 
-    if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
+    if IsPreset then
+        local BaseTheme = Library.Themes[Library.DefaultTheme] or Library.Themes.Graphite or {}
+        local CompleteTheme = table.clone(BaseTheme)
+        for Index, Value in ThemeData do
+            CompleteTheme[Index] = Value
+        end
+        ThemeData = CompleteTheme
+    else
         ThemeData = table.clone(ThemeData)
+    end
+
+    if ThemeData.RedColor == nil and ThemeData.Red ~= nil then
+        ThemeData.RedColor = ThemeData.Red
+    end
+    if ThemeData.DarkColor == nil and ThemeData.Dark ~= nil then
+        ThemeData.DarkColor = ThemeData.Dark
+    end
+    if ThemeData.WhiteColor == nil and ThemeData.White ~= nil then
+        ThemeData.WhiteColor = ThemeData.White
+    end
+
+    if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
         ThemeData.TopBarColor = ThemeData.MainColor
     end
 
     if IsPreset and ThemeData.BackgroundImage == nil then
-        ThemeData = table.clone(ThemeData)
         ThemeData.BackgroundImage = ""
     end
 
@@ -10361,6 +10389,10 @@ function Library:SetTheme(Theme)
         end
     end
 
+    Library.Scheme.Red = nil
+    Library.Scheme.Dark = nil
+    Library.Scheme.White = nil
+
     Library.IsLightTheme = ThemeData.IsLight == true
 
     if ThemeData.CornerRadius ~= nil then
@@ -10373,15 +10405,17 @@ function Library:SetTheme(Theme)
     end
 
     if ThemeData.Font ~= nil then
-        Templates.Window.Font = ThemeData.Font
-        Library:SetFont(ThemeData.Font)
-    else
-        Library:UpdateColorsUsingRegistry()
+        Library:SetFont(ThemeData.Font, true)
     end
 
     if ThemeData.BackgroundImage ~= nil then
-        Library:SetBackgroundImage(ThemeData.BackgroundImage)
+        Library.Scheme.BackgroundImage = ThemeData.BackgroundImage
+        if Library.Window then
+            Library.Window:SetBackgroundImage(ThemeData.BackgroundImage)
+        end
     end
+
+    Library:UpdateColorsUsingRegistry()
 
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
         Library.ThemeManager:SyncFromLibrary()
@@ -10390,14 +10424,17 @@ function Library:SetTheme(Theme)
     return Library
 end
 
-function Library:SetFont(FontFace)
+function Library:SetFont(FontFace, SkipRegistryUpdate: boolean?)
     if typeof(FontFace) == "EnumItem" then
         FontFace = Font.fromEnum(FontFace :: any)
     end
 
     Library.Scheme.Font = FontFace
+    Templates.Window.Font = FontFace
     Library:ClearTextBoundsCache()
-    Library:UpdateColorsUsingRegistry()
+    if not SkipRegistryUpdate then
+        Library:UpdateColorsUsingRegistry()
+    end
 end
 
 function Library:SetBackgroundImage(Image: string | number)

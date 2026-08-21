@@ -131,18 +131,7 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library.Scheme.BackgroundColor = Color3.fromRGB(22, 24, 29)
-Library.Scheme.MainColor = Color3.fromRGB(33, 36, 43)
-Library.Scheme.TopBarColor = Color3.fromRGB(39, 42, 50)
-Library.Scheme.AccentColor = Color3.fromRGB(133, 141, 160)
-Library.Scheme.OutlineColor = Color3.fromRGB(65, 69, 80)
-Library.Scheme.FontColor = Color3.fromRGB(239, 241, 246)
-Library.Scheme.WarningColor = Color3.fromRGB(208, 157, 80)
-Library.Scheme.DestructiveColor = Color3.fromRGB(196, 58, 76)
-Library.Scheme.WhiteColor = Color3.fromRGB(248, 249, 252)
-Library.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
-Library.CornerRadius = 4
-Library.IsLightTheme = false
+Library:SetTheme("Graphite")
 Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
@@ -863,7 +852,7 @@ WatermarkSettings:AddToggle("WatermarkPing", {
 WatermarkSettings:AddDropdown("WatermarkSide", {
 	Text = "Watermark side",
 	Values = { "Left", "Right" },
-	Default = "Right",
+	Default = "Left",
 	Callback = function(Value)
 		Library:SetWatermarkSide(Value)
 	end,

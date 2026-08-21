@@ -285,14 +285,20 @@ function VisualPreview.Create(Library, Tab, Info)
     })
 
     local ViewportFrame = Instance.new("ViewportFrame")
-    ViewportFrame.Ambient = Color3.fromRGB(154, 165, 178)
+    ViewportFrame.Ambient = Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.42)
     ViewportFrame.Active = true
     ViewportFrame.BackgroundTransparency = 1
-    ViewportFrame.LightColor = Color3.fromRGB(238, 244, 252)
+    ViewportFrame.LightColor = Library.Scheme.FontColor
     ViewportFrame.LightDirection = Vector3.new(-1, -0.65, -1)
     ViewportFrame.Size = UDim2.fromScale(1, 1)
     ViewportFrame.ZIndex = 11
     ViewportFrame.Parent = Content
+    Library:AddToRegistry(ViewportFrame, {
+        Ambient = function()
+            return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.42)
+        end,
+        LightColor = "FontColor",
+    })
 
     local Camera = Instance.new("Camera")
     Camera.Parent = ViewportFrame
@@ -343,6 +349,30 @@ function VisualPreview.Create(Library, Tab, Info)
         Zoom = 1.9,
         Connections = {},
     }
+
+    if Overlay.InfoTop then
+        Library:AddToRegistry(Overlay.InfoTop, {
+            FontFace = "Font",
+            TextColor3 = "FontColor",
+            TextStrokeColor3 = "DarkColor",
+        })
+    end
+    if Overlay.InfoBottom then
+        Library:AddToRegistry(Overlay.InfoBottom, {
+            FontFace = "Font",
+            TextColor3 = function()
+                return Library.Scheme.FontColor:Lerp(Library.Scheme.AccentColor, 0.16)
+            end,
+            TextStrokeColor3 = "DarkColor",
+        })
+    end
+    if Overlay.HealthBack then
+        Library:AddToRegistry(Overlay.HealthBack, {
+            BackgroundColor3 = function()
+                return Library.Scheme.DarkColor:Lerp(Library.Scheme.BackgroundColor, 0.2)
+            end,
+        })
+    end
     local VisibilitySequence = 0
 
     local function UpdateInfoLabels()

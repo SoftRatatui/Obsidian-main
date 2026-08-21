@@ -36,6 +36,12 @@ local SaveManager = {
     AutoloadConfig = nil
 }
 
+local ThemeOptionPrefix = "ThemeManager_"
+
+local function IsThemeManagerOption(OptionId: any): boolean
+    return typeof(OptionId) == "string" and string.sub(OptionId, 1, #ThemeOptionPrefix) == ThemeOptionPrefix
+end
+
 function SaveManager:SetLibrary(Library)
     SaveManager.Library = Library
 end
@@ -293,6 +299,7 @@ end
 function SaveManager:IgnoreThemeSettings()
     SaveManager:SetIgnoreIndexes({
         "BackgroundColor", "MainColor", "TopBarColor", "AccentColor", "OutlineColor", "FontColor", "WarningColor", "DestructiveColor", "FontFace", "BackgroundImage",
+        "ThemeManager_BackgroundColor", "ThemeManager_MainColor", "ThemeManager_TopBarColor", "ThemeManager_AccentColor", "ThemeManager_OutlineColor", "ThemeManager_FontColor", "ThemeManager_WarningColor", "ThemeManager_DestructiveColor", "ThemeManager_FontFace", "ThemeManager_BackgroundImage",
         "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName"
     })
 end
@@ -494,6 +501,7 @@ function SaveManager:LoadJSON(Content: string)
     local Library = SaveManager.Library
     local LoadingOrder = SaveManager.LoadingOrder
     local IgnoreIndexes = SaveManager.Ignore
+    local LoadErrors = {}
 
     if SaveManager.UseLoadingOrder == true and typeof(LoadingOrder) == "table" then
         table.sort(Decoded.objects, function(a, b)
@@ -503,7 +511,6 @@ function SaveManager:LoadJSON(Content: string)
         end)
     end
 
-    
     if Library.KeybindFrame and typeof(Decoded.keybindMenu) == "table" then
         local KeybindFrameData = Decoded.keybindMenu
         local IsVisible = KeybindFrameData.visible == true
@@ -522,15 +529,71 @@ function SaveManager:LoadJSON(Content: string)
         end
     end
 
+    local ThemeManager = Library and Library.ThemeManager
+    local ThemeLoadStarted = false
+    local SkipThemeOptions = false
+    if ThemeManager then
+        local HasThemeOptions = false
+        for _, Option in Decoded.objects do
+            if typeof(Option) == "table" and IsThemeManagerOption(Option.idx) and not IgnoreIndexes[Option.idx] and ElementParser[Option.type] then
+                HasThemeOptions = true
+                break
+            end
+        end
+
+        if HasThemeOptions then
+            if typeof(ThemeManager.BeginConfigLoad) == "function" and typeof(ThemeManager.MarkConfigOptionLoaded) == "function" and typeof(ThemeManager.EndConfigLoad) == "function" then
+                local SuccessBegin, BeginResult, BeginError = pcall(ThemeManager.BeginConfigLoad, ThemeManager)
+                if SuccessBegin and BeginResult ~= false then
+                    ThemeLoadStarted = true
+                else
+                    SkipThemeOptions = true
+                    table.insert(LoadErrors, "theme transaction: " .. tostring(if SuccessBegin then BeginError else BeginResult))
+                end
+            else
+                SkipThemeOptions = true
+            end
+        end
+    end
+
     
-    for _, Option in Decoded.objects do
+    for ObjectIndex, Option in Decoded.objects do
+        if typeof(Option) ~= "table" then
+            table.insert(LoadErrors, string.format("object %s: expected table", tostring(ObjectIndex)))
+            continue
+        end
         if not Option.type then continue end
         if IgnoreIndexes[Option.idx] then continue end
+        if SkipThemeOptions and IsThemeManagerOption(Option.idx) then continue end
 
         local Parser = ElementParser[Option.type]
         if not Parser then continue end
 
-        task.defer(Parser.Load, Option.idx, Option)
+        local SuccessLoad, LoadError = pcall(Parser.Load, Option.idx, Option)
+        if not SuccessLoad then
+            table.insert(LoadErrors, string.format("%s %q: %s", tostring(Option.type), tostring(Option.idx), tostring(LoadError)))
+            continue
+        end
+
+        if ThemeLoadStarted and IsThemeManagerOption(Option.idx) then
+            local SuccessMark, MarkError = pcall(ThemeManager.MarkConfigOptionLoaded, ThemeManager, Option.idx)
+            if not SuccessMark then
+                table.insert(LoadErrors, string.format("theme option %q: %s", tostring(Option.idx), tostring(MarkError)))
+            end
+        end
+    end
+
+    if ThemeLoadStarted then
+        local SuccessEnd, EndResult, EndError = pcall(ThemeManager.EndConfigLoad, ThemeManager)
+        if not SuccessEnd then
+            table.insert(LoadErrors, "theme transaction: " .. tostring(EndResult))
+        elseif EndResult == false then
+            table.insert(LoadErrors, "theme transaction: " .. tostring(EndError))
+        end
+    end
+
+    if #LoadErrors > 0 then
+        return false, "Failed to load config data: " .. table.concat(LoadErrors, "; ")
     end
 
     return true

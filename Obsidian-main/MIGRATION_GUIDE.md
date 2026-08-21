@@ -565,7 +565,7 @@ ThemeGroup:SetOrder(0)
 
 Опции ThemeManager теперь имеют префикс `ThemeManager_`, например `ThemeManager_BackgroundColor`. Это исключает конфликты с ID ваших элементов.
 
-ThemeManager использует versioned default marker `default-v4.txt`. Старые markers остаются на диске, но больше не применяются автоматически, поэтому не могут вернуть Ubuntu, старый font, отдельные цвета или предыдущий Graphite. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
+ThemeManager использует versioned default marker `default-v5.txt`. Старые markers остаются на диске, но больше не применяются автоматически, поэтому не могут вернуть Ubuntu, старый font, отдельные цвета или предыдущую палитру. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
 
 ## SaveManager
 

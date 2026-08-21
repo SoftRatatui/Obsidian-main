@@ -6,7 +6,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 
 ## What changed
 
-- Soft Graphite visual system with layered charcoal surfaces, a muted periwinkle accent, restrained 6px geometry, and Gotham typography.
+- Graphite visual system with layered neutral-gray surfaces, a muted slate accent, soft 6px geometry, and Gotham typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -90,7 +90,7 @@ App:Get("speed"):SetValue(50)
 
 ## Current Graphite interface
 
-`Graphite` is the default Soft Graphite profile. It uses charcoal-gray surfaces, a muted periwinkle accent, Gotham typography, square checkboxes, restrained 6px geometry, and a fixed footer. Theme Manager uses a versioned default marker, so legacy saved defaults cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Graphite` is the default profile. It uses neutral-gray surfaces, a muted slate accent, Gotham typography, square checkboxes, soft 6px geometry, and a fixed footer. Sidebar tabs use their complete available row while keeping a rounded selected state. Theme Manager uses a versioned default marker, so legacy saved defaults cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 

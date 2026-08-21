@@ -126,7 +126,7 @@ local Window = Library:CreateWindow({
 })
 ```
 
-`Graphite`, Gotham, a 6px outer radius, compact fixed-position switches, and a footer are the normal MonHub profile. It uses charcoal surfaces with a restrained periwinkle accent, softer separators, and no moving text or icons. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Graphite`, Gotham, a 6px outer radius, compact fixed-position switches, and a footer are the normal MonHub profile. It keeps the original neutral-gray palette while using softer separators, full-width sidebar tabs, and no moving text or icons. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -449,7 +449,7 @@ Library:SetTheme("BlackPurple")
 Library:SetTheme("Classic")
 ```
 
-Graphite is the default Soft Graphite profile: charcoal-gray surfaces, a muted periwinkle accent, Gotham, 6px outer geometry, and semantic warning/danger colors. Cards, inputs, separators, floating menus, dialogs, notifications, and preview lighting all update through the theme registry together.
+Graphite is the default profile: neutral-gray surfaces, a muted slate accent, Gotham, 6px outer geometry, and semantic warning/danger colors. Cards, inputs, separators, floating menus, dialogs, notifications, and preview lighting all update through the theme registry together. Sidebar tabs fill their full available row while their selected state remains softly rounded.
 
 Passing a table to `Library:SetTheme` is a deliberate patch operation. It changes only the fields you provide:
 
@@ -479,7 +479,7 @@ ThemeGroup:SetOrder(0)
 
 ThemeManager applies themes atomically. It resets all internal semantic colors, synchronizes the Font Face and background image, and prevents an old palette from leaving isolated elements behind. Theme controls use IDs such as `ThemeManager_BackgroundColor`; do not reuse that prefix for your own controls.
 
-The default marker is `default-v4.txt`. Older markers are intentionally ignored, so an older saved Ubuntu, partial theme, or pre-Soft-Graphite default cannot override Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
+The default marker is `default-v5.txt`. Older markers are intentionally ignored, so an older saved Ubuntu, partial theme, or previous palette cannot override Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
 
 Call `ThemeManager:SetDefaultTheme(table)` only before `ApplyToTab`. It replaces the session fallback palette used by ThemeManager.
 
@@ -654,7 +654,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. Soft Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, and the compact launcher; it adds no perpetual glow or render-loop effect. Window closing stays a fast fade-only transition so text never visually shifts. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, and the compact launcher; it adds no perpetual glow or render-loop effect. Window closing stays a fast fade-only transition so text never visually shifts. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -693,7 +693,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old Ubuntu or mixed theme
 
-Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Old default markers are ignored by `default-v4.txt`. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
+Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Old default markers are ignored by `default-v5.txt`. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
 
 ### A theme control changes only part of the UI
 

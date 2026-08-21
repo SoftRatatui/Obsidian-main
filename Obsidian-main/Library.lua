@@ -329,19 +329,19 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(18, 19, 24),
-        MainColor = Color3.fromRGB(28, 30, 37),
-        TopBarColor = Color3.fromRGB(25, 27, 34),
-        AccentColor = Color3.fromRGB(132, 125, 218),
-        OutlineColor = Color3.fromRGB(61, 65, 77),
-        FontColor = Color3.fromRGB(241, 242, 247),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
-        RedColor = Color3.fromRGB(236, 97, 116),
-        WarningColor = Color3.fromRGB(213, 166, 93),
-        DestructiveColor = Color3.fromRGB(221, 88, 107),
-        DarkColor = Color3.fromRGB(8, 9, 12),
-        WhiteColor = Color3.fromRGB(250, 250, 254),
+        RedColor = Color3.fromRGB(232, 83, 103),
+        WarningColor = Color3.fromRGB(208, 157, 80),
+        DestructiveColor = Color3.fromRGB(196, 58, 76),
+        DarkColor = Color3.new(0, 0, 0),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
 
         BackgroundImage = ""
     },
@@ -386,18 +386,18 @@ Library.Themes = {
         IsLight = false,
     },
     Graphite = {
-        BackgroundColor = Color3.fromRGB(18, 19, 24),
-        MainColor = Color3.fromRGB(28, 30, 37),
-        TopBarColor = Color3.fromRGB(25, 27, 34),
-        AccentColor = Color3.fromRGB(132, 125, 218),
-        OutlineColor = Color3.fromRGB(61, 65, 77),
-        FontColor = Color3.fromRGB(241, 242, 247),
-        WarningColor = Color3.fromRGB(213, 166, 93),
-        DestructiveColor = Color3.fromRGB(221, 88, 107),
-        RedColor = Color3.fromRGB(236, 97, 116),
-        DarkColor = Color3.fromRGB(8, 9, 12),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
+        WarningColor = Color3.fromRGB(208, 157, 80),
+        DestructiveColor = Color3.fromRGB(196, 58, 76),
+        RedColor = Color3.fromRGB(232, 83, 103),
+        DarkColor = Color3.new(0, 0, 0),
         Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(250, 250, 254),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
         CornerRadius = 6,
         IsLight = false,
@@ -11439,13 +11439,14 @@ function Library:CreateWindow(WindowInfo)
             ScrollBarImageColor3 = "AccentColor",
             ScrollBarImageTransparency = 1,
             ScrollBarThickness = 2,
+            VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
             ScrollingDirection = Enum.ScrollingDirection.Y,
             Size = UDim2.new(0, InitialLeftWidth, 1, -(50 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIListLayout", {
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            Padding = UDim.new(0, 4),
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            Padding = UDim.new(0, 0),
             Parent = Tabs,
         })
         ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
@@ -12183,7 +12184,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -18, 0, 34),
+                Size = UDim2.new(1, 0, 0, 36),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -12196,8 +12197,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 4, 0.5, 0),
-                Size = UDim2.fromOffset(3, 18),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                Size = UDim2.fromOffset(3, 20),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -13401,7 +13402,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -18, 0, 34),
+                Size = UDim2.new(1, 0, 0, 36),
                 Text = "",
                 Parent = Tabs,
             })
@@ -13413,8 +13414,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 4, 0.5, 0),
-                Size = UDim2.fromOffset(3, 18),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                Size = UDim2.fromOffset(3, 20),
                 Parent = TabButton,
             })
             New("UICorner", {

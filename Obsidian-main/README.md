@@ -7,6 +7,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 ## What changed
 
 - Six focused visual presets: neutral-gray `Default`, violet `Metal`, near-black `Midnight`, cool `Steel`, green-gray `Sage`, and warm-neutral `Ash`; all use semantic background, card, raised, control, hover, muted-text, and accent layers, with a feature-gated soft shadow on elevated surfaces.
+- Optional cached Inter Medium typography through `LoadCustomFont` and `SetThemeFont`, with GothamMedium fallback and persistence across theme switches.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.

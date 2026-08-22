@@ -5,6 +5,9 @@
 + Replaced three overloaded palette colors with semantic Background, Surface, Raised, Element, Hover, AccentSoft, MutedFont, and Shadow layers
 + Theme changes now repaint the registry and refresh every stateful control in one transaction, including active toggles, buttons, sliders, and the compact launcher
 + Updated ThemeManager, SaveManager migration filters, VisualPreview, and type declarations for complete palette coverage
++ Isolated every registered property during repaint and added a final state pass so one invalid dynamic property cannot block the rest of an element
++ Increased surface separation in Metal, Midnight, and Ash while keeping their accents muted
++ Added validated cached Inter Medium loading with a persistent theme-font override and GothamMedium fallback
 
 [soft visual pass]
 + Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius

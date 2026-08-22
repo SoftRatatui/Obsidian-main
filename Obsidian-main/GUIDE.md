@@ -458,7 +458,21 @@ Library:SetTheme("Ash")
 
 ### Font policy
 
-Gotham Regular is the default UI font. It stays readable at small Roblox control sizes, preserves complete labels, numbers, punctuation, and keybind text, and avoids the dense appearance of a heavier weight.
+Gotham Regular remains the zero-download fallback. For the softer Zolar-style typography used by Knife Duels, load Inter Medium once and install it as a persistent theme font:
+
+```luau
+local InterFont = Library:LoadCustomFont(
+    "Inter",
+    "https://github.com/Da7mu/font/raw/refs/heads/main/Inter%20Medium%20500.ttf",
+    400
+)
+
+Library:SetThemeFont(InterFont or Enum.Font.GothamMedium)
+```
+
+`LoadCustomFont` validates the downloaded font header, caches the TTF and generated metadata in `MonHub/assets`, and returns an error instead of executing invalid content. `SetThemeFont` keeps the selected font active across every `SetTheme` call. Clients without `isfile`, `writefile`, `makefolder`, and `getcustomasset` should use the GothamMedium fallback.
+
+Theme updates are transactional. Every registered property is isolated during repaint, stateful controls refresh after the base pass, and a final pass applies descriptors created by those state changes. A faulty dynamic property can no longer prevent the remaining colors on the same element from updating.
 
 ### ThemeManager preset selector
 

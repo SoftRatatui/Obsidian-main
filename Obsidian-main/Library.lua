@@ -3,10 +3,25 @@ local function IsFunction(Value: any): boolean
 end
 
 local ExecutorEnvironment = getfenv()
-local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
+local function GetExecutorGlobal(Name)
+    if type(ExecutorEnvironment) ~= "table" then
+        return nil
+    end
+    local Success, Value = pcall(function()
+        return ExecutorEnvironment[Name]
+    end)
+    return Success and Value or nil
+end
+
+local SynEnvironment = GetExecutorGlobal("syn")
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
 local SynProtectGui = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "protect_gui") else nil
-local ExecutorRequest = request or http_request or SynRequest
+local ExecutorRequest = GetExecutorGlobal("request") or GetExecutorGlobal("http_request") or SynRequest
+local NativeIsFile = GetExecutorGlobal("isfile")
+local NativeReadFile = GetExecutorGlobal("readfile")
+local NativeWriteFile = GetExecutorGlobal("writefile")
+local NativeIsFolder = GetExecutorGlobal("isfolder")
+local NativeMakeFolder = GetExecutorGlobal("makefolder")
 
 local function RequestGet(URL: string): (boolean, string)
     local RequestError
@@ -39,14 +54,22 @@ local function RequestGet(URL: string): (boolean, string)
     return false, RequestError or tostring(Response)
 end
 
-local NativeCloneRef = IsFunction(cloneref) and cloneref or (IsFunction(clonereference) and clonereference or nil)
-local NativeGetHui = IsFunction(gethui) and gethui or nil
-local NativeProtectGui = IsFunction(protectgui) and protectgui or (IsFunction(SynProtectGui) and SynProtectGui or nil)
-local NativeSetClipboard = IsFunction(setclipboard) and setclipboard or nil
-local NativeSetHiddenProperty = IsFunction(sethiddenproperty) and sethiddenproperty or nil
-local NativeSetScriptable = IsFunction(setscriptable) and setscriptable or nil
-local NativeGetCustomAsset = IsFunction(getcustomasset) and getcustomasset or nil
-local NativeLoadString = IsFunction(loadstring) and loadstring or nil
+local CloneRefValue = GetExecutorGlobal("cloneref") or GetExecutorGlobal("clonereference")
+local NativeCloneRef = IsFunction(CloneRefValue) and CloneRefValue or nil
+local GetHuiValue = GetExecutorGlobal("gethui")
+local NativeGetHui = IsFunction(GetHuiValue) and GetHuiValue or nil
+local ProtectGuiValue = GetExecutorGlobal("protectgui")
+local NativeProtectGui = IsFunction(ProtectGuiValue) and ProtectGuiValue or (IsFunction(SynProtectGui) and SynProtectGui or nil)
+local SetClipboardValue = GetExecutorGlobal("setclipboard")
+local NativeSetClipboard = IsFunction(SetClipboardValue) and SetClipboardValue or nil
+local SetHiddenPropertyValue = GetExecutorGlobal("sethiddenproperty")
+local NativeSetHiddenProperty = IsFunction(SetHiddenPropertyValue) and SetHiddenPropertyValue or nil
+local SetScriptableValue = GetExecutorGlobal("setscriptable")
+local NativeSetScriptable = IsFunction(SetScriptableValue) and SetScriptableValue or nil
+local GetCustomAssetValue = GetExecutorGlobal("getcustomasset")
+local NativeGetCustomAsset = IsFunction(GetCustomAssetValue) and GetCustomAssetValue or nil
+local LoadStringValue = GetExecutorGlobal("loadstring")
+local NativeLoadString = IsFunction(LoadStringValue) and LoadStringValue or nil
 
 local cloneref = (NativeCloneRef or function(instance: any)
     return instance
@@ -59,8 +82,10 @@ local UserInputService: UserInputService = cloneref(game:GetService("UserInputSe
 local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
+local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 
-local getgenv = IsFunction(getgenv) and getgenv or function()
+local NativeGetGenv = GetExecutorGlobal("getgenv")
+local getgenv = IsFunction(NativeGetGenv) and NativeGetGenv or function()
     return if typeof(shared) == "table" then shared else _G
 end
 local setclipboard = NativeSetClipboard
@@ -315,6 +340,7 @@ local Library = {
     ForceCheckbox = true,
     TooltipsEnabled = false,
     AppearanceLocked = false,
+    ThemeFontOverride = nil,
 
     CantDragForced = false,
     DraggableElements = {},
@@ -378,6 +404,117 @@ function Library:Fetch(URL: string): (boolean, string)
     return RequestGet(URL)
 end
 
+local FontHeaders = {
+    ["\0\1\0\0"] = true,
+    OTTO = true,
+    ["true"] = true,
+    ttcf = true,
+    wOFF = true,
+}
+
+local function IsFontData(Data)
+    return type(Data) == "string" and #Data >= 4096 and FontHeaders[string.sub(Data, 1, 4)] == true
+end
+
+local function EnsureFontFolder(Path)
+    if not IsFunction(NativeIsFolder) or not IsFunction(NativeMakeFolder) then
+        return false
+    end
+
+    local Current = ""
+    for Segment in string.gmatch(Path, "[^/]+") do
+        Current = Current == "" and Segment or Current .. "/" .. Segment
+        if not NativeIsFolder(Current) then
+            local Created = pcall(NativeMakeFolder, Current)
+            if not Created and not NativeIsFolder(Current) then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
+function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Font?, string?)
+    if type(Name) ~= "string" or Name:match("%S") == nil then
+        return nil, "Font name must be a non-empty string"
+    end
+    if type(URL) ~= "string" or URL:match("^https?://") == nil then
+        return nil, "Font URL must use HTTP or HTTPS"
+    end
+    if not IsFunction(NativeIsFile) or not IsFunction(NativeWriteFile) or not IsFunction(NativeGetCustomAsset) then
+        return nil, "Custom font filesystem APIs are unavailable"
+    end
+    if not EnsureFontFolder("MonHub/assets") then
+        return nil, "Unable to create the font cache folder"
+    end
+
+    local SafeName = Name:gsub("[^%w_%-]", "_")
+    local FontPath = "MonHub/assets/" .. SafeName .. ".ttf"
+    local MetadataPath = "MonHub/assets/" .. SafeName .. ".json"
+    local ShouldDownload = not NativeIsFile(FontPath)
+
+    if not ShouldDownload and IsFunction(NativeReadFile) then
+        local Read, CachedData = pcall(NativeReadFile, FontPath)
+        ShouldDownload = not Read or not IsFontData(CachedData)
+    end
+
+    if ShouldDownload then
+        local Downloaded, FontData = RequestGet(URL)
+        if not Downloaded or not IsFontData(FontData) then
+            return nil, "Downloaded data is not a valid font"
+        end
+        local Written, WriteError = pcall(NativeWriteFile, FontPath, FontData)
+        if not Written then
+            return nil, tostring(WriteError)
+        end
+    end
+
+    local FontAssetSuccess, FontAsset = pcall(NativeGetCustomAsset, FontPath)
+    if not FontAssetSuccess or type(FontAsset) ~= "string" then
+        return nil, tostring(FontAsset)
+    end
+
+    local FaceWeight = math.clamp(math.floor(tonumber(Weight) or 400), 100, 900)
+    local Metadata = HttpService:JSONEncode({
+        name = Name,
+        faces = {
+            {
+                name = "Regular",
+                weight = FaceWeight,
+                style = "normal",
+                assetId = FontAsset,
+            },
+        },
+    })
+    local MetadataWritten, MetadataError = pcall(NativeWriteFile, MetadataPath, Metadata)
+    if not MetadataWritten then
+        return nil, tostring(MetadataError)
+    end
+
+    local MetadataAssetSuccess, MetadataAsset = pcall(NativeGetCustomAsset, MetadataPath)
+    if not MetadataAssetSuccess or type(MetadataAsset) ~= "string" then
+        return nil, tostring(MetadataAsset)
+    end
+
+    local Created, FontFace = pcall(Font.new, MetadataAsset, Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+    if not Created or typeof(FontFace) ~= "Font" then
+        return nil, tostring(FontFace)
+    end
+
+    return FontFace
+end
+
+function Library:SetThemeFont(FontFace): any
+    if typeof(FontFace) == "EnumItem" then
+        FontFace = Font.fromEnum(FontFace)
+    end
+    assert(typeof(FontFace) == "Font", "Font or Enum.Font expected")
+    Library.ThemeFontOverride = FontFace
+    Library:SetFont(FontFace)
+    return Library
+end
+
 Library.DefaultTheme = "Default"
 Library.CurrentTheme = "Default"
 Library.Themes = {
@@ -406,18 +543,18 @@ Library.Themes = {
         IsLight = false,
     },
     Metal = {
-        BackgroundColor = Color3.fromRGB(15, 15, 18),
-        MainColor = Color3.fromRGB(30, 30, 38),
-        TopBarColor = Color3.fromRGB(26, 26, 33),
-        SurfaceColor = Color3.fromRGB(20, 20, 25),
-        RaisedColor = Color3.fromRGB(26, 26, 33),
-        ElementColor = Color3.fromRGB(30, 30, 38),
-        HoverColor = Color3.fromRGB(39, 38, 48),
+        BackgroundColor = Color3.fromRGB(14, 14, 18),
+        MainColor = Color3.fromRGB(33, 31, 43),
+        TopBarColor = Color3.fromRGB(28, 26, 36),
+        SurfaceColor = Color3.fromRGB(21, 20, 27),
+        RaisedColor = Color3.fromRGB(28, 26, 36),
+        ElementColor = Color3.fromRGB(33, 31, 43),
+        HoverColor = Color3.fromRGB(43, 40, 55),
         AccentColor = Color3.fromRGB(140, 136, 201),
-        AccentSoftColor = Color3.fromRGB(42, 40, 53),
-        OutlineColor = Color3.fromRGB(50, 48, 61),
+        AccentSoftColor = Color3.fromRGB(45, 41, 58),
+        OutlineColor = Color3.fromRGB(56, 52, 67),
         FontColor = Color3.fromRGB(240, 240, 244),
-        MutedFontColor = Color3.fromRGB(151, 148, 162),
+        MutedFontColor = Color3.fromRGB(154, 149, 163),
         ShadowColor = Color3.fromRGB(5, 5, 8),
         WarningColor = Color3.fromRGB(214, 163, 83),
         DestructiveColor = Color3.fromRGB(204, 65, 86),
@@ -430,18 +567,18 @@ Library.Themes = {
         IsLight = false,
     },
     Midnight = {
-        BackgroundColor = Color3.fromRGB(11, 12, 15),
-        MainColor = Color3.fromRGB(25, 28, 34),
-        TopBarColor = Color3.fromRGB(22, 24, 30),
-        SurfaceColor = Color3.fromRGB(17, 19, 23),
-        RaisedColor = Color3.fromRGB(22, 24, 30),
-        ElementColor = Color3.fromRGB(25, 28, 34),
-        HoverColor = Color3.fromRGB(32, 36, 44),
-        AccentColor = Color3.fromRGB(116, 128, 148),
-        AccentSoftColor = Color3.fromRGB(30, 35, 44),
-        OutlineColor = Color3.fromRGB(42, 47, 57),
-        FontColor = Color3.fromRGB(232, 235, 242),
-        MutedFontColor = Color3.fromRGB(137, 144, 157),
+        BackgroundColor = Color3.fromRGB(10, 13, 18),
+        MainColor = Color3.fromRGB(25, 32, 42),
+        TopBarColor = Color3.fromRGB(21, 27, 36),
+        SurfaceColor = Color3.fromRGB(15, 20, 27),
+        RaisedColor = Color3.fromRGB(21, 27, 36),
+        ElementColor = Color3.fromRGB(25, 32, 42),
+        HoverColor = Color3.fromRGB(33, 42, 55),
+        AccentColor = Color3.fromRGB(116, 132, 154),
+        AccentSoftColor = Color3.fromRGB(31, 39, 50),
+        OutlineColor = Color3.fromRGB(44, 55, 69),
+        FontColor = Color3.fromRGB(233, 238, 245),
+        MutedFontColor = Color3.fromRGB(134, 146, 162),
         ShadowColor = Color3.fromRGB(3, 4, 6),
         WarningColor = Color3.fromRGB(203, 154, 77),
         DestructiveColor = Color3.fromRGB(191, 63, 81),
@@ -502,16 +639,16 @@ Library.Themes = {
         IsLight = false,
     },
     Ash = {
-        BackgroundColor = Color3.fromRGB(18, 17, 16),
-        MainColor = Color3.fromRGB(34, 33, 30),
-        TopBarColor = Color3.fromRGB(29, 28, 25),
-        SurfaceColor = Color3.fromRGB(24, 23, 21),
-        RaisedColor = Color3.fromRGB(29, 28, 25),
-        ElementColor = Color3.fromRGB(34, 33, 30),
-        HoverColor = Color3.fromRGB(43, 41, 37),
-        AccentColor = Color3.fromRGB(159, 151, 141),
-        AccentSoftColor = Color3.fromRGB(45, 42, 38),
-        OutlineColor = Color3.fromRGB(57, 54, 49),
+        BackgroundColor = Color3.fromRGB(18, 16, 14),
+        MainColor = Color3.fromRGB(37, 33, 28),
+        TopBarColor = Color3.fromRGB(31, 28, 24),
+        SurfaceColor = Color3.fromRGB(25, 22, 19),
+        RaisedColor = Color3.fromRGB(31, 28, 24),
+        ElementColor = Color3.fromRGB(37, 33, 28),
+        HoverColor = Color3.fromRGB(48, 43, 36),
+        AccentColor = Color3.fromRGB(165, 151, 133),
+        AccentSoftColor = Color3.fromRGB(46, 41, 34),
+        OutlineColor = Color3.fromRGB(62, 55, 46),
         FontColor = Color3.fromRGB(241, 239, 235),
         MutedFontColor = Color3.fromRGB(151, 146, 139),
         ShadowColor = Color3.fromRGB(7, 6, 5),
@@ -1529,7 +1666,9 @@ function Library:UpdateColorsUsingRegistry()
     for Instance, Properties in Library.Registry do
         pcall(function()
             CancelThemeTweens(Instance, Properties)
-            for Property, Index in Properties do
+        end)
+        for Property, Index in Properties do
+            pcall(function()
                 local SchemeValue = GetSchemeValue(Index)
                 local Value = SchemeValue
                 if Value == nil and typeof(Index) == "function" then
@@ -1539,8 +1678,8 @@ function Library:UpdateColorsUsingRegistry()
                 if Value ~= nil and Instance[Property] ~= Value then
                     Instance[Property] = Value
                 end
-            end
-        end)
+            end)
+        end
     end
 end
 
@@ -10863,9 +11002,10 @@ function Library:SetTheme(Theme)
         Library.Window:SetBackgroundImage(Library.Scheme.BackgroundImage)
     end
 
-    Library:SetFont(ThemeData.Font, true)
+    Library:SetFont(Library.ThemeFontOverride or ThemeData.Font, true)
     Library:UpdateColorsUsingRegistry()
     Library:RefreshThemeState()
+    Library:UpdateColorsUsingRegistry()
 
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
         Library.ThemeManager:SyncFromLibrary(ThemeName)

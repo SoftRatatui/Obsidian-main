@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with one premium Graphite design system, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with one premium Metal design system, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
-Read the canonical [complete guide](GUIDE.md) for installation, API usage, Graphite behavior, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
+Read the canonical [complete guide](GUIDE.md) for installation, API usage, Metal behavior, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- One Graphite visual system with layered neutral-gray surfaces, a muted slate accent, restrained 6px outer geometry, subtle single-pixel outlines, and Gotham typography.
+- One Metal visual system with layered neutral-gray surfaces, a muted steel accent, restrained 6px outer geometry, subtle single-pixel outlines, and Gotham Medium typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -15,7 +15,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, Graph
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
-- Legacy presets, custom theme files, and stale theme config fields now resolve to Graphite instead of leaving mixed colors behind.
+- Legacy presets, custom theme files, and stale theme config fields now resolve to Metal instead of leaving mixed colors behind.
 
 ## Quick start
 
@@ -88,9 +88,9 @@ local App = Library:Create({
 App:Get("speed"):SetValue(50)
 ```
 
-## Current Graphite interface
+## Current Metal interface
 
-`Graphite` is the only shipped profile. It uses neutral-gray surfaces, a muted slate accent, Gotham typography, compact 24×14 soft switches, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Legacy themes and saved appearance data cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Metal` is the only shipped profile. It uses neutral-gray surfaces, a muted steel accent, Gotham Medium typography, compact 24×14 soft switches, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. It feels soft through typography, contrast, spacing, and restrained motion rather than excessive corner rounding. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Legacy themes and saved appearance data cannot override Metal on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
@@ -161,9 +161,11 @@ Drag the character with the left mouse button or touch to rotate it. Use the mou
 
 For a ready-to-use binding from real ESP controls, see the ESP preview section in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
-## Graphite baseline
+## Metal baseline
 
-Graphite starts automatically and is the only palette in this release. `Library:SetTheme("Graphite")` remains available as an explicit reset. Other legacy preset names and theme tables are accepted only for compatibility and reset to Graphite; they do not recolor the UI. Theme selection, custom theme files, and persisted palette defaults are unavailable until the theme system returns.
+Metal starts automatically and is the only palette in this release. `Library:SetTheme("Metal")` remains available as an explicit reset. Other legacy preset names and theme tables are accepted only for compatibility and reset to Metal; they do not recolor the UI. Theme selection, custom theme files, and persisted palette defaults are unavailable until the theme system returns.
+
+Gotham Medium is deliberately kept as the readable UI default: it has stable small-size rendering and the full characters needed for labels, values, keybinds, and sliders. The supplied `Milkyway DEMO.ttf` is not bundled or loaded because it is licensed for personal use only and a local `.ttf` is not a portable Roblox UI font. A future custom font must be licensed, Roblox-compatible, and tested for full glyph coverage before it can become an optional visual accent.
 
 ## Legacy API
 

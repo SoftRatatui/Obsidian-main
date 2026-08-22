@@ -2,10 +2,11 @@
 
 ```diff
 [release]
-+ Locked the release build to one Graphite palette with Gotham typography and the neutral-gray visual system
-+ Legacy preset names, table themes, saved defaults, custom theme files, and stale ThemeManager config fields now resolve to Graphite
-+ Replaced the old ThemeManager editor with a lightweight Graphite compatibility shim for existing integrations
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, QuickStart.luau, Example.lua, and type declarations for the locked appearance contract
++ Locked the release build to one Metal palette with Gotham Medium typography and the neutral-gray visual system
++ Legacy preset names, table themes, saved defaults, custom theme files, and stale ThemeManager config fields now resolve to Metal
++ Replaced the old ThemeManager editor with a lightweight Metal compatibility shim for existing integrations
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, QuickStart.luau, Example.lua, and type declarations for the locked Metal appearance contract
++ Documented the font policy: the personal-use-only Milkyway DEMO font is not bundled or loaded; Gotham Medium remains the readable production default
 
 [design]
 + Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes

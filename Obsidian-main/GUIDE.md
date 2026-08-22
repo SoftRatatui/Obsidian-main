@@ -10,7 +10,7 @@
 4. [Controls](#controls)
 5. [Values, callbacks, and dependencies](#values-callbacks-and-dependencies)
 6. [Dialogs, notifications, and loading](#dialogs-notifications-and-loading)
-7. [Graphite and configuration](#graphite-and-configuration)
+7. [Metal and configuration](#metal-and-configuration)
 8. [Watermark, keybinds, launcher, and sound](#watermark-keybinds-launcher-and-sound)
 9. [Media and ESP preview](#media-and-esp-preview)
 10. [Declarative API](#declarative-api)
@@ -59,7 +59,7 @@ local Window = Library:CreateWindow({
     Center = true,
     AutoShow = true,
     GlobalSearch = true,
-    Font = Enum.Font.Gotham,
+    Font = Enum.Font.GothamMedium,
     CornerRadius = 6,
 })
 
@@ -92,7 +92,7 @@ local Window = Library:CreateWindow({
     Resizable = false,
     GlobalSearch = true,
     NotifySide = "Right",
-    Font = Enum.Font.Gotham,
+    Font = Enum.Font.GothamMedium,
     CornerRadius = 6,
     ShowCustomCursor = true,
     AlwaysOnTop = false,
@@ -119,13 +119,13 @@ local Window = Library:CreateWindow({
         Dropdown = true,
         KeyPicker = true,
     },
-    TabTransitionTime = 0.2,
-    TabSwipeOffset = 8,
+    TabTransitionTime = 0.14,
+    TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 })
 ```
 
-`Graphite`, Gotham, a 6px outer radius, compact fixed-position switches, and a footer are the normal MonHub profile. It keeps the original neutral-gray palette while using softer separators, full-width sidebar tabs, and no moving text or icons. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Metal`, Gotham Medium, a restrained 6px outer radius, compact fixed-position switches, and a footer are the normal MonHub profile. Its neutral-gray palette uses softer separators, full-width sidebar tabs, and fixed icon/text alignment rather than visual movement. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -239,7 +239,7 @@ Left:AddButton({
 })
 ```
 
-Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use the flat Graphite surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
+Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use the flat Metal surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
 
 ```luau
 Library:SetButtonVariantIcon("Danger", "trash-2")
@@ -437,21 +437,25 @@ Loading:Continue()
 
 `Loading:ShowErrorPage(true)`, `SetErrorMessage`, and `SetErrorButtons` provide a clean recovery screen. Always call `Destroy()` if a loading instance will not continue.
 
-## Graphite and configuration
+## Metal and configuration
 
-### Locked Graphite appearance
+### Locked Metal appearance
 
-Graphite is the only palette shipped in this release. It starts automatically and uses neutral-gray layers, a muted slate accent, Gotham typography, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. Sidebar tabs use an inset full-width row, while cards and fields retain only the amount of rounding needed to separate surfaces.
+Metal is the only palette shipped in this release. It starts automatically with layered neutral-gray surfaces, a muted steel accent, Gotham Medium typography, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface is soft because text contrast, spacing, surface hierarchy, and motion are balanced—not because every surface is heavily rounded. Sidebar tabs use an inset full-width row, while cards and fields retain only the amount of rounding needed to separate surfaces.
 
-`Library.Themes` contains only `Graphite`. `Library:SetTheme(...)` remains for source compatibility, but every old preset name and every legacy table now resets the interface to Graphite. It cannot restore an old font, background image, corner radius, or partial palette.
+`Library.Themes` contains only `Metal`. `Library:SetTheme(...)` remains for source compatibility, but every old preset name and every legacy table now resets the interface to Metal. It cannot restore an old font, background image, corner radius, or partial palette.
 
 ```luau
-Library:SetTheme("Graphite")
+Library:SetTheme("Metal")
 ```
+
+### Font policy
+
+Gotham Medium is the default UI font because it remains clean at small Roblox control sizes, preserves full numeric and punctuation coverage, and keeps labels, values, keybinds, and sliders readable. `Milkyway DEMO.ttf` is not bundled or loaded: its supplied license is personal-use only, and a raw local `.ttf` cannot be treated as a portable Roblox UI font. If a licensed, Roblox-compatible `FontFace` is introduced later, it should be optional and tested for complete glyph coverage before replacing the interface font.
 
 ### Legacy ThemeManager
 
-New projects do not need `ThemeManager.lua`. The addon remains a small compatibility shim for existing projects: `SetLibrary` and `ApplyTheme` reset the library to Graphite, but it does not display a theme editor, load a saved default, read custom theme files, or write a palette to disk.
+New projects do not need `ThemeManager.lua`. The addon remains a small compatibility shim for existing projects: `SetLibrary` and `ApplyTheme` reset the library to Metal, but it does not display a theme editor, load a saved default, read custom theme files, or write a palette to disk.
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -482,7 +486,7 @@ ConfigGroup:SetOrder(-100)
 SaveManager:LoadAutoloadConfig()
 ```
 
-`IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale appearance entries immediately; the locked Graphite baseline remains intact. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
+`IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale appearance entries immediately; the locked Metal baseline remains intact. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
 
 ## Watermark, keybinds, launcher, and sound
 
@@ -495,7 +499,7 @@ Library:SetWatermarkSide("Left")
 Library:SetWatermarkDraggable(true)
 ```
 
-The default watermark starts at the top-left, has no clock, can be dragged with mouse or touch, and stays inside the viewport after text, theme, or screen-size changes. `SetWatermarkSide("Right")` snaps it to the top-right. The library does not automatically save a dragged pixel position; save a side preference through your own config control when needed.
+The default watermark starts at the top-left, has no clock, can be dragged with mouse or touch, and stays inside the viewport after text or screen-size changes. `SetWatermarkSide("Right")` snaps it to the top-right. The library does not automatically save a dragged pixel position; save a side preference through your own config control when needed.
 
 ### Menu keybind and keybind menu
 
@@ -536,7 +540,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ## Media and ESP preview
 
-`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and uses the UI theme for its surface and lighting.
+`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and uses the Metal surface and lighting profile.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -640,7 +644,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. Tabs use a 140ms entry and an 80ms exit fade with a 4px maximum offset. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. Metal uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. Tabs use a 140ms entry and an 80ms exit fade with a 4px maximum offset. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham Medium remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -679,7 +683,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. This release maps every legacy preset, custom theme marker, and `ThemeManager_` field to the immutable Graphite baseline. Old files remain on disk but are not executed or applied.
+Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. This release maps every legacy preset, custom theme marker, and `ThemeManager_` field to the immutable Metal baseline. Old files remain on disk but are not executed or applied.
 
 ### A config does not load
 

@@ -327,19 +327,19 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        BackgroundColor = Color3.fromRGB(21, 21, 21),
+        MainColor = Color3.fromRGB(29, 29, 29),
+        TopBarColor = Color3.fromRGB(19, 19, 19),
+        AccentColor = Color3.fromRGB(130, 170, 255),
+        OutlineColor = Color3.fromRGB(66, 66, 66),
+        FontColor = Color3.fromRGB(235, 237, 241),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
-        DarkColor = Color3.new(0, 0, 0),
-        WhiteColor = Color3.fromRGB(248, 249, 252),
+        DarkColor = Color3.fromRGB(11, 11, 11),
+        WhiteColor = Color3.fromRGB(245, 245, 245),
 
         BackgroundImage = ""
     },
@@ -367,21 +367,21 @@ function Library:Fetch(URL: string): (boolean, string)
     return RequestGet(URL)
 end
 
-Library.DefaultTheme = "Graphite"
+Library.DefaultTheme = "Metal"
 Library.Themes = {
-    Graphite = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
+    Metal = {
+        BackgroundColor = Color3.fromRGB(21, 21, 21),
+        MainColor = Color3.fromRGB(29, 29, 29),
+        TopBarColor = Color3.fromRGB(19, 19, 19),
+        AccentColor = Color3.fromRGB(130, 170, 255),
+        OutlineColor = Color3.fromRGB(66, 66, 66),
+        FontColor = Color3.fromRGB(235, 237, 241),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         RedColor = Color3.fromRGB(232, 83, 103),
-        DarkColor = Color3.new(0, 0, 0),
-        Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(248, 249, 252),
+        DarkColor = Color3.fromRGB(11, 11, 11),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(245, 245, 245),
         BackgroundImage = "",
         CornerRadius = 6,
         IsLight = false,
@@ -484,7 +484,7 @@ local Templates = {
         NotifySide = "Right",
         ShowCustomCursor = true,
 
-        Font = Enum.Font.Gotham,
+        Font = Enum.Font.GothamMedium,
         ToggleKeybind = Enum.KeyCode.RightControl,
 
         ShowCompactLauncher = true,
@@ -10544,7 +10544,7 @@ do
 end
 
 function Library:SetTheme(_Theme)
-    local ThemeData = Library.Themes.Graphite
+    local ThemeData = Library.Themes.Metal
 
     for _, Index in {
         "BackgroundColor",
@@ -15042,6 +15042,8 @@ function Library:CreateLoading(LoadingInfo)
         ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
         Color = "DarkColor",
         LineJoinMode = Enum.LineJoinMode.Miter,
+        Thickness = 0.5,
+        Transparency = 0.7,
         Parent = ProgressLabel,
     })
 

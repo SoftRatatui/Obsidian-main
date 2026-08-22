@@ -143,7 +143,7 @@ local Window = Library:CreateWindow({
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
-	Font = Enum.Font.Gotham,
+	Font = Enum.Font.GothamMedium,
 	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
@@ -385,7 +385,7 @@ local CardText = Instance.new("TextLabel")
 CardText.BackgroundTransparency = 1
 CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
-CardText.Font = Enum.Font.Gotham
+CardText.Font = Enum.Font.GothamMedium
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
 CardText.TextColor3 = Library.Scheme.FontColor
 CardText.TextSize = 14
@@ -757,7 +757,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Graphite uses layered neutral-gray surfaces, a muted slate accent, Gotham typography, and restrained geometry.", true)
+StyleTab:AddLabel("Metal uses neutral-gray surfaces, a soft blue accent, Gotham Medium typography, and restrained geometry.", true)
 
 
 Tabs.KeySystem:AddLabel({

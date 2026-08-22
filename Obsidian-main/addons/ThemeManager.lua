@@ -2,20 +2,20 @@ local getgenv = type(getgenv) == "function" and getgenv or function()
     return if typeof(shared) == "table" then shared else _G
 end
 
-local GraphiteTheme = {
-    FontColor = "eff1f6",
-    MainColor = "21242b",
-    TopBarColor = "272a32",
-    AccentColor = "858da0",
-    BackgroundColor = "16181d",
-    OutlineColor = "414550",
+local MetalTheme = {
+    FontColor = "ebedf1",
+    MainColor = "1d1d1d",
+    TopBarColor = "131313",
+    AccentColor = "82aaff",
+    BackgroundColor = "151515",
+    OutlineColor = "424242",
     WarningColor = "d09d50",
     DestructiveColor = "c43a4c",
     RedColor = "e85367",
-    DarkColor = "000000",
-    WhiteColor = "f8f9fc",
+    DarkColor = "0b0b0b",
+    WhiteColor = "f5f5f5",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local ThemeManager = {
@@ -23,15 +23,15 @@ local ThemeManager = {
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",
     AppliedToTab = false,
-    DefaultThemeName = "Default",
-    DefaultThemeFileName = "default-v5.txt",
-    FallbackThemeName = "Default",
-    FallbackThemeLabel = "Graphite",
+    DefaultThemeName = "Metal",
+    DefaultThemeFileName = "metal-v6.txt",
+    FallbackThemeName = "Metal",
+    FallbackThemeLabel = "Metal",
     ApplyingTheme = false,
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
     BuiltInThemes = {
-        Default = { 1, table.clone(GraphiteTheme) },
+        Metal = { 1, table.clone(MetalTheme) },
     },
 }
 
@@ -39,13 +39,13 @@ local function IsValidFolderPath(Value)
     return typeof(Value) == "string" and Value:match("%S") ~= nil
 end
 
-local function IsGraphiteName(Value)
+local function IsMetalName(Value)
     if typeof(Value) ~= "string" then
         return false
     end
 
     local Name = string.lower(Value)
-    return Name == "default" or Name == "graphite"
+    return Name == "default" or Name == "metal"
 end
 
 function ThemeManager:SetLibrary(Library)
@@ -160,10 +160,10 @@ function ThemeManager:ApplyTheme(ThemeName)
 
     ThemeManager.ApplyingTheme = true
     local Success, ErrorMessage = pcall(function()
-        if not IsGraphiteName(ThemeName) then
+        if not IsMetalName(ThemeName) then
             ThemeManager.DefaultThemeName = ThemeManager.FallbackThemeName
         end
-        Library:SetTheme("Graphite")
+        Library:SetTheme("Metal")
     end)
     ThemeManager.ApplyingTheme = false
 
@@ -185,7 +185,7 @@ function ThemeManager:CreateThemeManager(Groupbox)
     end
 
     if Groupbox and Groupbox.AddLabel then
-        Groupbox:AddLabel("Graphite is active.", true)
+        Groupbox:AddLabel("Metal is active.", true)
     end
 
     ThemeManager.AppliedToTab = true

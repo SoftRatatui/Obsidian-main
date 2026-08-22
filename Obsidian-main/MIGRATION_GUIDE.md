@@ -1,43 +1,43 @@
-# Переход с Obsidian на MonHub UI
+# Migrating from Obsidian to MonHub UI
 
-Актуальная полная документация находится в [GUIDE.md](GUIDE.md). Этот файл посвящён именно переносу существующего проекта с Obsidian.
+The canonical API guide is [GUIDE.md](GUIDE.md). This document focuses on moving an existing Obsidian project to MonHub without rewriting its application logic.
 
-Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать. `ThemeManager` оставлен только как Graphite-совместимый shim для старого кода.
+MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` remains only as a Metal-compatible shim for older integrations.
 
-MonHub добавляет единый Graphite baseline, Gotham, адаптивный sidebar, улучшенные slider и toggle, плавные анимации, click sound, draggable Watermark с viewport clamp, R6 ESP preview, оптимизированный search и декларативный API.
+The release baseline is one neutral-gray Metal profile, Gotham Medium typography, responsive sidebar behavior, refined sliders and toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
 
-## Полезные ссылки
+## Useful links
 
-- [Репозиторий MonHub UI](https://github.com/SoftRatatui/Obsidian-main)
+- [MonHub UI repository](https://github.com/SoftRatatui/Obsidian-main)
 - [Library.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.lua)
 - [Raw Library.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua)
-- [Полный Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua)
+- [Complete Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua)
 - [Raw Example.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Example.lua)
 - [QuickStart.luau](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/QuickStart.luau)
 - [ThemeManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ThemeManager.lua)
 - [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
 - [VisualPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/VisualPreview.lua)
 - [Raw VisualPreview.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua)
-- [Library.d.luau с актуальными типами](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
-- [История изменений](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
-- [Оригинальный Obsidian](https://github.com/deividcomsono/Obsidian)
-- [Документация legacy API](https://docs.mspaint.cc/obsidian)
-- [Каталог Lucide icons](https://lucide.dev/icons/)
-- [Лицензия MIT](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/LICENSE)
+- [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
+- [Changelog](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
+- [Original Obsidian](https://github.com/deividcomsono/Obsidian)
+- [Legacy API reference](https://docs.mspaint.cc/obsidian)
+- [Lucide icon catalogue](https://lucide.dev/icons/)
+- [MIT license](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/LICENSE)
 
-## Короткий маршрут миграции
+## Short migration route
 
-Для большинства проектов достаточно выполнить пять действий:
+For most projects, complete these steps in order:
 
-1. Сохранить резервную копию рабочего скрипта и папки configs.
-2. Заменить URL оригинального `Library.lua` на MonHub raw URL.
-3. Оставить существующие IDs controls без изменений.
-4. Подключить новую версию `SaveManager.lua`; `ThemeManager.lua` добавляйте только если старый проект уже его вызывает.
-5. Запустить smoke test и проверить callbacks, configs, keybinds, mobile layout и unload.
+1. Back up the working script and configuration folder.
+2. Replace the upstream `Library.lua` URL with the MonHub raw URL.
+3. Keep existing control IDs unchanged.
+4. Update `SaveManager.lua`; add `ThemeManager.lua` only if older code already calls it.
+5. Run a smoke test for callbacks, configs, keybinds, mobile layout, and unload.
 
-## Шаг 1. Замените loader
+## Step 1: replace the loader
 
-Старый loader обычно выглядит так:
+An upstream loader usually looks like this:
 
 ```luau
 local Library = loadstring(game:HttpGet(
@@ -45,7 +45,7 @@ local Library = loadstring(game:HttpGet(
 ))()
 ```
 
-Замените его на MonHub:
+Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
@@ -53,11 +53,11 @@ local Library = loadstring(game:HttpGet(
 ))()
 ```
 
-Используйте `raw.githubusercontent.com`, а не ссылку вида `github.com/.../blob/...`. Blob-страница возвращает HTML, из-за чего Luau сообщает `Expected ident` на первой строке.
+Use `raw.githubusercontent.com`, not a `github.com/.../blob/...` URL. A blob page returns HTML, which causes Luau to report `Expected ident` on line 1.
 
-## Шаг 2. Оставьте legacy API
+## Step 2: keep the legacy API
 
-Не нужно сразу переходить на декларативный API. Существующий код можно сохранить:
+Do not move to the declarative API during the first migration. Existing code can stay almost unchanged:
 
 ```luau
 local Library = loadstring(game:HttpGet(
@@ -72,8 +72,10 @@ local Window = Library:CreateWindow({
     Resizable = true,
     GlobalSearch = true,
     EnableSidebarResize = true,
-    Font = Enum.Font.Gotham,
-    CornerRadius = 4,
+    Font = Enum.Font.GothamMedium,
+    CornerRadius = 6,
+    TabTransitionTime = 0.14,
+    TabSwipeOffset = 4,
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 })
 
@@ -89,38 +91,38 @@ GeneralGroup:AddToggle("Enabled", {
 })
 ```
 
-## Совместимость API
+## API compatibility
 
-| Оригинальный Obsidian | MonHub UI | Действие |
+| Upstream Obsidian | MonHub UI | Migration action |
 |---|---|---|
-| `Library:CreateWindow` | Поддерживается | Оставить |
-| `Window:AddTab` | Поддерживается | Оставить |
-| `Window:AddKeyTab` | Поддерживается | Оставить |
-| `Tab:AddLeftGroupbox` | Поддерживается | Оставить |
-| `Tab:AddRightGroupbox` | Поддерживается | Оставить |
-| `AddToggle` | Поддерживается | Оставить |
-| `AddCheckbox` | Поддерживается | Оставить |
-| `AddInput` | Поддерживается | Оставить |
-| `AddSlider` | Поддерживается | Оставить |
-| `AddDropdown` | Поддерживается | Оставить |
-| `AddButton` | Поддерживается | Оставить |
-| `AddLabel` и `AddDivider` | Поддерживаются | Оставить |
-| `AddColorPicker` | Поддерживается | Оставить |
-| `AddKeyPicker` | Поддерживается | Оставить |
-| `Library.Options` | Поддерживается | Не менять IDs |
-| `Library.Toggles` | Поддерживается | Не менять IDs |
-| `ThemeManager` | Compatibility shim | Не нужен для новых проектов |
-| `SaveManager` | Поддерживается | Обновить файл |
-| `Library:SetWatermark` | Поддерживается | Можно использовать |
-| `Library:SetWatermarkVisibility` | Поддерживается | Можно использовать |
-| `Library:SetWatermarkSide` | Поддерживается | `"Left"` или `"Right"` |
-| `Library:SetWatermarkDraggable` | Поддерживается | Включает или отключает drag |
+| `Library:CreateWindow` | Supported | Keep it |
+| `Window:AddTab` | Supported | Keep it |
+| `Window:AddKeyTab` | Supported | Keep it |
+| `Tab:AddLeftGroupbox` | Supported | Keep it |
+| `Tab:AddRightGroupbox` | Supported | Keep it |
+| `AddToggle` | Supported | Keep it |
+| `AddCheckbox` | Supported | Keep it |
+| `AddInput` | Supported | Keep it |
+| `AddSlider` | Supported | Keep it |
+| `AddDropdown` | Supported | Keep it |
+| `AddButton` | Supported | Keep it |
+| `AddLabel` and `AddDivider` | Supported | Keep them |
+| `AddColorPicker` | Supported | Keep it |
+| `AddKeyPicker` | Supported | Keep it |
+| `Library.Options` | Supported | Do not rename IDs |
+| `Library.Toggles` | Supported | Do not rename IDs |
+| `ThemeManager` | Compatibility shim | Not needed by new projects |
+| `SaveManager` | Supported | Update the addon file |
+| `Library:SetWatermark` | Supported | Use when needed |
+| `Library:SetWatermarkVisibility` | Supported | Use when needed |
+| `Library:SetWatermarkSide` | Supported | Use `"Left"` or `"Right"` |
+| `Library:SetWatermarkDraggable` | Supported | Enables or disables dragging |
 
-Изменился внешний вид controls, но их основные методы сохранены. `SetValue` больше не вызывает callback повторно, если значение не изменилось: это убирает лишние зависимости, tweens и вычисления.
+The visual design of controls has changed, but their primary methods remain. `SetValue` does not call a callback again when the value is unchanged, which avoids redundant dependencies, tweens, and calculations.
 
-## Настройка окна
+## Window settings
 
-Рекомендуемый набор параметров:
+Recommended settings:
 
 ```luau
 local Window = Library:CreateWindow({
@@ -134,10 +136,10 @@ local Window = Library:CreateWindow({
     EnableSidebarResize = true,
     EnableCompacting = true,
     ShowCustomCursor = true,
-    Font = Enum.Font.Gotham,
-    CornerRadius = 4,
-    TabTransitionTime = 0.18,
-    TabSwipeOffset = 10,
+    Font = Enum.Font.GothamMedium,
+    CornerRadius = 6,
+    TabTransitionTime = 0.14,
+    TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
     Animations = {
@@ -150,31 +152,29 @@ local Window = Library:CreateWindow({
 })
 ```
 
-Основные параметры:
-
-| Параметр | Назначение |
+| Setting | Purpose |
 |---|---|
-| `Title` | Заголовок окна |
-| `Footer` | Текст нижней панели |
-| `Size` | Размер desktop/mobile |
-| `Center` | Центрирование при создании |
-| `Resizable` | Изменение размера |
-| `GlobalSearch` | Поиск по controls |
-| `EnableSidebarResize` | Перетаскивание ширины sidebar |
-| `EnableCompacting` | Compact sidebar |
-| `CornerRadius` | Радиус от 0 до 20 |
-| `Font` | `Enum.Font` или `Font` |
-| `TabTransitionTime` | Длительность tab transition |
-| `TabSwipeOffset` | Дистанция появления tab content |
-| `TabSwipeFrom` | `left`, `right`, `top`, `bottom` |
+| `Title` | Window title |
+| `Footer` | Bottom-bar text |
+| `Size` | Desktop or mobile size |
+| `Center` | Centers the window on creation |
+| `Resizable` | Allows resizing |
+| `GlobalSearch` | Searches controls |
+| `EnableSidebarResize` | Allows sidebar-width dragging |
+| `EnableCompacting` | Enables a compact sidebar |
+| `CornerRadius` | Outer radius from 0 to 20 |
+| `Font` | `Enum.Font` or `Font` |
+| `TabTransitionTime` | Tab transition duration |
+| `TabSwipeOffset` | Tab content entry distance |
+| `TabSwipeFrom` | `left`, `right`, `top`, or `bottom` |
 
-После изменения viewport или нестандартного размера можно вызвать:
+Call this after a viewport change or manual size change:
 
 ```luau
 Window:FitToViewport()
 ```
 
-## Tabs и groupboxes
+## Tabs and groupboxes
 
 ```luau
 local Tabs = {
@@ -190,11 +190,11 @@ MainLeft:SetOrder(0)
 MainRight:SetOrder(0)
 ```
 
-Используйте `SetOrder`, если SaveManager или динамические groupboxes должны находиться в предсказуемом порядке.
+Use `SetOrder` when SaveManager sections or dynamic groupboxes need a predictable placement.
 
-## Перенос controls
+## Moving controls
 
-### Toggle и Checkbox
+### Toggle and Checkbox
 
 ```luau
 local FeatureToggle = MainLeft:AddToggle("FeatureEnabled", {
@@ -215,7 +215,7 @@ MainLeft:AddCheckbox("SafeMode", {
 })
 ```
 
-Checkbox остаётся отдельным квадратным контролом. `AddToggle` по умолчанию использует компактный мягкий switch с анимированным thumb и сохраняет прежний boolean API.
+`AddToggle` is the normal compact soft switch and retains the boolean API. `AddCheckbox` stays available as a square control for explicit multi-choice state.
 
 ### Input
 
@@ -249,7 +249,7 @@ MainLeft:AddSlider("PowerLevel", {
 })
 ```
 
-Slider API не изменился. Новый slider использует отдельные label/value, тонкий track, thumb, mouse drag, touch drag и right-click numeric input.
+The slider API is unchanged. The control has separate label/value areas, a thin track, a thumb, mouse drag, touch drag, and numeric right-click input.
 
 ### Dropdown
 
@@ -279,9 +279,9 @@ MainRight:AddDropdown("Command", {
 })
 ```
 
-Большие dropdown lists виртуализируются. Старые arrays, dictionaries, multi-select, player/team dropdowns поддерживаются.
+Large dropdown lists are virtualized. Arrays, dictionaries, multi-select values, player dropdowns, and team dropdowns remain supported.
 
-### Button, Label и Divider
+### Button, Label, and Divider
 
 ```luau
 MainLeft:AddLabel("Status: ready", true)
@@ -297,7 +297,7 @@ MainLeft:AddButton({
 })
 ```
 
-Короткая форма button также поддерживается:
+The short button form also remains available:
 
 ```luau
 MainLeft:AddButton("Run action", function()
@@ -305,13 +305,13 @@ MainLeft:AddButton("Run action", function()
 end)
 ```
 
-Доступны варианты `Default`, `Primary`, `Warning`, `Danger` и `Ghost`. У `Warning` и `Danger` есть отдельные иконки по умолчанию; `Icon = "triangle-alert"` или `Icon = "octagon-x"` заменяет иконку, а `Icon = false` отключает её. `Library:SetButtonVariantIcon("Danger", "trash-2")` задаёт общий icon для semantic danger-кнопок. Старый `Risky = true` сохраняет совместимость и использует `Danger`, если `Variant` не задан. `Secondary`, `Caution` и `Destructive` остаются алиасами для `Default`, `Warning` и `Danger`.
+Available variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Warning` and `Danger` have semantic icons by default; `Icon = "triangle-alert"` or `Icon = "octagon-x"` replaces one, and `Icon = false` removes it. `Library:SetButtonVariantIcon("Danger", "trash-2")` sets the global icon for semantic danger buttons. `Risky = true` maps to `Danger` when `Variant` is omitted. `Secondary`, `Caution`, and `Destructive` remain aliases for `Default`, `Warning`, and `Danger`.
 
-Toggle также принимает `Variant = "Warning"` или `Variant = "Danger"`. В активном состоянии меняются только track и outline, поэтому строки с key picker не сдвигаются и остаются ровными. При включении `Danger` toggle появляется короткий dialog с `Cancel` и `Continue`; выключение остаётся мгновенным, чтобы функцию можно было быстро остановить. `ConfirmDanger = false` отключает это подтверждение, а `ConfirmTitle` и `ConfirmDescription` меняют его текст. Для compatibility `Caution` и `Destructive` работают как алиасы, а `Risky = true` без явного `Variant` становится `Danger`.
+Toggles also accept `Variant = "Warning"` or `Variant = "Danger"`. In the enabled state only the track and outline become semantic, so key-picker rows do not shift. Enabling a danger toggle opens a short `Cancel` / `Continue` dialog. Turning it off is immediate. Set `ConfirmDanger = false` to disable confirmation, or set `ConfirmTitle` and `ConfirmDescription` for custom dialog copy.
 
-У окна есть mouse-first compact launcher: кнопка `−` в верхней панели сворачивает UI, а центральная draggable-панель с названием скрипта возвращает его. При скрытии через keybind launcher не появляется: UI возвращается тем же биндом и не перекрывает игру. Настройки `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition` и `CompactLauncherDraggable` передаются в `CreateWindow`.
+The title-bar minimize button collapses the UI to a centered draggable launcher with the script title. When the menu is hidden by keybind, the launcher does not appear; use the same bind to restore the menu. Configure this through `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow`.
 
-## ColorPicker и KeyPicker addons
+## ColorPicker and KeyPicker addons
 
 ```luau
 FeatureToggle:AddColorPicker("FeatureColor", {
@@ -335,19 +335,19 @@ FeatureToggle:AddKeyPicker("FeatureKeybind", {
 })
 ```
 
-Для feature keybind доступны `Toggle` и `Hold`. `Press` остаётся режимом action-bind для label/button и не попадает в state-панель keybinds.
+Feature keybinds support `Toggle` and `Hold`. `Press` remains an action-bind mode for labels and buttons and does not appear in the keybind state panel.
 
-Панель keybinds теперь автоматически скрывает строки без назначенной клавиши (`None` или некорректный bind) и не показывает пустое окно. Для её плавного отображения используйте публичный метод:
+The keybind panel hides unassigned (`None`) or invalid entries and does not display when it is empty. Enable its animated display with:
 
 ```luau
 Library:SetKeybindMenuVisible(true)
 ```
 
-Если позднее назначить первую клавишу, панель появится сама, пока эта настройка включена.
+When the first valid key is assigned later, the panel appears automatically while this setting is enabled.
 
-## Доступ к значениям
+## Reading values
 
-Не меняйте IDs при переносе configs.
+Do not change IDs when migrating configurations.
 
 ```luau
 local Options = Library.Options
@@ -362,39 +362,41 @@ Options.PowerLevel:SetValue(80)
 Options.Quality:SetValue("High")
 ```
 
-`Toggles` содержит toggle/checkbox. `Options` содержит input, slider, dropdown, key picker, color picker и другие option controls.
+`Toggles` contains toggle and checkbox controls. `Options` contains inputs, sliders, dropdowns, key pickers, color pickers, and other option controls.
 
-## Graphite baseline
+## Metal baseline and font policy
 
-Graphite применяется автоматически и является единственной палитрой релизной версии. Это нейтрально-серые поверхности, мягкий slate accent, Gotham, сдержанная внешняя геометрия и тонкие single-pixel outlines.
+Metal applies automatically and is the only palette in this release. It uses neutral-gray surfaces, a muted steel accent, Gotham Medium, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
 
 ```luau
-Library:SetTheme("Graphite")
+Library:SetTheme("Metal")
 ```
 
-Строка выше нужна только как явный reset. Старые имена preset-ов и старые таблицы `Library:SetTheme({...})` принимаются для совместимости, но всегда сбрасывают интерфейс к Graphite. Они не могут вернуть старый font, `TopBarColor`, background image, радиус или частично перекрасить UI.
+The call above is only an explicit reset. Legacy preset names and `Library:SetTheme({...})` tables are accepted for compatibility but always reset the interface to Metal. They cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
 
-Старые theme files и marker-файлы не удаляются автоматически, но больше не применяются. Это сохраняет возможность вручную вернуть данные в будущей системе тем, не позволяя им ломать релизный интерфейс.
+Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
+
+Gotham Medium is the production font because it remains clear at small UI sizes and has the glyph coverage required for labels, values, keybinds, sliders, and punctuation. The supplied `Milkyway DEMO.ttf` is not bundled or loaded: its license permits personal use only, it lacks the coverage needed for a control-heavy UI, and Roblox cannot treat a raw local `.ttf` as a portable UI font. Use a licensed, Roblox-compatible `FontFace` only after glyph coverage and runtime behavior have been verified.
 
 ## Click sound
 
-MonHub использует один общий audio object для всех `GuiButton`:
+MonHub uses one shared audio object for all `GuiButton` controls:
 
 ```luau
 Library:SetClickSound(92679954573730, 0.3)
 ```
 
-Отключение:
+Disable it with:
 
 ```luau
 Library:SetClickSound(false)
 ```
 
-Если звук не воспроизводится, проверьте доступность asset для текущего experience и ограничения Roblox audio permissions.
+If sound does not play, check the asset availability for the current experience and Roblox audio permissions.
 
-## Watermark, FPS и ping
+## Watermark, FPS, and ping
 
-Базовый API:
+Basic API:
 
 ```luau
 Library:SetWatermark("My Hub  |  Ready")
@@ -403,11 +405,11 @@ Library:SetWatermarkSide("Left")
 Library:SetWatermarkDraggable(true)
 ```
 
-Watermark по умолчанию находится слева сверху. Его можно перетащить мышью или touch, либо явно установить через `SetWatermarkSide("Left")` и `SetWatermarkSide("Right")`. Даже после drag, изменения текста и смены размера экрана он остаётся внутри viewport.
+The watermark starts in the top-left. It can be dragged with mouse or touch, or snapped through `SetWatermarkSide("Left")` and `SetWatermarkSide("Right")`. It remains within the viewport after dragging, text changes, and screen-size changes.
 
-Готовая реализация настроек `Watermark`, `Show FPS` и `Show ping` находится в [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua). Она обновляет текст раз в 0.5 секунды, считает FPS лёгким `RenderStepped` counter и безопасно читает `Data Ping` через `Stats`.
+[Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua) includes ready-to-use Watermark, Show FPS, and Show Ping settings. It updates text every 0.5 seconds, counts FPS with a lightweight `RenderStepped` counter, and reads `Data Ping` safely through `Stats`.
 
-## Интерактивный R6 Viewport
+## Interactive R6 viewport
 
 ```luau
 local PreviewGroup = Tabs.Visuals:AddLeftGroupbox("Character preview", "user-round")
@@ -421,22 +423,20 @@ PreviewGroup:AddViewport("CharacterViewport", {
 })
 ```
 
-Управление:
+Controls:
 
-- ЛКМ или ПКМ: вращение.
-- Mouse wheel: zoom.
-- Touch drag: вращение.
-- Pinch: zoom.
+- Left or right mouse drag rotates the model.
+- Mouse wheel zooms.
+- Touch drag rotates.
+- Pinch zooms.
 
-Zoom ограничен относительно размера модели. `Object` должен быть `BasePart` или `Model`.
-
-Рабочий R6 builder без внешней модели находится в полном [Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua).
+Zoom is clamped relative to model size. `Object` must be a `BasePart` or `Model`.
 
 ## ESP preview addon
 
-`addons/VisualPreview.lua` предназначен для вкладки с ESP-настройками. Он клонирует реального персонажа из `Target` в отдельную фиксированную панель рядом с окном: внешность, rig и аксессуары остаются настоящими, а оригинальный character не изменяется. Если `Target` не задан, используется `Players.LocalPlayer`. Панель скрывается вместе с UI, не изменяет layout вкладки и показывает только элементы, включённые в ESP controls.
+`addons/VisualPreview.lua` is intended for an ESP settings tab. It clones a real character from `Target` into a fixed panel beside the window: appearance, rig, and accessories remain real, while the source character is not changed. With no `Target`, it uses `Players.LocalPlayer`. The panel hides with the main UI, does not alter the tab layout, and only displays items enabled by your ESP controls.
 
-Загружайте addon из того же commit, что и `Library.lua`:
+Load the addon from the same commit as `Library.lua`:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -457,9 +457,9 @@ local Preview = VisualPreview.Create(Library, VisualsTab, {
 })
 ```
 
-`Window` обязателен для legacy API: передавайте результат `Library:CreateWindow`. `VisualsTab` должен быть обычным tab, созданным через `Window:AddTab`.
+`Window` is required for the legacy API; pass the return value of `Library:CreateWindow`. `VisualsTab` must be a normal tab created by `Window:AddTab`.
 
-Свяжите preview с теми же callbacks, которые меняют настоящий ESP:
+Bind the preview to the same callbacks that change the live ESP:
 
 ```luau
 local function SyncPreview()
@@ -484,11 +484,11 @@ local function SyncPreview()
 end
 ```
 
-`Renderer` необязателен: передавайте его только если ваш собственный скрипт предоставляет функцию, которая строит те же объекты, что и live ESP. Без него addon сам клонирует реального персонажа и строит preview. `Box Scale` и `Dynamic Boxes` используют тот же FOV/depth calculation, что и live renderer. `Preview:SetTarget(PlayerOrModel)` переключает preview на другого реального персонажа и автоматически обновляет clone после `CharacterAdded`, если передан `Player`. `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` и `SetPanelGap(number)` отвечают только за размещение панели. Верхняя строка preview показывает реальные name/team, нижняя — текущий tool и реальную distance до камеры, а R6-only chams использует fill, outline и transparency из тех же controls.
+`Renderer` is optional. Supply it only when your project has a function that constructs exactly the same objects as the live ESP. Without it, the addon clones a real character and builds the preview itself. Box Scale and Dynamic Boxes use the same FOV/depth calculation as the live renderer. `Preview:SetTarget(PlayerOrModel)` switches targets and refreshes after `CharacterAdded` when given a `Player`.
 
-Перетаскивайте character левой кнопкой мыши или touch-drag, чтобы вращать модель; mouse wheel меняет zoom. Для собственных controls доступны `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)` и `Preview:ResetView()`.
+Use `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` and `SetPanelGap(number)` only for panel placement. Drag the character with left mouse or touch to rotate it; use the mouse wheel for zoom. `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-## Image, Video и UIPassthrough
+## Image, Video, and UIPassthrough
 
 ```luau
 local MediaGroup = Tabs.Visuals:AddRightGroupbox("Media", "image")
@@ -509,11 +509,11 @@ MediaGroup:AddVideo("PreviewVideo", {
 })
 ```
 
-`AddUIPassthrough` принимает готовый `GuiBase2d` и помещает его внутрь groupbox.
+`AddUIPassthrough` accepts an existing `GuiBase2d` and places it inside a groupbox.
 
-## ThemeManager
+## ThemeManager compatibility
 
-Новые проекты не должны подключать `ThemeManager.lua`. Addon сохранён для старых скриптов, которые уже вызывают его методы:
+New projects should not load `ThemeManager.lua`. The addon is kept for older scripts that already invoke its methods:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -523,7 +523,7 @@ local ThemeManager = loadstring(game:HttpGet(
 ThemeManager:SetLibrary(Library)
 ```
 
-В релизной версии shim только сбрасывает Graphite. Он не создаёт selector, не открывает редактор палитры, не читает custom themes и не сохраняет default theme. Любые старые `ThemeManager_` поля из config игнорируются после миграции.
+The release shim resets to Metal only. It does not create a selector, open a palette editor, read custom themes, or save a default theme. Legacy `ThemeManager_` config fields are ignored after migration.
 
 ## SaveManager
 
@@ -541,18 +541,18 @@ ConfigGroup:SetOrder(-100)
 SaveManager:LoadAutoloadConfig()
 ```
 
-Правила переноса configs:
+Configuration migration rules:
 
-1. Сохраняйте прежние IDs controls.
-2. Чтобы использовать старую папку configs, оставьте прежнее значение `SetFolder`.
-3. Чтобы начать с чистой конфигурации, используйте новую папку `MonHub`.
-4. Не вызывайте `LoadAutoloadConfig` до создания всех controls.
-5. При переносе старых configs вызывайте `SaveManager:IgnoreThemeSettings()` до загрузки autoload config.
-6. Menu KeyPicker сохраняется вместе с конфигом по умолчанию. Добавляйте его в `SetIgnoreIndexes()` только если bind должен быть общим для всех configs.
+1. Preserve existing control IDs.
+2. Keep the old `SetFolder` value to reuse an existing config folder.
+3. Use a new `MonHub` folder to begin with clean configurations.
+4. Do not call `LoadAutoloadConfig` before all controls are created.
+5. Call `SaveManager:IgnoreThemeSettings()` before loading legacy autoload configs.
+6. The menu KeyPicker is saved normally. Add it to `SetIgnoreIndexes()` only when it must remain global across every configuration.
 
-## UI Settings
+## UI Settings layout
 
-Рекомендуемый порядок:
+Recommended placement:
 
 ```text
 Left column
@@ -562,7 +562,7 @@ Right column
 1. Configuration
 ```
 
-Используйте `Groupbox:SetOrder`:
+Use `Groupbox:SetOrder`:
 
 ```luau
 local InterfaceGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
@@ -572,9 +572,9 @@ local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
 ConfigGroup:SetOrder(-100)
 ```
 
-## Mobile и desktop
+## Mobile and desktop
 
-MonHub автоматически compact-ит sidebar на touch devices. При узкой рабочей области контентные колонки перестраиваются вертикально: сначала левая, затем правая. Это сохраняет ширину controls и не сжимает slider, dropdown или input до нечитаемого размера.
+MonHub compacts the sidebar on touch devices. On a narrow working area, content columns stack vertically: left first, right second. This preserves readable control width instead of compressing sliders, dropdowns, or inputs.
 
 ```luau
 local WindowSize = Library.IsMobile
@@ -582,7 +582,7 @@ local WindowSize = Library.IsMobile
     or UDim2.fromOffset(760, 660)
 ```
 
-Responsive layout включён по умолчанию. Его порог можно настроить под конкретный интерфейс:
+Responsive layout is enabled by default. Customize its thresholds for your UI:
 
 ```luau
 local Window = Library:CreateWindow({
@@ -592,21 +592,21 @@ local Window = Library:CreateWindow({
 })
 ```
 
-`SingleColumnWidth` — рабочая ширина контента, при которой две колонки становятся вертикальными. `HideSearchAtWidth` — крайний порог: если места почти нет, search временно скрывается вместо наложения на заголовок. Используйте `Window:SetResponsiveLayoutEnabled(false)`, только если ваш интерфейс гарантированно рассчитан на desktop.
+`SingleColumnWidth` is the content width at which two columns stack vertically. `HideSearchAtWidth` is the extreme threshold where search hides instead of overlapping the title. Only call `Window:SetResponsiveLayoutEnabled(false)` when a window is guaranteed to remain desktop-sized.
 
-Рекомендации:
+Recommendations:
 
-- Не уменьшайте desktop window ниже `480x360` без проверки controls.
-- Используйте короткие tab names.
-- Для длинного текста включайте wrapping в labels.
-- Проверяйте обе колонки при DPI `75%`, `100%`, `125%`, `150%`.
-- Проверяйте viewport в landscape mobile mode.
-- После ручного изменения размеров вызывайте `Window:FitToViewport()`.
-- В `Example.lua` настройка находится в `UI Settings → Responsive layout`.
+- Do not make a desktop window smaller than `480x360` without testing controls.
+- Keep tab names short.
+- Use label wrapping for long text.
+- Test both columns at 75%, 100%, 125%, and 150% DPI.
+- Test the viewport in landscape mobile orientation.
+- Call `Window:FitToViewport()` after manual resizing.
+- The relevant setting is in `UI Settings → Responsive layout` in `Example.lua`.
 
-## Анимации
+## Motion and performance
 
-Все основные transitions включены по умолчанию. Они завершаются после tween и не создают постоянную нагрузку.
+All primary transitions are enabled by default and complete after their tween; none creates a perpetual effect.
 
 ```luau
 Window:SetAnimations({
@@ -615,16 +615,16 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.18, 10, "bottom")
+}, 0.14, 4, "bottom")
 ```
 
-Для мгновенного UI отключите конкретную animation, а не все transitions сразу. Повторный hover или повторная установка того же состояния не создаёт новый tween: библиотека переиспользует активную цель анимации.
+For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
 
-Для пользовательских controls, которые меняют несколько значений в одном callback, используйте `Library:QueueDependencyUpdate()`. Библиотека выполнит одну общую проверку зависимостей в конце текущего task cycle.
+For custom controls that change multiple values in one callback, call `Library:QueueDependencyUpdate()`. The library then performs one dependency pass at the end of the current task cycle.
 
 ## Notifications
 
-Legacy форма:
+Legacy form:
 
 ```luau
 Library:Notify({
@@ -665,7 +665,7 @@ DependencyBox:AddSlider("AdvancedValue", {
 DependencyBox:SetupDependencies({ { AdvancedToggle, true } })
 ```
 
-## Unload и cleanup
+## Unload and cleanup
 
 ```luau
 Library:OnUnload(function()
@@ -675,11 +675,11 @@ end)
 Library:Unload()
 ```
 
-MonHub отключает зарегистрированные signals, удаляет UI, draggable elements, active animations, options и cached measurements. Собственные connections регистрируйте через `Library:GiveSignal` или отключайте в `OnUnload`.
+MonHub disconnects registered signals, destroys UI and draggable elements, cancels active animations, and clears options and cached measurements. Register external connections through `Library:GiveSignal`, or disconnect them in `OnUnload`.
 
-## Декларативный API
+## Declarative API
 
-Переход на декларативный API необязателен. Выполняйте его после успешной legacy migration.
+Moving to the declarative API is optional. Do it after the legacy migration is stable.
 
 ```luau
 local App = Library:Create({
@@ -722,7 +722,7 @@ App:Get("power"):SetValue(75)
 App:Toggle(true)
 ```
 
-Иерархия:
+Hierarchy:
 
 ```text
 App
@@ -731,104 +731,104 @@ App
         └── Controls / Elements
 ```
 
-`Id` нужен только для элементов, к которым обращается код. `App:Get(Id)` возвращает созданный control.
+`Id` is needed only for elements accessed by code. `App:Get(Id)` returns the created control.
 
-## Установка через Wally или Studio
+## Wally or Studio installation
 
-`wally.toml` в текущем repository сохраняет upstream package metadata. Установка `deividcomsono/obsidian` из публичного Wally registry может вернуть оригинальный Obsidian, а не эту MonHub-сборку.
+The repository `wally.toml` still contains upstream package metadata. Installing `deividcomsono/obsidian` from the public Wally registry can return original Obsidian rather than this MonHub build.
 
-Для точного поведения MonHub используйте один из вариантов:
+Use one of these options for exact MonHub behavior:
 
-1. Raw loader для executor environment.
-2. Vendor copy текущих `Library.lua`, `Library.d.luau` и `addons` в собственный проект.
-3. Собственный Wally package или Git submodule, зафиксированный на commit MonHub repository.
+1. A raw loader in an executor environment.
+2. A vendor copy of current `Library.lua`, `Library.d.luau`, and `addons` in your project.
+3. A private Wally package or Git submodule pinned to a MonHub repository commit.
 
-Не смешивайте `Library.lua` MonHub с addons другой версии.
+Do not mix MonHub `Library.lua` with addons from a different version.
 
-## Частые ошибки
+## Troubleshooting
 
-### `Expected ident` на строке 1
+### `Expected ident` on line 1
 
-Причина: loader получил HTML, страницу ошибки или страницу private repository.
+Cause: the loader received HTML, an error page, or a private-repository page.
 
-Проверка:
+Check that:
 
-- Используется raw URL.
-- Repository и branch доступны.
-- Путь содержит `Obsidian-main/Library.lua`.
-- Ответ GitHub не пустой.
-- Executor поддерживает `game:HttpGet` и `loadstring`.
+- The URL is a raw URL.
+- The repository and branch are accessible.
+- The path includes `Obsidian-main/Library.lua`.
+- The GitHub response is not empty.
+- The executor supports `game:HttpGet` and `loadstring`.
 
-### UI запускается, но выглядит как старый Obsidian
+### The UI looks like old Obsidian
 
-Причина: загружен upstream URL, Wally upstream package или старый cached file.
+Cause: the project is loading an upstream URL, upstream Wally package, or an old cached file.
 
-Решение: проверьте URL и перезапустите session.
+Fix: verify the URL and restart the session.
 
-### Font Face становится Code
+### Font Face becomes Code
 
-Проверьте, что используется текущий `Library.lua`, а старый ThemeManager UI не создаёт font selector. Релизный Graphite baseline использует Gotham; legacy appearance fields из configs должны быть добавлены в `SaveManager:IgnoreThemeSettings()`.
+Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release Metal baseline uses Gotham Medium. Legacy appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
 
-### Config не загружается
+### A configuration does not load
 
-Проверьте:
+Check that:
 
-- Все controls созданы до `LoadAutoloadConfig`.
-- IDs не изменены.
-- `SetFolder` и `SetSubFolder` совпадают со старым проектом.
-- Executor поддерживает file APIs.
+- All controls exist before `LoadAutoloadConfig`.
+- IDs were preserved.
+- `SetFolder` and `SetSubFolder` match the old project.
+- The executor supports file APIs.
 
-### Click sound не работает
+### Click sound does not work
 
-Проверьте Roblox audio permissions и доступность asset `92679954573730` для текущего experience.
+Check Roblox audio permissions and asset `92679954573730` availability for the current experience.
 
-### Watermark показывает `0 ms`
+### Watermark shows `0 ms`
 
-`Stats.Network.ServerStatsItem["Data Ping"]` может быть недоступен сразу после подключения. Подождите следующий update interval.
+`Stats.Network.ServerStatsItem["Data Ping"]` can be unavailable immediately after joining. Wait for the next update interval.
 
-### UI выходит за экран
+### The UI leaves the screen
 
-Используйте responsive size и вызовите:
+Use a responsive size and call:
 
 ```luau
 Window:FitToViewport()
 ```
 
-### Viewport вращается, но модель не видна
+### The viewport rotates but the model is invisible
 
-Проверьте `Object`, `Clone`, `PrimaryPart`, bounding box и `AutoFocus`. Для `Model` желательно назначить `PrimaryPart`.
+Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Model`, set a `PrimaryPart` when possible.
 
-## Финальный checklist
+## Final checklist
 
-- [ ] Raw URL заменён на MonHub.
-- [ ] Library и addons взяты из одной версии.
-- [ ] Старые control IDs сохранены.
-- [ ] Graphite применяется по умолчанию.
-- [ ] Gotham не заменяется на Code.
-- [ ] Window помещается в desktop viewport.
-- [ ] Sidebar compact работает на mobile.
-- [ ] Toggle и checkbox callbacks работают.
-- [ ] Slider работает мышью и touch.
-- [ ] Dropdown single/multi values сохраняются.
-- [ ] KeyPicker и ColorPicker работают.
-- [ ] Старые appearance fields игнорируются при загрузке configs.
-- [ ] Старые configs загружаются либо осознанно перенесены в новую папку.
-- [ ] Click sound доступен.
-- [ ] Watermark, FPS и ping переключаются.
-- [ ] Search работает без задержек.
-- [ ] Unload отключает UI и custom connections.
-- [ ] Скрипт проверен на desktop и mobile.
+- [ ] The raw URL points to MonHub.
+- [ ] Library and addons come from one version.
+- [ ] Existing control IDs are preserved.
+- [ ] Metal applies by default.
+- [ ] Gotham Medium is not replaced by Code.
+- [ ] The window fits the desktop viewport.
+- [ ] Sidebar compact works on mobile.
+- [ ] Toggle and checkbox callbacks work.
+- [ ] Slider works with mouse and touch.
+- [ ] Dropdown single and multi values persist.
+- [ ] KeyPicker and ColorPicker work.
+- [ ] Old appearance fields are ignored when configurations load.
+- [ ] Old configurations load, or are deliberately moved to a new folder.
+- [ ] Click sound is available.
+- [ ] Watermark, FPS, and ping controls work.
+- [ ] Search has no visible delay.
+- [ ] Unload cleans up UI and external connections.
+- [ ] The script is tested on desktop and mobile.
 
-## Рекомендуемый порядок реального переноса
+## Recommended real migration order
 
-1. Перенесите loader и запустите окно без addons.
-2. Проверьте tabs и controls.
-3. Проверьте `Library.Options` и `Library.Toggles`.
-4. Подключите SaveManager без autoload и вызовите `IgnoreThemeSettings()` для старых configs.
-5. Создайте test config и загрузите его.
-6. Включите autoload.
-7. Добавьте Watermark и click sound.
-8. Проверьте desktop, mobile, DPI и resizing.
-9. Только после этого переходите на декларативный API.
+1. Replace the loader and open a window without addons.
+2. Test tabs and controls.
+3. Test `Library.Options` and `Library.Toggles`.
+4. Add SaveManager without autoload and call `IgnoreThemeSettings()` for old configurations.
+5. Create and load a test configuration.
+6. Enable autoload.
+7. Add Watermark and click sound.
+8. Test desktop, mobile, DPI, and resizing.
+9. Move to the declarative API only after all previous steps pass.
 
-Этот порядок локализует ошибки и позволяет откатить каждый этап отдельно.
+This order localizes errors and makes each stage easy to roll back.

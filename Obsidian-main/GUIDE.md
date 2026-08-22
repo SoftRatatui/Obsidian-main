@@ -35,7 +35,9 @@ Use the raw GitHub URL only after the changes are published:
 local Library = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-5", "Library release mismatch")
+if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+end
 ```
 
 Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produces `Expected ident` on line 1. Keep `Library.lua` and every addon from the same commit or folder. `Example.lua` is a complete showcase, but it intentionally uses a fixed non-responsive desktop layout; it is not the only recommended window configuration.
@@ -50,7 +52,9 @@ Create a small legacy-style interface first:
 local Library = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-5", "Library release mismatch")
+if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+end
 
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -691,7 +695,7 @@ First confirm that GitHub Desktop pushed the repository and branch used by the r
 
 Do not mix an updated ThemeManager with an older Library. If a selector shows a new preset but most surfaces keep an earlier palette, the two modules came from different cached revisions. A versioned URL prevents that mixed state.
 
-The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-5"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
+The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-5"`. Project loaders compare this value before creating the window and emit a non-blocking warning when an executor returns an older cached build. A patch-level mismatch never prevents the interface from starting.
 
 The current Library also unloads an older MonHub instance before creating its ScreenGui. This prevents a previous window from remaining underneath or above the new release during repeated executor runs. A full rejoin is no longer required for normal UI updates, although game-specific script state may still require its own cleanup.
 

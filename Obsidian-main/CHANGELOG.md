@@ -37,6 +37,7 @@
 + Rebuilt keybind rows around a fixed horizontal layout with a 14x14 checkmark and deterministic alignment
 + Replaced fractional checkmark scaling with fixed-size antialiased glyphs and opacity-only motion for cleaner small-pixel rendering
 + Removed two UICorner instances per checkbox/keybind pair so the four corner pixels stay filled and the render tree is smaller
++ Changed release checks from fatal errors to non-blocking notices so a cached patch revision cannot prevent startup
 
 [motion]
 + Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing

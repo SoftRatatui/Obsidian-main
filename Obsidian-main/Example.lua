@@ -120,7 +120,9 @@ local function LoadModule(Path, Required, PreferredBase)
 end
 
 local Library, ActiveRepository = LoadModule("Library.lua", true)
-assert(Library.ReleaseVersion == RELEASE_VERSION, "Library release mismatch")
+if Library.ReleaseVersion ~= RELEASE_VERSION then
+	warn(string.format("MonHub version notice: expected %s, received %s", RELEASE_VERSION, tostring(Library.ReleaseVersion)))
+end
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)

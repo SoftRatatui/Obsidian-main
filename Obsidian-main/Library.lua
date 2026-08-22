@@ -263,26 +263,26 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    HoverTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    HoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabExitTransitionInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TabTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabExitTransitionInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 
     WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.035, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DialogOverlayOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DialogOpenAnimationInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DialogCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DropdownTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeyPickerTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DropdownTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeyPickerTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -308,9 +308,9 @@ local Library = {
 
     NotifyOnError = false,
     ShowCustomCursor = true,
-    ForceCheckbox = false,
+    ForceCheckbox = true,
     TooltipsEnabled = false,
-    AppearanceLocked = true,
+    AppearanceLocked = false,
 
     CantDragForced = false,
     DraggableElements = {},
@@ -327,19 +327,19 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(21, 21, 21),
-        MainColor = Color3.fromRGB(29, 29, 29),
-        TopBarColor = Color3.fromRGB(19, 19, 19),
-        AccentColor = Color3.fromRGB(130, 170, 255),
-        OutlineColor = Color3.fromRGB(66, 66, 66),
-        FontColor = Color3.fromRGB(235, 237, 241),
-        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
+        Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
-        DarkColor = Color3.fromRGB(11, 11, 11),
-        WhiteColor = Color3.fromRGB(245, 245, 245),
+        DarkColor = Color3.new(0, 0, 0),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
 
         BackgroundImage = ""
     },
@@ -367,21 +367,39 @@ function Library:Fetch(URL: string): (boolean, string)
     return RequestGet(URL)
 end
 
-Library.DefaultTheme = "Metal"
+Library.DefaultTheme = "Default"
+Library.CurrentTheme = "Default"
 Library.Themes = {
-    Metal = {
-        BackgroundColor = Color3.fromRGB(21, 21, 21),
-        MainColor = Color3.fromRGB(29, 29, 29),
-        TopBarColor = Color3.fromRGB(19, 19, 19),
-        AccentColor = Color3.fromRGB(130, 170, 255),
-        OutlineColor = Color3.fromRGB(66, 66, 66),
-        FontColor = Color3.fromRGB(235, 237, 241),
+    Default = {
+        BackgroundColor = Color3.fromRGB(22, 24, 29),
+        MainColor = Color3.fromRGB(33, 36, 43),
+        TopBarColor = Color3.fromRGB(39, 42, 50),
+        AccentColor = Color3.fromRGB(133, 141, 160),
+        OutlineColor = Color3.fromRGB(65, 69, 80),
+        FontColor = Color3.fromRGB(239, 241, 246),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         RedColor = Color3.fromRGB(232, 83, 103),
-        DarkColor = Color3.fromRGB(11, 11, 11),
-        Font = Font.fromEnum(Enum.Font.GothamMedium),
-        WhiteColor = Color3.fromRGB(245, 245, 245),
+        DarkColor = Color3.new(0, 0, 0),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
+        BackgroundImage = "",
+        CornerRadius = 6,
+        IsLight = false,
+    },
+    Metal = {
+        BackgroundColor = Color3.fromRGB(17, 17, 19),
+        MainColor = Color3.fromRGB(24, 24, 28),
+        TopBarColor = Color3.fromRGB(20, 20, 23),
+        AccentColor = Color3.fromRGB(127, 123, 234),
+        OutlineColor = Color3.fromRGB(49, 50, 59),
+        FontColor = Color3.fromRGB(240, 240, 244),
+        WarningColor = Color3.fromRGB(214, 163, 83),
+        DestructiveColor = Color3.fromRGB(204, 65, 86),
+        RedColor = Color3.fromRGB(235, 91, 115),
+        DarkColor = Color3.fromRGB(9, 9, 11),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(248, 248, 250),
         BackgroundImage = "",
         CornerRadius = 6,
         IsLight = false,
@@ -484,7 +502,7 @@ local Templates = {
         NotifySide = "Right",
         ShowCustomCursor = true,
 
-        Font = Enum.Font.GothamMedium,
+        Font = Enum.Font.Gotham,
         ToggleKeybind = Enum.KeyCode.RightControl,
 
         ShowCompactLauncher = true,
@@ -530,7 +548,7 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.14,
+        TabTransitionTime = 0.12,
         TabSwipeOffset = 4,
         TabSwipeFrom = "bottom"
     },
@@ -1986,7 +2004,8 @@ end
 
 local function GetToggleSurfaceColor(Toggle): Color3
     if Toggle.Value then
-        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.56)
+        local AccentWeight = Toggle.Variant == "Checkbox" and 0.82 or 0.56
+        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), AccentWeight)
     end
 
     return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.16)
@@ -2002,7 +2021,7 @@ end
 
 local function GetKeybindToggleSurfaceColor(Active: boolean): Color3
     if Active then
-        return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, 0.52)
+        return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, 0.78)
     end
 
     return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.16)
@@ -2686,7 +2705,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         local Offset = Library.TabSwipeOffset or 4
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
@@ -2743,7 +2762,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
             return
         end
 
-        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local Tween = TweenService:Create(TabCanvas, TweenInfo, {
             GroupTransparency = 1,
             Position = UDim2.fromOffset(0, -2),
@@ -4371,11 +4390,11 @@ do
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "MainColor",
                 Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.fromOffset(22, 12),
+                Size = UDim2.fromOffset(14, 14),
                 Parent = Holder,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, 6),
+                CornerRadius = UDim.new(0, 3),
                 Parent = Switch,
             })
             local SwitchStroke = New("UIStroke", {
@@ -4383,16 +4402,17 @@ do
                 Transparency = 0.18,
                 Parent = Switch,
             })
-            local Ball = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "FontColor",
-                Position = UDim2.new(0, KeybindsToggle.DisplayState == true and 12 or 2, 0.5, 0),
-                Size = UDim2.fromOffset(8, 8),
+            local CheckIcon = Library:GetCustomIcon("check")
+            local Checkmark = New("ImageLabel", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Image = CheckIcon and CheckIcon.Url or "",
+                ImageColor3 = "DarkColor",
+                ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
+                ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
+                ImageTransparency = 1,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(6, 6),
                 Parent = Switch,
-            })
-            New("UICorner", {
-                CornerRadius = UDim.new(0, 4),
-                Parent = Ball,
             })
 
             local SwitchRegistry = Library.Registry[Switch] or {}
@@ -4407,12 +4427,9 @@ do
             end
             Library.Registry[SwitchStroke] = SwitchStrokeRegistry
 
-            local BallRegistry = Library.Registry[Ball] or {}
-            BallRegistry.BackgroundColor3 = "FontColor"
-            BallRegistry.Position = function()
-                return UDim2.new(0, KeybindsToggle.DisplayState == true and 12 or 2, 0.5, 0)
-            end
-            Library.Registry[Ball] = BallRegistry
+            Library:AddToRegistry(Checkmark, {
+                ImageColor3 = "DarkColor",
+            })
 
             function KeybindsToggle:Display(State)
                 State = State == true
@@ -4431,8 +4448,8 @@ do
                 if KeybindsToggle.IndicatorStrokeTween then
                     StopTween(KeybindsToggle.IndicatorStrokeTween, true)
                 end
-                if KeybindsToggle.IndicatorBallTween then
-                    StopTween(KeybindsToggle.IndicatorBallTween, true)
+                if KeybindsToggle.IndicatorCheckTween then
+                    StopTween(KeybindsToggle.IndicatorCheckTween, true)
                 end
 
                 KeybindsToggle.LabelTween = TweenService:Create(Label, Library.KeybindRowTweenInfo, {
@@ -4445,14 +4462,14 @@ do
                     Color = GetKeybindToggleStrokeColor(State),
                     Transparency = State and 0.04 or 0.18,
                 })
-                KeybindsToggle.IndicatorBallTween = TweenService:Create(Ball, Library.KeybindRowTweenInfo, {
-                    Position = UDim2.new(0, State and 12 or 2, 0.5, 0),
-                    BackgroundColor3 = Library.Scheme.FontColor,
+                KeybindsToggle.IndicatorCheckTween = TweenService:Create(Checkmark, Library.KeybindRowTweenInfo, {
+                    ImageTransparency = State and 0 or 1,
+                    Size = UDim2.fromOffset(State and 9 or 6, State and 9 or 6),
                 })
                 KeybindsToggle.LabelTween:Play()
                 KeybindsToggle.IndicatorTween:Play()
                 KeybindsToggle.IndicatorStrokeTween:Play()
-                KeybindsToggle.IndicatorBallTween:Play()
+                KeybindsToggle.IndicatorCheckTween:Play()
             end
 
             function KeybindsToggle:SetText(Text)
@@ -4505,7 +4522,7 @@ do
                 KeybindsToggle.NormalApplied = true
 
                 Holder.Active = not Normal
-                Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(30, 0)
+                Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(22, 0)
                 Switch.Visible = not Normal
             end
 
@@ -7041,7 +7058,23 @@ do
             Parent = Checkbox,
         })
 
+        local CheckIcon = Library:GetCustomIcon("check")
+        local Checkmark = New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Image = CheckIcon and CheckIcon.Url or "",
+            ImageColor3 = "DarkColor",
+            ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
+            ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
+            ImageTransparency = Toggle.Value and 0 or 1,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7),
+            Parent = Checkbox,
+        })
+
         RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
+        Library:AddToRegistry(Checkmark, {
+            ImageColor3 = "DarkColor",
+        })
 
         function Toggle:UpdateColors()
             Toggle:Display()
@@ -7061,12 +7094,15 @@ do
                 Library:CancelTween(CheckboxStroke, "CheckboxStroke")
                 Library:CancelTween(Label, "CheckboxLabelColor")
                 Library:CancelTween(Label, "CheckboxLabelTransparency")
+                Library:CancelTween(Checkmark, "CheckboxCheckmark")
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
                 Checkbox.BackgroundColor3 = BackgroundColor
                 Checkbox.BackgroundTransparency = 0.35
                 CheckboxStroke.Color = StrokeColor
                 CheckboxStroke.Transparency = 0.65
+                Checkmark.ImageTransparency = Toggle.Value and 0.5 or 1
+                Checkmark.Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7)
 
                 return
             end
@@ -7085,6 +7121,10 @@ do
             })
             Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
+            })
+            Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
+                ImageTransparency = Toggle.Value and 0 or 1,
+                Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7),
             })
         end
 
@@ -7196,6 +7236,8 @@ do
         Groupbox:Resize()
 
         Toggle.TextLabel = Label
+        Toggle.Checkbox = Checkbox
+        Toggle.Checkmark = Checkmark
         Toggle.Container = Container
         setmetatable(Toggle, BaseAddons)
 
@@ -7218,6 +7260,7 @@ do
             Library:CancelTween(CheckboxStroke, "CheckboxStroke")
             Library:CancelTween(Label, "CheckboxLabelColor")
             Library:CancelTween(Label, "CheckboxLabelTransparency")
+            Library:CancelTween(Checkmark, "CheckboxCheckmark")
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -10543,8 +10586,30 @@ do
     end
 end
 
-function Library:SetTheme(_Theme)
-    local ThemeData = Library.Themes.Metal
+local ThemeAliases = {
+    default = "Default",
+    graphite = "Default",
+    gray = "Default",
+    grey = "Default",
+    metal = "Metal",
+    material = "Metal",
+    purple = "Metal",
+    blackpurple = "Metal",
+    amethyst = "Metal",
+}
+
+function Library:ResolveThemeName(Theme): string
+    if typeof(Theme) ~= "string" then
+        return Library.DefaultTheme
+    end
+
+    local Normalized = string.lower(Theme):gsub("[%s_%-]", "")
+    return ThemeAliases[Normalized] or Library.DefaultTheme
+end
+
+function Library:SetTheme(Theme)
+    local ThemeName = Library:ResolveThemeName(Theme)
+    local ThemeData = Library.Themes[ThemeName] or Library.Themes[Library.DefaultTheme]
 
     for _, Index in {
         "BackgroundColor",
@@ -10565,22 +10630,23 @@ function Library:SetTheme(_Theme)
     Library.Scheme.Red = nil
     Library.Scheme.Dark = nil
     Library.Scheme.White = nil
-    Library.Scheme.BackgroundImage = ""
-    Library.IsLightTheme = false
+    Library.Scheme.BackgroundImage = ThemeData.BackgroundImage or ""
+    Library.IsLightTheme = ThemeData.IsLight == true
+    Library.CurrentTheme = ThemeName
 
     local Radius = ThemeData.CornerRadius
     Library.CornerRadius = Radius
     Templates.Window.CornerRadius = Radius
     if Library.Window then
         Library.Window:SetCornerRadius(Radius)
-        Library.Window:SetBackgroundImage("")
+        Library.Window:SetBackgroundImage(Library.Scheme.BackgroundImage)
     end
 
     Library:SetFont(ThemeData.Font, true)
     Library:UpdateColorsUsingRegistry()
 
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
-        Library.ThemeManager:SyncFromLibrary()
+        Library.ThemeManager:SyncFromLibrary(ThemeName)
     end
 
     return Library
@@ -11088,7 +11154,7 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.14),
+        math.max(0, WindowInfo.TabTransitionTime or 0.12),
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
@@ -12165,7 +12231,7 @@ function Library:CreateWindow(WindowInfo)
 
         if typeof(TabTransitionTime) == "number" then
             local TweenInfo = TweenInfo.new(
-                math.max(0, TabTransitionTime or 0.14),
+                math.max(0, TabTransitionTime or 0.12),
                 Enum.EasingStyle.Quint,
                 Enum.EasingDirection.Out
             )
@@ -14500,7 +14566,7 @@ function Library:CreateWindow(WindowInfo)
                 and (Library.WindowOpenAnimationInfo or Library.WindowAnimationInfo)
                 or (Library.WindowCloseAnimationInfo or Library.WindowAnimationInfo)
 
-            WindowScale.Scale = Library.Toggled and TargetScale * 0.985 or TargetScale
+            WindowScale.Scale = TargetScale
 
             if Library.Toggled then
                 local WasVisible = MainFrame.Visible
@@ -14516,12 +14582,6 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local ActiveWindowTween = WindowTween
-
-            if Library.Toggled then
-                Library:PlayTween(WindowScale, "WindowVisibilityScale", AnimationInfo, {
-                    Scale = TargetScale,
-                })
-            end
 
             WindowTween.Completed:Once(function(PlaybackState)
                 if PlaybackState ~= Enum.PlaybackState.Completed or AnimationSequence ~= WindowAnimationSequence then

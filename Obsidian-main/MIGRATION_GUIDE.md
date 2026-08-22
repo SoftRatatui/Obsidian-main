@@ -2,9 +2,9 @@
 
 The canonical API guide is [GUIDE.md](GUIDE.md). This document focuses on moving an existing Obsidian project to MonHub without rewriting its application logic.
 
-MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` remains only as a Metal-compatible shim for older integrations.
+MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` now provides a minimal built-in preset selector.
 
-The release baseline is one neutral-gray Metal profile, Gotham Medium typography, responsive sidebar behavior, refined sliders and toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
+The release baseline is a neutral-gray `Default` theme with an optional violet `Metal` preset, Gotham Regular typography, responsive sidebar behavior, compact checkmark toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
 
 ## Useful links
 
@@ -32,7 +32,7 @@ For most projects, complete these steps in order:
 1. Back up the working script and configuration folder.
 2. Replace the upstream `Library.lua` URL with the MonHub raw URL.
 3. Keep existing control IDs unchanged.
-4. Update `SaveManager.lua`; add `ThemeManager.lua` only if older code already calls it.
+4. Update `SaveManager.lua`; add `ThemeManager.lua` when the settings page should expose the two theme presets.
 5. Run a smoke test for callbacks, configs, keybinds, mobile layout, and unload.
 
 ## Step 1: replace the loader
@@ -72,9 +72,9 @@ local Window = Library:CreateWindow({
     Resizable = true,
     GlobalSearch = true,
     EnableSidebarResize = true,
-    Font = Enum.Font.GothamMedium,
+    Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.14,
+    TabTransitionTime = 0.12,
     TabSwipeOffset = 4,
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 })
@@ -111,7 +111,7 @@ GeneralGroup:AddToggle("Enabled", {
 | `AddKeyPicker` | Supported | Keep it |
 | `Library.Options` | Supported | Do not rename IDs |
 | `Library.Toggles` | Supported | Do not rename IDs |
-| `ThemeManager` | Compatibility shim | Not needed by new projects |
+| `ThemeManager` | Minimal preset selector | Add it to expose Default and Metal |
 | `SaveManager` | Supported | Update the addon file |
 | `Library:SetWatermark` | Supported | Use when needed |
 | `Library:SetWatermarkVisibility` | Supported | Use when needed |
@@ -136,9 +136,9 @@ local Window = Library:CreateWindow({
     EnableSidebarResize = true,
     EnableCompacting = true,
     ShowCustomCursor = true,
-    Font = Enum.Font.GothamMedium,
+    Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.14,
+    TabTransitionTime = 0.12,
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
@@ -215,7 +215,7 @@ MainLeft:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` is the normal compact soft switch and retains the boolean API. `AddCheckbox` stays available as a square control for explicit multi-choice state.
+`AddToggle` now defaults to a compact 16×16 square with a 3px radius and an animated checkmark while retaining the same boolean API. `AddCheckbox` uses the same square language. Set `Library.ForceCheckbox = false` before creating controls only when an older project deliberately wants the legacy sliding switch.
 
 ### Input
 
@@ -364,19 +364,20 @@ Options.Quality:SetValue("High")
 
 `Toggles` contains toggle and checkbox controls. `Options` contains inputs, sliders, dropdowns, key pickers, color pickers, and other option controls.
 
-## Metal baseline and font policy
+## Theme presets and font policy
 
-Metal applies automatically and is the only palette in this release. It uses neutral-gray surfaces, a muted steel accent, Gotham Medium, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
+`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the optional violet preset based on the release reference. Both use Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
 
 ```luau
+Library:SetTheme("Default")
 Library:SetTheme("Metal")
 ```
 
-The call above is only an explicit reset. Legacy preset names and `Library:SetTheme({...})` tables are accepted for compatibility but always reset the interface to Metal. They cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
+The release contains exactly these two built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 
-Gotham Medium is the production font because it remains clear at small UI sizes and has the glyph coverage required for labels, values, keybinds, sliders, and punctuation. The supplied `Milkyway DEMO.ttf` is not bundled or loaded: its license permits personal use only, it lacks the coverage needed for a control-heavy UI, and Roblox cannot treat a raw local `.ttf` as a portable UI font. Use a licensed, Roblox-compatible `FontFace` only after glyph coverage and runtime behavior have been verified.
+Gotham Regular is the production font because it remains clear at small UI sizes without making dense settings pages look overly heavy.
 
 ## Click sound
 
@@ -511,9 +512,9 @@ MediaGroup:AddVideo("PreviewVideo", {
 
 `AddUIPassthrough` accepts an existing `GuiBase2d` and places it inside a groupbox.
 
-## ThemeManager compatibility
+## ThemeManager presets
 
-New projects should not load `ThemeManager.lua`. The addon is kept for older scripts that already invoke its methods:
+Load `ThemeManager.lua` when the UI Settings page should expose the two built-in presets:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -521,9 +522,10 @@ local ThemeManager = loadstring(game:HttpGet(
 ))()
 
 ThemeManager:SetLibrary(Library)
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
 ```
 
-The release shim resets to Metal only. It does not create a selector, open a palette editor, read custom themes, or save a default theme. Legacy `ThemeManager_` config fields are ignored after migration.
+The addon creates a minimal `Default` / `Metal` dropdown with the ID `ThemeManager_ThemeList`. SaveManager persists that selection. It does not expose raw palette editing or load custom theme files.
 
 ## SaveManager
 
@@ -547,7 +549,7 @@ Configuration migration rules:
 2. Keep the old `SetFolder` value to reuse an existing config folder.
 3. Use a new `MonHub` folder to begin with clean configurations.
 4. Do not call `LoadAutoloadConfig` before all controls are created.
-5. Call `SaveManager:IgnoreThemeSettings()` before loading legacy autoload configs.
+5. Call `SaveManager:IgnoreThemeSettings()` before loading legacy autoload configs; it filters old palette fields but keeps `ThemeManager_ThemeList`.
 6. The menu KeyPicker is saved normally. Add it to `SetIgnoreIndexes()` only when it must remain global across every configuration.
 
 ## UI Settings layout
@@ -615,10 +617,10 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.14, 4, "bottom")
+}, 0.12, 4, "bottom")
 ```
 
-For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
+Window opening uses a 90ms opacity-only transition and closing uses 50ms, without scale or font resizing. Tabs enter in 120ms and leave in 60ms with a 4px offset. Standard controls use 110ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
 
 For custom controls that change multiple values in one callback, call `Library:QueueDependencyUpdate()`. The library then performs one dependency pass at the end of the current task cycle.
 
@@ -767,7 +769,7 @@ Fix: verify the URL and restart the session.
 
 ### Font Face becomes Code
 
-Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release Metal baseline uses Gotham Medium. Legacy appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
+Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Regular. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
 
 ### A configuration does not load
 
@@ -803,8 +805,9 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 - [ ] The raw URL points to MonHub.
 - [ ] Library and addons come from one version.
 - [ ] Existing control IDs are preserved.
-- [ ] Metal applies by default.
-- [ ] Gotham Medium is not replaced by Code.
+- [ ] Default applies as the neutral-gray startup theme.
+- [ ] Metal applies as the violet alternate theme.
+- [ ] Gotham Regular is not replaced by Code.
 - [ ] The window fits the desktop viewport.
 - [ ] Sidebar compact works on mobile.
 - [ ] Toggle and checkbox callbacks work.
@@ -812,6 +815,7 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 - [ ] Dropdown single and multi values persist.
 - [ ] KeyPicker and ColorPicker work.
 - [ ] Old appearance fields are ignored when configurations load.
+- [ ] `ThemeManager_ThemeList` saves and restores the selected built-in theme.
 - [ ] Old configurations load, or are deliberately moved to a new folder.
 - [ ] Click sound is available.
 - [ ] Watermark, FPS, and ping controls work.

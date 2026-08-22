@@ -10,7 +10,7 @@
 4. [Controls](#controls)
 5. [Values, callbacks, and dependencies](#values-callbacks-and-dependencies)
 6. [Dialogs, notifications, and loading](#dialogs-notifications-and-loading)
-7. [Metal and configuration](#metal-and-configuration)
+7. [Themes and configuration](#themes-and-configuration)
 8. [Watermark, keybinds, launcher, and sound](#watermark-keybinds-launcher-and-sound)
 9. [Media and ESP preview](#media-and-esp-preview)
 10. [Declarative API](#declarative-api)
@@ -59,7 +59,7 @@ local Window = Library:CreateWindow({
     Center = true,
     AutoShow = true,
     GlobalSearch = true,
-    Font = Enum.Font.GothamMedium,
+    Font = Enum.Font.Gotham,
     CornerRadius = 6,
 })
 
@@ -92,7 +92,7 @@ local Window = Library:CreateWindow({
     Resizable = false,
     GlobalSearch = true,
     NotifySide = "Right",
-    Font = Enum.Font.GothamMedium,
+    Font = Enum.Font.Gotham,
     CornerRadius = 6,
     ShowCustomCursor = true,
     AlwaysOnTop = false,
@@ -119,13 +119,13 @@ local Window = Library:CreateWindow({
         Dropdown = true,
         KeyPicker = true,
     },
-    TabTransitionTime = 0.14,
+    TabTransitionTime = 0.12,
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 })
 ```
 
-`Metal`, Gotham Medium, a restrained 6px outer radius, compact fixed-position switches, and a footer are the normal MonHub profile. Its neutral-gray palette uses softer separators, full-width sidebar tabs, and fixed icon/text alignment rather than visual movement. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette uses soft separators, full-width sidebar tabs, and fixed icon/text alignment. `Metal` is the optional violet preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -189,7 +189,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` defaults to a compact 24×14 soft switch with a 10px sliding thumb. It gives the active state a muted accent track without using a checkmark. `AddCheckbox` remains available when a project specifically needs a square indicator; set `Library.ForceCheckbox = true` before creating controls only to force that alternative globally.
+`AddToggle` defaults to a compact 16×16 square with a 3px radius and an animated checkmark. `AddCheckbox` uses the same clear square language. Existing projects that prefer the legacy 24×14 sliding switch can set `Library.ForceCheckbox = false` before creating controls; explicit checkbox creation still uses `AddCheckbox`.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -239,7 +239,7 @@ Left:AddButton({
 })
 ```
 
-Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use the flat Metal surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
+Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use a flat theme-aware surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
 
 ```luau
 Library:SetButtonVariantIcon("Danger", "trash-2")
@@ -437,25 +437,26 @@ Loading:Continue()
 
 `Loading:ShowErrorPage(true)`, `SetErrorMessage`, and `SetErrorButtons` provide a clean recovery screen. Always call `Destroy()` if a loading instance will not continue.
 
-## Metal and configuration
+## Themes and configuration
 
-### Locked Metal appearance
+### Built-in themes
 
-Metal is the only palette shipped in this release. It starts automatically with layered neutral-gray surfaces, a muted steel accent, Gotham Medium typography, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface is soft because text contrast, spacing, surface hierarchy, and motion are balanced—not because every surface is heavily rounded. Sidebar tabs use an inset full-width row, while cards and fields retain only the amount of rounding needed to separate surfaces.
+The release ships exactly two palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a restrained violet accent inspired by the release reference. Both use Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
 
-`Library.Themes` contains only `Metal`. `Library:SetTheme(...)` remains for source compatibility, but every old preset name and every legacy table now resets the interface to Metal. It cannot restore an old font, background image, corner radius, or partial palette.
+`Library.Themes` contains only `Default` and `Metal`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
 
 ```luau
+Library:SetTheme("Default")
 Library:SetTheme("Metal")
 ```
 
 ### Font policy
 
-Gotham Medium is the default UI font because it remains clean at small Roblox control sizes, preserves full numeric and punctuation coverage, and keeps labels, values, keybinds, and sliders readable. `Milkyway DEMO.ttf` is not bundled or loaded: its supplied license is personal-use only, and a raw local `.ttf` cannot be treated as a portable Roblox UI font. If a licensed, Roblox-compatible `FontFace` is introduced later, it should be optional and tested for complete glyph coverage before replacing the interface font.
+Gotham Regular is the default UI font. It stays readable at small Roblox control sizes, preserves complete labels, numbers, punctuation, and keybind text, and avoids the dense appearance of a heavier weight.
 
-### Legacy ThemeManager
+### ThemeManager preset selector
 
-New projects do not need `ThemeManager.lua`. The addon remains a small compatibility shim for existing projects: `SetLibrary` and `ApplyTheme` reset the library to Metal, but it does not display a theme editor, load a saved default, read custom theme files, or write a palette to disk.
+`ThemeManager.lua` exposes a minimal two-item preset dropdown without a palette editor or custom theme files:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -463,9 +464,10 @@ local ThemeManager = loadstring(game:HttpGet(
 ))()
 
 ThemeManager:SetLibrary(Library)
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
 ```
 
-Old `default-v5.txt` markers, custom theme files, and `ThemeManager_` values inside configurations are ignored rather than deleted. This keeps a user’s files recoverable while preventing stale colors from repainting part of the interface.
+The selector uses the ID `ThemeManager_ThemeList`, so SaveManager can persist `Default` or `Metal` with the rest of a configuration. Old marker files and raw color fields remain ignored rather than deleted. This keeps user files recoverable while preventing stale colors from repainting only part of the interface.
 
 ### SaveManager
 
@@ -486,7 +488,7 @@ ConfigGroup:SetOrder(-100)
 SaveManager:LoadAutoloadConfig()
 ```
 
-`IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale appearance entries immediately; the locked Metal baseline remains intact. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
+`IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale raw appearance entries but intentionally keeps `ThemeManager_ThemeList`, allowing the selected built-in preset to save and restore normally. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
 
 ## Watermark, keybinds, launcher, and sound
 
@@ -540,7 +542,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ## Media and ESP preview
 
-`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and uses the Metal surface and lighting profile.
+`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and follows the active theme surface and lighting profile.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -644,7 +646,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. Metal uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. Tabs use a 140ms entry and an 80ms exit fade with a 4px maximum offset. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham Medium remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 90ms and 50ms opacity-only transitions, with no scale or font resizing. Tabs use a 120ms entry and a 60ms exit fade with a 4px maximum offset. Standard controls use 110ms state transitions. Gotham Regular remains the default readable UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -653,7 +655,7 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.14, 4, "bottom")
+}, 0.12, 4, "bottom")
 
 Library:Notify({
     Title = "Saved",
@@ -683,7 +685,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. This release maps every legacy preset, custom theme marker, and `ThemeManager_` field to the immutable Metal baseline. Old files remain on disk but are not executed or applied.
+Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields are ignored, while a valid `ThemeManager_ThemeList` value restores `Default` or `Metal`. Old custom-theme files remain on disk but are not executed or applied.
 
 ### A config does not load
 
@@ -705,6 +707,8 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] The window is readable at desktop and narrow/mobile widths.
 - [ ] Every danger control has a clear confirmation or an intentional opt-out.
 - [ ] Old appearance keys are ignored while legacy configs are migrated.
+- [ ] `Default` starts in gray and `Metal` applies the violet preset without stale colors.
+- [ ] `ThemeManager_ThemeList` saves and restores with configurations.
 - [ ] Watermark, keybind menu, compact launcher, and unload are tested.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 

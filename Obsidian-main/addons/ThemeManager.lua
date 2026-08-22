@@ -2,20 +2,36 @@ local getgenv = type(getgenv) == "function" and getgenv or function()
     return if typeof(shared) == "table" then shared else _G
 end
 
-local MetalTheme = {
-    FontColor = "ebedf1",
-    MainColor = "1d1d1d",
-    TopBarColor = "131313",
-    AccentColor = "82aaff",
-    BackgroundColor = "151515",
-    OutlineColor = "424242",
+local DefaultTheme = {
+    FontColor = "eff1f6",
+    MainColor = "21242b",
+    TopBarColor = "272a32",
+    AccentColor = "858da0",
+    BackgroundColor = "16181d",
+    OutlineColor = "414550",
     WarningColor = "d09d50",
     DestructiveColor = "c43a4c",
     RedColor = "e85367",
-    DarkColor = "0b0b0b",
-    WhiteColor = "f5f5f5",
+    DarkColor = "000000",
+    WhiteColor = "f8f9fc",
     BackgroundImage = "",
-    FontFace = "GothamMedium",
+    FontFace = "Gotham",
+}
+
+local MetalTheme = {
+    FontColor = "f0f0f4",
+    MainColor = "18181c",
+    TopBarColor = "141417",
+    AccentColor = "7f7bea",
+    BackgroundColor = "111113",
+    OutlineColor = "31323b",
+    WarningColor = "d6a353",
+    DestructiveColor = "cc4156",
+    RedColor = "eb5b73",
+    DarkColor = "09090b",
+    WhiteColor = "f8f8fa",
+    BackgroundImage = "",
+    FontFace = "Gotham",
 }
 
 local ThemeManager = {
@@ -23,15 +39,19 @@ local ThemeManager = {
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",
     AppliedToTab = false,
-    DefaultThemeName = "Metal",
-    DefaultThemeFileName = "metal-v6.txt",
-    FallbackThemeName = "Metal",
-    FallbackThemeLabel = "Metal",
+    DefaultThemeName = "Default",
+    DefaultThemeFileName = "default-v7.txt",
+    FallbackThemeName = "Default",
+    FallbackThemeLabel = "Default",
+    CurrentTheme = "Default",
     ApplyingTheme = false,
+    SyncingSelector = false,
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
+    ThemeNames = { "Default", "Metal" },
     BuiltInThemes = {
-        Metal = { 1, table.clone(MetalTheme) },
+        Default = { 1, table.clone(DefaultTheme) },
+        Metal = { 2, table.clone(MetalTheme) },
     },
 }
 
@@ -39,22 +59,42 @@ local function IsValidFolderPath(Value)
     return typeof(Value) == "string" and Value:match("%S") ~= nil
 end
 
-local function IsMetalName(Value)
-    if typeof(Value) ~= "string" then
-        return false
+local function ResolveThemeName(Value)
+    if ThemeManager.Library and ThemeManager.Library.ResolveThemeName then
+        return ThemeManager.Library:ResolveThemeName(Value)
     end
 
-    local Name = string.lower(Value)
-    return Name == "default" or Name == "metal"
+    if typeof(Value) ~= "string" then
+        return ThemeManager.FallbackThemeName
+    end
+
+    local Name = string.lower(Value):gsub("[%s_%-]", "")
+    if Name == "metal" or Name == "purple" or Name == "blackpurple" or Name == "amethyst" then
+        return "Metal"
+    end
+
+    return "Default"
 end
 
 function ThemeManager:SetLibrary(Library)
     ThemeManager.Library = Library
     Library.ThemeManager = ThemeManager
-    return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+    return ThemeManager:ApplyTheme(Library.CurrentTheme or Library.DefaultTheme or ThemeManager.FallbackThemeName)
 end
 
-function ThemeManager:SyncFromLibrary()
+function ThemeManager:SyncFromLibrary(ThemeName)
+    local Resolved = ResolveThemeName(ThemeName or (ThemeManager.Library and ThemeManager.Library.CurrentTheme))
+    ThemeManager.CurrentTheme = Resolved
+
+    local Selector = ThemeManager.ThemeSelector
+    if Selector and Selector.Value ~= Resolved and not ThemeManager.ApplyingTheme then
+        ThemeManager.SyncingSelector = true
+        pcall(function()
+            Selector:SetValue(Resolved)
+        end)
+        ThemeManager.SyncingSelector = false
+    end
+
     return true
 end
 
@@ -85,8 +125,13 @@ function ThemeManager:EndConfigLoad()
         return true
     end
 
+    local ThemeSelectionLoaded = ThemeManager.ConfigLoadOptions.ThemeManager_ThemeList == true
     table.clear(ThemeManager.ConfigLoadOptions)
-    return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+    if ThemeSelectionLoaded then
+        return true
+    end
+
+    return ThemeManager:ApplyTheme(ThemeManager.DefaultThemeName)
 end
 
 function ThemeManager:GetPaths()
@@ -94,11 +139,11 @@ function ThemeManager:GetPaths()
 end
 
 function ThemeManager:BuildFolderTree()
-    return false, "Theme persistence is disabled"
+    return false, "Custom theme persistence is disabled"
 end
 
 function ThemeManager:CheckFolderTree()
-    return false, "Theme persistence is disabled"
+    return false, "Custom theme persistence is disabled"
 end
 
 function ThemeManager:SetFolder(Folder)
@@ -128,28 +173,29 @@ function ThemeManager:Delete(_ThemeName)
 end
 
 function ThemeManager:GetDefaultTheme()
-    ThemeManager.DefaultThemeName = ThemeManager.FallbackThemeName
-    return ThemeManager.FallbackThemeName, true
+    return ThemeManager.DefaultThemeName, true
 end
 
-function ThemeManager:SetDefaultTheme(_Theme)
-    return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+function ThemeManager:SetDefaultTheme(Theme)
+    ThemeManager.DefaultThemeName = ResolveThemeName(Theme)
+    return ThemeManager:ApplyTheme(ThemeManager.DefaultThemeName)
 end
 
 function ThemeManager:SaveDefault(_ThemeName)
-    return false, "Theme persistence is disabled"
+    return false, "Theme file persistence is disabled"
 end
 
 function ThemeManager:LoadDefault()
-    return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+    return ThemeManager:ApplyTheme(ThemeManager.DefaultThemeName)
 end
 
 function ThemeManager:DeleteDefaultTheme()
-    return false, "Theme persistence is disabled"
+    ThemeManager.DefaultThemeName = ThemeManager.FallbackThemeName
+    return true
 end
 
 function ThemeManager:ThemeUpdate()
-    return ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
+    return ThemeManager:ApplyTheme(ThemeManager.CurrentTheme)
 end
 
 function ThemeManager:ApplyTheme(ThemeName)
@@ -158,12 +204,10 @@ function ThemeManager:ApplyTheme(ThemeName)
         return false, "Library is not set"
     end
 
+    local Resolved = ResolveThemeName(ThemeName)
     ThemeManager.ApplyingTheme = true
     local Success, ErrorMessage = pcall(function()
-        if not IsMetalName(ThemeName) then
-            ThemeManager.DefaultThemeName = ThemeManager.FallbackThemeName
-        end
-        Library:SetTheme("Metal")
+        Library:SetTheme(Resolved)
     end)
     ThemeManager.ApplyingTheme = false
 
@@ -171,7 +215,8 @@ function ThemeManager:ApplyTheme(ThemeName)
         return false, tostring(ErrorMessage)
     end
 
-    ThemeManager.DefaultThemeName = ThemeManager.FallbackThemeName
+    ThemeManager.CurrentTheme = Resolved
+    ThemeManager:SyncFromLibrary(Resolved)
     return true
 end
 
@@ -179,21 +224,24 @@ function ThemeManager:CreateThemeManager(Groupbox)
     assert(ThemeManager.Library, "Library is not set, call ThemeManager:SetLibrary(Library) first.")
     assert(not ThemeManager.AppliedToTab, "ThemeManager is already applied to a tab")
 
-    local Applied, ErrorMessage = ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName)
-    if not Applied then
-        error(ErrorMessage, 0)
-    end
-
-    if Groupbox and Groupbox.AddLabel then
-        Groupbox:AddLabel("Metal is active.", true)
-    end
+    ThemeManager.ThemeSelector = Groupbox:AddDropdown("ThemeManager_ThemeList", {
+        Text = "Theme",
+        Values = table.clone(ThemeManager.ThemeNames),
+        Default = ThemeManager.CurrentTheme,
+        Callback = function(Value)
+            if not ThemeManager.SyncingSelector then
+                ThemeManager:ApplyTheme(Value)
+            end
+        end,
+    })
 
     ThemeManager.AppliedToTab = true
+    ThemeManager:SyncFromLibrary(ThemeManager.CurrentTheme)
     return Groupbox
 end
 
 function ThemeManager:CreateGroupBox(Tab, IconName)
-    return Tab:AddLeftGroupbox("Appearance", IconName or "panel-top")
+    return Tab:AddLeftGroupbox("Themes", IconName or "palette")
 end
 
 function ThemeManager:ApplyToTab(Tab, IconName)

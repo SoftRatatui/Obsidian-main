@@ -117,6 +117,7 @@ end
 
 local Library, ActiveRepository = LoadModule("Library.lua", true)
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
+local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
@@ -124,7 +125,7 @@ local StatsService = game:GetService("Stats")
 local Options = Library.Options
 local Toggles = Library.Toggles
 
-Library.ForceCheckbox = false
+Library.ForceCheckbox = true
 Library.ShowToggleFrameInKeybinds = true
 
 
@@ -143,7 +144,7 @@ local Window = Library:CreateWindow({
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
-	Font = Enum.Font.GothamMedium,
+	Font = Enum.Font.Gotham,
 	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
@@ -152,7 +153,7 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.14,
+	TabTransitionTime = 0.12,
 	TabSwipeOffset = 4,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
@@ -385,7 +386,7 @@ local CardText = Instance.new("TextLabel")
 CardText.BackgroundTransparency = 1
 CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
-CardText.Font = Enum.Font.GothamMedium
+CardText.Font = Enum.Font.Gotham
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
 CardText.TextColor3 = Library.Scheme.FontColor
 CardText.TextSize = 14
@@ -757,7 +758,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Metal uses neutral-gray surfaces, a soft blue accent, Gotham Medium typography, and restrained geometry.", true)
+StyleTab:AddLabel("Default stays neutral gray. Metal uses the restrained violet profile from the release reference.", true)
 
 
 Tabs.KeySystem:AddLabel({
@@ -947,6 +948,18 @@ MenuGroup:AddButton({
 	end,
 })
 
+if ThemeManager then
+	local ThemeReady, ThemeError = pcall(function()
+		ThemeManager:SetLibrary(Library)
+		local AppearanceBox = ThemeManager:ApplyToTab(Tabs.Settings)
+		SetGroupOrder(AppearanceBox, -90)
+	end)
+
+	if not ThemeReady then
+		warn("[MonHub Example] ThemeManager disabled: " .. tostring(ThemeError))
+	end
+end
+
 
 if SaveManager then
 	local SaveReady, SaveError = pcall(function()
@@ -975,6 +988,7 @@ return {
 	Window = Window,
 	Tabs = Tabs,
 	SaveManager = SaveManager,
+	ThemeManager = ThemeManager,
 	ESPPreview = ESPPreview,
 	Repository = ActiveRepository,
 }

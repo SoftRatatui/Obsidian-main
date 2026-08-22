@@ -2,25 +2,28 @@
 
 ```diff
 [release]
-+ Locked the release build to one Metal palette with Gotham Medium typography and the neutral-gray visual system
-+ Legacy preset names, table themes, saved defaults, custom theme files, and stale ThemeManager config fields now resolve to Metal
-+ Replaced the old ThemeManager editor with a lightweight Metal compatibility shim for existing integrations
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, QuickStart.luau, Example.lua, and type declarations for the locked Metal appearance contract
-+ Documented the font policy: the personal-use-only Milkyway DEMO font is not bundled or loaded; Gotham Medium remains the readable production default
++ Finalized exactly two built-in themes: neutral-gray Default at startup and violet Metal as the alternate preset
++ Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
++ Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
++ Standardized the release typography on readable Gotham Regular
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the two-theme release contract
 
 [design]
 + Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes
 + Added inset full-width sidebar tabs so indicators no longer sit against the frame edge
 + Refined tabbox selection into a soft accent surface with short color/transparency transitions
 + Normalized content insets and group spacing for a calmer, less crowded layout
++ Changed the default AddToggle presentation to a compact 16x16 square checkmark with a restrained 3px radius
++ Kept the legacy sliding switch available through Library.ForceCheckbox = false
 
 [motion]
-+ Tab entry now uses a 140ms fade/4px offset and exit uses an 80ms fade
-+ Kept the fast 75ms open and 35ms close behavior while reducing general hover and groupbox transition overhead
++ Window opening now uses a 90ms opacity-only transition and closing uses 50ms, without scaling or font resizing
++ Tab entry now uses a 120ms fade/4px offset and exit uses a 60ms fade
++ Standard control state transitions now use a responsive 110ms timing
 
 [performance]
 + Removed one UIStroke from every standard outlined surface
-+ Removed unused runtime theme editor controls, palette file work, and repeated palette restoration paths
++ Removed unused raw theme editor controls, palette file work, and repeated palette restoration paths
 ```
 
 ## 19.08.2026

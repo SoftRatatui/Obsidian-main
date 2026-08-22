@@ -32,10 +32,11 @@
 + Added inset full-width sidebar tabs so indicators no longer sit against the frame edge
 + Refined tabbox selection into a soft accent surface with short color/transparency transitions
 + Normalized content insets and group spacing for a calmer, less crowded layout
-+ Changed the default AddToggle presentation to a compact 16x16 square checkmark with a restrained 3px radius
++ Changed the default AddToggle presentation to a compact, fully filled 16x16 square checkmark without a corner mask
 + Kept the legacy sliding switch available through Library.ForceCheckbox = false
 + Rebuilt keybind rows around a fixed horizontal layout with a 14x14 checkmark and deterministic alignment
 + Replaced fractional checkmark scaling with fixed-size antialiased glyphs and opacity-only motion for cleaner small-pixel rendering
++ Removed two UICorner instances per checkbox/keybind pair so the four corner pixels stay filled and the render tree is smaller
 
 [motion]
 + Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing

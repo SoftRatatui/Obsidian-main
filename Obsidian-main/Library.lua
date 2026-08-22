@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-final-theme-4",
+    ReleaseVersion = "0.0.1-final-theme-5",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -4702,10 +4702,6 @@ do
                 LayoutOrder = 1,
                 Parent = Holder,
             })
-            New("UICorner", {
-                CornerRadius = UDim.new(0, 3),
-                Parent = Switch,
-            })
             local SwitchStroke = New("UIStroke", {
                 Color = "OutlineColor",
                 Transparency = 0.18,
@@ -4774,7 +4770,7 @@ do
                     Transparency = State and 0.04 or 0.18,
                 })
                 KeybindsToggle.IndicatorCheckTween = TweenService:Create(Checkmark, Library.KeybindRowTweenInfo, {
-                    ImageTransparency = State and 0.08 or 1,
+                    ImageTransparency = State and 0 or 1,
                 })
                 KeybindsToggle.LabelTween:Play()
                 KeybindsToggle.IndicatorTween:Play()
@@ -7354,11 +7350,6 @@ do
             Size = UDim2.fromOffset(16, 16),
             Parent = Button,
         })
-        New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
-            Parent = Checkbox,
-        })
-
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
             Transparency = 0.18,
@@ -7372,7 +7363,7 @@ do
             ImageColor3 = "WhiteColor",
             ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
             ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
-            ImageTransparency = Toggle.Value and 0.06 or 1,
+            ImageTransparency = Toggle.Value and 0 or 1,
             Position = UDim2.fromScale(0.5, 0.5),
             ResampleMode = Enum.ResamplerMode.Default,
             ScaleType = Enum.ScaleType.Fit,
@@ -7431,7 +7422,7 @@ do
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
-                ImageTransparency = Toggle.Value and 0.06 or 1,
+                ImageTransparency = Toggle.Value and 0 or 1,
             })
         end
 

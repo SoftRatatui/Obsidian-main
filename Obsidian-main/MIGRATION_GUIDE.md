@@ -49,9 +49,9 @@ Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-4", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-5", "Library release mismatch")
 ```
 
 Use `raw.githubusercontent.com`, not a `github.com/.../blob/...` URL. A blob page returns HTML, which causes Luau to report `Expected ident` on line 1.
@@ -62,9 +62,9 @@ Do not move to the declarative API during the first migration. Existing code can
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-4", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-5", "Library release mismatch")
 
 local Window = Library:CreateWindow({
     Title = "My Hub",
@@ -447,7 +447,7 @@ Load the addon from the same commit as `Library.lua`:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
 local Players = game:GetService("Players")
 
@@ -524,7 +524,7 @@ Load `ThemeManager.lua` when the UI Settings page should expose the six built-in
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-5"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -537,7 +537,7 @@ The addon creates a minimal `Default` / `Metal` / `Midnight` / `Steel` / `Sage` 
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-5"
 ))()
 
 SaveManager:SetLibrary(Library)

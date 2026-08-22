@@ -47,9 +47,9 @@ local function Fetch(URL)
     return game:HttpGet(URL)
 end
 
-local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-4")
+local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5")
 local Library = assert(loadstring(Source))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-4", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-5", "Library release mismatch")
 
 local App = Library:Create({
     Title = "MonHub",
@@ -142,7 +142,7 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-4"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
 local Players = game:GetService("Players")
 

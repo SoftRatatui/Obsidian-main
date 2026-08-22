@@ -101,13 +101,6 @@ local CustomImageManagerAssets = {
         Id = nil,
     },
 
-    CheckIcon = {
-        RobloxId = 97682394690683,
-        Path = "Obsidian/assets/CheckIcon.png",
-        URL = BaseURL .. "assets/CheckIcon.png",
-
-        Id = nil,
-    },
 }
 do
     local function RecursiveCreatePath(Path: string, IsFile: boolean?)
@@ -2033,18 +2026,34 @@ end
 
 local function GetToggleSurfaceColor(Toggle): Color3
     if Toggle.Value then
-        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.72)
+        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.56)
     end
 
-    return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.22)
+    return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.16)
 end
 
 local function GetToggleStrokeColor(Toggle): Color3
     if Toggle.Value then
-        return Library.Scheme.OutlineColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.72)
+        return Library.Scheme.OutlineColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.64)
     end
 
-    return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.12)
+    return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.08)
+end
+
+local function GetKeybindToggleSurfaceColor(Active: boolean): Color3
+    if Active then
+        return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, 0.52)
+    end
+
+    return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.16)
+end
+
+local function GetKeybindToggleStrokeColor(Active: boolean): Color3
+    if Active then
+        return Library.Scheme.OutlineColor:Lerp(Library.Scheme.AccentColor, 0.64)
+    end
+
+    return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.08)
 end
 
 local function RegisterToggleTheme(Toggle, Surface: GuiObject, Stroke: UIStroke, Label: TextLabel)
@@ -4033,7 +4042,6 @@ function Library:OnUnload(Callback)
     table.insert(Library.UnloadSignals, Callback)
 end
 
-local CheckIcon = Library:GetIcon("check")
 local ArrowIcon = Library:GetIcon("chevron-up")
 local ResizeIcon = Library:GetIcon("move-diagonal-2")
 local KeyIcon = Library:GetIcon("key")
@@ -4043,7 +4051,6 @@ function Library:SetIconModule(module: IconModule)
     Icons = module
 
     
-    CheckIcon = Library:GetIcon("check")
     ArrowIcon = Library:GetIcon("chevron-up")
     ResizeIcon = Library:GetIcon("move-diagonal-2")
     KeyIcon = Library:GetIcon("key")
@@ -4373,24 +4380,26 @@ do
                 Parent = Holder,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, 0),
+                CornerRadius = UDim.new(0, 3),
                 Parent = Checkbox,
             })
-            New("UIStroke", {
+            local CheckboxStroke = New("UIStroke", {
                 Color = "OutlineColor",
+                Transparency = 0.18,
                 Parent = Checkbox,
             })
 
-            local CheckImage = New("ImageLabel", {
-                Image = CheckIcon and CheckIcon.Url or "",
-                ImageColor3 = "FontColor",
-                ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
-                ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
-                ImageTransparency = 1,
-                Position = UDim2.fromOffset(2, 2),
-                Size = UDim2.new(1, -4, 1, -4),
-                Parent = Checkbox,
-            })
+            local CheckboxRegistry = Library.Registry[Checkbox] or {}
+            CheckboxRegistry.BackgroundColor3 = function()
+                return GetKeybindToggleSurfaceColor(KeybindsToggle.DisplayState == true)
+            end
+            Library.Registry[Checkbox] = CheckboxRegistry
+
+            local CheckboxStrokeRegistry = Library.Registry[CheckboxStroke] or {}
+            CheckboxStrokeRegistry.Color = function()
+                return GetKeybindToggleStrokeColor(KeybindsToggle.DisplayState == true)
+            end
+            Library.Registry[CheckboxStroke] = CheckboxStrokeRegistry
 
             function KeybindsToggle:Display(State)
                 if KeybindsToggle.DisplayState == State then
@@ -4402,18 +4411,26 @@ do
                 if KeybindsToggle.LabelTween then
                     StopTween(KeybindsToggle.LabelTween, true)
                 end
-                if KeybindsToggle.CheckTween then
-                    StopTween(KeybindsToggle.CheckTween, true)
+                if KeybindsToggle.IndicatorTween then
+                    StopTween(KeybindsToggle.IndicatorTween, true)
+                end
+                if KeybindsToggle.IndicatorStrokeTween then
+                    StopTween(KeybindsToggle.IndicatorStrokeTween, true)
                 end
 
                 KeybindsToggle.LabelTween = TweenService:Create(Label, Library.KeybindRowTweenInfo, {
                     TextTransparency = State and 0 or 0.5,
                 })
-                KeybindsToggle.CheckTween = TweenService:Create(CheckImage, Library.KeybindRowTweenInfo, {
-                    ImageTransparency = State and 0 or 1,
+                KeybindsToggle.IndicatorTween = TweenService:Create(Checkbox, Library.KeybindRowTweenInfo, {
+                    BackgroundColor3 = GetKeybindToggleSurfaceColor(State),
+                })
+                KeybindsToggle.IndicatorStrokeTween = TweenService:Create(CheckboxStroke, Library.KeybindRowTweenInfo, {
+                    Color = GetKeybindToggleStrokeColor(State),
+                    Transparency = State and 0.04 or 0.18,
                 })
                 KeybindsToggle.LabelTween:Play()
-                KeybindsToggle.CheckTween:Play()
+                KeybindsToggle.IndicatorTween:Play()
+                KeybindsToggle.IndicatorStrokeTween:Play()
             end
 
             function KeybindsToggle:SetText(Text)
@@ -6988,24 +7005,13 @@ do
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 0),
+            CornerRadius = UDim.new(0, 3),
             Parent = Checkbox,
         })
 
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
             Transparency = 0.18,
-            Parent = Checkbox,
-        })
-
-        local CheckImage = New("ImageLabel", {
-            Image = CheckIcon and CheckIcon.Url or "",
-            ImageColor3 = "FontColor",
-            ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
-            ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
-            ImageTransparency = 1,
-            Position = UDim2.fromOffset(2, 2),
-            Size = UDim2.new(1, -4, 1, -4),
             Parent = Checkbox,
         })
 
@@ -7029,10 +7035,8 @@ do
                 Library:CancelTween(CheckboxStroke, "CheckboxStroke")
                 Library:CancelTween(Label, "CheckboxLabelColor")
                 Library:CancelTween(Label, "CheckboxLabelTransparency")
-                Library:CancelTween(CheckImage, "CheckboxIcon")
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
-                CheckImage.ImageTransparency = Toggle.Value and 0.65 or 1
                 Checkbox.BackgroundColor3 = BackgroundColor
                 Checkbox.BackgroundTransparency = 0.35
                 CheckboxStroke.Color = StrokeColor
@@ -7055,9 +7059,6 @@ do
             })
             Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or 0.4,
-            })
-            Library:PlayTween(CheckImage, "CheckboxIcon", Library.TweenInfo, {
-                ImageTransparency = Toggle.Value and 0 or 1,
             })
         end
 
@@ -7191,7 +7192,6 @@ do
             Library:CancelTween(CheckboxStroke, "CheckboxStroke")
             Library:CancelTween(Label, "CheckboxLabelColor")
             Library:CancelTween(Label, "CheckboxLabelTransparency")
-            Library:CancelTween(CheckImage, "CheckboxIcon")
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do

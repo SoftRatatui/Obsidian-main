@@ -190,7 +190,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` defaults to the same compact, square 16×16 checkbox as `AddCheckbox`. This keeps the standard control set aligned and avoids oversized switch tracks. Set `Library.ForceCheckbox = false` before creating controls only when a project specifically needs the legacy 28×16 switch style.
+`AddToggle` defaults to the same compact, soft-square 16×16 state indicator as `AddCheckbox`. The selected state is a muted accent fill with no checkmark icon, so the control stays clean and aligned. Set `Library.ForceCheckbox = false` before creating controls only when a project specifically needs the legacy 28×16 switch style.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -479,7 +479,7 @@ ThemeGroup:SetOrder(0)
 
 ThemeManager applies themes atomically. It resets all internal semantic colors, synchronizes the Font Face and background image, and prevents an old palette from leaving isolated elements behind. Theme controls use IDs such as `ThemeManager_BackgroundColor`; do not reuse that prefix for your own controls.
 
-The default marker is `default-v5.txt`. Older markers are intentionally ignored, so an older saved Ubuntu, partial theme, or previous palette cannot override Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
+The default marker is `default-v5.txt`. Retired palette names and stale theme data are rejected and fall back to Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
 
 Call `ThemeManager:SetDefaultTheme(table)` only before `ApplyToTab`. It replaces the session fallback palette used by ThemeManager.
 
@@ -698,9 +698,9 @@ You are probably loading `Library.lua` from GitHub while editing a local copy. T
 
 The loader received HTML or another non-Luau response. Use a raw GitHub URL, not a browser `blob` URL, and verify the URL in a browser before executing it.
 
-### The UI starts with an old Ubuntu or mixed theme
+### The UI starts with an old or mixed theme
 
-Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Old default markers are ignored by `default-v5.txt`. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
+Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Retired theme selections fall back to Graphite and cannot reapply their old color fields through a saved config. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
 
 ### A theme control changes only part of the UI
 

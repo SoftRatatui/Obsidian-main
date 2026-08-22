@@ -74,10 +74,6 @@ local ThemeManager = {
             6,
             { FontColor = "ffffff", MainColor = "191925", AccentColor = "6759b3", BackgroundColor = "16161f", OutlineColor = "323232", BackgroundImage = "" },
         },
-        ["Ubuntu"] = {
-            7,
-            { FontColor = "ffffff", MainColor = "3e3e3e", AccentColor = "e2581e", BackgroundColor = "323232", OutlineColor = "191919", BackgroundImage = "" },
-        },
         ["Quartz"] = {
             8,
             { FontColor = "ffffff", MainColor = "232330", AccentColor = "426e87", BackgroundColor = "1d1b26", OutlineColor = "27232f", BackgroundImage = "" },
@@ -337,8 +333,16 @@ local function IsValidLeafName(Name: any): boolean
     return Name ~= "." and Name ~= ".." and not Name:find('[\\/%z<>:"|%?%*]')
 end
 
+local RetiredThemeNames = {
+    ubuntu = true,
+}
+
+local function IsRetiredThemeName(Name: any): boolean
+    return typeof(Name) == "string" and RetiredThemeNames[string.lower(Name)] == true
+end
+
 local function IsValidThemeName(Name: any): boolean
-    return IsValidLeafName(Name)
+    return IsValidLeafName(Name) and not IsRetiredThemeName(Name)
 end
 
 function ThemeManager:BeginConfigLoad()
@@ -375,14 +379,25 @@ function ThemeManager:EndConfigLoad()
     end
 
     local ThemeData = nil
+    local RetiredThemeSelected = false
     local ThemeListId = "ThemeManager_ThemeList"
     if LoadedOptions[ThemeListId] then
         local ThemeList = Library.Options[ThemeListId]
         local ThemeName = ThemeList and ThemeList.Value
         if not IsStringEmpty(ThemeName) then
-            local CustomThemeData = ThemeManager:GetCustomTheme(ThemeName)
-            local BuiltInTheme = ThemeManager.BuiltInThemes[ThemeName]
-            ThemeData = CustomThemeData or (BuiltInTheme and BuiltInTheme[2])
+            if IsRetiredThemeName(ThemeName) then
+                RetiredThemeSelected = true
+                ThemeData = table.clone(ThemeManager.BuiltInThemes[ThemeManager.FallbackThemeName][2])
+                if ThemeList then
+                    ThemeManager.ApplyingTheme = true
+                    ThemeList:SetValue(ThemeManager.FallbackThemeName)
+                    ThemeManager.ApplyingTheme = false
+                end
+            else
+                local CustomThemeData = ThemeManager:GetCustomTheme(ThemeName)
+                local BuiltInTheme = ThemeManager.BuiltInThemes[ThemeName]
+                ThemeData = CustomThemeData or (BuiltInTheme and BuiltInTheme[2])
+            end
         end
     end
 
@@ -403,7 +418,7 @@ function ThemeManager:EndConfigLoad()
 
     for _, SchemeIndex in SchemeIndexes do
         local OptionId = GetThemeOptionId(SchemeIndex)
-        if LoadedOptions[OptionId] then
+        if not RetiredThemeSelected and LoadedOptions[OptionId] then
             local Option = Library.Options[OptionId]
             if Option then
                 ThemeData[SchemeIndex] = Option.Value
@@ -412,7 +427,7 @@ function ThemeManager:EndConfigLoad()
         end
     end
 
-    if LoadedOptions.ThemeManager_FontFace then
+    if not RetiredThemeSelected and LoadedOptions.ThemeManager_FontFace then
         local FontFace = Library.Options.ThemeManager_FontFace
         if FontFace then
             ThemeData.FontFace = FontFace.Value
@@ -420,7 +435,7 @@ function ThemeManager:EndConfigLoad()
         end
     end
 
-    if LoadedOptions.ThemeManager_BackgroundImage then
+    if not RetiredThemeSelected and LoadedOptions.ThemeManager_BackgroundImage then
         local BackgroundImage = Library.Options.ThemeManager_BackgroundImage
         if BackgroundImage then
             ThemeData.BackgroundImage = BackgroundImage.Value

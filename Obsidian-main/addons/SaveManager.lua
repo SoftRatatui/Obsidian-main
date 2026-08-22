@@ -59,7 +59,21 @@ local SpecialValueParser = {
         Decode = function(Data: any)
             local DataType = typeof(Data)
             if DataType == "table" then
-                return UDim2.new(Data.X.Scale, Data.X.Offset, Data.Y.Scale, Data.Y.Offset)
+                local X = Data.X
+                local Y = Data.Y
+                if typeof(X) ~= "table" or typeof(Y) ~= "table" then
+                    return nil
+                end
+
+                local XScale = X.Scale
+                local XOffset = X.Offset
+                local YScale = Y.Scale
+                local YOffset = Y.Offset
+                if typeof(XScale) ~= "number" or typeof(XOffset) ~= "number" or typeof(YScale) ~= "number" or typeof(YOffset) ~= "number" then
+                    return nil
+                end
+
+                return UDim2.new(XScale, XOffset, YScale, YOffset)
             elseif DataType == "UDim2" then
                 return Data
             end
@@ -224,6 +238,18 @@ local function IsStringEmpty(String: string): boolean
     return if typeof(String) == "string" then Trim(String) == "" else true
 end
 
+local function IsValidLeafName(Name: any): boolean
+    if typeof(Name) ~= "string" or Name ~= Trim(Name) or Name == "" or #Name > 96 then
+        return false
+    end
+
+    return Name ~= "." and Name ~= ".." and not Name:find('[\\/%z<>:"|%?%*]')
+end
+
+local function IsValidConfigName(Name: any): boolean
+    return IsValidLeafName(Name) and string.lower(Name) ~= "autoload"
+end
+
 local function IsValidFolderPath(Name: string): boolean
     return typeof(Name) == "string" and (
         Trim(Name) ~= "" and 
@@ -268,6 +294,10 @@ end
 
 
 local function GetConfigPath(ConfigName: string): false | string
+    if not IsValidConfigName(ConfigName) then
+        return false
+    end
+
     local CurrentSettingsPath = GetCurrentSettingsPath()
     return if CurrentSettingsPath == false then false else string.format("%s/%s.json", CurrentSettingsPath, ConfigName)
 end
@@ -317,24 +347,31 @@ end
 
 function SaveManager:BuildFolderTree(SkipWhenCreated: boolean?)
     if not SaveManager.FileSystemAvailable then
-        return false
+        return false, "Filesystem API is unavailable"
     end
 
     local Paths = SaveManager:GetPaths()
     if #Paths == 0 then
-        return false
+        return false, "Invalid folder path"
     end
 
     if SkipWhenCreated == true then
-        if isfolder(Paths[1]) then
+        if isfolder(Paths[#Paths]) then
             return true
         end
     end
 
     for _, Path in Paths do
         if isfolder(Path) then continue end
-        
-        makefolder(Path)
+
+        local Success, ErrorMessage = pcall(makefolder, Path)
+        if not Success and not isfolder(Path) then
+            return false, "Failed to create folder: " .. tostring(ErrorMessage)
+        end
+    end
+
+    if not isfolder(Paths[#Paths]) then
+        return false, "Failed to create folder"
     end
 
     return true
@@ -345,6 +382,10 @@ function SaveManager:CheckFolderTree()
 end
 
 function SaveManager:CheckSubFolder(CreateFolder: boolean)
+    if not SaveManager.FileSystemAvailable then
+        return false
+    end
+
     local SubFolderPath = GetSubFolderPath()
     if SubFolderPath == false then
         return false
@@ -355,14 +396,19 @@ function SaveManager:CheckSubFolder(CreateFolder: boolean)
         return FolderExists
     end
 
-    makefolder(SubFolderPath)
-    return true
+    if FolderExists then
+        return true
+    end
+
+    local FolderReady = SaveManager:BuildFolderTree()
+    return FolderReady == true and isfolder(SubFolderPath)
 end
 
 function SaveManager:SetFolder(Folder: string)
     assert(IsValidFolderPath(Folder), "Invalid path provided")
 
     SaveManager.Folder = Folder
+    SaveManager.AutoloadConfig = nil
     SaveManager:BuildFolderTree()
 end
 
@@ -370,6 +416,7 @@ function SaveManager:SetSubFolder(SubFolder: string)
     assert(IsValidFolderPath(SubFolder), "Invalid path provided")
 
     SaveManager.SubFolder = SubFolder
+    SaveManager.AutoloadConfig = nil
     SaveManager:BuildFolderTree()
 end
 
@@ -393,7 +440,7 @@ function SaveManager:RefreshConfigList()
 
         local Position = RawFileName:gsub("\\", "/"):find("/[^/]*$")
         local FileName = Position and RawFileName:sub(Position + 1) or RawFileName
-        if not FileName or FileName == "autoload" then continue end
+        if not IsValidConfigName(FileName) then continue end
 
         table.insert(FileNames, FileName)
     end
@@ -460,11 +507,7 @@ function SaveManager:SaveJSON(ConfigName)
 end
 
 function SaveManager:Save(ConfigName: string): (boolean, string?)
-    if IsStringEmpty(ConfigName) then
-        return false, "Invalid config name provided"
-    end
-
-    if string.lower(ConfigName) == "autoload" then
+    if not IsValidConfigName(ConfigName) then
         return false, "Invalid config name provided"
     end
 
@@ -473,7 +516,10 @@ function SaveManager:Save(ConfigName: string): (boolean, string?)
         return false, "Invalid config name provided"
     end
 
-    SaveManager:CheckFolderTree()
+    local FolderReady, FolderError = SaveManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare config folder"
+    end
 
     local EncodedData, SuccessEncode, EncodeErrorMessage = SaveManager:SaveJSON(ConfigName)
     if not SuccessEncode then
@@ -498,30 +544,116 @@ function SaveManager:LoadJSON(Content: string)
         return false, "Failed to decode config data"
     end
 
+    local function ValidateObject(ObjectIndex: any, Option: any): (boolean, string?)
+        if typeof(Option) ~= "table" then
+            return false, string.format("object %s: expected table", tostring(ObjectIndex))
+        end
+
+        if Option.type == nil then
+            return true
+        end
+
+        if typeof(Option.type) ~= "string" then
+            return false, string.format("object %s: expected string type", tostring(ObjectIndex))
+        end
+
+        local Parser = ElementParser[Option.type]
+        if not Parser then
+            return true
+        end
+
+        if typeof(Option.idx) ~= "string" and typeof(Option.idx) ~= "number" then
+            return false, string.format("%s object %s: expected string or number index", Option.type, tostring(ObjectIndex))
+        end
+
+        if Option.type == "Toggle" then
+            if typeof(Option.value) ~= "boolean" then
+                return false, string.format("Toggle %q: expected boolean value", tostring(Option.idx))
+            end
+        elseif Option.type == "Slider" then
+            if typeof(Option.value) ~= "string" and typeof(Option.value) ~= "number" then
+                return false, string.format("Slider %q: expected string or number value", tostring(Option.idx))
+            end
+        elseif Option.type == "Dropdown" then
+            if Option.multi ~= nil and typeof(Option.multi) ~= "boolean" then
+                return false, string.format("Dropdown %q: expected boolean multi value", tostring(Option.idx))
+            end
+        elseif Option.type == "ColorPicker" then
+            local IsColorValid = typeof(Option.value) == "string" and pcall(Color3.fromHex, Option.value)
+            if not IsColorValid or Option.transparency ~= nil and typeof(Option.transparency) ~= "number" then
+                return false, string.format("ColorPicker %q: invalid color data", tostring(Option.idx))
+            end
+        elseif Option.type == "KeyPicker" then
+            if Option.key ~= nil and typeof(Option.key) ~= "string" or Option.mode ~= nil and typeof(Option.mode) ~= "string" or Option.modifiers ~= nil and typeof(Option.modifiers) ~= "table" or Option.toggled ~= nil and typeof(Option.toggled) ~= "boolean" then
+                return false, string.format("KeyPicker %q: invalid keybind data", tostring(Option.idx))
+            end
+        elseif Option.type == "Input" then
+            if typeof(Option.text) ~= "string" then
+                return false, string.format("Input %q: expected string text", tostring(Option.idx))
+            end
+        elseif Option.type == "Groupbox" then
+            if typeof(Option.idx) ~= "string" or typeof(Option.tabIdx) ~= "string" or Option.collapsed ~= nil and typeof(Option.collapsed) ~= "boolean" then
+                return false, string.format("Groupbox %q: invalid groupbox data", tostring(Option.idx))
+            end
+        end
+
+        return true
+    end
+
+    local Objects = {}
+    for ObjectIndex, Option in Decoded.objects do
+        local Valid, ValidationError = ValidateObject(ObjectIndex, Option)
+        if not Valid then
+            return false, "Failed to load config data: " .. tostring(ValidationError)
+        end
+
+        if Option.type ~= nil then
+            table.insert(Objects, Option)
+        end
+    end
+
+    local KeybindMenuData = Decoded.keybindMenu
+    local KeybindMenuPosition = nil
+    if KeybindMenuData ~= nil then
+        if typeof(KeybindMenuData) ~= "table" then
+            return false, "Failed to load config data: invalid keybind menu data"
+        end
+
+        if KeybindMenuData.visible ~= nil and typeof(KeybindMenuData.visible) ~= "boolean" then
+            return false, "Failed to load config data: invalid keybind menu visibility"
+        end
+
+        if KeybindMenuData.position ~= nil then
+            KeybindMenuPosition = SpecialValueParser.UDim2.Decode(KeybindMenuData.position)
+            if not KeybindMenuPosition then
+                return false, "Failed to load config data: invalid keybind menu position"
+            end
+        end
+    end
+
     local Library = SaveManager.Library
     local LoadingOrder = SaveManager.LoadingOrder
     local IgnoreIndexes = SaveManager.Ignore
     local LoadErrors = {}
 
     if SaveManager.UseLoadingOrder == true and typeof(LoadingOrder) == "table" then
-        table.sort(Decoded.objects, function(a, b)
+        table.sort(Objects, function(a, b)
             local aIndex = table.find(LoadingOrder, a.type) or math.huge
             local bIndex = table.find(LoadingOrder, b.type) or math.huge
             return aIndex < bIndex
         end)
     end
 
-    if Library.KeybindFrame and typeof(Decoded.keybindMenu) == "table" then
-        local KeybindFrameData = Decoded.keybindMenu
+    if Library.KeybindFrame and KeybindMenuData then
+        local KeybindFrameData = KeybindMenuData
         local IsVisible = KeybindFrameData.visible == true
-        local Position = SpecialValueParser.UDim2.Decode(KeybindFrameData.position)
 
         if Library.SetKeybindMenuVisible then
             Library:SetKeybindMenuVisible(IsVisible)
         else
             Library.KeybindFrame.Visible = IsVisible
         end
-        Library.KeybindFrame.Position = Position or Library.KeybindFrame.Position
+        Library.KeybindFrame.Position = KeybindMenuPosition or Library.KeybindFrame.Position
         
         local KeybindMenuToggle = Library.Options and Library.Options.KeybindMenuOpen
         if KeybindMenuToggle then
@@ -534,7 +666,7 @@ function SaveManager:LoadJSON(Content: string)
     local SkipThemeOptions = false
     if ThemeManager then
         local HasThemeOptions = false
-        for _, Option in Decoded.objects do
+        for _, Option in Objects do
             if typeof(Option) == "table" and IsThemeManagerOption(Option.idx) and not IgnoreIndexes[Option.idx] and ElementParser[Option.type] then
                 HasThemeOptions = true
                 break
@@ -557,11 +689,7 @@ function SaveManager:LoadJSON(Content: string)
     end
 
     
-    for ObjectIndex, Option in Decoded.objects do
-        if typeof(Option) ~= "table" then
-            table.insert(LoadErrors, string.format("object %s: expected table", tostring(ObjectIndex)))
-            continue
-        end
+    for _ObjectIndex, Option in Objects do
         if not Option.type then continue end
         if IgnoreIndexes[Option.idx] then continue end
         if SkipThemeOptions and IsThemeManagerOption(Option.idx) then continue end
@@ -604,6 +732,10 @@ function SaveManager:Load(ConfigName: string): (boolean, string?)
         return false, "No config is selected"
     end
 
+    if not IsValidConfigName(ConfigName) then
+        return false, "Invalid config name provided"
+    end
+
     local ConfigPath = GetConfigPath(ConfigName)
     if ConfigPath == false or not isfile(ConfigPath) then
         return false, "Config file does not exist"
@@ -620,6 +752,10 @@ end
 function SaveManager:Delete(ConfigName: string): (boolean | string?)
     if IsStringEmpty(ConfigName) then
         return false, "No config is selected"
+    end
+
+    if not IsValidConfigName(ConfigName) then
+        return false, "Invalid config name provided"
     end
 
     local ConfigPath = GetConfigPath(ConfigName)
@@ -641,7 +777,10 @@ end
 
 
 function SaveManager:GetAutoloadConfig(): (string, boolean, string?)
-    SaveManager:CheckFolderTree()
+    local FolderReady, FolderError = SaveManager:CheckFolderTree()
+    if not FolderReady then
+        return "none", false, FolderError or "Failed to prepare config folder"
+    end
 
     local AutoloadPath = GetAutoloadPath()
     if AutoloadPath == false then
@@ -655,6 +794,11 @@ function SaveManager:GetAutoloadConfig(): (string, boolean, string?)
     local SuccessRead, AutoloadConfigName = pcall(readfile, AutoloadPath)
     if not (SuccessRead and typeof(AutoloadConfigName) == "string") then
         return "none", false, AutoloadConfigName
+    end
+
+    AutoloadConfigName = Trim(AutoloadConfigName)
+    if not IsValidConfigName(AutoloadConfigName) then
+        return "none", false, "Invalid autoload config name"
     end
 
     local ConfigExists = DoesConfigExist(AutoloadConfigName)
@@ -671,7 +815,14 @@ function SaveManager:SaveAutoloadConfig(ConfigName: string): (boolean, string?)
         return false, "No config is selected"
     end
 
-    SaveManager:CheckFolderTree()
+    if not IsValidConfigName(ConfigName) then
+        return false, "Invalid config name provided"
+    end
+
+    local FolderReady, FolderError = SaveManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare config folder"
+    end
 
     local AutoloadPath = GetAutoloadPath()
     if AutoloadPath == false then
@@ -711,7 +862,10 @@ function SaveManager:LoadAutoloadConfig()
 end
 
 function SaveManager:DeleteAutoLoadConfig(): (boolean, string?)
-    SaveManager:CheckFolderTree()
+    local FolderReady, FolderError = SaveManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare config folder"
+    end
 
     local AutoloadPath = GetAutoloadPath()
     if AutoloadPath == false then

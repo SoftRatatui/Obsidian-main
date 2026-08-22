@@ -329,6 +329,18 @@ local function IsStringEmpty(String: string): boolean
     return if typeof(String) == "string" then Trim(String) == "" else true
 end
 
+local function IsValidLeafName(Name: any): boolean
+    if typeof(Name) ~= "string" or Name ~= Trim(Name) or Name == "" or #Name > 96 then
+        return false
+    end
+
+    return Name ~= "." and Name ~= ".." and not Name:find('[\\/%z<>:"|%?%*]')
+end
+
+local function IsValidThemeName(Name: any): boolean
+    return IsValidLeafName(Name)
+end
+
 function ThemeManager:BeginConfigLoad()
     ThemeManager.ConfigLoadDepth += 1
     if ThemeManager.ConfigLoadDepth == 1 then
@@ -456,12 +468,20 @@ local GetCurrentThemesPath = GetFolderPath
 
 
 local function GetThemePath(ThemeName: string): false | string
+    if not IsValidThemeName(ThemeName) then
+        return false
+    end
+
     local CurrentThemesPath = GetCurrentThemesPath()
     return if CurrentThemesPath == false then false else string.format("%s/%s.json", CurrentThemesPath, ThemeName)
 end
 
 local function DoesThemeExist(ThemeName: string, IncludeBuiltIn: boolean): boolean
-    if ThemeManager.BuiltInThemes[ThemeName] then
+    if not IsValidThemeName(ThemeName) then
+        return false
+    end
+
+    if IncludeBuiltIn and ThemeManager.BuiltInThemes[ThemeName] then
         return true
     end
 
@@ -482,24 +502,31 @@ end
 
 function ThemeManager:BuildFolderTree(SkipWhenCreated: boolean?)
     if not ThemeManager.FileSystemAvailable then
-        return false
+        return false, "Filesystem API is unavailable"
     end
 
     local Paths = ThemeManager:GetPaths()
     if #Paths == 0 then
-        return false
+        return false, "Invalid folder path"
     end
 
     if SkipWhenCreated == true then
-        if isfolder(Paths[1]) then
+        if isfolder(Paths[#Paths]) then
             return true
         end
     end
 
     for _, Path in Paths do
         if isfolder(Path) then continue end
-        
-        makefolder(Path)
+
+        local Success, ErrorMessage = pcall(makefolder, Path)
+        if not Success and not isfolder(Path) then
+            return false, "Failed to create folder: " .. tostring(ErrorMessage)
+        end
+    end
+
+    if not isfolder(Paths[#Paths]) then
+        return false, "Failed to create folder"
     end
 
     return true
@@ -513,6 +540,7 @@ function ThemeManager:SetFolder(Folder: string)
     assert(IsValidFolderPath(Folder), "Invalid path provided")
 
     ThemeManager.Folder = Folder
+    ThemeManager.DefaultThemeName = nil
     ThemeManager:BuildFolderTree()
 end
 
@@ -548,7 +576,7 @@ function ThemeManager:ReloadCustomThemes()
 
         local Position = RawFileName:gsub("\\", "/"):find("/[^/]*$")
         local FileName = Position and RawFileName:sub(Position + 1) or RawFileName
-        if not FileName then continue end
+        if not IsValidThemeName(FileName) then continue end
 
         table.insert(FileNames, FileName)
     end
@@ -557,7 +585,7 @@ function ThemeManager:ReloadCustomThemes()
 end
 
 function ThemeManager:GetCustomTheme(ThemeName: string): any
-    if IsStringEmpty(ThemeName) then
+    if not IsValidThemeName(ThemeName) then
         return nil
     end
 
@@ -580,7 +608,7 @@ function ThemeManager:GetCustomTheme(ThemeName: string): any
 end
 
 function ThemeManager:SaveCustomTheme(ThemeName: string): any
-    if IsStringEmpty(ThemeName) then
+    if not IsValidThemeName(ThemeName) then
         return false, "Invalid theme name provided"
     end
 
@@ -593,7 +621,10 @@ function ThemeManager:SaveCustomTheme(ThemeName: string): any
         return false, "Invalid theme name provided"
     end
 
-    ThemeManager:CheckFolderTree()
+    local FolderReady, FolderError = ThemeManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare theme folder"
+    end
 
     local Library = ThemeManager.Library
     local _FontFace, FontName = ResolveThemeFont(Library.Scheme.Font)
@@ -625,6 +656,10 @@ function ThemeManager:Delete(ThemeName: string): (boolean | string?)
         return false, "No theme is selected"
     end
 
+    if not IsValidThemeName(ThemeName) then
+        return false, "Invalid theme name provided"
+    end
+
     local ThemePath = GetThemePath(ThemeName)
     if ThemePath == false or not isfile(ThemePath) then
         return false, "Theme file does not exist"
@@ -644,7 +679,11 @@ end
 
 
 function ThemeManager:GetDefaultTheme(): (string, boolean, string?)
-    ThemeManager:CheckFolderTree()
+    local FolderReady, FolderError = ThemeManager:CheckFolderTree()
+    if not FolderReady then
+        ThemeManager.DefaultThemeName = nil
+        return "none", false, FolderError or "Failed to prepare theme folder"
+    end
 
     local DefaultThemePath = GetDefaultThemePath()
     if DefaultThemePath == false then
@@ -664,6 +703,11 @@ function ThemeManager:GetDefaultTheme(): (string, boolean, string?)
     end
 
     DefaultThemeName = Trim(DefaultThemeName)
+
+    if not IsValidThemeName(DefaultThemeName) then
+        ThemeManager.DefaultThemeName = nil
+        return "none", false, "Invalid default theme name"
+    end
 
     local ConfigExists = DoesThemeExist(DefaultThemeName, true)
     if not ConfigExists then
@@ -709,7 +753,14 @@ function ThemeManager:SaveDefault(ThemeName: string): (boolean, string?)
         return false, "No theme is selected"
     end
 
-    ThemeManager:CheckFolderTree()
+    if not IsValidThemeName(ThemeName) then
+        return false, "Invalid theme name provided"
+    end
+
+    local FolderReady, FolderError = ThemeManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare theme folder"
+    end
 
     local DefaultThemePath = GetDefaultThemePath()
     if DefaultThemePath == false then
@@ -776,7 +827,10 @@ function ThemeManager:LoadDefault()
 end
 
 function ThemeManager:DeleteDefaultTheme(): (boolean, string?)
-    ThemeManager:CheckFolderTree()
+    local FolderReady, FolderError = ThemeManager:CheckFolderTree()
+    if not FolderReady then
+        return false, FolderError or "Failed to prepare theme folder"
+    end
 
     local DefaultThemePath = GetDefaultThemePath()
     if DefaultThemePath == false then
@@ -815,7 +869,7 @@ function ThemeManager:ThemeUpdate()
 end
 
 function ThemeManager:ApplyTheme(ThemeName: string)
-    if IsStringEmpty(ThemeName) then
+    if not IsValidThemeName(ThemeName) then
         return false, "No theme is selected"
     end
 
@@ -877,6 +931,7 @@ end
 
 function ThemeManager:CreateThemeManager(Themesbox: any)
     assert(ThemeManager.Library, "Library is not set, call ThemeManager:SetLibrary(Library) first.")
+    assert(not ThemeManager.AppliedToTab, "ThemeManager is already applied to a tab")
 
     local BuiltInThemesNames = {}
     for Name, _ThemeData in ThemeManager.BuiltInThemes do
@@ -1075,7 +1130,12 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
             return
         end
 
-        ThemeManager:ApplyTheme(Name)
+        local Success, ErrorMessage = ThemeManager:ApplyTheme(Name)
+        if not Success then
+            ThemeManager.Library:Notify(string.format("Failed to load theme %q: %s", Name, tostring(ErrorMessage)))
+            return
+        end
+
         ThemeManager.Library:Notify(string.format("Successfully loaded theme %q", Name))
     end)
 
@@ -1097,7 +1157,12 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
             "Overwrite",
             function()
-                ThemeManager:SaveCustomTheme(Name)
+                local Success, ErrorMessage = ThemeManager:SaveCustomTheme(Name)
+                if not Success then
+                    ThemeManager.Library:Notify(string.format("Failed to overwrite theme %q: %s", Name, tostring(ErrorMessage)))
+                    return
+                end
+
                 ThemeManager.Library:Notify(string.format("Successfully overwrote theme %q", Name))
             end
         )

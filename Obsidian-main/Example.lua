@@ -14,7 +14,6 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local FALLBACK_REPOSITORY = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local ExecutorRequest = request or http_request or (syn and syn.request)
 
 local function DownloadSource(Url)
@@ -96,7 +95,6 @@ local function LoadModule(Path, Required, PreferredBase)
 
 	AddBase(PreferredBase)
 	AddBase(PRIMARY_REPOSITORY)
-	AddBase(FALLBACK_REPOSITORY)
 
 	local Errors = {}
 	for _, BaseUrl in Bases do
@@ -143,7 +141,7 @@ local Window = Library:CreateWindow({
 	Resizable = false,
 	GlobalSearch = true,
 	EnableSidebarResize = false,
-	ResponsiveLayout = false,
+	ResponsiveLayout = true,
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
@@ -1001,9 +999,7 @@ end
 
 Notify(
 	"MonHub started",
-	ActiveRepository == PRIMARY_REPOSITORY
-		and "Loaded from the custom repository. Press RightShift to toggle the interface."
-		or "The custom repository was unavailable, so the verified upstream fallback was used.",
+	"Loaded from the custom repository. Press RightShift to toggle the interface.",
 	6
 )
 

@@ -124,7 +124,10 @@ do
 
         for _, Segment in ipairs(Segments) do
             if not isfolder(TraversedPath .. Segment) then
-                makefolder(TraversedPath .. Segment)
+                local Created = pcall(makefolder, TraversedPath .. Segment)
+                if not Created and not isfolder(TraversedPath .. Segment) then
+                    return nil
+                end
             end
 
             TraversedPath = TraversedPath .. Segment .. "/"
@@ -447,6 +450,18 @@ else
 
     Library.IsMobile = (Library.DevicePlatform == Enum.Platform.Android or Library.DevicePlatform == Enum.Platform.IOS)
     Library.OriginalMinSize = Library.IsMobile and Vector2.new(480, 240) or Vector2.new(480, 360)
+end
+
+local function GetViewportSize()
+    local Camera = workspace.CurrentCamera
+    local Success, ViewportSize = pcall(function()
+        return Camera and Camera.ViewportSize
+    end)
+    if Success and typeof(ViewportSize) == "Vector2" and ViewportSize.X > 0 and ViewportSize.Y > 0 then
+        return ViewportSize
+    end
+
+    return Vector2.new(1280, 720)
 end
 
 local Templates = {
@@ -854,9 +869,11 @@ local function StopTween(Tween: TweenBase, Destroy: boolean?)
         return
     end
 
-    if Tween.PlaybackState == Enum.PlaybackState.Playing then
-        Tween:Cancel()
-    end
+    pcall(function()
+        if Tween.PlaybackState == Enum.PlaybackState.Playing then
+            Tween:Cancel()
+        end
+    end)
 
     if Destroy == true then
         pcall(Tween.Destroy, Tween)
@@ -880,7 +897,7 @@ local function AreTweenTargetsEqual(First, Second)
 end
 
 function Library:PlayTween(Instance: Instance, Slot: string, TweenInfoValue: TweenInfo, Properties)
-    if not Instance or Library.Unloaded then
+    if not Instance or not Instance.Parent or Library.Unloaded then
         return nil
     end
 
@@ -929,6 +946,10 @@ function Library:PlayTween(Instance: Instance, Slot: string, TweenInfoValue: Twe
 end
 
 function Library:CancelTween(Instance: Instance, Slot: string)
+    if not Instance then
+        return
+    end
+
     local TweenSlots = Library.ActiveTweens[Instance]
     if not TweenSlots or not TweenSlots[Slot] then
         return
@@ -1443,9 +1464,17 @@ function Library:SetDPIScale(DPIScale: number)
     Library.DPIScale = Scale
     Library.MinSize = Library.OriginalMinSize * Library.DPIScale
 
-	for _, UIScale in Library.Scales do
-        Library:CancelTween(UIScale, "WindowVisibilityScale")
-        UIScale.Scale = Library.DPIScale - (tonumber(Library.ScalesOffset[UIScale]) or 0)
+	for Index = #Library.Scales, 1, -1 do
+        local UIScale = Library.Scales[Index]
+        if not UIScale or not UIScale.Parent then
+            if UIScale then
+                Library.ScalesOffset[UIScale] = nil
+            end
+            table.remove(Library.Scales, Index)
+        else
+            Library:CancelTween(UIScale, "WindowVisibilityScale")
+            UIScale.Scale = Library.DPIScale - (tonumber(Library.ScalesOffset[UIScale]) or 0)
+        end
     end
 
     for _, Option in Options do
@@ -1644,11 +1673,11 @@ local function New(ClassName: string, Properties: { [string]: any }): any
     end
 
     if Instance:IsA("GuiButton") then
-        Library:GiveSignal(Instance.Activated:Connect(function()
+        Instance.Activated:Connect(function()
             if Library.PlayClickSound then
                 Library:PlayClickSound()
             end
-        end))
+        end)
     end
 
     return Instance
@@ -2168,7 +2197,7 @@ function Library:ClearTextBoundsCache()
 end
 
 function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: number?): (number, number)
-    local FinalWidth = Width or workspace.CurrentCamera.ViewportSize.X - 32
+    local FinalWidth = math.max(1, Width or GetViewportSize().X - 32)
     local FontCache = TextBoundsCache[Font]
     if not FontCache then
         FontCache = {}
@@ -2283,7 +2312,7 @@ function GetOverlappingDraggable(UI: GuiObject, TargetPos: Vector2?)
 end
 
 function GetNonOverlappingPosition(UI: GuiObject, StartPos: UDim2?)
-    local ScreenSize = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)) - Vector2.new(100, 100)
+    local ScreenSize = GetViewportSize() - Vector2.new(100, 100)
     local Start = StartPos and Vector2.new(StartPos.X.Offset, StartPos.Y.Offset) or Vector2.new(6, 6)
     local Padding = 6
     
@@ -2337,14 +2366,13 @@ function PositionDraggable(UI: GuiObject, StartPos: UDim2?)
 end
 
 ClampGuiToViewport = function(UI: GuiObject, Margin: number?)
-    local Camera = workspace.CurrentCamera
-    if not Camera or not UI.Parent then
+    if not UI.Parent then
         return
     end
 
     Margin = Margin or 8
 
-    local ViewportSize = Camera.ViewportSize
+    local ViewportSize = GetViewportSize()
     local AbsolutePosition = UI.AbsolutePosition
     local AbsoluteSize = UI.AbsoluteSize
     local MaxX = math.max(Margin, ViewportSize.X - AbsoluteSize.X - Margin)
@@ -2428,6 +2456,10 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
         StartPos = Input.Position
         FramePos = UI.Position
         Dragging = true
+
+        if Changed and Changed.Connected then
+            Changed:Disconnect()
+        end
 
         Changed = Input.Changed:Connect(function()
             if Input.UserInputState ~= Enum.UserInputState.End then
@@ -2536,6 +2568,10 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
         FrameSize = UI.Size
         Dragging = true
 
+        if Changed and Changed.Connected then
+            Changed:Disconnect()
+        end
+
         Changed = Input.Changed:Connect(function()
             if Input.UserInputState ~= Enum.UserInputState.End then
                 return
@@ -2562,8 +2598,7 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
 
         if Dragging and IsHoverInput(Input) then
             local Delta = Input.Position - StartPos
-            local Camera = workspace.CurrentCamera
-            local ViewportSize = Camera and Camera.ViewportSize or Vector2.new(math.huge, math.huge)
+            local ViewportSize = GetViewportSize()
             local Scale = math.max(Library.DPIScale or 1, 0.01)
             local MaxWidth = math.max(0, (ViewportSize.X - UI.AbsolutePosition.X - 8) / Scale)
             local MaxHeight = math.max(0, (ViewportSize.Y - UI.AbsolutePosition.Y - 8) / Scale)
@@ -2974,6 +3009,10 @@ function Library:AddDraggableLabel(...)
     end
 
     function DraggableLabel:Destroy()
+        if DraggableLabel.Destroyed then
+            return
+        end
+
         DraggableLabel.Destroyed = true
 
         if DraggableLabel.Connections then
@@ -3090,6 +3129,10 @@ function Library:AddDraggableButton(...)
     PositionDraggable(Button, Button.Position)
 
     function DraggableButton:Destroy()
+        if DraggableButton.Destroyed then
+            return
+        end
+
         DraggableButton.Destroyed = true
 
         if DraggableButton.Connections then
@@ -3480,9 +3523,27 @@ do
             QueueWatermarkClamp()
         end
     end))
-    if workspace.CurrentCamera then
-        Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(QueueWatermarkClamp))
+    local WatermarkCameraConnection
+    local function BindWatermarkCamera()
+        if WatermarkCameraConnection and WatermarkCameraConnection.Connected then
+            WatermarkCameraConnection:Disconnect()
+        end
+
+        local Camera = workspace.CurrentCamera
+        if Camera then
+            WatermarkCameraConnection = Library:GiveSignal(
+                Camera:GetPropertyChangedSignal("ViewportSize"):Connect(QueueWatermarkClamp)
+            )
+        else
+            WatermarkCameraConnection = nil
+        end
     end
+
+    BindWatermarkCamera()
+    Library:GiveSignal(workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        BindWatermarkCamera()
+        QueueWatermarkClamp()
+    end))
 end
 
 
@@ -3779,6 +3840,10 @@ function Library:AddContextMenu(
     end
 
     function Table:Destroy()
+        if Table.Destroyed then
+            return
+        end
+
         Table.Destroyed = true
 
         if Table.Connections then
@@ -3867,7 +3932,7 @@ TooltipLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
         TooltipLabel.Text,
         TooltipLabel.FontFace,
         TooltipLabel.TextSize,
-        (workspace.CurrentCamera.ViewportSize.X - TooltipLabel.AbsolutePosition.X - 8) / Library.DPIScale
+        math.max(1, (GetViewportSize().X - TooltipLabel.AbsolutePosition.X - 8) / Library.DPIScale)
     )
 
     TooltipLabel.Size = UDim2.fromOffset(X + 8, 0)
@@ -3946,6 +4011,12 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
     end))
 
     function TooltipTable:Destroy()
+        if TooltipTable.Destroyed then
+            return
+        end
+
+        TooltipTable.Destroyed = true
+
         for Index = #TooltipTable.Signals, 1, -1 do
             local Connection = table.remove(TooltipTable.Signals, Index)
             if Connection and Connection.Connected then
@@ -5033,12 +5104,17 @@ do
         KeyPicker.DefaultModifiers = table.clone(KeyPicker.Modifiers or {})
 
         function KeyPicker:Destroy()
+            if KeyPicker.Destroyed then
+                return
+            end
+
             KeyPicker.Destroyed = true
 
             if KeyPicker.Connections then
                 for _, Connection in KeyPicker.Connections do
                     Connection:Disconnect()
                 end
+                table.clear(KeyPicker.Connections)
             end
 
             if KeybindsToggle and KeybindsToggle.Loaded then
@@ -5376,12 +5452,7 @@ do
             end
 
             local function ClampToViewport(NewWidth, NewHeight)
-                local Camera = workspace.CurrentCamera
-                if not Camera then
-                    return NewWidth, NewHeight
-                end
-
-                local ViewportSize = Camera.ViewportSize
+                local ViewportSize = GetViewportSize()
                 local ScreenMargin = 12
 
                 local MaxWidth = ViewportSize.X - ColorMenu.Menu.AbsolutePosition.X - ScreenMargin
@@ -5886,6 +5957,10 @@ do
         ColorPicker.Default = ColorPicker.Value
 
         function ColorPicker:Destroy()
+            if ColorPicker.Destroyed then
+                return
+            end
+
             ColorPicker.Destroyed = true
 
             if ColorPicker.Connections then
@@ -6108,6 +6183,10 @@ do
         end
 
         function Divider:Destroy()
+            if Divider.Destroyed then
+                return
+            end
+
             Divider.Destroyed = true
 
             if Divider.Connections then
@@ -6251,6 +6330,10 @@ do
         end
 
         function Label:Destroy()
+            if Label.Destroyed then
+                return
+            end
+
             Label.Destroyed = true
 
             if Label.Connections then
@@ -6345,6 +6428,7 @@ do
 
         local Button = {
             Connections = {},
+            Addons = {},
             Destroyed = false,
 
             Text = Info.Text,
@@ -6586,6 +6670,7 @@ do
 
             local SubButton = {
                 Connections = {},
+                Addons = {},
                 Destroyed = false,
 
                 Text = Info.Text,
@@ -6680,7 +6765,18 @@ do
             SubButton.AddKeyPicker = BaseAddons.__index.AddKeyPicker
 
             function SubButton:Destroy()
+                if SubButton.Destroyed then
+                    return
+                end
+
                 SubButton.Destroyed = true
+
+                for _, Addon in table.clone(SubButton.Addons) do
+                    if Addon.Destroy then
+                        Addon:Destroy()
+                    end
+                end
+                table.clear(SubButton.Addons)
 
                 if SubButton.TooltipTable then 
                     SubButton.TooltipTable:Destroy() 
@@ -6779,7 +6875,18 @@ do
         Button.AddKeyPicker = BaseAddons.__index.AddKeyPicker
 
         function Button:Destroy()
+            if Button.Destroyed then
+                return
+            end
+
             Button.Destroyed = true
+
+            for _, Addon in table.clone(Button.Addons) do
+                if Addon.Destroy then
+                    Addon:Destroy()
+                end
+            end
+            table.clear(Button.Addons)
 
             if Button.TooltipTable then 
                 Button.TooltipTable:Destroy() 
@@ -7084,6 +7191,10 @@ do
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
+            if Toggle.Destroyed then
+                return
+            end
+
             CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
@@ -7418,6 +7529,10 @@ do
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
+            if Toggle.Destroyed then
+                return
+            end
+
             CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
 
@@ -7686,6 +7801,10 @@ do
         Options[Idx] = Input
 
         function Input:Destroy()
+            if Input.Destroyed then
+                return
+            end
+
             Input.Destroyed = true
 
             if Input.Connections then
@@ -8145,6 +8264,10 @@ do
         Options[Idx] = Slider
 
         function Slider:Destroy()
+            if Slider.Destroyed then
+                return
+            end
+
             Slider.Destroyed = true
 
             if Slider.Connections then
@@ -9238,6 +9361,10 @@ do
         Options[Idx] = Dropdown
 
         function Dropdown:Destroy()
+            if Dropdown.Destroyed then
+                return
+            end
+
             Dropdown.Destroyed = true
 
             StopDragSelect()
@@ -9284,15 +9411,22 @@ do
         local LastMousePos, LastPinchDist = nil, 0
         local MinZoomDistance, MaxZoomDistance = 2, 100
 
+        local function CloneViewportObject(Object: Instance)
+            local Archivable = Object.Archivable
+            if not Archivable then
+                Object.Archivable = true
+            end
+
+            local Success, Clone = pcall(Object.Clone, Object)
+            Object.Archivable = Archivable
+            assert(Success and Clone, "Viewport object could not be cloned.")
+
+            return Clone
+        end
+
         local ViewportObject = Info.Object
         if Info.Clone and typeof(Info.Object) == "Instance" then
-            if Info.Object.Archivable then
-                ViewportObject = ViewportObject:Clone()
-            else
-                Info.Object.Archivable = true
-                ViewportObject = ViewportObject:Clone()
-                Info.Object.Archivable = false
-            end
+            ViewportObject = CloneViewportObject(Info.Object)
         end
 
         local Viewport = {
@@ -9301,6 +9435,7 @@ do
 
             Object = ViewportObject :: PVInstance,
             Camera = if not Info.Camera then Instance.new("Camera") else Info.Camera,
+            OwnsCamera = not Info.Camera,
             Interactive = Info.Interactive,
             AutoFocus = Info.AutoFocus,
             Visible = Info.Visible,
@@ -9532,10 +9667,17 @@ do
         end
 
         function Viewport:SetObject(Object: Instance, Clone: boolean?)
-            assert(Object, "Object cannot be nil.")
+            assert(
+                typeof(Object) == "Instance" and (Object:IsA("BasePart") or Object:IsA("Model")),
+                "Object must be a BasePart or Model."
+            )
+
+            if Object == Viewport.Object and Clone ~= true then
+                return
+            end
 
             if Clone then
-                Object = Object:Clone()
+                Object = CloneViewportObject(Object)
             end
 
             if Viewport.Object then
@@ -9553,7 +9695,7 @@ do
         end
 
         function Viewport:SetHeight(Height: number)
-            assert(Height > 0, "Height must be greater than 0.")
+            assert(typeof(Height) == "number" and Height > 0, "Height must be greater than 0.")
 
             Holder.Size = UDim2.new(1, 0, 0, Height)
             Groupbox:Resize()
@@ -9573,7 +9715,12 @@ do
                 "Camera must be a valid Camera instance."
             )
 
+            if Viewport.OwnsCamera and Viewport.Camera and Viewport.Camera ~= Camera then
+                Viewport.Camera:Destroy()
+            end
+
             Viewport.Camera = Camera
+            Viewport.OwnsCamera = false
             ViewportFrame.CurrentCamera = Camera
         end
 
@@ -9604,6 +9751,10 @@ do
         Options[Idx] = Viewport
 
         function Viewport:Destroy()
+            if Viewport.Destroyed then
+                return
+            end
+
             Viewport.Destroyed = true
             SetTabScrollingEnabled(true)
 
@@ -9611,6 +9762,12 @@ do
                 for _, Connection in Viewport.Connections do
                     Connection:Disconnect()
                 end
+                table.clear(Viewport.Connections)
+            end
+
+            if Viewport.OwnsCamera and Viewport.Camera then
+                Viewport.Camera:Destroy()
+                Viewport.Camera = nil
             end
 
             if Holder then 
@@ -9777,6 +9934,10 @@ do
         Options[Idx] = Image
 
         function Image:Destroy()
+            if Image.Destroyed then
+                return
+            end
+
             Image.Destroyed = true
 
             if Holder then 
@@ -9915,6 +10076,10 @@ do
         Options[Idx] = Video
 
         function Video:Destroy()
+            if Video.Destroyed then
+                return
+            end
+
             Video.Destroyed = true
 
             if Video.Connections then
@@ -10012,6 +10177,10 @@ do
         Options[Idx] = Passthrough
 
         function Passthrough:Destroy()
+            if Passthrough.Destroyed then
+                return
+            end
+
             Passthrough.Destroyed = true
 
             if Passthrough.Connections then
@@ -10074,6 +10243,10 @@ do
         }
 
         function Depbox:Resize()
+            if Depbox.Destroyed or not DepboxContainer.Parent then
+                return
+            end
+
             DepboxContainer.Size = UDim2.new(1, 0, 0, DepboxList.AbsoluteContentSize.Y / Library.DPIScale)
             Groupbox:Resize()
         end
@@ -10144,25 +10317,32 @@ do
         table.insert(Library.DependencyBoxes, Depbox)
 
         function Depbox:Destroy()
+            if Depbox.Destroyed then
+                return
+            end
+
             Depbox.Destroyed = true
 
             if Depbox.Connections then
                 for _, Connection in Depbox.Connections do
                     Connection:Disconnect()
                 end
+                table.clear(Depbox.Connections)
             end
 
-            for _, Element in Depbox.Elements do
+            for _, Element in table.clone(Depbox.Elements) do
                 if Element.Destroy then
                     Element:Destroy()
                 end
             end
+            table.clear(Depbox.Elements)
 
-            for _, SubDepbox in Depbox.DependencyBoxes do
+            for _, SubDepbox in table.clone(Depbox.DependencyBoxes) do
                 if SubDepbox.Destroy then
                     SubDepbox:Destroy()
                 end
             end
+            table.clear(Depbox.DependencyBoxes)
 
             if DepboxContainer then 
                 DepboxContainer:Destroy() 
@@ -10238,6 +10418,10 @@ do
         }
 
         function DepGroupbox:Resize()
+            if DepGroupbox.Destroyed or not DepGroupboxContainer.Parent then
+                return
+            end
+
             DepGroupboxContainer.Size = UDim2.new(1, 0, 0, (DepGroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 18)
         end
 
@@ -10293,25 +10477,32 @@ do
         table.insert(Library.DependencyBoxes, DepGroupbox :: any)
 
         function DepGroupbox:Destroy()
+            if DepGroupbox.Destroyed then
+                return
+            end
+
             DepGroupbox.Destroyed = true
 
             if DepGroupbox.Connections then
                 for _, Connection in DepGroupbox.Connections do
                     Connection:Disconnect()
                 end
+                table.clear(DepGroupbox.Connections)
             end
 
-            for _, Element in DepGroupbox.Elements do
+            for _, Element in table.clone(DepGroupbox.Elements) do
                 if Element.Destroy then
                     Element:Destroy()
                 end
             end
+            table.clear(DepGroupbox.Elements)
 
-            for _, SubDepbox in DepGroupbox.DependencyBoxes do
+            for _, SubDepbox in table.clone(DepGroupbox.DependencyBoxes) do
                 if SubDepbox.Destroy then
                     SubDepbox:Destroy()
                 end
             end
+            table.clear(DepGroupbox.DependencyBoxes)
 
             if DepGroupboxContainer then 
                 DepGroupboxContainer:Destroy() 
@@ -10525,6 +10716,9 @@ function Library:Notify(...)
         Data.Time = select(2, ...) or 5
         Data.SoundId = select(3, ...)
         Data.Volume = select(4, ...) or 3
+    end
+    if typeof(Data.Time) ~= "Instance" then
+        Data.Time = math.max(tonumber(Data.Time) or 5, 0)
     end
     Data.Destroyed = false
 
@@ -10863,17 +11057,14 @@ function Library:Notify(...)
 end
 
 function Library:CreateWindow(WindowInfo)
-    WindowInfo = Library:Validate(WindowInfo, Templates.Window)
-    local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
-    if RunService:IsStudio() and ViewportSize.X <= 5 and ViewportSize.Y <= 5 then
-        repeat
-            ViewportSize = workspace.CurrentCamera.ViewportSize
-            task.wait()
-        until ViewportSize.X > 5 and ViewportSize.Y > 5
-    end
+    assert(not Library.Unloaded, "Cannot create a window after unloading the library.")
+    assert(not Library.Window, "Only one window can be created per library instance.")
 
-    local MaxX = ViewportSize.X - 64
-    local MaxY = ViewportSize.Y - 64
+    WindowInfo = Library:Validate(WindowInfo, Templates.Window)
+    local ViewportSize: Vector2 = GetViewportSize()
+
+    local MaxX = math.max(1, ViewportSize.X - 32)
+    local MaxY = math.max(1, ViewportSize.Y - 32)
 
     Library.OriginalMinSize =
         Vector2.new(math.min(Library.OriginalMinSize.X, MaxX), math.min(Library.OriginalMinSize.Y, MaxY))
@@ -10886,7 +11077,7 @@ function Library:CreateWindow(WindowInfo)
     if typeof(WindowInfo.Font) == "EnumItem" then
         WindowInfo.Font = Font.fromEnum(WindowInfo.Font :: any)
     end
-    WindowInfo.CornerRadius = math.min(WindowInfo.CornerRadius, 20)
+    WindowInfo.CornerRadius = math.clamp(WindowInfo.CornerRadius, 0, 20)
     
     
     if WindowInfo.Compact ~= nil then
@@ -11946,25 +12137,33 @@ function Library:CreateWindow(WindowInfo)
 
     function Window:SetCornerRadius(Radius: number)
         assert(typeof(Radius) == "number", "Expected number for Radius got: " .. typeof(Radius))
-        Radius = math.min(Radius, 20)
+        Radius = math.clamp(Radius, 0, 20)
 
         local RadiusHalf = UDim.new(0, Radius / 2)
         local RadiusUDim = UDim.new(0, Radius)
         local HalfCurrent = Library.CornerRadius / 2
 
-        for _, UICorner in Library.Corners do
-            if UICorner.CornerRadius.Offset == HalfCurrent then
+        for Index = #Library.Corners, 1, -1 do
+            local UICorner = Library.Corners[Index]
+            if not UICorner or not UICorner.Parent then
+                table.remove(Library.Corners, Index)
+            elseif UICorner.CornerRadius.Offset == HalfCurrent then
                 UICorner.CornerRadius = RadiusHalf
             else
                 UICorner.CornerRadius = RadiusUDim
             end
         end
 
-        for _, UICorner in Library.SpecificCorners do
-            SetUICorner(UICorner, "TopRightRadius", HalfCurrent, RadiusHalf, RadiusUDim)
-            SetUICorner(UICorner, "TopLeftRadius", HalfCurrent, RadiusHalf, RadiusUDim)
-            SetUICorner(UICorner, "BottomRightRadius", HalfCurrent, RadiusHalf, RadiusUDim)
-            SetUICorner(UICorner, "BottomLeftRadius", HalfCurrent, RadiusHalf, RadiusUDim)
+        for Index = #Library.SpecificCorners, 1, -1 do
+            local UICorner = Library.SpecificCorners[Index]
+            if not UICorner or not UICorner.Parent then
+                table.remove(Library.SpecificCorners, Index)
+            else
+                SetUICorner(UICorner, "TopRightRadius", HalfCurrent, RadiusHalf, RadiusUDim)
+                SetUICorner(UICorner, "TopLeftRadius", HalfCurrent, RadiusHalf, RadiusUDim)
+                SetUICorner(UICorner, "BottomRightRadius", HalfCurrent, RadiusHalf, RadiusUDim)
+                SetUICorner(UICorner, "BottomLeftRadius", HalfCurrent, RadiusHalf, RadiusUDim)
+            end
         end
 
         Library.CornerRadius = Radius
@@ -12541,6 +12740,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:RefreshSides()
+            if Tab.Destroyed or not TabCanvas.Parent then
+                return
+            end
+
             local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
             if IsNarrowLayout then
                 local HalfOffset = math.floor(Offset / 2)
@@ -12590,6 +12793,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Resize(ResizeWarningBox: boolean?)
+            if Tab.Destroyed or not TabContainer.Parent then
+                return
+            end
+
             if ResizeWarningBox then
                 local MaximumSize = math.floor(TabContainer.AbsoluteSize.Y / 3.25)
                 local _, YText = Library:GetTextBounds(
@@ -12849,25 +13056,32 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:Destroy()
+                    if Tab.Destroyed then
+                        return
+                    end
+
                     Tab.Destroyed = true
 
                     if Tab.Connections then
                         for _, Connection in Tab.Connections do
                             Connection:Disconnect()
                         end
+                        table.clear(Tab.Connections)
                     end
 
-                    for _, Element in Tab.Elements do
+                    for _, Element in table.clone(Tab.Elements) do
                         if Element.Destroy then
                             Element:Destroy()
                         end
                     end
+                    table.clear(Tab.Elements)
 
-                    for _, SubDepbox in Tab.DependencyBoxes do
+                    for _, SubDepbox in table.clone(Tab.DependencyBoxes) do
                         if SubDepbox.Destroy then
                             SubDepbox:Destroy()
                         end
                     end
+                    table.clear(Tab.DependencyBoxes)
 
                     if Container then
                         Container:Destroy()
@@ -12894,19 +13108,25 @@ function Library:CreateWindow(WindowInfo)
             end
 
             function Tabbox:Destroy()
+                if Tabbox.Destroyed then
+                    return
+                end
+
                 Tabbox.Destroyed = true
 
                 if Tabbox.Connections then
                     for _, Connection in Tabbox.Connections do
                         Connection:Disconnect()
                     end
+                    table.clear(Tabbox.Connections)
                 end
 
-                for _, Tab in Tabbox.Tabs do
+                for _, Tab in table.clone(Tabbox.Tabs) do
                     if Tab.Destroy then
                         Tab:Destroy()
                     end
                 end
+                table.clear(Tabbox.Tabs)
 
                 if TabboxHolder then
                     TabboxHolder:Destroy()
@@ -13076,6 +13296,10 @@ function Library:CreateWindow(WindowInfo)
             local ResizeQueued = false
 
             function Groupbox:Resize()
+                if Groupbox.Destroyed or not GroupboxHolder.Parent then
+                    return
+                end
+
                 local DPIScale = math.max(Library.DPIScale or 1, 0.01)
                 local ContentBottom = (GroupboxList.AbsoluteContentSize.Y / DPIScale) + GroupboxTopPadding
                 local ContainerY = GroupboxContainer.AbsolutePosition.Y
@@ -13155,6 +13379,10 @@ function Library:CreateWindow(WindowInfo)
             end
 
             function Groupbox:Destroy()
+                if Groupbox.Destroyed then
+                    return
+                end
+
                 Groupbox.Destroyed = true
 
                 Library:CancelTween(GroupboxHolder, "GroupboxSize")
@@ -13166,16 +13394,17 @@ function Library:CreateWindow(WindowInfo)
                     for _, Connection in Groupbox.Connections do
                         Connection:Disconnect()
                     end
+                    table.clear(Groupbox.Connections)
                 end
 
-                for _, Element in Groupbox.Elements do
+                for _, Element in table.clone(Groupbox.Elements) do
                     if Element.Destroy then
                         Element:Destroy()
                     end
                 end
                 table.clear(Groupbox.Elements)
 
-                for _, SubDepbox in Groupbox.DependencyBoxes do
+                for _, SubDepbox in table.clone(Groupbox.DependencyBoxes) do
                     if SubDepbox.Destroy then
                         SubDepbox:Destroy()
                     end
@@ -13257,6 +13486,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Show()
+            if Tab.Destroyed then
+                return
+            end
+
             if Library.ActiveTab == Tab then
                 return
             end
@@ -13282,6 +13515,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            if Tab.Destroyed then
+                return
+            end
+
             Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
@@ -13291,6 +13528,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:SetVisible(Visible: boolean)
+            if Tab.Destroyed then
+                return
+            end
+
             TabButton.Visible = Visible
 
             if not Visible and Library.ActiveTab == Tab then
@@ -13303,33 +13544,39 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Destroy()
+            if Tab.Destroyed then
+                return
+            end
+
             Tab.Destroyed = true
 
             if Tab.Connections then
                 for _, Connection in Tab.Connections do
                     Connection:Disconnect()
                 end
+                table.clear(Tab.Connections)
             end
 
-            for _, Groupbox in Tab.Groupboxes do
+            for _, Groupbox in table.clone(Tab.Groupboxes) do
                 if Groupbox.Destroy then
                     Groupbox:Destroy()
                 end
             end
             table.clear(Tab.Groupboxes)
 
-            for _, Tabbox in Tab.Tabboxes do
+            for _, Tabbox in table.clone(Tab.Tabboxes) do
                 if Tabbox.Destroy then
                     Tabbox:Destroy()
                 end
             end
             table.clear(Tab.Tabboxes)
 
-            for _, DepGroupbox in Tab.DependencyGroupboxes do
+            for _, DepGroupbox in table.clone(Tab.DependencyGroupboxes) do
                 if DepGroupbox.Destroy then
                     DepGroupbox:Destroy()
                 end
             end
+            table.clear(Tab.DependencyGroupboxes)
 
             if TabCanvas then
                 TabCanvas:Destroy()
@@ -13346,6 +13593,13 @@ function Library:CreateWindow(WindowInfo)
                 end
                 
                 TabButton:Destroy()
+            end
+
+            if Library.ActiveTab == Tab then
+                Library.ActiveTab = nil
+            end
+            if Library.LastSearchTab == Tab then
+                Library.LastSearchTab = nil
             end
 
             Library.Tabs[Name] = nil
@@ -13501,6 +13755,7 @@ function Library:CreateWindow(WindowInfo)
         local Tab = {
             Description = Description,
             IsKeyTab = true,
+            Destroyed = false,
 
             Elements = {},
 
@@ -13572,11 +13827,17 @@ function Library:CreateWindow(WindowInfo)
                     return
                 end
 
-                Callback(Box.Text)
+                Library:SafeCallback(Callback, Box.Text)
             end)
         end
         
         function Tab:Destroy()
+            if Tab.Destroyed then
+                return
+            end
+
+            Tab.Destroyed = true
+
             if TabCanvas then
                 TabCanvas:Destroy()
             elseif TabContainer then
@@ -13592,6 +13853,13 @@ function Library:CreateWindow(WindowInfo)
                 end
                 
                 TabButton:Destroy()
+            end
+
+            if Library.ActiveTab == Tab then
+                Library.ActiveTab = nil
+            end
+            if Library.LastSearchTab == Tab then
+                Library.LastSearchTab = nil
             end
 
             Library.Tabs[Name] = nil
@@ -13610,6 +13878,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Show()
+            if Tab.Destroyed then
+                return
+            end
+
             if Library.ActiveTab == Tab then
                 return
             end
@@ -13636,6 +13908,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            if Tab.Destroyed then
+                return
+            end
+
             Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
@@ -13645,6 +13921,10 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:SetVisible(Visible: boolean)
+            if Tab.Destroyed then
+                return
+            end
+
             TabButton.Visible = Visible
 
             if not Visible and Library.ActiveTab == Tab then
@@ -13884,8 +14164,12 @@ function Library:CreateWindow(WindowInfo)
         }
 
         function Dialog:Resize()
-            local MaxWidth = MainFrame.AbsoluteSize.X * 0.75
-            local MinWidth = 400
+            if Dialog.Destroyed or not MainFrame.Parent then
+                return
+            end
+
+            local MaxWidth = math.max(220, MainFrame.AbsoluteSize.X - 24)
+            local MinWidth = math.min(400, MaxWidth)
 
             local TotalButtonWidth = 0
             local ButtonCount = 0
@@ -13922,11 +14206,19 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Dialog:SetTitle(Title)
+            if Dialog.Destroyed then
+                return
+            end
+
             TitleLabel.Text = Title
             Dialog:Resize()
         end
 
         function Dialog:SetDescription(Description)
+            if Dialog.Destroyed then
+                return
+            end
+
             DescriptionLabel.Text = Description
             Dialog:Resize()
         end
@@ -13974,28 +14266,45 @@ function Library:CreateWindow(WindowInfo)
         end)
 
         function Dialog:RemoveFooterButton(ButtonIdx)
+            if Dialog.Destroyed then
+                return
+            end
+
             if FooterButtonsList[ButtonIdx] then
                 FooterButtonsList[ButtonIdx].Container:Destroy()
                 FooterButtonsList[ButtonIdx] = nil
+                Dialog:Resize()
             end
         end
 
         function Dialog:SetButtonDisabled(ButtonIdx, Disabled)
+            if Dialog.Destroyed then
+                return
+            end
+
             if FooterButtonsList[ButtonIdx] and type(FooterButtonsList[ButtonIdx].SetDisabled) == "function" then
                 FooterButtonsList[ButtonIdx]:SetDisabled(Disabled)
             end
         end
 
         function Dialog:SetButtonOrder(ButtonIdx, Order)
+            if Dialog.Destroyed then
+                return
+            end
+
             if FooterButtonsList[ButtonIdx] and FooterButtonsList[ButtonIdx].Container then
                 FooterButtonsList[ButtonIdx].Container.LayoutOrder = Order
             end
         end
 
         function Dialog:AddFooterButton(ButtonIdx, ButtonInfo)
+            if Dialog.Destroyed then
+                return
+            end
+
             Dialog:RemoveFooterButton(ButtonIdx)
 
-            local WaitTime = ButtonInfo.WaitTime or 0
+            local WaitTime = math.max(tonumber(ButtonInfo.WaitTime) or 0, 0)
 
             local ButtonContainer = New("Frame", {
                 BackgroundTransparency = 1,
@@ -14117,6 +14426,10 @@ function Library:CreateWindow(WindowInfo)
             local ButtonWrap = {
                 Container = ButtonContainer,
                 SetDisabled = function(self, Disabled)
+                    if Dialog.Destroyed or not TextBtn.Parent then
+                        return
+                    end
+
                     IsActive = not Disabled
                     ApplyFooterButtonStyle(false, Disabled, true)
                 end
@@ -14134,7 +14447,7 @@ function Library:CreateWindow(WindowInfo)
             TextBtn.MouseButton1Click:Connect(function()
                 if not IsActive then return end
                 if ButtonInfo.Callback then
-                    ButtonInfo.Callback(Dialog)
+                    Library:SafeCallback(ButtonInfo.Callback, Dialog)
                 end
                 if Info.AutoDismiss then
                     Dialog:Dismiss()
@@ -14147,16 +14460,21 @@ function Library:CreateWindow(WindowInfo)
                 }):Play()
                 
                 task.delay(WaitTime, function()
+                    if Dialog.Destroyed or not TextBtn.Parent then
+                        return
+                    end
+
                     ButtonWrap:SetDisabled(false)
-                    if ProgressBar then
-                        TweenService:Create(ProgressBar, Library.TweenInfo, {
+                    if ProgressBar and ProgressBar.Parent then
+                        Library:PlayTween(ProgressBar, "DialogFooterProgress", Library.TweenInfo, {
                             BackgroundTransparency = 1
-                        }):Play()
+                        })
                     end
                 end)
             end
 
             FooterButtonsList[ButtonIdx] = ButtonWrap
+            Dialog:Resize()
         end
 
         for BIdx, BInfo in Info.FooterButtons do
@@ -14364,6 +14682,7 @@ function Library:CreateWindow(WindowInfo)
         Library:GiveSignal(UserInputService.InputChanged:Connect(function(Input: InputObject)
             if not Library.Toggled or not (ScreenGui and ScreenGui.Parent) then
                 Dragging = false
+                Library.CantDragForced = false
                 if Changed and Changed.Connected then
                     Changed:Disconnect()
                     Changed = nil
@@ -14390,14 +14709,37 @@ function Library:CreateWindow(WindowInfo)
         end))
     end
 
-    if workspace.CurrentCamera then
-        Library:GiveSignal(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-            Window:QueueFitToViewport()
-            if CompactLauncher and CompactLauncher.Parent then
-                ClampGuiToViewport(CompactLauncher, 8)
-            end
-        end))
+    local WindowCameraConnection
+    local function HandleViewportChanged()
+        if Library.Unloaded then
+            return
+        end
+
+        Window:QueueFitToViewport()
+        if CompactLauncher and CompactLauncher.Parent then
+            ClampGuiToViewport(CompactLauncher, 8)
+        end
     end
+    local function BindWindowCamera()
+        if WindowCameraConnection and WindowCameraConnection.Connected then
+            WindowCameraConnection:Disconnect()
+        end
+
+        local Camera = workspace.CurrentCamera
+        if Camera then
+            WindowCameraConnection = Library:GiveSignal(
+                Camera:GetPropertyChangedSignal("ViewportSize"):Connect(HandleViewportChanged)
+            )
+        else
+            WindowCameraConnection = nil
+        end
+    end
+
+    BindWindowCamera()
+    Library:GiveSignal(workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        BindWindowCamera()
+        HandleViewportChanged()
+    end))
 
     Window:SetAlwaysOnTop(WindowInfo.AlwaysOnTop)
     Window:FitToViewport()
@@ -15135,7 +15477,7 @@ function Library:CreateLoading(LoadingInfo)
 
             TextBtn.MouseButton1Click:Connect(function()
                 if ButtonInfo.Callback then
-                    ButtonInfo.Callback(Loading)
+                    Library:SafeCallback(ButtonInfo.Callback, Loading)
                 end
             end)
         end
@@ -15145,6 +15487,10 @@ function Library:CreateLoading(LoadingInfo)
 
     
     function Loading:Destroy()
+        if Loading.Destroyed then
+            return
+        end
+
         if RotationTween then
             StopTween(RotationTween, true)
             RotationTween = nil
@@ -15506,6 +15852,10 @@ Library:GiveSignal(Teams.ChildAdded:Connect(OnTeamChange))
 Library:GiveSignal(Teams.ChildRemoved:Connect(OnTeamChange))
 
 function Library:Unload()
+    if Library.Unloaded then
+        return
+    end
+
     Library.Unloaded = true
     SearchRequestId += 1
 
@@ -15536,9 +15886,7 @@ function Library:Unload()
     end
 
     
-    for Index = #Library.Tabs, 1, -1 do
-        local Tab = table.remove(Library.Tabs, Index)
-
+    for _, Tab in table.clone(Library.Tabs) do
         if Tab and Tab.Destroy then
             Library:SafeCallback(Tab.Destroy, Tab)
         end
@@ -15588,10 +15936,16 @@ function Library:Unload()
     Library:ClearTextBoundsCache()
     
     Library.Toggle = function(...) end
+    Library.Window = nil
     Library.ScreenGui = nil
     Library.WindowContainer = nil
     Library.KeybindFrame = nil
     Library.KeybindContainer = nil
+    Library.ActiveTab = nil
+    Library.LastSearchTab = nil
+    Library.ActiveDialog = nil
+    Library.ActiveLoading = nil
+    Library.CantDragForced = false
 
     if getgenv().Library == Library then
         getgenv().Library = nil

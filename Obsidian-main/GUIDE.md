@@ -502,7 +502,7 @@ ConfigGroup:SetOrder(-100)
 SaveManager:LoadAutoloadConfig()
 ```
 
-`IgnoreThemeSettings()` is recommended when ThemeManager owns the palette. If a project intentionally stores `ThemeManager_` options in a config, the current SaveManager batches them and applies one final palette instead of showing intermediate mixed colors. Configuration parser errors now return an error instead of silently reporting a successful load.
+`IgnoreThemeSettings()` is recommended when ThemeManager owns the palette. If a project intentionally stores `ThemeManager_` options in a config, the current SaveManager batches them and applies one final palette instead of showing intermediate mixed colors. Configuration parser errors now return an error instead of silently reporting a successful load. Config and theme names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces. Folder creation and malformed stored keybind-menu data now fail safely with a readable result.
 
 ## Watermark, keybinds, launcher, and sound
 
@@ -586,7 +586,7 @@ Preview:SetGradientEnabled(true)
 Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
 
-Use `Preview:SetTarget(PlayerOrModel)`, `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` for custom controls. `Renderer` is optional and must be a function from your own script that builds the same rendering objects as your live ESP. Do not paste an undefined `State.CreateESPPreview` placeholder into a project.
+Use `Preview:SetTarget(PlayerOrModel)`, `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` for custom controls. `Renderer` is optional. It must return a table with a live GuiObject in `Container`; `BoxFrame`, `BoxStroke`, `BoxGradient`, `InfoTop`, `InfoBottom`, `HealthBack`, and `HealthFill` are optional and are safely skipped when absent. Do not paste an undefined `State.CreateESPPreview` placeholder into a project.
 
 ## Declarative API
 
@@ -645,7 +645,7 @@ Supported element types are `Label`, `Button`, `Toggle`, `Checkbox`, `Input`, `S
 Use these lower-level helpers only when the standard window and controls do not cover the integration:
 
 ```luau
-Library:SetDPIScale(1)
+Library:SetDPIScale(100)
 Library:SetNotifySide("Left")
 Library:SetIconModule(CustomIconModule)
 
@@ -686,7 +686,7 @@ end)
 Library:Unload()
 ```
 
-Window hide and restore animations are intentionally short and opacity-led so text does not scale or change appearance during close. `Unload()` cancels managed tweens, disconnects signals, destroys UI, and clears library references. Call it once from the user-facing unload action; it does not need a double click.
+Window hide and restore animations are intentionally short and opacity-led so text does not scale or change appearance during close. `Unload()` cancels managed tweens, disconnects signals, destroys UI, and clears library references. It is safe to call more than once, but it is terminal: create a fresh library instance before building another window. A library instance supports one window only, which prevents duplicate global input handlers.
 
 ## Troubleshooting
 

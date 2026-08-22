@@ -33,9 +33,9 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-4"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-3", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-4", "Library release mismatch")
 ```
 
 Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produces `Expected ident` on line 1. Keep `Library.lua` and every addon from the same commit or folder. `Example.lua` is a complete showcase, but it intentionally uses a fixed non-responsive desktop layout; it is not the only recommended window configuration.
@@ -48,9 +48,9 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-4"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-3", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-4", "Library release mismatch")
 
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -191,7 +191,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` defaults to a compact 16×16 square with a 3px radius and an animated checkmark inside a 22px layout-managed row. `AddCheckbox` uses the same clear square language. Existing projects that prefer the legacy 24×14 sliding switch can set `Library.ForceCheckbox = false` before creating controls; explicit checkbox creation still uses `AddCheckbox`.
+`AddToggle` defaults to a compact 16×16 square with a 3px radius and a fixed-size antialiased checkmark inside a 22px layout-managed row. The mark uses opacity-only motion so fractional resize frames cannot create pixel shimmer. `AddCheckbox` uses the same clear square language. Existing projects that prefer the legacy 24×14 sliding switch can set `Library.ForceCheckbox = false` before creating controls; explicit checkbox creation still uses `AddCheckbox`.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -470,7 +470,7 @@ Theme updates are transactional. Every registered property is isolated during re
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-4"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -485,7 +485,7 @@ Build every control before loading configurations:
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-4"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -556,7 +556,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-4"
 ))()
 local Players = game:GetService("Players")
 
@@ -687,11 +687,11 @@ Window hide and restore animations are intentionally short and opacity-led so te
 
 ### Changes do not appear after restarting
 
-First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-final-theme-3` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
+First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-final-theme-4` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
 
 Do not mix an updated ThemeManager with an older Library. If a selector shows a new preset but most surfaces keep an earlier palette, the two modules came from different cached revisions. A versioned URL prevents that mixed state.
 
-The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-3"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
+The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-4"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
 
 The current Library also unloads an older MonHub instance before creating its ScreenGui. This prevents a previous window from remaining underneath or above the new release during repeated executor runs. A full rejoin is no longer required for normal UI updates, although game-specific script state may still require its own cleanup.
 

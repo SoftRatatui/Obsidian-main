@@ -1078,7 +1078,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-final-theme-3",
+    ReleaseVersion: "0.0.1-final-theme-4",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,

@@ -35,6 +35,7 @@
 + Changed the default AddToggle presentation to a compact 16x16 square checkmark with a restrained 3px radius
 + Kept the legacy sliding switch available through Library.ForceCheckbox = false
 + Rebuilt keybind rows around a fixed horizontal layout with a 14x14 checkmark and deterministic alignment
++ Replaced fractional checkmark scaling with fixed-size antialiased glyphs and opacity-only motion for cleaner small-pixel rendering
 
 [motion]
 + Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing

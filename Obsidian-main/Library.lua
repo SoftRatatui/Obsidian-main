@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-final-theme-3",
+    ReleaseVersion = "0.0.1-final-theme-4",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -4715,12 +4715,14 @@ do
             local Checkmark = New("ImageLabel", {
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 Image = CheckIcon and CheckIcon.Url or "",
-                ImageColor3 = "DarkColor",
+                ImageColor3 = "WhiteColor",
                 ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
                 ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
                 ImageTransparency = 1,
                 Position = UDim2.fromScale(0.5, 0.5),
-                Size = UDim2.fromOffset(6, 6),
+                ResampleMode = Enum.ResamplerMode.Default,
+                ScaleType = Enum.ScaleType.Fit,
+                Size = UDim2.fromOffset(9, 9),
                 Parent = Switch,
             })
 
@@ -4737,7 +4739,7 @@ do
             Library.Registry[SwitchStroke] = SwitchStrokeRegistry
 
             Library:AddToRegistry(Checkmark, {
-                ImageColor3 = "DarkColor",
+                ImageColor3 = "WhiteColor",
             })
 
             function KeybindsToggle:Display(State)
@@ -4772,8 +4774,7 @@ do
                     Transparency = State and 0.04 or 0.18,
                 })
                 KeybindsToggle.IndicatorCheckTween = TweenService:Create(Checkmark, Library.KeybindRowTweenInfo, {
-                    ImageTransparency = State and 0 or 1,
-                    Size = UDim2.fromOffset(State and 9 or 6, State and 9 or 6),
+                    ImageTransparency = State and 0.08 or 1,
                 })
                 KeybindsToggle.LabelTween:Play()
                 KeybindsToggle.IndicatorTween:Play()
@@ -7368,18 +7369,20 @@ do
         local Checkmark = New("ImageLabel", {
             AnchorPoint = Vector2.new(0.5, 0.5),
             Image = CheckIcon and CheckIcon.Url or "",
-            ImageColor3 = "DarkColor",
+            ImageColor3 = "WhiteColor",
             ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
             ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
-            ImageTransparency = Toggle.Value and 0 or 1,
+            ImageTransparency = Toggle.Value and 0.06 or 1,
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7),
+            ResampleMode = Enum.ResamplerMode.Default,
+            ScaleType = Enum.ScaleType.Fit,
+            Size = UDim2.fromOffset(10, 10),
             Parent = Checkbox,
         })
 
         RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
         Library:AddToRegistry(Checkmark, {
-            ImageColor3 = "DarkColor",
+            ImageColor3 = "WhiteColor",
         })
 
         function Toggle:UpdateColors()
@@ -7407,8 +7410,7 @@ do
                 Checkbox.BackgroundTransparency = 0.35
                 CheckboxStroke.Color = StrokeColor
                 CheckboxStroke.Transparency = 0.65
-                Checkmark.ImageTransparency = Toggle.Value and 0.5 or 1
-                Checkmark.Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7)
+                Checkmark.ImageTransparency = Toggle.Value and 0.58 or 1
 
                 return
             end
@@ -7429,8 +7431,7 @@ do
                 TextTransparency = Toggle.Value and 0 or 0.4,
             })
             Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
-                ImageTransparency = Toggle.Value and 0 or 1,
-                Size = UDim2.fromOffset(Toggle.Value and 10 or 7, Toggle.Value and 10 or 7),
+                ImageTransparency = Toggle.Value and 0.06 or 1,
             })
         end
 

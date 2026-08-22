@@ -366,7 +366,7 @@ Options.Quality:SetValue("High")
 
 ## Theme presets and font policy
 
-`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. All three use Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
+`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. All three use Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Background, card, raised overlay, control, hover, muted text, and soft accent surfaces are separate semantic tokens. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
 
 ```luau
 Library:SetTheme("Default")
@@ -374,7 +374,7 @@ Library:SetTheme("Metal")
 Library:SetTheme("Midnight")
 ```
 
-The release contains exactly these three built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
+The release contains exactly these three built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette. Theme application now updates the full instance registry and then refreshes stateful components, preventing an active toggle, popup, launcher, slider, or hover state from retaining the previous palette.
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 

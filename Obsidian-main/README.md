@@ -6,7 +6,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 
 ## What changed
 
-- Three focused visual presets: neutral-gray `Default`, violet `Metal`, and near-black `Midnight`, all with restrained 6px outer geometry, subtle single-pixel outlines, and Gotham Regular typography.
+- Three focused visual presets: neutral-gray `Default`, violet `Metal`, and near-black `Midnight`, all built from semantic background, card, raised, control, hover, muted-text, and accent layers; elevated surfaces use a feature-gated soft shadow with a clean outline fallback.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -15,7 +15,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
-- Raw legacy palette fields are ignored, while the minimal theme selector can persist any release preset without leaving mixed colors behind.
+- Theme changes are atomic: registered instances and stateful controls are refreshed together, while raw legacy palette fields are ignored so old colors cannot remain in the top bar, overlays, controls, or footer.
 
 ## Quick start
 
@@ -23,7 +23,9 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 
 ```luau
 local function Fetch(URL)
-    local Request = request or http_request or (syn and syn.request)
+    local Environment = getfenv()
+    local SynEnvironment = type(Environment) == "table" and rawget(Environment, "syn") or nil
+    local Request = request or http_request or (type(SynEnvironment) == "table" and rawget(SynEnvironment, "request") or nil)
     if type(Request) == "function" then
         local Response = Request({ Url = URL, Method = "GET" })
         local Body = type(Response) == "table" and (Response.Body or Response.body) or Response
@@ -90,7 +92,7 @@ App:Get("speed"):SetValue(50)
 
 ## Current interface
 
-`Default` starts automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the dark violet reference preset, while `Midnight` provides a near-black neutral profile with a muted steel accent. All three use Gotham Regular, compact 16×16 checkmark toggles with a 3px radius, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. The interface feels soft through typography, contrast, spacing, and brief motion rather than excessive corner rounding. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` is the dark violet reference preset, while `Midnight` provides a near-black neutral profile with a muted steel accent. All three use Gotham Regular, compact 16×16 checkmarks inside a 22px row, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. Cards, popups, inputs, hover states, and secondary text have separate semantic colors, which creates depth without blur or blanket rounding. Sidebar tabs use an inset full-width row with a soft background transition. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 

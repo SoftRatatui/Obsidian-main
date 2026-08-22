@@ -331,12 +331,19 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
+        BackgroundColor = Color3.fromRGB(17, 19, 22),
+        MainColor = Color3.fromRGB(31, 34, 39),
+        TopBarColor = Color3.fromRGB(27, 30, 35),
+        SurfaceColor = Color3.fromRGB(23, 25, 29),
+        RaisedColor = Color3.fromRGB(29, 32, 37),
+        ElementColor = Color3.fromRGB(31, 34, 39),
+        HoverColor = Color3.fromRGB(38, 42, 49),
         AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
+        AccentSoftColor = Color3.fromRGB(39, 43, 51),
+        OutlineColor = Color3.fromRGB(52, 57, 66),
+        FontColor = Color3.fromRGB(238, 240, 244),
+        MutedFontColor = Color3.fromRGB(146, 151, 160),
+        ShadowColor = Color3.fromRGB(5, 6, 8),
         Font = Font.fromEnum(Enum.Font.Gotham),
 
         RedColor = Color3.fromRGB(232, 83, 103),
@@ -375,12 +382,19 @@ Library.DefaultTheme = "Default"
 Library.CurrentTheme = "Default"
 Library.Themes = {
     Default = {
-        BackgroundColor = Color3.fromRGB(22, 24, 29),
-        MainColor = Color3.fromRGB(33, 36, 43),
-        TopBarColor = Color3.fromRGB(39, 42, 50),
+        BackgroundColor = Color3.fromRGB(17, 19, 22),
+        MainColor = Color3.fromRGB(31, 34, 39),
+        TopBarColor = Color3.fromRGB(27, 30, 35),
+        SurfaceColor = Color3.fromRGB(23, 25, 29),
+        RaisedColor = Color3.fromRGB(29, 32, 37),
+        ElementColor = Color3.fromRGB(31, 34, 39),
+        HoverColor = Color3.fromRGB(38, 42, 49),
         AccentColor = Color3.fromRGB(133, 141, 160),
-        OutlineColor = Color3.fromRGB(65, 69, 80),
-        FontColor = Color3.fromRGB(239, 241, 246),
+        AccentSoftColor = Color3.fromRGB(39, 43, 51),
+        OutlineColor = Color3.fromRGB(52, 57, 66),
+        FontColor = Color3.fromRGB(238, 240, 244),
+        MutedFontColor = Color3.fromRGB(146, 151, 160),
+        ShadowColor = Color3.fromRGB(5, 6, 8),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         RedColor = Color3.fromRGB(232, 83, 103),
@@ -392,12 +406,19 @@ Library.Themes = {
         IsLight = false,
     },
     Metal = {
-        BackgroundColor = Color3.fromRGB(17, 17, 19),
-        MainColor = Color3.fromRGB(24, 24, 28),
-        TopBarColor = Color3.fromRGB(20, 20, 23),
-        AccentColor = Color3.fromRGB(127, 123, 234),
-        OutlineColor = Color3.fromRGB(49, 50, 59),
+        BackgroundColor = Color3.fromRGB(15, 15, 18),
+        MainColor = Color3.fromRGB(30, 30, 38),
+        TopBarColor = Color3.fromRGB(23, 23, 29),
+        SurfaceColor = Color3.fromRGB(20, 20, 25),
+        RaisedColor = Color3.fromRGB(26, 26, 33),
+        ElementColor = Color3.fromRGB(30, 30, 38),
+        HoverColor = Color3.fromRGB(37, 36, 47),
+        AccentColor = Color3.fromRGB(132, 125, 224),
+        AccentSoftColor = Color3.fromRGB(38, 36, 53),
+        OutlineColor = Color3.fromRGB(47, 46, 59),
         FontColor = Color3.fromRGB(240, 240, 244),
+        MutedFontColor = Color3.fromRGB(151, 148, 162),
+        ShadowColor = Color3.fromRGB(5, 5, 8),
         WarningColor = Color3.fromRGB(214, 163, 83),
         DestructiveColor = Color3.fromRGB(204, 65, 86),
         RedColor = Color3.fromRGB(235, 91, 115),
@@ -409,12 +430,19 @@ Library.Themes = {
         IsLight = false,
     },
     Midnight = {
-        BackgroundColor = Color3.fromRGB(14, 15, 18),
-        MainColor = Color3.fromRGB(21, 23, 28),
-        TopBarColor = Color3.fromRGB(18, 20, 24),
-        AccentColor = Color3.fromRGB(103, 119, 151),
-        OutlineColor = Color3.fromRGB(48, 53, 64),
+        BackgroundColor = Color3.fromRGB(11, 12, 15),
+        MainColor = Color3.fromRGB(25, 28, 34),
+        TopBarColor = Color3.fromRGB(20, 22, 27),
+        SurfaceColor = Color3.fromRGB(17, 19, 23),
+        RaisedColor = Color3.fromRGB(22, 24, 30),
+        ElementColor = Color3.fromRGB(25, 28, 34),
+        HoverColor = Color3.fromRGB(32, 36, 44),
+        AccentColor = Color3.fromRGB(105, 122, 153),
+        AccentSoftColor = Color3.fromRGB(30, 35, 44),
+        OutlineColor = Color3.fromRGB(42, 47, 57),
         FontColor = Color3.fromRGB(232, 235, 242),
+        MutedFontColor = Color3.fromRGB(137, 144, 157),
+        ShadowColor = Color3.fromRGB(3, 4, 6),
         WarningColor = Color3.fromRGB(203, 154, 77),
         DestructiveColor = Color3.fromRGB(191, 63, 81),
         RedColor = Color3.fromRGB(226, 82, 102),
@@ -488,10 +516,7 @@ local Templates = {
     TextBox = {
         BorderSizePixel = 0,
         FontFace = "Font",
-        PlaceholderColor3 = function()
-            local H, S, V = Library.Scheme.FontColor:ToHSV()
-            return Color3.fromHSV(H, S, V / 2)
-        end,
+        PlaceholderColor3 = "MutedFontColor",
         Text = "",
         TextColor3 = "FontColor",
     },
@@ -1447,6 +1472,23 @@ function Library:UpdateColorsUsingRegistry()
     end
 end
 
+function Library:RefreshThemeState()
+    local Refreshed = {}
+    for _, Collection in { Library.Buttons, Library.Toggles, Library.Options } do
+        for _, Control in Collection do
+            if typeof(Control) == "table" and not Refreshed[Control] and typeof(Control.UpdateColors) == "function" then
+                Refreshed[Control] = true
+                pcall(Control.UpdateColors, Control)
+            end
+        end
+    end
+
+    local Window = Library.Window
+    if Window and typeof(Window.RefreshTheme) == "function" then
+        pcall(Window.RefreshTheme, Window)
+    end
+end
+
 function Library:SetDPIScale(DPIScale: number)
     local Scale = math.max(tonumber(DPIScale) or 100, 1) / 100
     if Library.DPIScale == Scale then
@@ -1893,11 +1935,33 @@ function Library:GetBetterColor(Color: Color3, Add: number): Color3
 end
 
 function Library:GetAccentSurfaceColor(Strength: number?): Color3
-    return Library.Scheme.MainColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.1, 0, 1))
+    local Weight = math.clamp(Strength or 0.1, 0, 1)
+    local Base = Library.Scheme.AccentSoftColor or Library.Scheme.SurfaceColor or Library.Scheme.MainColor
+    return Base:Lerp(Library.Scheme.AccentColor, Weight * 0.38)
 end
 
 local function GetTopBarSurfaceColor(Strength: number?): Color3
-    return Library.Scheme.TopBarColor:Lerp(Library.Scheme.AccentColor, math.clamp(Strength or 0.08, 0, 1))
+    local Weight = math.clamp(Strength or 0.08, 0, 1)
+    local Base = Library.Scheme.ElementColor or Library.Scheme.TopBarColor
+    return Base:Lerp(Library.Scheme.AccentColor, Weight * 0.28)
+end
+
+function Library:GetSurfaceColor(Level: string?): Color3
+    if Level == "Raised" then
+        return Library.Scheme.RaisedColor or Library.Scheme.TopBarColor
+    end
+    if Level == "Element" then
+        return Library.Scheme.ElementColor or Library.Scheme.MainColor
+    end
+    if Level == "Hover" then
+        return Library.Scheme.HoverColor or Library:GetBetterColor(Library.Scheme.MainColor, 4)
+    end
+
+    return Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor:Lerp(Library.Scheme.MainColor, 0.5)
+end
+
+function Library:GetMutedFontColor(): Color3
+    return Library.Scheme.MutedFontColor or Library.Scheme.FontColor:Lerp(Library.Scheme.BackgroundColor, 0.42)
 end
 
 local ButtonVariantAliases = {
@@ -1924,13 +1988,13 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
     local Scheme = Library.Scheme
     local Normalized = Library:NormalizeButtonVariant(Variant)
     local Style = {
-        BackgroundColor = Scheme.MainColor,
+        BackgroundColor = Library:GetSurfaceColor("Element"),
         BackgroundTransparency = 0,
         OutlineColor = Scheme.OutlineColor,
         OutlineTransparency = 0.1,
         TextColor = Scheme.FontColor,
         TextTransparency = 0.16,
-        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 2),
+        HoverBackgroundColor = Library:GetSurfaceColor("Hover"),
         HoverBackgroundTransparency = 0,
         HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.28),
         HoverOutlineTransparency = 0,
@@ -1940,15 +2004,15 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
 
     if Normalized == "Primary" then
         Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.62)
-        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
+        Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
         Style.HoverOutlineColor = Scheme.AccentColor
     elseif Normalized == "Warning" then
         Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.WarningColor, 0.65)
-        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
+        Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
         Style.HoverOutlineColor = Scheme.WarningColor
     elseif Normalized == "Danger" then
         Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.DestructiveColor, 0.65)
-        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
+        Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
         Style.HoverOutlineColor = Scheme.DestructiveColor
     elseif Normalized == "Ghost" then
         Style.BackgroundColor = Scheme.BackgroundColor
@@ -1956,7 +2020,7 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         Style.OutlineColor = Scheme.OutlineColor
         Style.OutlineTransparency = 1
         Style.TextTransparency = 0.24
-        Style.HoverBackgroundColor = Scheme.MainColor
+        Style.HoverBackgroundColor = Library:GetSurfaceColor("Element")
         Style.HoverBackgroundTransparency = 0
         Style.HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.2)
         Style.HoverOutlineTransparency = 0.16
@@ -2026,10 +2090,10 @@ end
 local function GetToggleSurfaceColor(Toggle): Color3
     if Toggle.Value then
         local AccentWeight = Toggle.Variant == "Checkbox" and 0.82 or 0.56
-        return Library.Scheme.MainColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), AccentWeight)
+        return Library:GetSurfaceColor("Element"):Lerp(GetToggleAccentColor(Toggle.StyleVariant), AccentWeight)
     end
 
-    return Library.Scheme.MainColor:Lerp(Library.Scheme.OutlineColor, 0.16)
+    return Library:GetSurfaceColor("Element"):Lerp(Library.Scheme.OutlineColor, 0.12)
 end
 
 local function GetToggleStrokeColor(Toggle): Color3
@@ -2685,6 +2749,32 @@ function Library:AddOutline(Frame: GuiObject)
     return OutlineStroke
 end
 
+function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparency: number?, Offset: UDim2?)
+    local Shadow
+    local Success = pcall(function()
+        Shadow = Instance.new("UIShadow")
+        Shadow.BlurRadius = UDim.new(0, math.max(0, tonumber(BlurRadius) or 14))
+        Shadow.Color = Library.Scheme.ShadowColor or Library.Scheme.DarkColor
+        Shadow.Offset = Offset or UDim2.fromOffset(0, 3)
+        Shadow.Spread = UDim2.fromOffset(1, 1)
+        Shadow.Transparency = math.clamp(tonumber(Transparency) or 0.46, 0, 1)
+        Shadow.ZIndex = 0
+        Shadow.Parent = Frame
+    end)
+
+    if not Success or not Shadow then
+        if Shadow then
+            Shadow:Destroy()
+        end
+        return nil
+    end
+
+    Library:AddToRegistry(Shadow, {
+        Color = "ShadowColor",
+    })
+    return Shadow
+end
+
 function Library:AddBlank(Frame: GuiObject, Size: UDim2)
     return New("Frame", {
         BackgroundTransparency = 1,
@@ -2816,19 +2906,27 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 end
 
-function Library:AnimateTabHover(Label: TextLabel, Icon: ImageLabel?, Hovering: boolean)
+function Library:AnimateTabHover(Button: TextButton, Label: TextLabel, Icon: ImageLabel?, Hovering: boolean)
+    Library:PlayTween(Button, "TabHover", Library.HoverTweenInfo, {
+        BackgroundTransparency = Hovering and 0.52 or 1,
+    })
     Library:PlayTween(Label, "TabHover", Library.TweenInfo, {
-        TextTransparency = Hovering and 0.25 or 0.5,
+        TextTransparency = Hovering and 0.18 or 0.5,
     })
 
     if Icon then
         Library:PlayTween(Icon, "TabHover", Library.TweenInfo, {
-            ImageTransparency = Hovering and 0.25 or 0.5,
+            ImageTransparency = Hovering and 0.18 or 0.5,
         })
     end
 end
 
 function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Indicator: Frame, Icon: ImageLabel?, Selected: boolean)
+    Library:CancelTween(Button, "TabHover")
+    Library:CancelTween(Label, "TabHover")
+    if Icon then
+        Library:CancelTween(Icon, "TabHover")
+    end
     Library:PlayTween(Button, "TabSelection", Library.TweenInfo, {
         BackgroundTransparency = Selected and 0 or 1,
     })
@@ -3084,7 +3182,7 @@ function Library:AddDraggableButton(...)
     }
 
     local Button = New("TextButton", {
-        BackgroundColor3 = "BackgroundColor",
+        BackgroundColor3 = "RaisedColor",
         Position = UDim2.fromOffset(6, 6),
         TextSize = 16,
         ZIndex = 10,
@@ -3181,9 +3279,7 @@ end
 function Library:AddDraggableMenu(Name: string)
     local Holder = New("CanvasGroup", {
         AutomaticSize = Enum.AutomaticSize.XY,
-        BackgroundColor3 = function()
-            return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-        end,
+        BackgroundColor3 = "RaisedColor",
         GroupTransparency = 1,
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.fromOffset(0, 0),
@@ -3208,6 +3304,7 @@ function Library:AddDraggableMenu(Name: string)
         Parent = Holder,
     })
     Library:AddOutline(Holder)
+    Library:AddSoftShadow(Holder, 14, 0.48, UDim2.fromOffset(0, 3))
 
     Library:MakeLine(Holder, {
         Position = UDim2.fromOffset(0, 34),
@@ -3359,7 +3456,7 @@ function Library:AddDraggableImageButton(...)
     local DraggableImageButton = {}
 
     local Button = New("TextButton", {
-        BackgroundColor3 = "BackgroundColor",
+        BackgroundColor3 = "RaisedColor",
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.fromOffset(IconSize + 12, IconSize + 12),
         Text = "",
@@ -3591,9 +3688,7 @@ function Library:AddContextMenu(
         Menu = New("ScrollingFrame", {
             AutomaticCanvasSize = Enum.AutomaticSize.None,
             AutomaticSize = List == 1 and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-            end,
+            BackgroundColor3 = "RaisedColor",
             BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
             CanvasSize = UDim2.fromOffset(0, 0),
             ScrollBarImageColor3 = "OutlineColor",
@@ -3606,9 +3701,7 @@ function Library:AddContextMenu(
         })
     else
         Menu = New("Frame", {
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-            end,
+            BackgroundColor3 = "RaisedColor",
             Size = typeof(Size) == "function" and Size() or Size,
             Visible = false,
             ZIndex = MenuZIndex,
@@ -3914,7 +4007,7 @@ end))
 
 local TooltipLabel = New("TextLabel", {
     AutomaticSize = Enum.AutomaticSize.Y,
-    BackgroundColor3 = "BackgroundColor",
+    BackgroundColor3 = "RaisedColor",
     TextSize = 14,
     TextWrapped = true,
     Visible = false,
@@ -5339,9 +5432,7 @@ do
         local FooterHeight = Library.IsMobile and 30 or 22
 
         local FooterBackground = New("Frame", {
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
-            end,
+            BackgroundColor3 = "SurfaceColor",
             Size = UDim2.new(1, 0, 0, FooterHeight),
             Parent = ColorMenu.Menu,
         })
@@ -6527,7 +6618,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 21),
+            Size = UDim2.new(1, 0, 0, 25),
             Parent = Container,
         })
 
@@ -7043,7 +7134,7 @@ do
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 18),
+            Size = UDim2.new(1, 0, 0, 22),
             Text = "",
             Visible = Toggle.Visible,
             Parent = Container,
@@ -7069,7 +7160,7 @@ do
 
         local Checkbox = New("Frame", {
             BackgroundColor3 = "MainColor",
-            Position = UDim2.fromOffset(0, 1),
+            Position = UDim2.fromOffset(0, 3),
             Size = UDim2.fromOffset(16, 16),
             Parent = Button,
         })
@@ -7705,7 +7796,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 39),
+            Size = UDim2.new(1, 0, 0, 43),
             Visible = Input.Visible,
             Parent = Container,
         })
@@ -7725,7 +7816,7 @@ do
             ClearTextOnFocus = not Input.Disabled and Input.ClearTextOnFocus,
             PlaceholderText = Input.Placeholder,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 21),
+            Size = UDim2.new(1, 0, 0, 25),
             Text = Input.Value,
             TextEditable = not Input.Disabled,
             TextSize = 14,
@@ -8037,6 +8128,16 @@ do
             ZIndex = Bar.ZIndex + 1,
             Parent = Track,
         })
+        local FillGradient = New("UIGradient", {
+            Color = function()
+                return ColorSequence.new(
+                    Library.Scheme.AccentColor:Lerp(Library.Scheme.FontColor, 0.12),
+                    Library.Scheme.AccentColor
+                )
+            end,
+            Enabled = not Slider.Disabled,
+            Parent = Fill,
+        })
         New("UICorner", {
             CornerRadius = UDim.new(0, 3),
             Parent = Fill,
@@ -8090,6 +8191,7 @@ do
 
             Fill.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.AccentColor
             Library.Registry[Fill].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "AccentColor"
+            FillGradient.Enabled = not Slider.Disabled
             Thumb.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.FontColor
             Library.Registry[Thumb].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "FontColor"
         end
@@ -8429,7 +8531,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Dropdown.Text and 39 or 21),
+            Size = UDim2.new(1, 0, 0, Dropdown.Text and 43 or 25),
             Visible = Dropdown.Visible,
             Parent = Container,
         })
@@ -8449,7 +8551,7 @@ do
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 21),
+            Size = UDim2.new(1, 0, 0, 25),
             Text = "",
             TextTransparency = 1,
             ZIndex = 2,
@@ -8489,7 +8591,7 @@ do
         local DisplayButton = New("TextButton", {
             Active = not Dropdown.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 21),
+            Size = UDim2.new(1, 0, 0, 25),
             Text = "None",
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -10458,7 +10560,7 @@ do
 
         do
             DepGroupboxContainer = New("Frame", {
-                BackgroundColor3 = "BackgroundColor",
+                BackgroundColor3 = "SurfaceColor",
                 Size = UDim2.fromScale(1, 0),
                 Visible = false,
                 Parent = BoxHolder,
@@ -10644,9 +10746,16 @@ function Library:SetTheme(Theme)
         "BackgroundColor",
         "MainColor",
         "TopBarColor",
+        "SurfaceColor",
+        "RaisedColor",
+        "ElementColor",
+        "HoverColor",
         "AccentColor",
+        "AccentSoftColor",
         "OutlineColor",
         "FontColor",
+        "MutedFontColor",
+        "ShadowColor",
         "RedColor",
         "WarningColor",
         "DestructiveColor",
@@ -10673,6 +10782,7 @@ function Library:SetTheme(Theme)
 
     Library:SetFont(ThemeData.Font, true)
     Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
 
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
         Library.ThemeManager:SyncFromLibrary(ThemeName)
@@ -10805,7 +10915,7 @@ function Library:Notify(...)
 
     local Holder = New("CanvasGroup", {
         AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = "MainColor",
+        BackgroundColor3 = "RaisedColor",
         GroupTransparency = 1,
         Position = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2),
         Size = UDim2.fromScale(1, 1),
@@ -10831,6 +10941,7 @@ function Library:Notify(...)
         Parent = Holder,
     })
     Library:AddOutline(Holder)
+    Library:AddSoftShadow(Holder, 16, 0.44, UDim2.fromOffset(0, 4))
     local NotificationScale = New("UIScale", {
         Scale = 0.975,
         Parent = Holder,
@@ -11242,9 +11353,7 @@ function Library:CreateWindow(WindowInfo)
         end))
 
         MainFrame = New("CanvasGroup", {
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
-            end,
+            BackgroundColor3 = "BackgroundColor",
             ClipsDescendants = true,
             GroupTransparency = 1,
             Name = "Main",
@@ -11265,6 +11374,7 @@ function Library:CreateWindow(WindowInfo)
         })
         table.insert(Library.Scales, WindowScale)
         Library:AddOutline(MainFrame)
+        Library:AddSoftShadow(MainFrame, 18, 0.42, UDim2.fromOffset(0, 4))
         Library:MakeLine(MainFrame, {
             Color = function()
                 return Library:GetAccentSurfaceColor(0.2)
@@ -11317,11 +11427,18 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 48),
             Parent = MainFrame,
         })
+        New("UIGradient", {
+            Color = function()
+                return ColorSequence.new(Library.Scheme.TopBarColor, Library:GetSurfaceColor("Raised"))
+            end,
+            Rotation = 90,
+            Parent = TopBar,
+        })
 
         
         TitleHolder = New("Frame", {
             BackgroundColor3 = "TopBarColor",
-            BackgroundTransparency = 0,
+            BackgroundTransparency = 1,
             Size = UDim2.new(0, InitialLeftWidth, 1, 0),
             Parent = TopBar,
         })
@@ -11421,17 +11538,16 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.fromScale(1, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             Text = "",
+            TextColor3 = "MutedFontColor",
             TextWrapped = true,
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
-            TextTransparency = 0.5,
+            TextTransparency = 0.12,
             Parent = CurrentTabInfo,
         })
 
         SearchBox = New("TextBox", {
-            BackgroundColor3 = function()
-                return GetTopBarSurfaceColor(0.065)
-            end,
+            BackgroundColor3 = "ElementColor",
             PlaceholderText = "Search",
             Size = WindowInfo.SearchbarSize,
             TextSize = 14,
@@ -11601,9 +11717,7 @@ function Library:CreateWindow(WindowInfo)
         
         BottomBackground = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
-            end,
+            BackgroundColor3 = "SurfaceColor",
             Position = UDim2.fromScale(0, 1),
             Size = UDim2.new(1, 0, 0, BottomBarHeight),
             ZIndex = 3,
@@ -11639,8 +11753,9 @@ function Library:CreateWindow(WindowInfo)
             Position = UDim2.fromOffset(36, 0),
             Size = UDim2.new(1, -72, 1, 0),
             Text = WindowInfo.Footer,
+            TextColor3 = "MutedFontColor",
             TextSize = 12,
-            TextTransparency = 0.55,
+            TextTransparency = 0.2,
             TextTruncate = Enum.TextTruncate.AtEnd,
             ZIndex = 5,
             Parent = BottomBar,
@@ -11712,9 +11827,7 @@ function Library:CreateWindow(WindowInfo)
         
         Container = New("Frame", {
             AnchorPoint = Vector2.new(1, 0),
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-            end,
+            BackgroundColor3 = "BackgroundColor",
             ClipsDescendants = true,
             Name = "Container",
             Position = UDim2.new(1, 0, 0, 49),
@@ -11822,6 +11935,10 @@ function Library:CreateWindow(WindowInfo)
         CompactLauncherStroke.Transparency = StrokeTransparency
     end
 
+    function Window:RefreshTheme()
+        ApplyCompactLauncherStyle(false)
+    end
+
     if WindowInfo.ShowCompactLauncher then
         CompactLauncher = New("TextButton", {
             Active = true,
@@ -11862,6 +11979,7 @@ function Library:CreateWindow(WindowInfo)
             Transparency = 1,
             Parent = CompactLauncher,
         })
+        Library:AddSoftShadow(CompactLauncher, 14, 0.46, UDim2.fromOffset(0, 3))
         CompactLauncherIcon = New("ImageLabel", {
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundTransparency = 1,
@@ -12898,7 +13016,7 @@ function Library:CreateWindow(WindowInfo)
 
             do
                 TabboxHolder = New("Frame", {
-                    BackgroundColor3 = "BackgroundColor",
+                    BackgroundColor3 = "SurfaceColor",
                     Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
                 })
@@ -13253,9 +13371,7 @@ function Library:CreateWindow(WindowInfo)
 
             do
                 GroupboxHolder = New("Frame", {
-                    BackgroundColor3 = function()
-                        return Library.Scheme.BackgroundColor:Lerp(Library.Scheme.MainColor, 0.48)
-                    end,
+                    BackgroundColor3 = "SurfaceColor",
                     ClipsDescendants = true,
                     Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
@@ -13548,7 +13664,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            Library:AnimateTabHover(TabLabel, TabIcon, Hovering)
+            Library:AnimateTabHover(TabButton, TabLabel, TabIcon, Hovering)
         end
 
         function Tab:Show()
@@ -13940,7 +14056,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            Library:AnimateTabHover(TabLabel, TabIcon, Hovering)
+            Library:AnimateTabHover(TabButton, TabLabel, TabIcon, Hovering)
         end
 
         function Tab:Show()
@@ -14045,9 +14161,7 @@ function Library:CreateWindow(WindowInfo)
 
         DialogFrame = New("TextButton", {
             AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundColor3 = function()
-                return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-            end,
+            BackgroundColor3 = "RaisedColor",
             Position = UDim2.fromScale(0.5, 0.5),
             Size = UDim2.fromOffset(300, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -14064,6 +14178,7 @@ function Library:CreateWindow(WindowInfo)
             })
         )
         local DialogOutline = Library:AddOutline(DialogFrame)
+        Library:AddSoftShadow(DialogFrame, 18, 0.4, UDim2.fromOffset(0, 4))
         DialogOutline.Transparency = 0.16
 
         local InnerContainer = New("Frame", {
@@ -14917,9 +15032,7 @@ function Library:CreateLoading(LoadingInfo)
     local MainFrame = New("TextButton", {
         Name = "Main",
         AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = function()
-            return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
-        end,
+        BackgroundColor3 = "BackgroundColor",
         Position = UDim2.fromScale(0.5, 0.5),
         Size = UDim2.fromOffset(Loading.ShowSidebar and (Loading.ContentWidth + Loading.SidebarWidth) or Loading.WindowWidth, Loading.WindowHeight),
         ClipsDescendants = true,
@@ -14928,6 +15041,7 @@ function Library:CreateLoading(LoadingInfo)
         Parent = ScreenGui,
     })
     Library:AddOutline(MainFrame)
+    Library:AddSoftShadow(MainFrame, 18, 0.42, UDim2.fromOffset(0, 4))
     table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius), Parent = MainFrame }))
     
 	local MainScale = New("UIScale", {

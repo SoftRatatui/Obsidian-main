@@ -761,7 +761,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Default is neutral gray, Metal is restrained violet, and Midnight is near-black with a muted steel accent.", true)
+StyleTab:AddLabel("Default is layered neutral gray, Metal is restrained violet, and Midnight is near-black with a muted steel accent. Cards, controls, hover states, and overlays use separate theme surfaces.", true)
 
 
 Tabs.KeySystem:AddLabel({

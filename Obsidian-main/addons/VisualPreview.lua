@@ -273,7 +273,7 @@ function VisualPreview.Create(Library, Tab, Info)
     local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
     Holder.AnchorPoint = Vector2.new(0, 0.5)
-    Holder.BackgroundColor3 = Library.Scheme.BackgroundColor
+    Holder.BackgroundColor3 = Library.Scheme.RaisedColor or Library.Scheme.BackgroundColor
     Holder.BorderSizePixel = 0
     Holder.ClipsDescendants = true
     Holder.Position = UDim2.fromOffset(8, 8)
@@ -282,7 +282,9 @@ function VisualPreview.Create(Library, Tab, Info)
     Holder.ZIndex = 10
     Holder.Parent = Library.ScreenGui
     Library:AddToRegistry(Holder, {
-        BackgroundColor3 = "BackgroundColor",
+        BackgroundColor3 = function()
+            return Library.Scheme.RaisedColor or Library.Scheme.BackgroundColor
+        end,
     })
 
     local Corner = Instance.new("UICorner")
@@ -330,7 +332,7 @@ function VisualPreview.Create(Library, Tab, Info)
     })
 
     local Content = Instance.new("Frame")
-    Content.BackgroundColor3 = Library:GetBetterColor(Library.Scheme.BackgroundColor, 2)
+    Content.BackgroundColor3 = Library.Scheme.SurfaceColor or Library:GetBetterColor(Library.Scheme.BackgroundColor, 2)
     Content.BorderSizePixel = 0
     Content.Position = UDim2.fromOffset(0, 35)
     Content.Size = UDim2.new(1, 0, 1, -35)
@@ -338,7 +340,7 @@ function VisualPreview.Create(Library, Tab, Info)
     Content.Parent = Holder
     Library:AddToRegistry(Content, {
         BackgroundColor3 = function()
-            return Library:GetBetterColor(Library.Scheme.BackgroundColor, 2)
+            return Library.Scheme.SurfaceColor or Library:GetBetterColor(Library.Scheme.BackgroundColor, 2)
         end,
     })
 

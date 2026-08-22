@@ -125,7 +125,7 @@ local Window = Library:CreateWindow({
 })
 ```
 
-`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette uses soft separators, full-width sidebar tabs, and fixed icon/text alignment. `Metal` is the violet reference preset and `Midnight` is the near-black neutral preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette separates the window background, cards, raised overlays, controls, hover states, muted text, and soft accent surfaces instead of deriving every component from one color. `Metal` is the violet reference preset and `Midnight` is the near-black neutral preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -189,7 +189,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` defaults to a compact 16×16 square with a 3px radius and an animated checkmark. `AddCheckbox` uses the same clear square language. Existing projects that prefer the legacy 24×14 sliding switch can set `Library.ForceCheckbox = false` before creating controls; explicit checkbox creation still uses `AddCheckbox`.
+`AddToggle` defaults to a compact 16×16 square with a 3px radius and an animated checkmark inside a 22px layout-managed row. `AddCheckbox` uses the same clear square language. Existing projects that prefer the legacy 24×14 sliding switch can set `Library.ForceCheckbox = false` before creating controls; explicit checkbox creation still uses `AddCheckbox`.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -443,6 +443,8 @@ Loading:Continue()
 
 The release ships exactly three palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a restrained violet accent inspired by the release reference. `Midnight` uses near-black neutral surfaces and a muted steel accent. All three use Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
 
+Every preset supplies `BackgroundColor`, `SurfaceColor`, `RaisedColor`, `ElementColor`, `HoverColor`, `TopBarColor`, `AccentColor`, `AccentSoftColor`, `OutlineColor`, `FontColor`, `MutedFontColor`, and `ShadowColor`. `SetTheme` copies the complete preset, updates the instance registry, then refreshes stateful controls such as active toggles, disabled sliders, buttons, and the compact launcher. This order is deliberate: a theme switch cannot leave an old hover color, top bar, footer, popup, or active control behind. Supported clients receive one subtle `UIShadow` on elevated windows, dialogs, notifications, and the launcher; unsupported clients fall back silently to the normal outline, and ordinary controls never receive individual blurred shadows.
+
 `Library.Themes` contains only `Default`, `Metal`, and `Midnight`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
 
 ```luau
@@ -686,7 +688,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields are ignored, while a valid `ThemeManager_ThemeList` value restores `Default`, `Metal`, or `Midnight`. Old custom-theme files remain on disk but are not executed or applied.
+Use `Library.lua`, `ThemeManager.lua`, and `SaveManager.lua` from the same commit, then call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields, including old or partial semantic surface fields, are ignored, while a valid `ThemeManager_ThemeList` value restores `Default`, `Metal`, or `Midnight`. The current theme engine repaints registered instances and stateful controls together. Old custom-theme files remain on disk but are not executed or applied.
 
 ### A config does not load
 

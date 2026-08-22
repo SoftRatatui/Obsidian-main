@@ -1,6 +1,16 @@
 ## 22.08.2026
 
 ```diff
+[theme engine]
++ Replaced three overloaded palette colors with semantic Background, Surface, Raised, Element, Hover, AccentSoft, MutedFont, and Shadow layers
++ Theme changes now repaint the registry and refresh every stateful control in one transaction, including active toggles, buttons, sliders, and the compact launcher
++ Updated ThemeManager, SaveManager migration filters, VisualPreview, and type declarations for complete palette coverage
+
+[soft visual pass]
++ Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius
++ Added a restrained top-bar gradient, raised overlays, distinct card surfaces, softer selected-tab hover states, and two-tone slider fills
++ Increased standard control breathing room while preserving the compact 16x16 checkmark and fast interaction timings
+
 [release]
 + Finalized exactly three built-in themes: neutral-gray Default, violet Metal, and near-black Midnight
 + Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations

@@ -8,15 +8,17 @@
 
 [soft visual pass]
 + Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius
-+ Added a restrained top-bar gradient, raised overlays, distinct card surfaces, softer selected-tab hover states, and two-tone slider fills
++ Unified the top bar, title zone, search area, and header controls on one registered top-bar surface so every theme repaints the full header
++ Added raised overlays, distinct card surfaces, softer selected-tab hover states, and two-tone slider fills
 + Increased standard control breathing room while preserving the compact 16x16 checkmark and fast interaction timings
++ Reduced tab crossfade to 75ms in, 45ms out, and 2px of travel for a faster, calmer transition
 
 [release]
-+ Finalized exactly three built-in themes: neutral-gray Default, violet Metal, and near-black Midnight
++ Finalized six restrained built-in themes: neutral-gray Default, desaturated-violet Metal, near-black Midnight, cool Steel, green-gray Sage, and warm-neutral Ash
 + Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
 + Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
 + Standardized the release typography on readable Gotham Regular
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the three-theme release contract
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the six-theme release contract
 
 [design]
 + Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes
@@ -29,7 +31,7 @@
 
 [motion]
 + Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing
-+ Tab entry now uses a 110ms fade/4px offset and exit uses a 70ms fade
++ Tab entry now uses a 75ms fade/2px offset and exit uses a 45ms fade
 + Standard control state transitions now use a responsive 110ms timing
 + Keybind overlays use a 70ms fade and 75ms row transitions without fractional UIScale animation
 
@@ -44,7 +46,7 @@
 ```diff
 [design]
 + Azure is now the default visual system: deep blue-slate layers, a restrained cool-blue accent, and high-contrast soft-white typography
-+ Added a subtle theme-aware top-bar gradient and refined accent dividers for a more composed premium surface
++ Added a solid theme-aware top-bar surface and refined accent dividers for a more composed premium layout
 + Graphite remains available as an optional neutral preset
 
 [motion]

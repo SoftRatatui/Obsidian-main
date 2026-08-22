@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with neutral-gray Default, violet Metal, and near-black Midnight themes, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with six restrained semantic themes, responsive layouts, fast smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
 Read the canonical [complete guide](GUIDE.md) for installation, API usage, themes, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- Three focused visual presets: neutral-gray `Default`, violet `Metal`, and near-black `Midnight`, all built from semantic background, card, raised, control, hover, muted-text, and accent layers; elevated surfaces use a feature-gated soft shadow with a clean outline fallback.
+- Six focused visual presets: neutral-gray `Default`, violet `Metal`, near-black `Midnight`, cool `Steel`, green-gray `Sage`, and warm-neutral `Ash`; all use semantic background, card, raised, control, hover, muted-text, and accent layers, with a feature-gated soft shadow on elevated surfaces.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -165,9 +165,9 @@ For a ready-to-use binding from real ESP controls, see the ESP preview section i
 
 ## Theme presets
 
-The release contains exactly three built-ins: `Default`, the neutral-gray startup theme; `Metal`, the violet reference theme; and `Midnight`, the near-black neutral theme. Switch directly with `Library:SetTheme("Default")`, `Library:SetTheme("Metal")`, or `Library:SetTheme("Midnight")`. Raw legacy palette tables and saved color fields are ignored.
+The release contains six built-ins: `Default`, the neutral-gray startup theme; `Metal`, the desaturated violet reference theme; `Midnight`, the near-black neutral theme; `Steel`, a cool blue-gray theme; `Sage`, a quiet green-gray theme; and `Ash`, a warm neutral theme. Switch directly with `Library:SetTheme("ThemeName")`. Raw legacy palette tables and saved color fields are ignored.
 
-`ThemeManager.lua` adds a minimal three-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable UI default.
+`ThemeManager.lua` adds a minimal six-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable UI default.
 
 ## Legacy API
 

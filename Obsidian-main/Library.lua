@@ -270,9 +270,9 @@ local Library = {
     TweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     HoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabExitTransitionInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    TabSwipeOffset = 4,
+    TabTransitionInfo = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabExitTransitionInfo = TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TabSwipeOffset = 2,
     TabSwipeFrom = "bottom",
 
     WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -333,7 +333,7 @@ local Library = {
     Scheme = {
         BackgroundColor = Color3.fromRGB(17, 19, 22),
         MainColor = Color3.fromRGB(31, 34, 39),
-        TopBarColor = Color3.fromRGB(27, 30, 35),
+        TopBarColor = Color3.fromRGB(29, 32, 37),
         SurfaceColor = Color3.fromRGB(23, 25, 29),
         RaisedColor = Color3.fromRGB(29, 32, 37),
         ElementColor = Color3.fromRGB(31, 34, 39),
@@ -384,7 +384,7 @@ Library.Themes = {
     Default = {
         BackgroundColor = Color3.fromRGB(17, 19, 22),
         MainColor = Color3.fromRGB(31, 34, 39),
-        TopBarColor = Color3.fromRGB(27, 30, 35),
+        TopBarColor = Color3.fromRGB(29, 32, 37),
         SurfaceColor = Color3.fromRGB(23, 25, 29),
         RaisedColor = Color3.fromRGB(29, 32, 37),
         ElementColor = Color3.fromRGB(31, 34, 39),
@@ -408,14 +408,14 @@ Library.Themes = {
     Metal = {
         BackgroundColor = Color3.fromRGB(15, 15, 18),
         MainColor = Color3.fromRGB(30, 30, 38),
-        TopBarColor = Color3.fromRGB(23, 23, 29),
+        TopBarColor = Color3.fromRGB(26, 26, 33),
         SurfaceColor = Color3.fromRGB(20, 20, 25),
         RaisedColor = Color3.fromRGB(26, 26, 33),
         ElementColor = Color3.fromRGB(30, 30, 38),
-        HoverColor = Color3.fromRGB(37, 36, 47),
-        AccentColor = Color3.fromRGB(132, 125, 224),
-        AccentSoftColor = Color3.fromRGB(38, 36, 53),
-        OutlineColor = Color3.fromRGB(47, 46, 59),
+        HoverColor = Color3.fromRGB(39, 38, 48),
+        AccentColor = Color3.fromRGB(140, 136, 201),
+        AccentSoftColor = Color3.fromRGB(42, 40, 53),
+        OutlineColor = Color3.fromRGB(50, 48, 61),
         FontColor = Color3.fromRGB(240, 240, 244),
         MutedFontColor = Color3.fromRGB(151, 148, 162),
         ShadowColor = Color3.fromRGB(5, 5, 8),
@@ -432,12 +432,12 @@ Library.Themes = {
     Midnight = {
         BackgroundColor = Color3.fromRGB(11, 12, 15),
         MainColor = Color3.fromRGB(25, 28, 34),
-        TopBarColor = Color3.fromRGB(20, 22, 27),
+        TopBarColor = Color3.fromRGB(22, 24, 30),
         SurfaceColor = Color3.fromRGB(17, 19, 23),
         RaisedColor = Color3.fromRGB(22, 24, 30),
         ElementColor = Color3.fromRGB(25, 28, 34),
         HoverColor = Color3.fromRGB(32, 36, 44),
-        AccentColor = Color3.fromRGB(105, 122, 153),
+        AccentColor = Color3.fromRGB(116, 128, 148),
         AccentSoftColor = Color3.fromRGB(30, 35, 44),
         OutlineColor = Color3.fromRGB(42, 47, 57),
         FontColor = Color3.fromRGB(232, 235, 242),
@@ -449,6 +449,78 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(5, 6, 8),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 249, 252),
+        BackgroundImage = "",
+        CornerRadius = 6,
+        IsLight = false,
+    },
+    Steel = {
+        BackgroundColor = Color3.fromRGB(16, 20, 24),
+        MainColor = Color3.fromRGB(30, 38, 46),
+        TopBarColor = Color3.fromRGB(26, 33, 40),
+        SurfaceColor = Color3.fromRGB(21, 27, 32),
+        RaisedColor = Color3.fromRGB(26, 33, 40),
+        ElementColor = Color3.fromRGB(30, 38, 46),
+        HoverColor = Color3.fromRGB(39, 51, 61),
+        AccentColor = Color3.fromRGB(120, 148, 174),
+        AccentSoftColor = Color3.fromRGB(38, 50, 60),
+        OutlineColor = Color3.fromRGB(52, 66, 78),
+        FontColor = Color3.fromRGB(234, 240, 244),
+        MutedFontColor = Color3.fromRGB(143, 156, 166),
+        ShadowColor = Color3.fromRGB(5, 8, 10),
+        WarningColor = Color3.fromRGB(203, 157, 87),
+        DestructiveColor = Color3.fromRGB(192, 67, 82),
+        RedColor = Color3.fromRGB(225, 86, 105),
+        DarkColor = Color3.fromRGB(6, 9, 12),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(246, 249, 251),
+        BackgroundImage = "",
+        CornerRadius = 6,
+        IsLight = false,
+    },
+    Sage = {
+        BackgroundColor = Color3.fromRGB(17, 21, 18),
+        MainColor = Color3.fromRGB(32, 42, 36),
+        TopBarColor = Color3.fromRGB(27, 35, 30),
+        SurfaceColor = Color3.fromRGB(23, 29, 25),
+        RaisedColor = Color3.fromRGB(27, 35, 30),
+        ElementColor = Color3.fromRGB(32, 42, 36),
+        HoverColor = Color3.fromRGB(41, 54, 46),
+        AccentColor = Color3.fromRGB(134, 163, 148),
+        AccentSoftColor = Color3.fromRGB(41, 55, 47),
+        OutlineColor = Color3.fromRGB(56, 72, 63),
+        FontColor = Color3.fromRGB(237, 242, 239),
+        MutedFontColor = Color3.fromRGB(146, 159, 152),
+        ShadowColor = Color3.fromRGB(5, 8, 6),
+        WarningColor = Color3.fromRGB(205, 158, 86),
+        DestructiveColor = Color3.fromRGB(192, 69, 80),
+        RedColor = Color3.fromRGB(225, 88, 104),
+        DarkColor = Color3.fromRGB(7, 10, 8),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(247, 250, 248),
+        BackgroundImage = "",
+        CornerRadius = 6,
+        IsLight = false,
+    },
+    Ash = {
+        BackgroundColor = Color3.fromRGB(18, 17, 16),
+        MainColor = Color3.fromRGB(34, 33, 30),
+        TopBarColor = Color3.fromRGB(29, 28, 25),
+        SurfaceColor = Color3.fromRGB(24, 23, 21),
+        RaisedColor = Color3.fromRGB(29, 28, 25),
+        ElementColor = Color3.fromRGB(34, 33, 30),
+        HoverColor = Color3.fromRGB(43, 41, 37),
+        AccentColor = Color3.fromRGB(159, 151, 141),
+        AccentSoftColor = Color3.fromRGB(45, 42, 38),
+        OutlineColor = Color3.fromRGB(57, 54, 49),
+        FontColor = Color3.fromRGB(241, 239, 235),
+        MutedFontColor = Color3.fromRGB(151, 146, 139),
+        ShadowColor = Color3.fromRGB(7, 6, 5),
+        WarningColor = Color3.fromRGB(205, 158, 86),
+        DestructiveColor = Color3.fromRGB(194, 67, 79),
+        RedColor = Color3.fromRGB(227, 87, 103),
+        DarkColor = Color3.fromRGB(9, 8, 7),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(249, 247, 243),
         BackgroundImage = "",
         CornerRadius = 6,
         IsLight = false,
@@ -594,8 +666,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.12,
-        TabSwipeOffset = 4,
+        TabTransitionTime = 0.075,
+        TabSwipeOffset = 2,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -2816,8 +2888,8 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        local Offset = Library.TabSwipeOffset or 4
+        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local Offset = Library.TabSwipeOffset or 2
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
 
@@ -2873,7 +2945,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
             return
         end
 
-        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local Tween = TweenService:Create(TabCanvas, TweenInfo, {
             GroupTransparency = 1,
             Position = UDim2.fromOffset(0, -2),
@@ -10727,6 +10799,17 @@ local ThemeAliases = {
     midnight = "Midnight",
     night = "Midnight",
     dark = "Midnight",
+    steel = "Steel",
+    slate = "Steel",
+    bluegray = "Steel",
+    bluegrey = "Steel",
+    sage = "Sage",
+    forest = "Sage",
+    green = "Sage",
+    ash = "Ash",
+    warmgray = "Ash",
+    warmgrey = "Ash",
+    taupe = "Ash",
 }
 
 function Library:ResolveThemeName(Theme): string
@@ -11294,11 +11377,11 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.12),
+        math.max(0, WindowInfo.TabTransitionTime or 0.075),
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
-    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 4)
+    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 2)
     Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "bottom"
 
     local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
@@ -11427,18 +11510,11 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 48),
             Parent = MainFrame,
         })
-        New("UIGradient", {
-            Color = function()
-                return ColorSequence.new(Library.Scheme.TopBarColor, Library:GetSurfaceColor("Raised"))
-            end,
-            Rotation = 90,
-            Parent = TopBar,
-        })
 
         
         TitleHolder = New("Frame", {
             BackgroundColor3 = "TopBarColor",
-            BackgroundTransparency = 1,
+            BackgroundTransparency = 0,
             Size = UDim2.new(0, InitialLeftWidth, 1, 0),
             Parent = TopBar,
         })
@@ -12378,7 +12454,7 @@ function Library:CreateWindow(WindowInfo)
 
         if typeof(TabTransitionTime) == "number" then
             local TweenInfo = TweenInfo.new(
-                math.max(0, TabTransitionTime or 0.12),
+                math.max(0, TabTransitionTime or 0.075),
                 Enum.EasingStyle.Quint,
                 Enum.EasingDirection.Out
             )

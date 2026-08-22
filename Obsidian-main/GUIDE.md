@@ -119,8 +119,8 @@ local Window = Library:CreateWindow({
         Dropdown = true,
         KeyPicker = true,
     },
-    TabTransitionTime = 0.11,
-    TabSwipeOffset = 4,
+    TabTransitionTime = 0.075,
+    TabSwipeOffset = 2,
     TabSwipeFrom = "bottom",
 })
 ```
@@ -441,16 +441,19 @@ Loading:Continue()
 
 ### Built-in themes
 
-The release ships exactly three palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a restrained violet accent inspired by the release reference. `Midnight` uses near-black neutral surfaces and a muted steel accent. All three use Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
+The release ships six restrained palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a desaturated violet accent. `Midnight` uses near-black surfaces and a low-saturation steel accent. `Steel` is a cool blue-gray preset, `Sage` is a quiet green-gray preset, and `Ash` is a warm neutral preset. Every palette uses Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
 
 Every preset supplies `BackgroundColor`, `SurfaceColor`, `RaisedColor`, `ElementColor`, `HoverColor`, `TopBarColor`, `AccentColor`, `AccentSoftColor`, `OutlineColor`, `FontColor`, `MutedFontColor`, and `ShadowColor`. `SetTheme` copies the complete preset, updates the instance registry, then refreshes stateful controls such as active toggles, disabled sliders, buttons, and the compact launcher. This order is deliberate: a theme switch cannot leave an old hover color, top bar, footer, popup, or active control behind. Supported clients receive one subtle `UIShadow` on elevated windows, dialogs, notifications, and the launcher; unsupported clients fall back silently to the normal outline, and ordinary controls never receive individual blurred shadows.
 
-`Library.Themes` contains only `Default`, `Metal`, and `Midnight`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
+`Library.Themes` contains `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, and `Ash`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
 
 ```luau
 Library:SetTheme("Default")
 Library:SetTheme("Metal")
 Library:SetTheme("Midnight")
+Library:SetTheme("Steel")
+Library:SetTheme("Sage")
+Library:SetTheme("Ash")
 ```
 
 ### Font policy
@@ -459,7 +462,7 @@ Gotham Regular is the default UI font. It stays readable at small Roblox control
 
 ### ThemeManager preset selector
 
-`ThemeManager.lua` exposes a minimal three-item preset dropdown without a palette editor or custom theme files:
+`ThemeManager.lua` exposes a minimal six-item preset dropdown without a palette editor or custom theme files:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -470,7 +473,7 @@ ThemeManager:SetLibrary(Library)
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 ```
 
-The selector uses the ID `ThemeManager_ThemeList`, so SaveManager can persist `Default`, `Metal`, or `Midnight` with the rest of a configuration. Old marker files and raw color fields remain ignored rather than deleted. This keeps user files recoverable while preventing stale colors from repainting only part of the interface.
+The selector uses the ID `ThemeManager_ThemeList`, so SaveManager can persist any built-in preset with the rest of a configuration. Old marker files and raw color fields remain ignored rather than deleted. This keeps user files recoverable while preventing stale colors from repainting only part of the interface.
 
 ### SaveManager
 
@@ -658,7 +661,7 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.11, 4, "bottom")
+}, 0.075, 2, "bottom")
 
 Library:Notify({
     Title = "Saved",
@@ -688,7 +691,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use `Library.lua`, `ThemeManager.lua`, and `SaveManager.lua` from the same commit, then call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields, including old or partial semantic surface fields, are ignored, while a valid `ThemeManager_ThemeList` value restores `Default`, `Metal`, or `Midnight`. The current theme engine repaints registered instances and stateful controls together. Old custom-theme files remain on disk but are not executed or applied.
+Use `Library.lua`, `ThemeManager.lua`, and `SaveManager.lua` from the same commit, then call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields, including old or partial semantic surface fields, are ignored, while a valid `ThemeManager_ThemeList` value restores any of the six built-in palettes. The current theme engine repaints registered instances and stateful controls together. Old custom-theme files remain on disk but are not executed or applied.
 
 ### A config does not load
 
@@ -710,7 +713,7 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] The window is readable at desktop and narrow/mobile widths.
 - [ ] Every danger control has a clear confirmation or an intentional opt-out.
 - [ ] Old appearance keys are ignored while legacy configs are migrated.
-- [ ] `Default` starts in gray, `Metal` applies violet, and `Midnight` applies near-black without stale colors.
+- [ ] All six built-ins repaint the top bar, footer, overlays, controls, and active states without stale colors.
 - [ ] `ThemeManager_ThemeList` saves and restores with configurations.
 - [ ] Watermark, keybind menu, compact launcher, and unload are tested.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.

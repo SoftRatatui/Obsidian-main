@@ -156,8 +156,8 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.11,
-	TabSwipeOffset = 4,
+	TabTransitionTime = 0.075,
+	TabSwipeOffset = 2,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
 	Animations = {
@@ -761,7 +761,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Default is layered neutral gray, Metal is restrained violet, and Midnight is near-black with a muted steel accent. Cards, controls, hover states, and overlays use separate theme surfaces.", true)
+StyleTab:AddLabel("Default, Metal, Midnight, Steel, Sage, and Ash use separate surfaces for cards, controls, hover states, overlays, and the top bar.", true)
 
 
 Tabs.KeySystem:AddLabel({

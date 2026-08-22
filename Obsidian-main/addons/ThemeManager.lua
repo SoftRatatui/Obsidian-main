@@ -6,7 +6,7 @@ local DefaultTheme = {
     FontColor = "eef0f4",
     MutedFontColor = "9297a0",
     MainColor = "1f2227",
-    TopBarColor = "1b1e23",
+    TopBarColor = "1d2025",
     SurfaceColor = "17191d",
     RaisedColor = "1d2025",
     ElementColor = "1f2227",
@@ -29,15 +29,15 @@ local MetalTheme = {
     FontColor = "f0f0f4",
     MutedFontColor = "9794a2",
     MainColor = "1e1e26",
-    TopBarColor = "17171d",
+    TopBarColor = "1a1a21",
     SurfaceColor = "141419",
     RaisedColor = "1a1a21",
     ElementColor = "1e1e26",
-    HoverColor = "25242f",
-    AccentColor = "847de0",
-    AccentSoftColor = "262435",
+    HoverColor = "272630",
+    AccentColor = "8c88c9",
+    AccentSoftColor = "2a2835",
     BackgroundColor = "0f0f12",
-    OutlineColor = "2f2e3b",
+    OutlineColor = "32303d",
     ShadowColor = "050508",
     WarningColor = "d6a353",
     DestructiveColor = "cc4156",
@@ -52,12 +52,12 @@ local MidnightTheme = {
     FontColor = "e8ebf2",
     MutedFontColor = "89909d",
     MainColor = "191c22",
-    TopBarColor = "14161b",
+    TopBarColor = "16181e",
     SurfaceColor = "111317",
     RaisedColor = "16181e",
     ElementColor = "191c22",
     HoverColor = "20242c",
-    AccentColor = "697a99",
+    AccentColor = "748094",
     AccentSoftColor = "1e232c",
     BackgroundColor = "0b0c0f",
     OutlineColor = "2a2f39",
@@ -67,6 +67,75 @@ local MidnightTheme = {
     RedColor = "e25266",
     DarkColor = "050608",
     WhiteColor = "f8f9fc",
+    BackgroundImage = "",
+    FontFace = "Gotham",
+}
+
+local SteelTheme = {
+    FontColor = "eaf0f4",
+    MutedFontColor = "8f9ca6",
+    MainColor = "1e262e",
+    TopBarColor = "1a2128",
+    SurfaceColor = "151b20",
+    RaisedColor = "1a2128",
+    ElementColor = "1e262e",
+    HoverColor = "27333d",
+    AccentColor = "7894ae",
+    AccentSoftColor = "26323c",
+    BackgroundColor = "101418",
+    OutlineColor = "34424e",
+    ShadowColor = "05080a",
+    WarningColor = "cb9d57",
+    DestructiveColor = "c04352",
+    RedColor = "e15669",
+    DarkColor = "06090c",
+    WhiteColor = "f6f9fb",
+    BackgroundImage = "",
+    FontFace = "Gotham",
+}
+
+local SageTheme = {
+    FontColor = "edf2ef",
+    MutedFontColor = "929f98",
+    MainColor = "202a24",
+    TopBarColor = "1b231e",
+    SurfaceColor = "171d19",
+    RaisedColor = "1b231e",
+    ElementColor = "202a24",
+    HoverColor = "29362e",
+    AccentColor = "86a394",
+    AccentSoftColor = "29372f",
+    BackgroundColor = "111512",
+    OutlineColor = "38483f",
+    ShadowColor = "050806",
+    WarningColor = "cd9e56",
+    DestructiveColor = "c04550",
+    RedColor = "e15868",
+    DarkColor = "070a08",
+    WhiteColor = "f7faf8",
+    BackgroundImage = "",
+    FontFace = "Gotham",
+}
+
+local AshTheme = {
+    FontColor = "f1efeb",
+    MutedFontColor = "97928b",
+    MainColor = "22211e",
+    TopBarColor = "1d1c19",
+    SurfaceColor = "181715",
+    RaisedColor = "1d1c19",
+    ElementColor = "22211e",
+    HoverColor = "2b2925",
+    AccentColor = "9f978d",
+    AccentSoftColor = "2d2a26",
+    BackgroundColor = "121110",
+    OutlineColor = "393631",
+    ShadowColor = "070605",
+    WarningColor = "cd9e56",
+    DestructiveColor = "c2434f",
+    RedColor = "e35767",
+    DarkColor = "090807",
+    WhiteColor = "f9f7f3",
     BackgroundImage = "",
     FontFace = "Gotham",
 }
@@ -85,11 +154,14 @@ local ThemeManager = {
     SyncingSelector = false,
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
-    ThemeNames = { "Default", "Metal", "Midnight" },
+    ThemeNames = { "Default", "Metal", "Midnight", "Steel", "Sage", "Ash" },
     BuiltInThemes = {
         Default = { 1, table.clone(DefaultTheme) },
         Metal = { 2, table.clone(MetalTheme) },
         Midnight = { 3, table.clone(MidnightTheme) },
+        Steel = { 4, table.clone(SteelTheme) },
+        Sage = { 5, table.clone(SageTheme) },
+        Ash = { 6, table.clone(AshTheme) },
     },
 }
 
@@ -113,6 +185,18 @@ local function ResolveThemeName(Value)
 
     if Name == "midnight" or Name == "night" or Name == "dark" then
         return "Midnight"
+    end
+
+    if Name == "steel" or Name == "slate" or Name == "bluegray" or Name == "bluegrey" then
+        return "Steel"
+    end
+
+    if Name == "sage" or Name == "forest" or Name == "green" then
+        return "Sage"
+    end
+
+    if Name == "ash" or Name == "warmgray" or Name == "warmgrey" or Name == "taupe" then
+        return "Ash"
     end
 
     return "Default"

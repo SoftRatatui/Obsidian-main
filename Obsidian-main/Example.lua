@@ -116,7 +116,6 @@ local function LoadModule(Path, Required, PreferredBase)
 end
 
 local Library, ActiveRepository = LoadModule("Library.lua", true)
-local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
@@ -129,7 +128,6 @@ Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
-Library:SetTheme("Graphite")
 Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
@@ -154,8 +152,8 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.2,
-	TabSwipeOffset = 8,
+	TabTransitionTime = 0.14,
+	TabSwipeOffset = 4,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
 	Animations = {
@@ -759,14 +757,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Graphite uses layered neutral-gray surfaces, a muted slate accent, and compact geometry.", true)
-StyleTab:AddButton("Reapply Graphite", function()
-	if ThemeManager and ThemeManager.ApplyTheme then
-		ThemeManager:ApplyTheme(ThemeManager.FallbackThemeName or "Default")
-	else
-		Library:SetTheme("Graphite")
-	end
-end)
+StyleTab:AddLabel("Graphite uses layered neutral-gray surfaces, a muted slate accent, Gotham typography, and restrained geometry.", true)
 
 
 Tabs.KeySystem:AddLabel({
@@ -940,17 +931,6 @@ MenuGroup:AddDropdown("DPIScale", {
 	end,
 })
 
-MenuGroup:AddSlider("CornerRadius", {
-	Text = "Corner radius",
-	Default = Library.CornerRadius,
-	Min = 0,
-	Max = 16,
-	Rounding = 0,
-	Callback = function(Value)
-		Window:SetCornerRadius(Value)
-	end,
-})
-
 MenuGroup:AddDivider()
 MenuGroup:AddLabel("Menu keybind"):AddKeyPicker("MenuKeybind", {
 	Default = "RightShift",
@@ -967,19 +947,6 @@ MenuGroup:AddButton({
 	end,
 })
 
-
-if ThemeManager then
-	local ThemeReady, ThemeError = pcall(function()
-		ThemeManager:SetLibrary(Library)
-		ThemeManager:SetFolder("MonHub")
-		local ThemeBox = ThemeManager:ApplyToTab(Tabs.Settings)
-		SetGroupOrder(ThemeBox, 0)
-	end)
-
-	if not ThemeReady then
-		warn("[MonHub Example] ThemeManager disabled: " .. tostring(ThemeError))
-	end
-end
 
 if SaveManager then
 	local SaveReady, SaveError = pcall(function()
@@ -1007,7 +974,6 @@ return {
 	Library = Library,
 	Window = Window,
 	Tabs = Tabs,
-	ThemeManager = ThemeManager,
 	SaveManager = SaveManager,
 	ESPPreview = ESPPreview,
 	Repository = ActiveRepository,

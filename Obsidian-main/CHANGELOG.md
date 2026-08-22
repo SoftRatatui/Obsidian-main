@@ -1,3 +1,27 @@
+## 22.08.2026
+
+```diff
+[release]
++ Locked the release build to one Graphite palette with Gotham typography and the neutral-gray visual system
++ Legacy preset names, table themes, saved defaults, custom theme files, and stale ThemeManager config fields now resolve to Graphite
++ Replaced the old ThemeManager editor with a lightweight Graphite compatibility shim for existing integrations
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, QuickStart.luau, Example.lua, and type declarations for the locked appearance contract
+
+[design]
++ Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes
++ Added inset full-width sidebar tabs so indicators no longer sit against the frame edge
++ Refined tabbox selection into a soft accent surface with short color/transparency transitions
++ Normalized content insets and group spacing for a calmer, less crowded layout
+
+[motion]
++ Tab entry now uses a 140ms fade/4px offset and exit uses an 80ms fade
++ Kept the fast 75ms open and 35ms close behavior while reducing general hover and groupbox transition overhead
+
+[performance]
++ Removed one UIStroke from every standard outlined surface
++ Removed unused runtime theme editor controls, palette file work, and repeated palette restoration paths
+```
+
 ## 19.08.2026
 
 ```diff

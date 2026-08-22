@@ -263,11 +263,12 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    HoverTweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    HoverTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabSwipeOffset = 8,
+    TabTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabExitTransitionInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 
     WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -280,8 +281,8 @@ local Library = {
     DropdownTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -309,6 +310,7 @@ local Library = {
     ShowCustomCursor = true,
     ForceCheckbox = false,
     TooltipsEnabled = false,
+    AppearanceLocked = true,
 
     CantDragForced = false,
     DraggableElements = {},
@@ -367,20 +369,6 @@ end
 
 Library.DefaultTheme = "Graphite"
 Library.Themes = {
-    Azure = {
-        BackgroundColor = Color3.fromRGB(18, 25, 34),
-        MainColor = Color3.fromRGB(28, 39, 52),
-        TopBarColor = Color3.fromRGB(34, 48, 65),
-        AccentColor = Color3.fromRGB(119, 166, 209),
-        OutlineColor = Color3.fromRGB(67, 89, 115),
-        FontColor = Color3.fromRGB(238, 244, 250),
-        WarningColor = Color3.fromRGB(214, 169, 94),
-        DestructiveColor = Color3.fromRGB(211, 79, 92),
-        Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(248, 251, 254),
-        CornerRadius = 4,
-        IsLight = false,
-    },
     Graphite = {
         BackgroundColor = Color3.fromRGB(22, 24, 29),
         MainColor = Color3.fromRGB(33, 36, 43),
@@ -396,34 +384,6 @@ Library.Themes = {
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
         CornerRadius = 6,
-        IsLight = false,
-    },
-    BlackPurple = {
-        BackgroundColor = Color3.fromRGB(9, 9, 13),
-        MainColor = Color3.fromRGB(18, 17, 24),
-        TopBarColor = Color3.fromRGB(20, 18, 27),
-        AccentColor = Color3.fromRGB(116, 82, 178),
-        OutlineColor = Color3.fromRGB(43, 38, 53),
-        FontColor = Color3.fromRGB(232, 229, 238),
-        WarningColor = Color3.fromRGB(202, 151, 82),
-        DestructiveColor = Color3.fromRGB(191, 62, 85),
-        Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.fromRGB(232, 229, 238),
-        CornerRadius = 4,
-        IsLight = false,
-    },
-    Classic = {
-        BackgroundColor = Color3.fromRGB(15, 15, 15),
-        MainColor = Color3.fromRGB(25, 25, 25),
-        TopBarColor = Color3.fromRGB(28, 28, 28),
-        AccentColor = Color3.fromRGB(125, 85, 255),
-        OutlineColor = Color3.fromRGB(40, 40, 40),
-        FontColor = Color3.new(1, 1, 1),
-        WarningColor = Color3.fromRGB(221, 170, 74),
-        DestructiveColor = Color3.fromRGB(210, 63, 80),
-        Font = Font.fromEnum(Enum.Font.Gotham),
-        WhiteColor = Color3.new(1, 1, 1),
-        CornerRadius = 3,
         IsLight = false,
     },
 }
@@ -570,8 +530,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.2,
-        TabSwipeOffset = 8,
+        TabTransitionTime = 0.14,
+        TabSwipeOffset = 4,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -2678,18 +2638,11 @@ function Library:AddOutline(Frame: GuiObject)
     local OutlineStroke = New("UIStroke", {
         Color = "OutlineColor",
         Thickness = 1,
-        Transparency = 0.28,
+        Transparency = 0.42,
         ZIndex = 2,
         Parent = Frame,
     })
-    local ShadowStroke = New("UIStroke", {
-        Color = "DarkColor",
-        Thickness = 1,
-        Transparency = 0.84,
-        ZIndex = 1,
-        Parent = Frame,
-    })
-    return OutlineStroke, ShadowStroke
+    return OutlineStroke
 end
 
 function Library:AddBlank(Frame: GuiObject, Size: UDim2)
@@ -2733,8 +2686,8 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        local Offset = Library.TabSwipeOffset or 14
+        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local Offset = Library.TabSwipeOffset or 4
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
 
@@ -2780,14 +2733,46 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
             end
         end)
     else
-        TabCanvas.GroupTransparency = 1
-        TabCanvas.Visible = false
-        TabCanvas.Position = UDim2.fromScale(0, 0)
-        TabCanvas.ZIndex = BaseZIndex
-
-        if OnComplete then
-            OnComplete()
+        if not TabCanvas.Visible then
+            TabCanvas.GroupTransparency = 1
+            TabCanvas.Position = UDim2.fromScale(0, 0)
+            TabCanvas.ZIndex = BaseZIndex
+            if OnComplete then
+                OnComplete()
+            end
+            return
         end
+
+        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local Tween = TweenService:Create(TabCanvas, TweenInfo, {
+            GroupTransparency = 1,
+            Position = UDim2.fromOffset(0, -2),
+        })
+
+        ActiveTabTweens[TabCanvas] = Tween
+        Tween:Play()
+
+        local Connection; Connection = Tween.Completed:Connect(function(PlaybackState)
+            if Connection then
+                Connection:Disconnect()
+            end
+
+            if ActiveTabTweens[TabCanvas] ~= Tween then
+                return
+            end
+
+            ActiveTabTweens[TabCanvas] = nil
+            if PlaybackState == Enum.PlaybackState.Cancelled then
+                return
+            end
+
+            TabCanvas.Visible = false
+            TabCanvas.Position = UDim2.fromScale(0, 0)
+            TabCanvas.ZIndex = BaseZIndex
+            if OnComplete then
+                OnComplete()
+            end
+        end)
     end
 end
 
@@ -2927,9 +2912,7 @@ function Library:AddDraggableLabel(...)
         })
     )
 
-    local _, LabelShadow = Library:AddOutline(Label)
-    LabelShadow.Thickness = 2
-    LabelShadow.Transparency = 0.84
+    Library:AddOutline(Label)
     if Draggable then
         Library:MakeDraggable(Label, Label, true)
     end
@@ -10560,44 +10543,8 @@ do
     end
 end
 
-function Library:SetTheme(Theme)
-    local ThemeData = Theme
-    local IsPreset = typeof(Theme) == "string"
-    if IsPreset then
-        ThemeData = Library.Themes[Theme]
-        assert(ThemeData, string.format("Unknown theme %q", Theme))
-    end
-
-    assert(typeof(ThemeData) == "table", "Theme must be a preset name or a table")
-
-    if IsPreset then
-        local BaseTheme = Library.Themes[Library.DefaultTheme] or Library.Themes.Graphite or {}
-        local CompleteTheme = table.clone(BaseTheme)
-        for Index, Value in ThemeData do
-            CompleteTheme[Index] = Value
-        end
-        ThemeData = CompleteTheme
-    else
-        ThemeData = table.clone(ThemeData)
-    end
-
-    if ThemeData.RedColor == nil and ThemeData.Red ~= nil then
-        ThemeData.RedColor = ThemeData.Red
-    end
-    if ThemeData.DarkColor == nil and ThemeData.Dark ~= nil then
-        ThemeData.DarkColor = ThemeData.Dark
-    end
-    if ThemeData.WhiteColor == nil and ThemeData.White ~= nil then
-        ThemeData.WhiteColor = ThemeData.White
-    end
-
-    if ThemeData.TopBarColor == nil and ThemeData.MainColor ~= nil then
-        ThemeData.TopBarColor = ThemeData.MainColor
-    end
-
-    if IsPreset and ThemeData.BackgroundImage == nil then
-        ThemeData.BackgroundImage = ""
-    end
+function Library:SetTheme(_Theme)
+    local ThemeData = Library.Themes.Graphite
 
     for _, Index in {
         "BackgroundColor",
@@ -10612,37 +10559,24 @@ function Library:SetTheme(Theme)
         "DarkColor",
         "WhiteColor",
     } do
-        if ThemeData[Index] ~= nil then
-            Library.Scheme[Index] = ThemeData[Index]
-        end
+        Library.Scheme[Index] = ThemeData[Index]
     end
 
     Library.Scheme.Red = nil
     Library.Scheme.Dark = nil
     Library.Scheme.White = nil
+    Library.Scheme.BackgroundImage = ""
+    Library.IsLightTheme = false
 
-    Library.IsLightTheme = ThemeData.IsLight == true
-
-    if ThemeData.CornerRadius ~= nil then
-        local Radius = math.clamp(ThemeData.CornerRadius, 0, 20)
-        Library.CornerRadius = Radius
-        Templates.Window.CornerRadius = Radius
-        if Library.Window then
-            Library.Window:SetCornerRadius(Radius)
-        end
+    local Radius = ThemeData.CornerRadius
+    Library.CornerRadius = Radius
+    Templates.Window.CornerRadius = Radius
+    if Library.Window then
+        Library.Window:SetCornerRadius(Radius)
+        Library.Window:SetBackgroundImage("")
     end
 
-    if ThemeData.Font ~= nil then
-        Library:SetFont(ThemeData.Font, true)
-    end
-
-    if ThemeData.BackgroundImage ~= nil then
-        Library.Scheme.BackgroundImage = ThemeData.BackgroundImage
-        if Library.Window then
-            Library.Window:SetBackgroundImage(ThemeData.BackgroundImage)
-        end
-    end
-
+    Library:SetFont(ThemeData.Font, true)
     Library:UpdateColorsUsingRegistry()
 
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
@@ -11154,11 +11088,11 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.18),
+        math.max(0, WindowInfo.TabTransitionTime or 0.14),
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
-    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 10)
+    Library.TabSwipeOffset = math.max(1, WindowInfo.TabSwipeOffset or 4)
     Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "bottom"
 
     local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
@@ -11482,9 +11416,8 @@ function Library:CreateWindow(WindowInfo)
                 Parent = MoveButton,
             })
         )
-        local MoveOutline, MoveShadow = Library:AddOutline(MoveButton)
+        local MoveOutline = Library:AddOutline(MoveButton)
         MoveOutline.Transparency = 0.74
-        MoveShadow.Transparency = 0.9
 
         local MoveIcon = Library:GetIcon("move")
         New("ImageLabel", {
@@ -11669,7 +11602,14 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIListLayout", {
             HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            Padding = UDim.new(0, 0),
+            Padding = UDim.new(0, 4),
+            Parent = Tabs,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 6),
+            PaddingLeft = UDim.new(0, 4),
+            PaddingRight = UDim.new(0, 4),
+            PaddingTop = UDim.new(0, 6),
             Parent = Tabs,
         })
         ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
@@ -12225,7 +12165,7 @@ function Library:CreateWindow(WindowInfo)
 
         if typeof(TabTransitionTime) == "number" then
             local TweenInfo = TweenInfo.new(
-                math.max(0, TabTransitionTime or 0.22),
+                math.max(0, TabTransitionTime or 0.14),
                 Enum.EasingStyle.Quint,
                 Enum.EasingDirection.Out
             )
@@ -12415,7 +12355,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 36),
+                Size = UDim2.new(1, -8, 0, 34),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -12428,8 +12368,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 0, 0.5, 0),
-                Size = UDim2.fromOffset(3, 20),
+                Position = UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.fromOffset(2, 18),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -12502,14 +12442,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 4),
+                Padding = UDim.new(0, 8),
                 Parent = TabLeft,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 12),
-                PaddingLeft = UDim.new(0, 4),
-                PaddingRight = UDim.new(0, 6),
-                PaddingTop = UDim.new(0, 6),
+                PaddingBottom = UDim.new(0, 14),
+                PaddingLeft = UDim.new(0, 8),
+                PaddingRight = UDim.new(0, 8),
+                PaddingTop = UDim.new(0, 8),
                 Parent = TabLeft,
             })
             do
@@ -12540,14 +12480,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 4),
+                Padding = UDim.new(0, 8),
                 Parent = TabRight,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 12),
-                PaddingLeft = UDim.new(0, 4),
-                PaddingRight = UDim.new(0, 6),
-                PaddingTop = UDim.new(0, 6),
+                PaddingBottom = UDim.new(0, 14),
+                PaddingLeft = UDim.new(0, 8),
+                PaddingRight = UDim.new(0, 8),
+                PaddingTop = UDim.new(0, 8),
                 Parent = TabRight,
             })
             do
@@ -12579,7 +12519,6 @@ function Library:CreateWindow(WindowInfo)
 
         local WarningBox
         local WarningBoxOutline
-        local WarningBoxShadowOutline
         local WarningBoxScrollingFrame
         local WarningTitle
         local WarningStroke
@@ -12598,7 +12537,7 @@ function Library:CreateWindow(WindowInfo)
                     Parent = WarningBox,
                 })
             )
-            WarningBoxOutline, WarningBoxShadowOutline = Library:AddOutline(WarningBox)
+            WarningBoxOutline = Library:AddOutline(WarningBox)
 
             WarningBoxScrollingFrame = New("ScrollingFrame", {
                 BackgroundTransparency = 1,
@@ -12665,10 +12604,6 @@ function Library:CreateWindow(WindowInfo)
             return Library.Scheme.BackgroundColor:Lerp(GetWarningBoxDestructiveColor(), 0.34)
         end
 
-        local function GetWarningBoxShadowColor()
-            return Library.Scheme.DarkColor:Lerp(GetWarningBoxDestructiveColor(), 0.28)
-        end
-
         local function GetWarningBoxStrokeColor()
             return GetWarningBoxDestructiveColor():Lerp(Library.Scheme.DarkColor, 0.42)
         end
@@ -12724,8 +12659,6 @@ function Library:CreateWindow(WindowInfo)
             WarningBox.BackgroundColor3 = Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor
                 or GetWarningBoxSurfaceColor()
 
-            WarningBoxShadowOutline.Color = Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor
-                or GetWarningBoxShadowColor()
             WarningBoxOutline.Color = Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor
                 or GetWarningBoxDestructiveColor()
 
@@ -12736,9 +12669,6 @@ function Library:CreateWindow(WindowInfo)
 
             if not Library.Registry[WarningBox] then
                 Library:AddToRegistry(WarningBox, {})
-            end
-            if not Library.Registry[WarningBoxShadowOutline] then
-                Library:AddToRegistry(WarningBoxShadowOutline, {})
             end
             if not Library.Registry[WarningBoxOutline] then
                 Library:AddToRegistry(WarningBoxOutline, {})
@@ -12752,10 +12682,6 @@ function Library:CreateWindow(WindowInfo)
 
             Library.Registry[WarningBox].BackgroundColor3 = function()
                 return Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor or GetWarningBoxSurfaceColor()
-            end
-
-            Library.Registry[WarningBoxShadowOutline].Color = function()
-                return Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor or GetWarningBoxShadowColor()
             end
 
             Library.Registry[WarningBoxOutline].Color = function()
@@ -12936,8 +12862,10 @@ function Library:CreateWindow(WindowInfo)
                 local TabStoringIndex = IsNameEmpty and tostring(TabIndex) or Name
 
                 local Button = New("TextButton", {
-                    BackgroundColor3 = "MainColor",
-                    BackgroundTransparency = 0,
+                    BackgroundColor3 = function()
+                        return Library:GetAccentSurfaceColor(0.14)
+                    end,
+                    BackgroundTransparency = 1,
                     Size = UDim2.fromOffset(0, 34),
                     Text = "",
                     Parent = TabboxButtons,
@@ -12996,8 +12924,10 @@ function Library:CreateWindow(WindowInfo)
 
                 local Line = Library:MakeLine(Button, {
                     AnchorPoint = Vector2.new(0, 1),
+                    Color = "OutlineColor",
                     Position = UDim2.new(0, 0, 1, 1),
                     Size = UDim2.new(1, 0, 0, 1),
+                    Transparency = 0.68,
                 })
 
                 local Container = New("Frame", {
@@ -13032,21 +12962,47 @@ function Library:CreateWindow(WindowInfo)
                     DependencyBoxes = {},
                 }
 
+                local function ApplyTabboxVisual(Selected: boolean, Animate: boolean)
+                    local BackgroundTransparency = Selected and 0 or 1
+                    local TextTransparency = Selected and 0.04 or 0.5
+
+                    if Animate then
+                        Library:PlayTween(Button, "TabboxSelection", Library.HoverTweenInfo, {
+                            BackgroundTransparency = BackgroundTransparency,
+                        })
+                        if ButtonLabel then
+                            Library:PlayTween(ButtonLabel, "TabboxSelection", Library.HoverTweenInfo, {
+                                TextTransparency = TextTransparency,
+                            })
+                        end
+                        if ButtonIcon then
+                            Library:PlayTween(ButtonIcon, "TabboxSelection", Library.HoverTweenInfo, {
+                                ImageTransparency = TextTransparency,
+                            })
+                        end
+                    else
+                        Library:CancelTween(Button, "TabboxSelection")
+                        Button.BackgroundTransparency = BackgroundTransparency
+                        if ButtonLabel then
+                            Library:CancelTween(ButtonLabel, "TabboxSelection")
+                            ButtonLabel.TextTransparency = TextTransparency
+                        end
+                        if ButtonIcon then
+                            Library:CancelTween(ButtonIcon, "TabboxSelection")
+                            ButtonIcon.ImageTransparency = TextTransparency
+                        end
+                    end
+
+                    Line.Visible = not Selected
+                end
+
                 function Tab:Show()
+                    local Animate = Tabbox.ActiveTab ~= nil
                     if Tabbox.ActiveTab then
                         Tabbox.ActiveTab:Hide()
                     end
 
-                    Button.BackgroundTransparency = 1
-
-                    if ButtonLabel then
-                        ButtonLabel.TextTransparency = 0
-                    end
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0
-                    end
-
-                    Line.Visible = false
+                    ApplyTabboxVisual(true, Animate)
 
                     Container.Visible = true
 
@@ -13055,15 +13011,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:Hide()
-                    Button.BackgroundTransparency = 0
-
-                    if ButtonLabel then
-                        ButtonLabel.TextTransparency = 0.5
-                    end
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0.5
-                    end
-                    Line.Visible = true
+                    ApplyTabboxVisual(false, true)
                     Container.Visible = false
 
                     Tabbox.ActiveTab = nil
@@ -13194,15 +13142,6 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
                 Parent = Info.Side == 1 and TabLeft or TabRight,
-            })
-            New("UIListLayout", {
-                Padding = UDim.new(0, 6),
-                Parent = BoxHolder,
-            })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 4),
-                PaddingTop = UDim.new(0, 4),
-                Parent = BoxHolder,
             })
 
             local GroupboxHolder
@@ -13688,7 +13627,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 36),
+                Size = UDim2.new(1, -8, 0, 34),
                 Text = "",
                 Parent = Tabs,
             })
@@ -13700,8 +13639,8 @@ function Library:CreateWindow(WindowInfo)
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 0, 0.5, 0),
-                Size = UDim2.fromOffset(3, 20),
+                Position = UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.fromOffset(2, 18),
                 Parent = TabButton,
             })
             New("UICorner", {
@@ -14029,10 +13968,8 @@ function Library:CreateWindow(WindowInfo)
                 Parent = DialogFrame,
             })
         )
-        local DialogOutline, DialogShadow = Library:AddOutline(DialogFrame)
+        local DialogOutline = Library:AddOutline(DialogFrame)
         DialogOutline.Transparency = 0.16
-        DialogShadow.Thickness = 2
-        DialogShadow.Transparency = 0.78
 
         local InnerContainer = New("Frame", {
             BackgroundTransparency = 1,

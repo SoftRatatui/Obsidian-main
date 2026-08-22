@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with a premium Graphite default theme, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with one premium Graphite design system, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
-Read the canonical [complete guide](GUIDE.md) for installation, API usage, themes, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
+Read the canonical [complete guide](GUIDE.md) for installation, API usage, Graphite behavior, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- Graphite visual system with layered neutral-gray surfaces, a muted slate accent, soft 6px geometry, and Gotham typography.
+- One Graphite visual system with layered neutral-gray surfaces, a muted slate accent, restrained 6px outer geometry, subtle single-pixel outlines, and Gotham typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -15,7 +15,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
-- Editable top-bar theme color with backwards-compatible fallback for existing themes.
+- Legacy presets, custom theme files, and stale theme config fields now resolve to Graphite instead of leaving mixed colors behind.
 
 ## Quick start
 
@@ -90,19 +90,19 @@ App:Get("speed"):SetValue(50)
 
 ## Current Graphite interface
 
-`Graphite` is the default profile. It uses neutral-gray surfaces, a muted slate accent, Gotham typography, square checkboxes, soft 6px geometry, and a fixed footer. Sidebar tabs use their complete available row while keeping a rounded selected state. Theme Manager uses a versioned default marker, so legacy saved defaults cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Graphite` is the only shipped profile. It uses neutral-gray surfaces, a muted slate accent, Gotham typography, compact 24×14 soft switches, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Legacy themes and saved appearance data cannot override Graphite on launch. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
 Buttons support `Default`, `Primary`, `Warning`, `Danger`, and `Ghost` variants. `Warning` and `Danger` receive restrained semantic icons by default; pass `Icon = "..."` to replace one or `Icon = false` to remove it. `Library:SetButtonVariantIcon("Danger", "trash-2")` changes the default for new and existing semantic danger buttons. `Risky = true` remains supported and maps to `Danger` when no explicit variant is provided. `Secondary`, `Caution`, and `Destructive` remain accepted as legacy aliases for `Default`, `Warning`, and `Danger`.
 
-Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. Activating a `Danger` toggle opens a short `Cancel` / `Continue` confirmation; turning it off stays immediate for a quick exit. Set `ConfirmDanger = false` to opt out, or provide `ConfirmTitle` and `ConfirmDescription` for the dialog copy. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`. Theme Manager now includes dedicated `Warning color` and `Danger color` controls, and all header surfaces follow `TopBarColor`.
+Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. Activating a `Danger` toggle opens a short `Cancel` / `Continue` confirmation; turning it off stays immediate for a quick exit. Set `ConfirmDanger = false` to opt out, or provide `ConfirmTitle` and `ConfirmDescription` for the dialog copy. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`.
 
 Use `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow` to configure the launcher. It stays outside the main window, remains inside the viewport, and uses a movement threshold so dragging never triggers an accidental reopen.
 
 ## Full executor profile
 
-MonHub is tuned for full-featured executors with `request`, `loadstring`, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. This profile keeps every visual enhancement, local theme/config workflow, custom image support, cursor, and refined transitions enabled.
+MonHub is tuned for full-featured executors with `request`, `loadstring`, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. This profile keeps every visual enhancement, local config workflow, custom image support, cursor, and refined transitions enabled.
 
 The library retains ordinary defensive guards where they are free, but reduced-feature executor compatibility is not the target of this build.
 
@@ -161,15 +161,9 @@ Drag the character with the left mouse button or touch to rotate it. Use the mou
 
 For a ready-to-use binding from real ESP controls, see the ESP preview section in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
-## Themes
+## Graphite baseline
 
-`Graphite` is the default. `Azure`, `BlackPurple`, and `Classic` remain available:
-
-```luau
-Library:SetTheme("BlackPurple")
-```
-
-You can pass `Theme = "Graphite"` to `Library:Create`, select another built-in theme, or supply a custom theme table.
+Graphite starts automatically and is the only palette in this release. `Library:SetTheme("Graphite")` remains available as an explicit reset. Other legacy preset names and theme tables are accepted only for compatibility and reset to Graphite; they do not recolor the UI. Theme selection, custom theme files, and persisted palette defaults are unavailable until the theme system returns.
 
 ## Legacy API
 

@@ -10,7 +10,7 @@
 4. [Controls](#controls)
 5. [Values, callbacks, and dependencies](#values-callbacks-and-dependencies)
 6. [Dialogs, notifications, and loading](#dialogs-notifications-and-loading)
-7. [Themes and configuration](#themes-and-configuration)
+7. [Graphite and configuration](#graphite-and-configuration)
 8. [Watermark, keybinds, launcher, and sound](#watermark-keybinds-launcher-and-sound)
 9. [Media and ESP preview](#media-and-esp-preview)
 10. [Declarative API](#declarative-api)
@@ -41,7 +41,7 @@ Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produc
 
 ## Installation and first window
 
-The full visual profile targets executors that provide `loadstring`, HTTP requests, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. The library itself can still run without optional addons, but custom themes, saved configs, and local image assets need the relevant executor APIs.
+The full visual profile targets executors that provide `loadstring`, HTTP requests, filesystem APIs, `getcustomasset`, `gethui`, and `protectgui`. The library itself can still run without optional addons, but saved configs and local image assets need the relevant executor APIs.
 
 Create a small legacy-style interface first:
 
@@ -50,7 +50,6 @@ local Library = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
 ))()
 
-Library:SetTheme("Graphite")
 Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
@@ -438,33 +437,21 @@ Loading:Continue()
 
 `Loading:ShowErrorPage(true)`, `SetErrorMessage`, and `SetErrorButtons` provide a clean recovery screen. Always call `Destroy()` if a loading instance will not continue.
 
-## Themes and configuration
+## Graphite and configuration
 
-### Built-in and custom palettes
+### Locked Graphite appearance
+
+Graphite is the only palette shipped in this release. It starts automatically and uses neutral-gray layers, a muted slate accent, Gotham typography, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. Sidebar tabs use an inset full-width row, while cards and fields retain only the amount of rounding needed to separate surfaces.
+
+`Library.Themes` contains only `Graphite`. `Library:SetTheme(...)` remains for source compatibility, but every old preset name and every legacy table now resets the interface to Graphite. It cannot restore an old font, background image, corner radius, or partial palette.
 
 ```luau
 Library:SetTheme("Graphite")
-Library:SetTheme("Azure")
-Library:SetTheme("BlackPurple")
-Library:SetTheme("Classic")
 ```
 
-Graphite is the default profile: neutral-gray surfaces, a muted slate accent, Gotham, 6px outer geometry, and semantic warning/danger colors. Cards, inputs, separators, floating menus, dialogs, notifications, and preview lighting all update through the theme registry together. Sidebar tabs fill their full available row while their selected state remains softly rounded.
+### Legacy ThemeManager
 
-Passing a table to `Library:SetTheme` is a deliberate patch operation. It changes only the fields you provide:
-
-```luau
-Library:SetTheme({
-    MainColor = Color3.fromRGB(37, 40, 48),
-    TopBarColor = Color3.fromRGB(42, 46, 55),
-})
-```
-
-For a full independent palette, include every color you rely on: `BackgroundColor`, `MainColor`, `TopBarColor`, `AccentColor`, `OutlineColor`, `FontColor`, `WarningColor`, `DestructiveColor`, `RedColor`, `DarkColor`, `WhiteColor`, `Font`, `BackgroundImage`, `CornerRadius`, and `IsLight`.
-
-### ThemeManager
-
-Load addons from the same repository revision as `Library.lua`:
+New projects do not need `ThemeManager.lua`. The addon remains a small compatibility shim for existing projects: `SetLibrary` and `ApplyTheme` reset the library to Graphite, but it does not display a theme editor, load a saved default, read custom theme files, or write a palette to disk.
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -472,20 +459,13 @@ local ThemeManager = loadstring(game:HttpGet(
 ))()
 
 ThemeManager:SetLibrary(Library)
-ThemeManager:SetFolder("MonHub")
-local ThemeGroup = ThemeManager:ApplyToTab(Tabs.Settings)
-ThemeGroup:SetOrder(0)
 ```
 
-ThemeManager applies themes atomically. It resets all internal semantic colors, synchronizes the Font Face and background image, and prevents an old palette from leaving isolated elements behind. Theme controls use IDs such as `ThemeManager_BackgroundColor`; do not reuse that prefix for your own controls.
-
-The default marker is `default-v5.txt`. Retired palette names and stale theme data are rejected and fall back to Graphite on startup. A theme explicitly saved through the current manager is still respected as the user’s choice.
-
-Call `ThemeManager:SetDefaultTheme(table)` only before `ApplyToTab`. It replaces the session fallback palette used by ThemeManager.
+Old `default-v5.txt` markers, custom theme files, and `ThemeManager_` values inside configurations are ignored rather than deleted. This keeps a user’s files recoverable while preventing stale colors from repainting part of the interface.
 
 ### SaveManager
 
-Initialize ThemeManager first, build every control, then load configurations:
+Build every control before loading configurations:
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
@@ -502,7 +482,7 @@ ConfigGroup:SetOrder(-100)
 SaveManager:LoadAutoloadConfig()
 ```
 
-`IgnoreThemeSettings()` is recommended when ThemeManager owns the palette. If a project intentionally stores `ThemeManager_` options in a config, the current SaveManager batches them and applies one final palette instead of showing intermediate mixed colors. Configuration parser errors now return an error instead of silently reporting a successful load. Config and theme names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces. Folder creation and malformed stored keybind-menu data now fail safely with a readable result.
+`IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale appearance entries immediately; the locked Graphite baseline remains intact. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
 
 ## Watermark, keybinds, launcher, and sound
 
@@ -596,7 +576,6 @@ For an interface described by data rather than sequential calls, use `Library:Cr
 local App = Library:Create({
     Title = "MonHub",
     Footer = "Ready",
-    Theme = "Graphite",
     Window = {
         Size = UDim2.fromOffset(760, 660),
         Center = true,
@@ -661,7 +640,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. Tabs use a 140ms entry and an 80ms exit fade with a 4px maximum offset. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -670,7 +649,7 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.2, 8, "bottom")
+}, 0.14, 4, "bottom")
 
 Library:Notify({
     Title = "Saved",
@@ -700,15 +679,11 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use the current `ThemeManager.lua`, initialize it before `SaveManager`, and keep both from the same repository revision as `Library.lua`. Retired theme selections fall back to Graphite and cannot reapply their old color fields through a saved config. A theme explicitly saved as a new default is intentionally respected; use `Reset default` in ThemeManager to return to Graphite.
-
-### A theme control changes only part of the UI
-
-Do not reuse `ThemeManager_` option IDs. Use `ThemeManager` for full palette management rather than manually setting a few unrelated theme options. If an external custom `GuiObject` needs to follow the palette, register it through the library’s standard constructors or refresh it explicitly in your own theme callback.
+Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. This release maps every legacy preset, custom theme marker, and `ThemeManager_` field to the immutable Graphite baseline. Old files remain on disk but are not executed or applied.
 
 ### A config does not load
 
-Create all tabs and controls before `LoadAutoloadConfig()`. Call `SaveManager:IgnoreThemeSettings()` if ThemeManager owns the palette. Inspect the returned error from `SaveManager:Load(name)` or `LoadJSON(content)` instead of assuming a failed parser succeeded.
+Create all tabs and controls before `LoadAutoloadConfig()`. Call `SaveManager:IgnoreThemeSettings()` when reusing configs created by older builds. Inspect the returned error from `SaveManager:Load(name)` or `LoadJSON(content)` instead of assuming a failed parser succeeded.
 
 ### The watermark is on the right
 
@@ -725,7 +700,7 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] All user-facing labels and notifications are English.
 - [ ] The window is readable at desktop and narrow/mobile widths.
 - [ ] Every danger control has a clear confirmation or an intentional opt-out.
-- [ ] ThemeManager is initialized before SaveManager autoload.
+- [ ] Old appearance keys are ignored while legacy configs are migrated.
 - [ ] Watermark, keybind menu, compact launcher, and unload are tested.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 

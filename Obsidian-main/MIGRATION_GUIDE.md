@@ -2,9 +2,9 @@
 
 Актуальная полная документация находится в [GUIDE.md](GUIDE.md). Этот файл посвящён именно переносу существующего проекта с Obsidian.
 
-Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `ThemeManager`, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать.
+Этот документ описывает безопасный перенос существующего интерфейса с оригинального Obsidian на MonHub UI без переписывания всей логики. Legacy API сохранён: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options` и `Library.Toggles` продолжают работать. `ThemeManager` оставлен только как Graphite-совместимый shim для старого кода.
 
-MonHub добавляет Graphite-тему, Gotham, адаптивный sidebar, улучшенные slider и checkbox, плавные анимации, click sound, draggable Watermark с viewport clamp, R6 ESP preview, оптимизированный search и декларативный API.
+MonHub добавляет единый Graphite baseline, Gotham, адаптивный sidebar, улучшенные slider и toggle, плавные анимации, click sound, draggable Watermark с viewport clamp, R6 ESP preview, оптимизированный search и декларативный API.
 
 ## Полезные ссылки
 
@@ -32,7 +32,7 @@ MonHub добавляет Graphite-тему, Gotham, адаптивный sideba
 1. Сохранить резервную копию рабочего скрипта и папки configs.
 2. Заменить URL оригинального `Library.lua` на MonHub raw URL.
 3. Оставить существующие IDs controls без изменений.
-4. Подключить новые версии `ThemeManager.lua` и `SaveManager.lua` из того же репозитория.
+4. Подключить новую версию `SaveManager.lua`; `ThemeManager.lua` добавляйте только если старый проект уже его вызывает.
 5. Запустить smoke test и проверить callbacks, configs, keybinds, mobile layout и unload.
 
 ## Шаг 1. Замените loader
@@ -109,7 +109,7 @@ GeneralGroup:AddToggle("Enabled", {
 | `AddKeyPicker` | Поддерживается | Оставить |
 | `Library.Options` | Поддерживается | Не менять IDs |
 | `Library.Toggles` | Поддерживается | Не менять IDs |
-| `ThemeManager` | Поддерживается | Обновить файл |
+| `ThemeManager` | Compatibility shim | Не нужен для новых проектов |
 | `SaveManager` | Поддерживается | Обновить файл |
 | `Library:SetWatermark` | Поддерживается | Можно использовать |
 | `Library:SetWatermarkVisibility` | Поддерживается | Можно использовать |
@@ -190,7 +190,7 @@ MainLeft:SetOrder(0)
 MainRight:SetOrder(0)
 ```
 
-Используйте `SetOrder`, если ThemeManager, SaveManager или динамические groupboxes должны находиться в предсказуемом порядке.
+Используйте `SetOrder`, если SaveManager или динамические groupboxes должны находиться в предсказуемом порядке.
 
 ## Перенос controls
 
@@ -364,52 +364,17 @@ Options.Quality:SetValue("High")
 
 `Toggles` содержит toggle/checkbox. `Options` содержит input, slider, dropdown, key picker, color picker и другие option controls.
 
-## Graphite-тема
+## Graphite baseline
 
-Graphite используется по умолчанию:
+Graphite применяется автоматически и является единственной палитрой релизной версии. Это нейтрально-серые поверхности, мягкий slate accent, Gotham, сдержанная внешняя геометрия и тонкие single-pixel outlines.
 
 ```luau
 Library:SetTheme("Graphite")
 ```
 
-Верхняя панель имеет отдельный цвет `TopBarColor`. Он доступен в ThemeManager как `Top bar color`:
+Строка выше нужна только как явный reset. Старые имена preset-ов и старые таблицы `Library:SetTheme({...})` принимаются для совместимости, но всегда сбрасывают интерфейс к Graphite. Они не могут вернуть старый font, `TopBarColor`, background image, радиус или частично перекрасить UI.
 
-```luau
-Library:SetTheme({
-    MainColor = Color3.fromRGB(33, 36, 43),
-    TopBarColor = Color3.fromRGB(39, 42, 50),
-})
-```
-
-Старые темы без `TopBarColor` продолжают работать: верхняя панель автоматически наследует `MainColor`.
-
-Старая чёрно-фиолетовая тема сохранена:
-
-```luau
-Library:SetTheme("BlackPurple")
-```
-
-Классическая тема:
-
-```luau
-Library:SetTheme("Classic")
-```
-
-Собственная тема:
-
-```luau
-Library:SetTheme({
-    BackgroundColor = Color3.fromRGB(22, 24, 29),
-    MainColor = Color3.fromRGB(33, 36, 43),
-    AccentColor = Color3.fromRGB(133, 141, 160),
-    OutlineColor = Color3.fromRGB(65, 69, 80),
-    FontColor = Color3.fromRGB(239, 241, 246),
-    WhiteColor = Color3.fromRGB(248, 249, 252),
-    Font = Font.fromEnum(Enum.Font.Gotham),
-    CornerRadius = 4,
-    IsLight = false,
-})
-```
+Старые theme files и marker-файлы не удаляются автоматически, но больше не применяются. Это сохраняет возможность вручную вернуть данные в будущей системе тем, не позволяя им ломать релизный интерфейс.
 
 ## Click sound
 
@@ -548,7 +513,7 @@ MediaGroup:AddVideo("PreviewVideo", {
 
 ## ThemeManager
 
-Загружайте addon из того же commit/repository, что и Library:
+Новые проекты не должны подключать `ThemeManager.lua`. Addon сохранён для старых скриптов, которые уже вызывают его методы:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -556,16 +521,9 @@ local ThemeManager = loadstring(game:HttpGet(
 ))()
 
 ThemeManager:SetLibrary(Library)
-ThemeManager:SetFolder("MonHub")
-local ThemeGroup = ThemeManager:ApplyToTab(Tabs.Settings)
-ThemeGroup:SetOrder(0)
 ```
 
-Новая версия корректно определяет Gotham и не сбрасывает font dropdown на Code.
-
-Опции ThemeManager теперь имеют префикс `ThemeManager_`, например `ThemeManager_BackgroundColor`. Это исключает конфликты с ID ваших элементов.
-
-ThemeManager использует versioned default marker `default-v5.txt`. Устаревшие palette names и theme data больше не применяются автоматически, поэтому не могут вернуть старый font, отдельные цвета или предыдущую палитру. Выберите тему и сохраните её как default, если хотите заменить Graphite при следующем запуске.
+В релизной версии shim только сбрасывает Graphite. Он не создаёт selector, не открывает редактор палитры, не читает custom themes и не сохраняет default theme. Любые старые `ThemeManager_` поля из config игнорируются после миграции.
 
 ## SaveManager
 
@@ -589,7 +547,7 @@ SaveManager:LoadAutoloadConfig()
 2. Чтобы использовать старую папку configs, оставьте прежнее значение `SetFolder`.
 3. Чтобы начать с чистой конфигурации, используйте новую папку `MonHub`.
 4. Не вызывайте `LoadAutoloadConfig` до создания всех controls.
-5. ThemeManager подключайте до загрузки autoload config.
+5. При переносе старых configs вызывайте `SaveManager:IgnoreThemeSettings()` до загрузки autoload config.
 6. Menu KeyPicker сохраняется вместе с конфигом по умолчанию. Добавляйте его в `SetIgnoreIndexes()` только если bind должен быть общим для всех configs.
 
 ## UI Settings
@@ -599,7 +557,6 @@ SaveManager:LoadAutoloadConfig()
 ```text
 Left column
 1. Interface
-2. Themes
 
 Right column
 1. Configuration
@@ -610,9 +567,6 @@ Right column
 ```luau
 local InterfaceGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
 InterfaceGroup:SetOrder(-100)
-
-local ThemeGroup = ThemeManager:ApplyToTab(Tabs.Settings)
-ThemeGroup:SetOrder(0)
 
 local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
 ConfigGroup:SetOrder(-100)
@@ -731,7 +685,6 @@ MonHub отключает зарегистрированные signals, удал
 local App = Library:Create({
     Title = "My Interface",
     Footer = "Ready",
-    Theme = "Graphite",
     Tabs = {
         {
             Name = "Main",
@@ -814,7 +767,7 @@ App
 
 ### Font Face становится Code
 
-Обновите `ThemeManager.lua`. Текущая версия определяет активный Gotham font. Старый сохранённый theme также может явно содержать Code.
+Проверьте, что используется текущий `Library.lua`, а старый ThemeManager UI не создаёт font selector. Релизный Graphite baseline использует Gotham; legacy appearance fields из configs должны быть добавлены в `SaveManager:IgnoreThemeSettings()`.
 
 ### Config не загружается
 
@@ -858,7 +811,7 @@ Window:FitToViewport()
 - [ ] Slider работает мышью и touch.
 - [ ] Dropdown single/multi values сохраняются.
 - [ ] KeyPicker и ColorPicker работают.
-- [ ] ThemeManager создаётся до SaveManager autoload.
+- [ ] Старые appearance fields игнорируются при загрузке configs.
 - [ ] Старые configs загружаются либо осознанно перенесены в новую папку.
 - [ ] Click sound доступен.
 - [ ] Watermark, FPS и ping переключаются.
@@ -871,12 +824,11 @@ Window:FitToViewport()
 1. Перенесите loader и запустите окно без addons.
 2. Проверьте tabs и controls.
 3. Проверьте `Library.Options` и `Library.Toggles`.
-4. Подключите ThemeManager.
-5. Подключите SaveManager без autoload.
-6. Создайте test config и загрузите его.
-7. Включите autoload.
-8. Добавьте Watermark и click sound.
-9. Проверьте desktop, mobile, DPI и resizing.
-10. Только после этого переходите на декларативный API.
+4. Подключите SaveManager без autoload и вызовите `IgnoreThemeSettings()` для старых configs.
+5. Создайте test config и загрузите его.
+6. Включите autoload.
+7. Добавьте Watermark и click sound.
+8. Проверьте desktop, mobile, DPI и resizing.
+9. Только после этого переходите на декларативный API.
 
 Этот порядок локализует ошибки и позволяет откатить каждый этап отдельно.

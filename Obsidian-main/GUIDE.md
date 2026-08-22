@@ -190,7 +190,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` defaults to the same compact, soft-square 16×16 state indicator as `AddCheckbox`. The selected state is a muted accent fill with no checkmark icon, so the control stays clean and aligned. Set `Library.ForceCheckbox = false` before creating controls only when a project specifically needs the legacy 28×16 switch style.
+`AddToggle` defaults to a compact 24×14 soft switch with a 10px sliding thumb. It gives the active state a muted accent track without using a checkmark. `AddCheckbox` remains available when a project specifically needs a square indicator; set `Library.ForceCheckbox = true` before creating controls only to force that alternative globally.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -319,7 +319,7 @@ Feature:AddColorPicker("FeatureColor", {
 })
 ```
 
-KeyPicker modes are `Always`, `Toggle`, `Hold`, and `Press`. Use `NoUI = true` for a menu keybind that should not appear in the keybind menu. Only controls with a real keybind appear in that menu.
+Feature keybinds expose `Toggle` and `Hold`. `Toggle` persists until pressed again; `Hold` remains active only while the key is down. `Press` is reserved for label and button actions and is intentionally hidden from the state keybind menu. Use `NoUI = true` for a menu keybind that should not appear there. Only configured feature binds appear in that menu.
 
 ### Media controls
 

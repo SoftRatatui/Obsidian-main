@@ -215,7 +215,7 @@ MainLeft:AddCheckbox("SafeMode", {
 })
 ```
 
-Checkbox теперь квадратный. Toggle сохраняет прежний boolean API.
+Checkbox остаётся отдельным квадратным контролом. `AddToggle` по умолчанию использует компактный мягкий switch с анимированным thumb и сохраняет прежний boolean API.
 
 ### Input
 
@@ -335,7 +335,7 @@ FeatureToggle:AddKeyPicker("FeatureKeybind", {
 })
 ```
 
-Доступные key modes: `Always`, `Toggle`, `Hold`, `Press`.
+Для feature keybind доступны `Toggle` и `Hold`. `Press` остаётся режимом action-bind для label/button и не попадает в state-панель keybinds.
 
 Панель keybinds теперь автоматически скрывает строки без назначенной клавиши (`None` или некорректный bind) и не показывает пустое окно. Для её плавного отображения используйте публичный метод:
 

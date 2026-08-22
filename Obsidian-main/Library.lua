@@ -307,7 +307,7 @@ local Library = {
 
     NotifyOnError = false,
     ShowCustomCursor = true,
-    ForceCheckbox = true,
+    ForceCheckbox = false,
     TooltipsEnabled = false,
 
     CantDragForced = false,
@@ -713,7 +713,7 @@ local Templates = {
         WhitelistedModifiers = {},
 
         Mode = "Toggle",
-        Modes = { "Always", "Toggle", "Hold" },
+        Modes = { "Toggle", "Hold" },
         SyncToggleState = false,
 
         Callback = function() end,
@@ -4060,6 +4060,23 @@ local BaseAddons = {}
 do
     local Funcs = {}
 
+    local function NormalizeFeatureKeyPickerModes(Modes)
+        local Result = {}
+        if typeof(Modes) == "table" then
+            for _, Mode in Modes do
+                if (Mode == "Toggle" or Mode == "Hold") and not table.find(Result, Mode) then
+                    table.insert(Result, Mode)
+                end
+            end
+        end
+
+        if #Result == 0 then
+            Result = { "Toggle", "Hold" }
+        end
+
+        return Result
+    end
+
     function Funcs:AddKeyPicker(Idx, Info)
         if self.Destroyed then return nil end
 
@@ -4067,11 +4084,20 @@ do
 
         local ParentObj = self
         local ToggleLabel = ParentObj.TextLabel
+        local IsForButton = ParentObj.Type == "Button" or ParentObj.Type == "SubButton"
 
-        if ParentObj.Type == "Button" or ParentObj.Type == "SubButton" then
-            assert(Info.Mode == "Press", "KeyPicker on Buttons can only be applied with the 'Press' mode.")
-
+        if IsForButton then
+            Info.Mode = "Press"
+            Info.Modes = { "Press" }
             ToggleLabel = ParentObj.Base
+        elseif Info.Mode == "Press" then
+            assert(ParentObj.Type == "Label", "KeyPicker with the mode 'Press' can only be applied on Labels and Buttons.")
+            Info.Modes = { "Press" }
+        else
+            Info.Modes = NormalizeFeatureKeyPickerModes(Info.Modes)
+            if not table.find(Info.Modes, Info.Mode) then
+                Info.Mode = table.find(Info.Modes, "Toggle") and "Toggle" or Info.Modes[1]
+            end
         end
 
         local KeyPicker = {
@@ -4100,23 +4126,10 @@ do
         }
 
         if KeyPicker.Mode == "Press" then
-            assert(ParentObj.Type == "Label" or ParentObj.Type == "Button" or ParentObj.Type == "SubButton", "KeyPicker with the mode 'Press' can be only applied on Labels and Buttons.")
-
             KeyPicker.SyncToggleState = false
-            Info.Modes = { "Press" }
-            Info.Mode = "Press"
-        end
-
-        if KeyPicker.SyncToggleState then
-            Info.Modes = { "Toggle", "Hold" }
-
-            if not table.find(Info.Modes, Info.Mode) then
-                Info.Mode = "Toggle"
-            end
         end
 
         local Picking = false
-        local IsForButton = ParentObj.Type == "Button" or ParentObj.Type == "SubButton"
 
         
         local SpecialKeys = {
@@ -4371,37 +4384,55 @@ do
                 Parent = Holder,
             })
 
-            local Checkbox = New("Frame", {
+            local Switch = New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "MainColor",
                 Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.fromOffset(14, 14),
-                SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                Size = UDim2.fromOffset(22, 12),
                 Parent = Holder,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, 3),
-                Parent = Checkbox,
+                CornerRadius = UDim.new(0, 6),
+                Parent = Switch,
             })
-            local CheckboxStroke = New("UIStroke", {
+            local SwitchStroke = New("UIStroke", {
                 Color = "OutlineColor",
                 Transparency = 0.18,
-                Parent = Checkbox,
+                Parent = Switch,
+            })
+            local Ball = New("Frame", {
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundColor3 = "FontColor",
+                Position = UDim2.new(0, KeybindsToggle.DisplayState == true and 12 or 2, 0.5, 0),
+                Size = UDim2.fromOffset(8, 8),
+                Parent = Switch,
+            })
+            New("UICorner", {
+                CornerRadius = UDim.new(0, 4),
+                Parent = Ball,
             })
 
-            local CheckboxRegistry = Library.Registry[Checkbox] or {}
-            CheckboxRegistry.BackgroundColor3 = function()
+            local SwitchRegistry = Library.Registry[Switch] or {}
+            SwitchRegistry.BackgroundColor3 = function()
                 return GetKeybindToggleSurfaceColor(KeybindsToggle.DisplayState == true)
             end
-            Library.Registry[Checkbox] = CheckboxRegistry
+            Library.Registry[Switch] = SwitchRegistry
 
-            local CheckboxStrokeRegistry = Library.Registry[CheckboxStroke] or {}
-            CheckboxStrokeRegistry.Color = function()
+            local SwitchStrokeRegistry = Library.Registry[SwitchStroke] or {}
+            SwitchStrokeRegistry.Color = function()
                 return GetKeybindToggleStrokeColor(KeybindsToggle.DisplayState == true)
             end
-            Library.Registry[CheckboxStroke] = CheckboxStrokeRegistry
+            Library.Registry[SwitchStroke] = SwitchStrokeRegistry
+
+            local BallRegistry = Library.Registry[Ball] or {}
+            BallRegistry.BackgroundColor3 = "FontColor"
+            BallRegistry.Position = function()
+                return UDim2.new(0, KeybindsToggle.DisplayState == true and 12 or 2, 0.5, 0)
+            end
+            Library.Registry[Ball] = BallRegistry
 
             function KeybindsToggle:Display(State)
+                State = State == true
                 if KeybindsToggle.DisplayState == State then
                     return
                 end
@@ -4417,20 +4448,28 @@ do
                 if KeybindsToggle.IndicatorStrokeTween then
                     StopTween(KeybindsToggle.IndicatorStrokeTween, true)
                 end
+                if KeybindsToggle.IndicatorBallTween then
+                    StopTween(KeybindsToggle.IndicatorBallTween, true)
+                end
 
                 KeybindsToggle.LabelTween = TweenService:Create(Label, Library.KeybindRowTweenInfo, {
                     TextTransparency = State and 0 or 0.5,
                 })
-                KeybindsToggle.IndicatorTween = TweenService:Create(Checkbox, Library.KeybindRowTweenInfo, {
+                KeybindsToggle.IndicatorTween = TweenService:Create(Switch, Library.KeybindRowTweenInfo, {
                     BackgroundColor3 = GetKeybindToggleSurfaceColor(State),
                 })
-                KeybindsToggle.IndicatorStrokeTween = TweenService:Create(CheckboxStroke, Library.KeybindRowTweenInfo, {
+                KeybindsToggle.IndicatorStrokeTween = TweenService:Create(SwitchStroke, Library.KeybindRowTweenInfo, {
                     Color = GetKeybindToggleStrokeColor(State),
                     Transparency = State and 0.04 or 0.18,
+                })
+                KeybindsToggle.IndicatorBallTween = TweenService:Create(Ball, Library.KeybindRowTweenInfo, {
+                    Position = UDim2.new(0, State and 12 or 2, 0.5, 0),
+                    BackgroundColor3 = Library.Scheme.FontColor,
                 })
                 KeybindsToggle.LabelTween:Play()
                 KeybindsToggle.IndicatorTween:Play()
                 KeybindsToggle.IndicatorStrokeTween:Play()
+                KeybindsToggle.IndicatorBallTween:Play()
             end
 
             function KeybindsToggle:SetText(Text)
@@ -4483,8 +4522,8 @@ do
                 KeybindsToggle.NormalApplied = true
 
                 Holder.Active = not Normal
-                Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(22, 0)
-                Checkbox.Visible = not Normal
+                Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(30, 0)
+                Switch.Visible = not Normal
             end
 
             KeyPicker.DoClick = function(...) end 
@@ -4499,7 +4538,8 @@ do
 
             KeybindsToggle.Holder = Holder
             KeybindsToggle.Label = Label
-            KeybindsToggle.Checkbox = Checkbox
+            KeybindsToggle.Checkbox = Switch
+            KeybindsToggle.Switch = Switch
             KeybindsToggle.Loaded = true
             table.insert(Library.KeybindToggles, KeybindsToggle)
         end
@@ -4693,7 +4733,10 @@ do
         function KeyPicker:Update()
             KeyPicker:Display()
 
-            if Info.NoUI then
+            if Info.NoUI or KeyPicker.Mode == "Press" then
+                if KeybindsToggle.Loaded then
+                    KeybindsToggle:SetVisibility(false)
+                end
                 return
             end
 
@@ -7283,7 +7326,7 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -36, 1, 0),
+            Size = UDim2.new(1, -32, 1, 0),
             Text = Toggle.Text,
             TextSize = 14,
             TextTransparency = 0.4,
@@ -7306,11 +7349,11 @@ do
             end,
             ClipsDescendants = true,
             Position = UDim2.fromScale(1, 0.5),
-            Size = UDim2.fromOffset(28, 16),
+            Size = UDim2.fromOffset(24, 14),
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 4),
+            CornerRadius = UDim.new(0, 7),
             Parent = Switch,
         })
         local SwitchStroke = New("UIStroke", {
@@ -7324,12 +7367,12 @@ do
         local Ball = New("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "FontColor",
-            Position = UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0),
-            Size = UDim2.fromOffset(12, 12),
+            Position = UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0),
+            Size = UDim2.fromOffset(10, 10),
             Parent = Switch,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
+            CornerRadius = UDim.new(0, 5),
             Parent = Ball,
         })
 
@@ -7339,7 +7382,7 @@ do
             return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
         end
         BallRegistry.Position = function()
-            return UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0)
+            return UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0)
         end
         Library.Registry[Ball] = BallRegistry
 
@@ -7352,7 +7395,7 @@ do
                 return
             end
 
-            local BallPosition = UDim2.new(0, Toggle.Value and 14 or 2, 0.5, 0)
+            local BallPosition = UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0)
             local SwitchColor = GetToggleSurfaceColor(Toggle)
             local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)

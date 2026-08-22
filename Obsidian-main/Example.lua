@@ -125,7 +125,7 @@ local StatsService = game:GetService("Stats")
 local Options = Library.Options
 local Toggles = Library.Toggles
 
-Library.ForceCheckbox = true
+Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
 
@@ -219,8 +219,8 @@ FeatureToggle:AddKeyPicker("FeatureKeybind", {
 	SyncToggleState = true,
 })
 
-BasicGroup:AddCheckbox("CheckboxMode", {
-	Text = "Checkbox mode",
+BasicGroup:AddToggle("SecondaryToggle", {
+	Text = "Secondary toggle",
 	Default = false,
 })
 

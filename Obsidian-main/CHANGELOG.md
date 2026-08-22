@@ -10,6 +10,7 @@
 + Added validated cached Inter Medium loading with a persistent theme-font override and GothamMedium fallback
 + Added a shared release query to every remote loader so executor and raw-CDN caches cannot mix Library and addon revisions after a push
 + Automatically unloads the previous MonHub ScreenGui before a repeated run so an old interface cannot cover the new release
++ Added a dedicated core-surface binding pass for the window, header, title zone, sidebar, content, and footer so the top bar cannot retain a previous theme color
 
 [soft visual pass]
 + Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius

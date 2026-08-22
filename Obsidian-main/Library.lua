@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-final-theme-2",
+    ReleaseVersion = "0.0.1-final-theme-3",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -12129,7 +12129,29 @@ function Library:CreateWindow(WindowInfo)
         CompactLauncherStroke.Transparency = StrokeTransparency
     end
 
+    local function BindCoreSurface(Instance, Property, Token)
+        if not Instance or not Instance.Parent then
+            return
+        end
+
+        local Properties = Library.Registry[Instance] or {}
+        Properties[Property] = Token
+        Library.Registry[Instance] = Properties
+
+        local Value = Library.Scheme[Token]
+        if Value ~= nil and Instance[Property] ~= Value then
+            Library:CancelTween(Instance, "ThemeSurface")
+            Instance[Property] = Value
+        end
+    end
+
     function Window:RefreshTheme()
+        BindCoreSurface(MainFrame, "BackgroundColor3", "BackgroundColor")
+        BindCoreSurface(TopBar, "BackgroundColor3", "TopBarColor")
+        BindCoreSurface(TitleHolder, "BackgroundColor3", "TopBarColor")
+        BindCoreSurface(Tabs, "BackgroundColor3", "BackgroundColor")
+        BindCoreSurface(Container, "BackgroundColor3", "BackgroundColor")
+        BindCoreSurface(BottomBackground, "BackgroundColor3", "SurfaceColor")
         ApplyCompactLauncherStyle(false)
     end
 

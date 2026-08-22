@@ -1,7 +1,7 @@
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-3"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-3", "Library release mismatch")
 
 Library:SetClickSound(92679954573730, 0.3)
 

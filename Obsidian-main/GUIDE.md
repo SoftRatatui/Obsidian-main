@@ -33,9 +33,9 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-3"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-3", "Library release mismatch")
 ```
 
 Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produces `Expected ident` on line 1. Keep `Library.lua` and every addon from the same commit or folder. `Example.lua` is a complete showcase, but it intentionally uses a fixed non-responsive desktop layout; it is not the only recommended window configuration.
@@ -48,9 +48,9 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-3"
 ))()
-assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
+assert(Library.ReleaseVersion == "0.0.1-final-theme-3", "Library release mismatch")
 
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -470,7 +470,7 @@ Theme updates are transactional. Every registered property is isolated during re
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-3"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -485,7 +485,7 @@ Build every control before loading configurations:
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-3"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -556,7 +556,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-3"
 ))()
 local Players = game:GetService("Players")
 
@@ -656,7 +656,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window opening and closing use 90ms and 60ms opacity-only transitions, with no scale or font resizing. Tabs use a 110ms entry and a 70ms exit fade with a 4px maximum offset. Keybind overlays use a 70ms fade, keybind rows use 75ms, and standard controls use 110ms state transitions. Gotham Regular remains the default readable UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window opening and closing use 90ms and 60ms opacity-only transitions, with no scale or font resizing. Tabs use a 75ms entry and a 45ms exit fade with a 2px maximum offset. Keybind overlays use a 70ms fade, keybind rows use 75ms, and standard controls use 110ms state transitions. Gotham Regular remains the default readable UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -687,11 +687,11 @@ Window hide and restore animations are intentionally short and opacity-led so te
 
 ### Changes do not appear after restarting
 
-First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-final-theme-2` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
+First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-final-theme-3` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
 
 Do not mix an updated ThemeManager with an older Library. If a selector shows a new preset but most surfaces keep an earlier palette, the two modules came from different cached revisions. A versioned URL prevents that mixed state.
 
-The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-2"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
+The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-3"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
 
 The current Library also unloads an older MonHub instance before creating its ScreenGui. This prevents a previous window from remaining underneath or above the new release during repeated executor runs. A full rejoin is no longer required for normal UI updates, although game-specific script state may still require its own cleanup.
 
@@ -701,7 +701,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use `Library.lua`, `ThemeManager.lua`, and `SaveManager.lua` from the same commit, then call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields, including old or partial semantic surface fields, are ignored, while a valid `ThemeManager_ThemeList` value restores any of the six built-in palettes. The current theme engine repaints registered instances and stateful controls together. Old custom-theme files remain on disk but are not executed or applied.
+Use `Library.lua`, `ThemeManager.lua`, and `SaveManager.lua` from the same commit, then call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields, including old or partial semantic surface fields, are ignored, while a valid `ThemeManager_ThemeList` value restores any of the six built-in palettes. The current theme engine repaints registered instances and stateful controls together. It also rebinds the window, top bar, title zone, sidebar, content area, and footer directly on every theme transaction, so a missing or externally changed registry entry cannot leave the header on the previous palette. Old custom-theme files remain on disk but are not executed or applied.
 
 ### A config does not load
 

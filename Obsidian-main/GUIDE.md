@@ -33,8 +33,9 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
 ))()
+assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
 ```
 
 Do not use a GitHub `blob/...` URL with `loadstring`: it returns HTML and produces `Expected ident` on line 1. Keep `Library.lua` and every addon from the same commit or folder. `Example.lua` is a complete showcase, but it intentionally uses a fixed non-responsive desktop layout; it is not the only recommended window configuration.
@@ -47,14 +48,15 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
 ))()
+assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
 
 Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
     Title = "MonHub Private",
-    Footer = "Beta v0.0.1",
+    Footer = "MonHub v0.0.1",
     Size = UDim2.fromOffset(760, 660),
     Center = true,
     AutoShow = true,
@@ -84,7 +86,7 @@ For a local test, replace the first two lines with the `readfile` loader from th
 ```luau
 local Window = Library:CreateWindow({
     Title = "MonHub Private",
-    Footer = "Beta v0.0.1",
+    Footer = "MonHub v0.0.1",
     Size = UDim2.fromOffset(760, 660),
     Position = UDim2.fromScale(0.5, 0.5),
     Center = true,
@@ -223,14 +225,6 @@ Left:AddButton({
 })
 
 Left:AddButton({
-    Text = "Reset",
-    Variant = "Danger",
-    Func = function()
-        print("Reset")
-    end,
-})
-
-Left:AddButton({
     Text = "Open help",
     Variant = "Ghost",
     Func = function()
@@ -239,11 +233,7 @@ Left:AddButton({
 })
 ```
 
-Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use a flat theme-aware surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
-
-```luau
-Library:SetButtonVariantIcon("Danger", "trash-2")
-```
+Supported button variants are `Default`, `Primary`, and `Ghost`; `Secondary` remains an alias for `Default`. Warning and danger button styling was removed because colored outlines competed with the content and made dense pages inconsistent. Use an explicit `Icon`, a confirmation dialog, or clear button text when an action needs additional context.
 
 ### Input, slider, and dropdown
 
@@ -381,7 +371,7 @@ Dependency refreshes are batched and unchanged values are ignored. Do not create
 
 ## Dialogs, notifications, and loading
 
-Use a dialog for a deliberate destructive action. `Ghost`, `Primary`, `Warning`, and `Danger` footer variants follow the same component system as ordinary buttons.
+Use a dialog for a deliberate destructive action. `Ghost`, `Primary`, and `Default` footer variants follow the same component system as ordinary buttons.
 
 ```luau
 Window:AddDialog("ClearConfig", {
@@ -399,7 +389,7 @@ Window:AddDialog("ClearConfig", {
         },
         Continue = {
             Title = "Continue",
-            Variant = "Danger",
+            Variant = "Primary",
             Order = 2,
             Callback = function()
                 print("Cleared")
@@ -480,7 +470,7 @@ Theme updates are transactional. Every registered property is isolated during re
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-2"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -495,7 +485,7 @@ Build every control before loading configurations:
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-2"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -566,7 +556,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-2"
 ))()
 local Players = game:GetService("Players")
 
@@ -601,7 +591,7 @@ For an interface described by data rather than sequential calls, use `Library:Cr
 ```luau
 local App = Library:Create({
     Title = "MonHub",
-    Footer = "Ready",
+    Footer = "MonHub v0.0.1",
     Window = {
         Size = UDim2.fromOffset(760, 660),
         Center = true,
@@ -697,7 +687,13 @@ Window hide and restore animations are intentionally short and opacity-led so te
 
 ### Changes do not appear after restarting
 
-You are probably loading `Library.lua` from GitHub while editing a local copy. Test with `loadstring(readfile("Library.lua"))()` or publish the changed files, then use the raw URL. Update the library and addons together.
+First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-final-theme-2` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
+
+Do not mix an updated ThemeManager with an older Library. If a selector shows a new preset but most surfaces keep an earlier palette, the two modules came from different cached revisions. A versioned URL prevents that mixed state.
+
+The current build reports `Library.ReleaseVersion == "0.0.1-final-theme-2"`. Project loaders may assert this value before creating the window, which turns a stale response into a clear startup error instead of a partially themed interface.
+
+The current Library also unloads an older MonHub instance before creating its ScreenGui. This prevents a previous window from remaining underneath or above the new release during repeated executor runs. A full rejoin is no longer required for normal UI updates, although game-specific script state may still require its own cleanup.
 
 ### `Expected ident` on line 1
 

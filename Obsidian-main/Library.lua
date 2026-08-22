@@ -237,6 +237,7 @@ do
 end
 
 local Library = {
+    ReleaseVersion = "0.0.1-final-theme-2",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -381,12 +382,6 @@ local Library = {
         BackgroundImage = ""
     },
 
-    ButtonIcons = {
-        Warning = "triangle-alert",
-        Danger = "octagon-x",
-    },
-
-    
 	Registry = setmetatable({}, { __mode = "k" }),
 	ColorRevision = 0,
 	Scales = {},
@@ -1976,6 +1971,14 @@ local function SetAlwaysOnTop(Gui: ScreenGui, Enabled: boolean)
     end)
 end
 
+local ExistingLibrary = getgenv().Library
+if typeof(ExistingLibrary) == "table" and ExistingLibrary ~= Library and IsFunction(ExistingLibrary.Unload) then
+    local ExistingGui = ExistingLibrary.ScreenGui
+    if typeof(ExistingGui) == "Instance" and ExistingGui.Name == "MonHub" then
+        pcall(ExistingLibrary.Unload, ExistingLibrary)
+    end
+end
+
 local ScreenGui = New("ScreenGui", {
     Name = "MonHub",
     DisplayOrder = 998,
@@ -2179,20 +2182,16 @@ local ButtonVariantAliases = {
     Default = "Default",
     Secondary = "Default",
     Primary = "Primary",
-    Warning = "Warning",
-    Caution = "Warning",
-    Danger = "Danger",
-    Destructive = "Danger",
     Ghost = "Ghost",
 }
 
-function Library:NormalizeButtonVariant(Variant: string?, Risky: boolean?): string
+function Library:NormalizeButtonVariant(Variant: string?, _Risky: boolean?): string
     local Normalized = typeof(Variant) == "string" and ButtonVariantAliases[Variant] or nil
     if Normalized then
         return Normalized
     end
 
-    return Risky and "Danger" or "Default"
+    return "Default"
 end
 
 function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
@@ -2217,14 +2216,6 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.62)
         Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
         Style.HoverOutlineColor = Scheme.AccentColor
-    elseif Normalized == "Warning" then
-        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.WarningColor, 0.65)
-        Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
-        Style.HoverOutlineColor = Scheme.WarningColor
-    elseif Normalized == "Danger" then
-        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.DestructiveColor, 0.65)
-        Style.HoverBackgroundColor = Library:GetSurfaceColor("Hover")
-        Style.HoverOutlineColor = Scheme.DestructiveColor
     elseif Normalized == "Ghost" then
         Style.BackgroundColor = Scheme.BackgroundColor
         Style.BackgroundTransparency = 1
@@ -2271,12 +2262,16 @@ local function GetCachedButtonStyle(Button)
 end
 
 local function NormalizeToggleVariant(Variant: string?, Risky: boolean?): string
-    local Normalized = Library:NormalizeButtonVariant(Variant, Risky)
-    if Normalized == "Warning" or Normalized == "Danger" then
-        return Normalized
+    if typeof(Variant) == "string" then
+        if Variant == "Warning" or Variant == "Caution" then
+            return "Warning"
+        end
+        if Variant == "Danger" or Variant == "Destructive" then
+            return "Danger"
+        end
     end
 
-    return "Default"
+    return Risky and "Danger" or "Default"
 end
 
 local function GetToggleAccentColor(Variant: string): Color3
@@ -2351,11 +2346,8 @@ local function RegisterToggleTheme(Toggle, Surface: GuiObject, Stroke: UIStroke,
     Library.Registry[Label] = LabelRegistry
 end
 
-local function ResolveButtonIcon(Variant: string?, Icon: string | number | boolean?)
+local function ResolveButtonIcon(Icon: string | number | boolean?)
     local RequestedIcon = Icon
-    if RequestedIcon == nil then
-        RequestedIcon = Library.ButtonIcons[Library:NormalizeButtonVariant(Variant)]
-    end
 
     if RequestedIcon == false or RequestedIcon == nil or RequestedIcon == "" then
         return nil
@@ -2366,20 +2358,6 @@ local function ResolveButtonIcon(Variant: string?, Icon: string | number | boole
     end
 
     return Library:GetCustomIcon(RequestedIcon)
-end
-
-function Library:SetButtonVariantIcon(Variant: string, Icon: string | number | boolean?)
-    local Normalized = Library:NormalizeButtonVariant(Variant)
-    assert(Normalized == "Warning" or Normalized == "Danger", "Only Warning and Danger variants have semantic icons.")
-
-    Library.ButtonIcons[Normalized] = Icon
-
-    for _, Button in Buttons do
-        if Button and Button.Variant == Normalized and Button.Icon == nil and Button.UpdateIcon then
-            Button:UpdateIcon()
-            Button:UpdateColors()
-        end
-    end
 end
 
 local function ApplyButtonVisual(
@@ -6439,7 +6417,7 @@ do
                 },
                 Continue = {
                     Title = "Continue",
-                    Variant = "Danger",
+                    Variant = "Primary",
                     Order = 2,
                     Callback = function()
                         Toggle.ConfirmationPending = false
@@ -6903,7 +6881,7 @@ do
         end
 
         local function UpdateButtonIcon(Button)
-            local IconData = ResolveButtonIcon(Button.Variant, Button.Icon)
+            local IconData = ResolveButtonIcon(Button.Icon)
             if not IconData then
                 Button.IconImage.Visible = false
                 return

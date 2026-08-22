@@ -25,8 +25,17 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 ```luau
 local function Fetch(URL)
     local Environment = getfenv()
-    local SynEnvironment = type(Environment) == "table" and rawget(Environment, "syn") or nil
-    local Request = request or http_request or (type(SynEnvironment) == "table" and rawget(SynEnvironment, "request") or nil)
+    local function ReadGlobal(Name)
+        if type(Environment) ~= "table" then
+            return nil
+        end
+        local Success, Value = pcall(function()
+            return Environment[Name]
+        end)
+        return Success and Value or nil
+    end
+    local SynEnvironment = ReadGlobal("syn")
+    local Request = ReadGlobal("request") or ReadGlobal("http_request") or (type(SynEnvironment) == "table" and rawget(SynEnvironment, "request") or nil)
     if type(Request) == "function" then
         local Response = Request({ Url = URL, Method = "GET" })
         local Body = type(Response) == "table" and (Response.Body or Response.body) or Response
@@ -38,12 +47,13 @@ local function Fetch(URL)
     return game:HttpGet(URL)
 end
 
-local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua")
+local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2")
 local Library = assert(loadstring(Source))()
+assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
 
 local App = Library:Create({
     Title = "MonHub",
-    Footer = "Ready",
+    Footer = "MonHub v0.0.1",
 
     Tabs = {
         {
@@ -97,7 +107,7 @@ App:Get("speed"):SetValue(50)
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
-Buttons support `Default`, `Primary`, `Warning`, `Danger`, and `Ghost` variants. `Warning` and `Danger` receive restrained semantic icons by default; pass `Icon = "..."` to replace one or `Icon = false` to remove it. `Library:SetButtonVariantIcon("Danger", "trash-2")` changes the default for new and existing semantic danger buttons. `Risky = true` remains supported and maps to `Danger` when no explicit variant is provided. `Secondary`, `Caution`, and `Destructive` remain accepted as legacy aliases for `Default`, `Warning`, and `Danger`.
+Buttons support `Default`, `Primary`, and `Ghost` variants. `Secondary` remains an alias for `Default`. Warning and danger button styling and automatic semantic icons were removed from the current API; use clear text, an explicit icon, or a confirmation dialog instead.
 
 Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. Activating a `Danger` toggle opens a short `Cancel` / `Continue` confirmation; turning it off stays immediate for a quick exit. Set `ConfirmDanger = false` to opt out, or provide `ConfirmTitle` and `ConfirmDescription` for the dialog copy. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`.
 
@@ -132,7 +142,7 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-2"
 ))()
 local Players = game:GetService("Players")
 

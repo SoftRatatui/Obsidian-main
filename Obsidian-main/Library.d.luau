@@ -114,7 +114,7 @@ export type DraggableImageButton = {
 }
 
 
-export type ButtonVariant = "Default" | "Primary" | "Warning" | "Danger" | "Ghost" | "Secondary" | "Caution" | "Destructive"
+export type ButtonVariant = "Default" | "Primary" | "Ghost" | "Secondary"
 export type ToggleVariant = "Default" | "Warning" | "Danger" | "Caution" | "Destructive"
 
 export type ButtonInfo = {
@@ -1078,6 +1078,7 @@ export type App = {
 
 
 export type Library = {
+    ReleaseVersion: "0.0.1-final-theme-2",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1148,7 +1149,6 @@ export type Library = {
     CornerRadius: number,
     IsLightTheme: boolean,
     Scheme: Scheme,
-    ButtonIcons: { Warning: string | number | boolean?, Danger: string | number | boolean? },
     DefaultTheme: "Default",
     CurrentTheme: "Default" | "Metal" | "Midnight" | "Steel" | "Sage" | "Ash",
     Themes: {
@@ -1296,7 +1296,6 @@ export type Library = {
     OnUnload: (self: Library, Callback: () -> ()) -> (),
     Unload: (self: Library) -> (),
     SetIconModule: (self: Library, module: any) -> (),
-    SetButtonVariantIcon: (self: Library, Variant: ButtonVariant, Icon: string | number | boolean?) -> (),
     ResolveThemeName: (self: Library, Theme: any) -> ("Default" | "Metal" | "Midnight" | "Steel" | "Sage" | "Ash"),
     SetTheme: (self: Library, Theme: string | ThemePreset) -> Library,
     LoadCustomFont: (self: Library, Name: string, URL: string, Weight: number?) -> (Font?, string?),

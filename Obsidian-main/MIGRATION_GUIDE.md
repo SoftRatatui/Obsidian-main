@@ -49,8 +49,9 @@ Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
 ))()
+assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
 ```
 
 Use `raw.githubusercontent.com`, not a `github.com/.../blob/...` URL. A blob page returns HTML, which causes Luau to report `Expected ident` on line 1.
@@ -61,12 +62,13 @@ Do not move to the declarative API during the first migration. Existing code can
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-2"
 ))()
+assert(Library.ReleaseVersion == "0.0.1-final-theme-2", "Library release mismatch")
 
 local Window = Library:CreateWindow({
     Title = "My Hub",
-    Footer = "Ready",
+    Footer = "MonHub v0.0.1",
     Center = true,
     AutoShow = true,
     Resizable = true,
@@ -127,7 +129,7 @@ Recommended settings:
 ```luau
 local Window = Library:CreateWindow({
     Title = "MonHub",
-    Footer = "Beta",
+    Footer = "MonHub v0.0.1",
     NotifySide = "Right",
     Center = true,
     AutoShow = true,
@@ -305,7 +307,7 @@ MainLeft:AddButton("Run action", function()
 end)
 ```
 
-Available variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Warning` and `Danger` have semantic icons by default; `Icon = "triangle-alert"` or `Icon = "octagon-x"` replaces one, and `Icon = false` removes it. `Library:SetButtonVariantIcon("Danger", "trash-2")` sets the global icon for semantic danger buttons. `Risky = true` maps to `Danger` when `Variant` is omitted. `Secondary`, `Caution`, and `Destructive` remain aliases for `Default`, `Warning`, and `Danger`.
+Available button variants are `Default`, `Primary`, and `Ghost`. `Secondary` remains an alias for `Default`. Older `Warning`, `Danger`, `Caution`, `Destructive`, and `Risky` button styling now resolves to `Default`, so legacy scripts remain functional without carrying colored outlines into the current design. Use an explicit icon or confirmation dialog when the action needs extra context.
 
 Toggles also accept `Variant = "Warning"` or `Variant = "Danger"`. In the enabled state only the track and outline become semantic, so key-picker rows do not shift. Enabling a danger toggle opens a short `Cancel` / `Continue` dialog. Turning it off is immediate. Set `ConfirmDanger = false` to disable confirmation, or set `ConfirmTitle` and `ConfirmDescription` for custom dialog copy.
 
@@ -445,7 +447,7 @@ Load the addon from the same commit as `Library.lua`:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-2"
 ))()
 local Players = game:GetService("Players")
 
@@ -522,7 +524,7 @@ Load `ThemeManager.lua` when the UI Settings page should expose the six built-in
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-2"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -535,7 +537,7 @@ The addon creates a minimal `Default` / `Metal` / `Midnight` / `Steel` / `Sage` 
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-2"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -690,7 +692,7 @@ Moving to the declarative API is optional. Do it after the legacy migration is s
 ```luau
 local App = Library:Create({
     Title = "My Interface",
-    Footer = "Ready",
+    Footer = "MonHub v0.0.1",
     Tabs = {
         {
             Name = "Main",

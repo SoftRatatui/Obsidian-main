@@ -8,6 +8,8 @@
 + Isolated every registered property during repaint and added a final state pass so one invalid dynamic property cannot block the rest of an element
 + Increased surface separation in Metal, Midnight, and Ash while keeping their accents muted
 + Added validated cached Inter Medium loading with a persistent theme-font override and GothamMedium fallback
++ Added a shared release query to every remote loader so executor and raw-CDN caches cannot mix Library and addon revisions after a push
++ Automatically unloads the previous MonHub ScreenGui before a repeated run so an old interface cannot cover the new release
 
 [soft visual pass]
 + Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius
@@ -18,6 +20,7 @@
 
 [release]
 + Finalized six restrained built-in themes: neutral-gray Default, desaturated-violet Metal, near-black Midnight, cool Steel, green-gray Sage, and warm-neutral Ash
++ Removed warning and danger button styling and automatic semantic button icons; legacy values now resolve to the neutral default style
 + Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
 + Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
 + Standardized the release typography on readable Gotham Regular

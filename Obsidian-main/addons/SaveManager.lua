@@ -917,7 +917,7 @@ local function ShowDialog(
 
             DestructiveAction = {
                 Title = DestructiveText,
-                Variant = "Destructive",
+                Variant = "Default",
                 Order = 2,
                 Callback = function(Dialog)
                     Dialog:Dismiss()

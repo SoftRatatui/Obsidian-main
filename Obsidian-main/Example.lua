@@ -14,10 +14,11 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
+local RELEASE_VERSION = "0.0.1-final-theme-2"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
-local ExecutorRequest = request or http_request or SynRequest
+local ExecutorRequest = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "request") or rawget(ExecutorEnvironment, "http_request") or SynRequest else SynRequest
 
 local function DownloadSource(Url)
 	local RequestError
@@ -56,7 +57,7 @@ local function CleanPreview(Source)
 end
 
 local function TryModule(BaseUrl, Path)
-	local Url = BaseUrl .. Path
+	local Url = BaseUrl .. Path .. "?monhub=" .. RELEASE_VERSION
 	local Downloaded, Source = DownloadSource(Url)
 
 	if not Downloaded then
@@ -119,6 +120,7 @@ local function LoadModule(Path, Required, PreferredBase)
 end
 
 local Library, ActiveRepository = LoadModule("Library.lua", true)
+assert(Library.ReleaseVersion == RELEASE_VERSION, "Library release mismatch")
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
@@ -136,7 +138,7 @@ Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
 	Title = "MonHub Private",
-	Footer = "Beta v0.0.1",
+	Footer = "MonHub v0.0.1",
 	NotifySide = "Right",
 	Center = true,
 	AutoShow = true,
@@ -679,25 +681,6 @@ ButtonStyles:AddButton({
 	end,
 })
 
-ButtonStyles:AddButton({
-	Text = "Warning action",
-	Variant = "Warning",
-	Icon = "triangle-alert",
-	Func = function()
-		Notify("Warning action", "Warning actions use a separate semantic icon.")
-	end,
-})
-
-ButtonStyles:AddButton({
-    Text = "Danger action",
-	Variant = "Danger",
-	Icon = "octagon-x",
-	DoubleClick = true,
-	Func = function()
-		Notify("Danger action", "The confirmation was accepted.")
-    end,
-})
-
 ButtonStyles:AddDivider()
 
 ButtonStyles:AddToggle("WarningToggleStyle", {
@@ -945,7 +928,6 @@ Library.ToggleKeybind = Options.MenuKeybind
 
 MenuGroup:AddButton({
 	Text = "Unload interface",
-	Variant = "Danger",
 	Func = function()
 		Library:Unload()
 	end,

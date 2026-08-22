@@ -248,8 +248,8 @@ local Library = {
     KeybindToggles = {},
     KeybindMenuRequested = false,
     KeybindMenuVisible = false,
-    KeybindMenuTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeybindRowTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeybindMenuTweenInfo = TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    KeybindRowTweenInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     ActiveTweens = setmetatable({}, { __mode = "k" }),
 
     
@@ -277,9 +277,9 @@ local Library = {
     TabSwipeOffset = 8,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.035, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DialogOverlayOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     DialogOpenAnimationInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -314,7 +314,7 @@ local Library = {
 
     NotifyOnError = false,
     ShowCustomCursor = true,
-    ForceCheckbox = false,
+    ForceCheckbox = true,
     TooltipsEnabled = false,
 
     CantDragForced = false,
@@ -1935,47 +1935,39 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         BackgroundColor = Scheme.MainColor,
         BackgroundTransparency = 0,
         OutlineColor = Scheme.OutlineColor,
-        OutlineTransparency = 0.24,
+        OutlineTransparency = 0.1,
         TextColor = Scheme.FontColor,
-        TextTransparency = 0.12,
-        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3),
+        TextTransparency = 0.16,
+        HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 2),
         HoverBackgroundTransparency = 0,
-        HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.18),
-        HoverOutlineTransparency = 0.08,
+        HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.28),
+        HoverOutlineTransparency = 0,
         HoverTextColor = Scheme.FontColor,
         HoverTextTransparency = 0,
     }
 
     if Normalized == "Primary" then
-        Style.BackgroundColor = Library:GetAccentSurfaceColor(0.2)
-        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.45)
-        Style.TextTransparency = 0.03
-        Style.HoverBackgroundColor = Library:GetAccentSurfaceColor(0.3)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.62)
+        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
         Style.HoverOutlineColor = Scheme.AccentColor
     elseif Normalized == "Warning" then
-        Style.BackgroundColor = Scheme.MainColor:Lerp(Scheme.WarningColor, 0.18)
-        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.WarningColor, 0.52)
-        Style.TextTransparency = 0.05
-        Style.HoverBackgroundColor = Scheme.MainColor:Lerp(Scheme.WarningColor, 0.28)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.WarningColor, 0.65)
+        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
         Style.HoverOutlineColor = Scheme.WarningColor
     elseif Normalized == "Danger" then
-        Style.BackgroundColor = Scheme.MainColor:Lerp(Scheme.DestructiveColor, 0.2)
-        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.DestructiveColor, 0.55)
-        Style.TextColor = Scheme.WhiteColor
-        Style.TextTransparency = 0.05
-        Style.HoverBackgroundColor = Scheme.MainColor:Lerp(Scheme.DestructiveColor, 0.3)
+        Style.OutlineColor = Scheme.OutlineColor:Lerp(Scheme.DestructiveColor, 0.65)
+        Style.HoverBackgroundColor = Library:GetBetterColor(Scheme.MainColor, 3)
         Style.HoverOutlineColor = Scheme.DestructiveColor
-        Style.HoverTextColor = Scheme.WhiteColor
     elseif Normalized == "Ghost" then
         Style.BackgroundColor = Scheme.BackgroundColor
-        Style.BackgroundTransparency = 0.34
+        Style.BackgroundTransparency = 1
         Style.OutlineColor = Scheme.OutlineColor
-        Style.OutlineTransparency = 0.58
-        Style.TextTransparency = 0.2
+        Style.OutlineTransparency = 1
+        Style.TextTransparency = 0.24
         Style.HoverBackgroundColor = Scheme.MainColor
-        Style.HoverBackgroundTransparency = 0.06
-        Style.HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.25)
-        Style.HoverOutlineTransparency = 0.12
+        Style.HoverBackgroundTransparency = 0
+        Style.HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.2)
+        Style.HoverOutlineTransparency = 0.16
     end
 
     if Disabled then
@@ -3263,7 +3255,7 @@ function Library:RefreshKeybindMenu()
         Frame.Visible = true
         Library.UpdatingKeybindMenuVisibility = false
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.98
+        AnimationScale.Scale = 0.992
 
         Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
             GroupTransparency = 0,
@@ -3276,7 +3268,7 @@ function Library:RefreshKeybindMenu()
 
     if not Frame.Visible then
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.98
+        AnimationScale.Scale = 0.992
         return
     end
 
@@ -3284,7 +3276,7 @@ function Library:RefreshKeybindMenu()
         GroupTransparency = 1,
     })
     Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
-        Scale = 0.98,
+        Scale = 0.992,
     })
 
     local Tween = Library.KeybindMenuTween
@@ -4380,13 +4372,10 @@ do
                 SizeConstraint = Enum.SizeConstraint.RelativeYY,
                 Parent = Holder,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Checkbox,
-                })
-            )
+            New("UICorner", {
+                CornerRadius = UDim.new(0, 0),
+                Parent = Checkbox,
+            })
             New("UIStroke", {
                 Color = "OutlineColor",
                 Parent = Checkbox,
@@ -6999,7 +6988,7 @@ do
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 2),
+            CornerRadius = UDim.new(0, 0),
             Parent = Checkbox,
         })
 

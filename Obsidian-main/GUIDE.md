@@ -190,7 +190,7 @@ local SafeMode = Left:AddCheckbox("SafeMode", {
 })
 ```
 
-`AddToggle` uses a 28×16 compact switch inside a 20px interaction row. `AddCheckbox` uses a square checkbox. The fixed 2px inset and position-only thumb animation keep the geometry aligned on different DPI scales while the row remains easy to press on desktop and touch devices.
+`AddToggle` defaults to the same compact, square 16×16 checkbox as `AddCheckbox`. This keeps the standard control set aligned and avoids oversized switch tracks. Set `Library.ForceCheckbox = false` before creating controls only when a project specifically needs the legacy 28×16 switch style.
 
 Toggle variants are `Default`, `Warning`, and `Danger`. `Caution` is a legacy alias for `Warning`; `Destructive` is an alias for `Danger`. `Risky = true` also maps to `Danger` when no explicit variant is supplied.
 
@@ -240,7 +240,7 @@ Left:AddButton({
 })
 ```
 
-Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
+Supported variants are `Default`, `Primary`, `Warning`, `Danger`, and `Ghost`. `Secondary`, `Caution`, and `Destructive` are accepted legacy aliases. Buttons use the flat Graphite surface by default; primary, warning, and danger variants stay visually restrained through their outline and optional icon rather than a large colored fill. Warning and danger buttons receive restrained semantic icons by default. Replace one with `Icon = "..."`, remove it with `Icon = false`, or change the global default:
 
 ```luau
 Library:SetButtonVariantIcon("Danger", "trash-2")
@@ -661,7 +661,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, and the compact launcher; it adds no perpetual glow or render-loop effect. Window closing stays a fast fade-only transition so text never visually shifts. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. Graphite uses keyed short tweens for hover, keybind menus, notifications, dialogs, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 75ms and 35ms opacity-led transitions. The keybind menu and its rows use 45ms and 60ms transitions, so input feedback stays immediate without dropping animation entirely. Gotham remains the default smooth UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({

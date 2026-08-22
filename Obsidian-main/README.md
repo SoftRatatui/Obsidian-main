@@ -1,12 +1,12 @@
 # MonHub UI
 
-A polished Roblox UI library with neutral-gray Default and violet Metal themes, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A polished Roblox UI library with neutral-gray Default, violet Metal, and near-black Midnight themes, responsive layouts, smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
 
 Read the canonical [complete guide](GUIDE.md) for installation, API usage, themes, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
-- Two focused visual presets: neutral-gray `Default` and violet `Metal`, both with restrained 6px outer geometry, subtle single-pixel outlines, and Gotham Regular typography.
+- Three focused visual presets: neutral-gray `Default`, violet `Metal`, and near-black `Midnight`, all with restrained 6px outer geometry, subtle single-pixel outlines, and Gotham Regular typography.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -15,7 +15,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
 - Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
-- Raw legacy palette fields are ignored, while the minimal theme selector can persist `Default` or `Metal` without leaving mixed colors behind.
+- Raw legacy palette fields are ignored, while the minimal theme selector can persist any release preset without leaving mixed colors behind.
 
 ## Quick start
 
@@ -90,7 +90,7 @@ App:Get("speed"):SetValue(50)
 
 ## Current interface
 
-`Default` starts automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the optional dark violet preset. Both use Gotham Regular, compact 16×16 checkmark toggles with a 3px radius, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. The interface feels soft through typography, contrast, spacing, and brief motion rather than excessive corner rounding. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Default` starts automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the dark violet reference preset, while `Midnight` provides a near-black neutral profile with a muted steel accent. All three use Gotham Regular, compact 16×16 checkmark toggles with a 3px radius, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. The interface feels soft through typography, contrast, spacing, and brief motion rather than excessive corner rounding. Sidebar tabs use an inset full-width row, while selected states stay soft without pushing against the window edge. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
@@ -163,9 +163,9 @@ For a ready-to-use binding from real ESP controls, see the ESP preview section i
 
 ## Theme presets
 
-The release contains exactly two built-ins: `Default`, the neutral-gray startup theme, and `Metal`, the violet reference theme. Switch directly with `Library:SetTheme("Default")` or `Library:SetTheme("Metal")`. Raw legacy palette tables and saved color fields are ignored.
+The release contains exactly three built-ins: `Default`, the neutral-gray startup theme; `Metal`, the violet reference theme; and `Midnight`, the near-black neutral theme. Switch directly with `Library:SetTheme("Default")`, `Library:SetTheme("Metal")`, or `Library:SetTheme("Midnight")`. Raw legacy palette tables and saved color fields are ignored.
 
-`ThemeManager.lua` adds a minimal `Default` / `Metal` dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable UI default.
+`ThemeManager.lua` adds a minimal three-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable UI default.
 
 ## Legacy API
 

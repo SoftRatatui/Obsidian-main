@@ -2,11 +2,11 @@
 
 ```diff
 [release]
-+ Finalized exactly two built-in themes: neutral-gray Default at startup and violet Metal as the alternate preset
++ Finalized exactly three built-in themes: neutral-gray Default, violet Metal, and near-black Midnight
 + Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
 + Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
 + Standardized the release typography on readable Gotham Regular
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the two-theme release contract
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the three-theme release contract
 
 [design]
 + Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes
@@ -15,15 +15,18 @@
 + Normalized content insets and group spacing for a calmer, less crowded layout
 + Changed the default AddToggle presentation to a compact 16x16 square checkmark with a restrained 3px radius
 + Kept the legacy sliding switch available through Library.ForceCheckbox = false
++ Rebuilt keybind rows around a fixed horizontal layout with a 14x14 checkmark and deterministic alignment
 
 [motion]
-+ Window opening now uses a 90ms opacity-only transition and closing uses 50ms, without scaling or font resizing
-+ Tab entry now uses a 120ms fade/4px offset and exit uses a 60ms fade
++ Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing
++ Tab entry now uses a 110ms fade/4px offset and exit uses a 70ms fade
 + Standard control state transitions now use a responsive 110ms timing
++ Keybind overlays use a 70ms fade and 75ms row transitions without fractional UIScale animation
 
 [performance]
 + Removed one UIStroke from every standard outlined surface
 + Removed unused raw theme editor controls, palette file work, and repeated palette restoration paths
++ Replaced direct optional executor-global reads with cached environment lookups to avoid strict Luau unknown-global errors
 ```
 
 ## 19.08.2026

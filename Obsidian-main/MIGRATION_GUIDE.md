@@ -4,7 +4,7 @@ The canonical API guide is [GUIDE.md](GUIDE.md). This document focuses on moving
 
 MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` now provides a minimal built-in preset selector.
 
-The release baseline is a neutral-gray `Default` theme with an optional violet `Metal` preset, Gotham Regular typography, responsive sidebar behavior, compact checkmark toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
+The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Regular typography, responsive sidebar behavior, compact checkmark toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
 
 ## Useful links
 
@@ -74,7 +74,7 @@ local Window = Library:CreateWindow({
     EnableSidebarResize = true,
     Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.12,
+    TabTransitionTime = 0.11,
     TabSwipeOffset = 4,
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 })
@@ -111,7 +111,7 @@ GeneralGroup:AddToggle("Enabled", {
 | `AddKeyPicker` | Supported | Keep it |
 | `Library.Options` | Supported | Do not rename IDs |
 | `Library.Toggles` | Supported | Do not rename IDs |
-| `ThemeManager` | Minimal preset selector | Add it to expose Default and Metal |
+| `ThemeManager` | Minimal preset selector | Add it to expose Default, Metal, and Midnight |
 | `SaveManager` | Supported | Update the addon file |
 | `Library:SetWatermark` | Supported | Use when needed |
 | `Library:SetWatermarkVisibility` | Supported | Use when needed |
@@ -138,7 +138,7 @@ local Window = Library:CreateWindow({
     ShowCustomCursor = true,
     Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.12,
+    TabTransitionTime = 0.11,
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
@@ -366,14 +366,15 @@ Options.Quality:SetValue("High")
 
 ## Theme presets and font policy
 
-`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the optional violet preset based on the release reference. Both use Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
+`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. All three use Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
 
 ```luau
 Library:SetTheme("Default")
 Library:SetTheme("Metal")
+Library:SetTheme("Midnight")
 ```
 
-The release contains exactly these two built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
+The release contains exactly these three built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette.
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 
@@ -514,7 +515,7 @@ MediaGroup:AddVideo("PreviewVideo", {
 
 ## ThemeManager presets
 
-Load `ThemeManager.lua` when the UI Settings page should expose the two built-in presets:
+Load `ThemeManager.lua` when the UI Settings page should expose the three built-in presets:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -525,7 +526,7 @@ ThemeManager:SetLibrary(Library)
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 ```
 
-The addon creates a minimal `Default` / `Metal` dropdown with the ID `ThemeManager_ThemeList`. SaveManager persists that selection. It does not expose raw palette editing or load custom theme files.
+The addon creates a minimal `Default` / `Metal` / `Midnight` dropdown with the ID `ThemeManager_ThemeList`. SaveManager persists that selection. It does not expose raw palette editing or load custom theme files.
 
 ## SaveManager
 
@@ -617,10 +618,10 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.12, 4, "bottom")
+}, 0.11, 4, "bottom")
 ```
 
-Window opening uses a 90ms opacity-only transition and closing uses 50ms, without scale or font resizing. Tabs enter in 120ms and leave in 60ms with a 4px offset. Standard controls use 110ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
+Window opening uses a 90ms opacity-only transition and closing uses 60ms, without scale or font resizing. Tabs enter in 110ms and leave in 70ms with a 4px offset. The keybind overlay fades in 70ms, its rows settle in 75ms, and standard controls use 110ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
 
 For custom controls that change multiple values in one callback, call `Library:QueueDependencyUpdate()`. The library then performs one dependency pass at the end of the current task cycle.
 

@@ -2,7 +2,11 @@ local function IsFunction(Value: any): boolean
     return type(Value) == "function"
 end
 
-local ExecutorRequest = request or http_request or (syn and syn.request)
+local ExecutorEnvironment = getfenv()
+local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
+local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
+local SynProtectGui = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "protect_gui") else nil
+local ExecutorRequest = request or http_request or SynRequest
 
 local function RequestGet(URL: string): (boolean, string)
     local RequestError
@@ -37,7 +41,7 @@ end
 
 local NativeCloneRef = IsFunction(cloneref) and cloneref or (IsFunction(clonereference) and clonereference or nil)
 local NativeGetHui = IsFunction(gethui) and gethui or nil
-local NativeProtectGui = IsFunction(protectgui) and protectgui or (syn and IsFunction(syn.protect_gui) and syn.protect_gui or nil)
+local NativeProtectGui = IsFunction(protectgui) and protectgui or (IsFunction(SynProtectGui) and SynProtectGui or nil)
 local NativeSetClipboard = IsFunction(setclipboard) and setclipboard or nil
 local NativeSetHiddenProperty = IsFunction(sethiddenproperty) and sethiddenproperty or nil
 local NativeSetScriptable = IsFunction(setscriptable) and setscriptable or nil
@@ -241,8 +245,8 @@ local Library = {
     KeybindToggles = {},
     KeybindMenuRequested = false,
     KeybindMenuVisible = false,
-    KeybindMenuTweenInfo = TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    KeybindRowTweenInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    KeybindMenuTweenInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeybindRowTweenInfo = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     ActiveTweens = setmetatable({}, { __mode = "k" }),
 
     
@@ -266,23 +270,23 @@ local Library = {
     TweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     HoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabExitTransitionInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TabTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabExitTransitionInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 
     WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     WindowOpenAnimationInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogOverlayOpenAnimationInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogOpenAnimationInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DropdownTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    KeyPickerTransitionInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogOverlayOpenAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogOpenAnimationInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DialogOverlayCloseAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogCloseAnimationInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DropdownTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    KeyPickerTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
-    GroupboxTweenInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    RotatingChevronTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    GroupboxTweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    RotatingChevronTweenInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
     Animations = {
         ToggleWindow = true,
@@ -400,6 +404,23 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(9, 9, 11),
         Font = Font.fromEnum(Enum.Font.Gotham),
         WhiteColor = Color3.fromRGB(248, 248, 250),
+        BackgroundImage = "",
+        CornerRadius = 6,
+        IsLight = false,
+    },
+    Midnight = {
+        BackgroundColor = Color3.fromRGB(14, 15, 18),
+        MainColor = Color3.fromRGB(21, 23, 28),
+        TopBarColor = Color3.fromRGB(18, 20, 24),
+        AccentColor = Color3.fromRGB(103, 119, 151),
+        OutlineColor = Color3.fromRGB(48, 53, 64),
+        FontColor = Color3.fromRGB(232, 235, 242),
+        WarningColor = Color3.fromRGB(203, 154, 77),
+        DestructiveColor = Color3.fromRGB(191, 63, 81),
+        RedColor = Color3.fromRGB(226, 82, 102),
+        DarkColor = Color3.fromRGB(5, 6, 8),
+        Font = Font.fromEnum(Enum.Font.Gotham),
+        WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
         CornerRadius = 6,
         IsLight = false,
@@ -3250,7 +3271,7 @@ end
 function Library:RefreshKeybindMenu()
     local Frame = Library.KeybindFrame
     local AnimationScale = Library.KeybindAnimationScale
-    if not Frame or not AnimationScale or Library.Unloaded then
+    if not Frame or Library.Unloaded then
         return
     end
 
@@ -3266,28 +3287,26 @@ function Library:RefreshKeybindMenu()
         Frame.Visible = true
         Library.UpdatingKeybindMenuVisibility = false
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.992
+        if AnimationScale then
+            AnimationScale.Scale = 1
+        end
 
         Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
             GroupTransparency = 0,
-        })
-        Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
-            Scale = 1,
         })
         return
     end
 
     if not Frame.Visible then
         Frame.GroupTransparency = 1
-        AnimationScale.Scale = 0.992
+        if AnimationScale then
+            AnimationScale.Scale = 1
+        end
         return
     end
 
     Library.KeybindMenuTween = Library:PlayTween(Frame, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
         GroupTransparency = 1,
-    })
-    Library.KeybindMenuScaleTween = Library:PlayTween(AnimationScale, "KeybindMenuVisibility", Library.KeybindMenuTweenInfo, {
-        Scale = 0.992,
     })
 
     local Tween = Library.KeybindMenuTween
@@ -4370,27 +4389,35 @@ do
             local Holder = New("TextButton", {
                 BackgroundTransparency = 1,
                 ClipsDescendants = true,
-                Size = UDim2.new(1, 0, 0, 16),
+                Size = UDim2.new(1, 0, 0, 18),
                 Text = "",
                 Visible = false,
                 Parent = Library.KeybindContainer,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 7),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Parent = Holder,
             })
 
             local Label = New("TextLabel", {
                 AutomaticSize = Enum.AutomaticSize.X,
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(0, 1),
+                LayoutOrder = 2,
                 Text = "",
                 TextSize = 14,
                 TextTransparency = 0.5,
+                TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = Holder,
             })
 
             local Switch = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "MainColor",
-                Position = UDim2.fromScale(0, 0.5),
                 Size = UDim2.fromOffset(14, 14),
+                LayoutOrder = 1,
                 Parent = Holder,
             })
             New("UICorner", {
@@ -4493,7 +4520,7 @@ do
                     Holder.Visible = true
                     Holder.Size = UDim2.new(1, 0, 0, 0)
                     KeybindsToggle.VisibilityTween = TweenService:Create(Holder, Library.KeybindRowTweenInfo, {
-                        Size = UDim2.new(1, 0, 0, 16),
+                        Size = UDim2.new(1, 0, 0, 18),
                     })
                     KeybindsToggle.VisibilityTween:Play()
                 else
@@ -4522,7 +4549,6 @@ do
                 KeybindsToggle.NormalApplied = true
 
                 Holder.Active = not Normal
-                Label.Position = Normal and UDim2.fromOffset(0, 0) or UDim2.fromOffset(22, 0)
                 Switch.Visible = not Normal
             end
 
@@ -10596,6 +10622,9 @@ local ThemeAliases = {
     purple = "Metal",
     blackpurple = "Metal",
     amethyst = "Metal",
+    midnight = "Midnight",
+    night = "Midnight",
+    dark = "Midnight",
 }
 
 function Library:ResolveThemeName(Theme): string

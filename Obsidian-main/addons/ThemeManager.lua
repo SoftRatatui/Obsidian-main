@@ -34,6 +34,22 @@ local MetalTheme = {
     FontFace = "Gotham",
 }
 
+local MidnightTheme = {
+    FontColor = "e8ebf2",
+    MainColor = "15171c",
+    TopBarColor = "121418",
+    AccentColor = "677797",
+    BackgroundColor = "0e0f12",
+    OutlineColor = "303540",
+    WarningColor = "cb9a4d",
+    DestructiveColor = "bf3f51",
+    RedColor = "e25266",
+    DarkColor = "050608",
+    WhiteColor = "f8f9fc",
+    BackgroundImage = "",
+    FontFace = "Gotham",
+}
+
 local ThemeManager = {
     Library = nil,
     FileSystemAvailable = false,
@@ -48,10 +64,11 @@ local ThemeManager = {
     SyncingSelector = false,
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
-    ThemeNames = { "Default", "Metal" },
+    ThemeNames = { "Default", "Metal", "Midnight" },
     BuiltInThemes = {
         Default = { 1, table.clone(DefaultTheme) },
         Metal = { 2, table.clone(MetalTheme) },
+        Midnight = { 3, table.clone(MidnightTheme) },
     },
 }
 
@@ -71,6 +88,10 @@ local function ResolveThemeName(Value)
     local Name = string.lower(Value):gsub("[%s_%-]", "")
     if Name == "metal" or Name == "purple" or Name == "blackpurple" or Name == "amethyst" then
         return "Metal"
+    end
+
+    if Name == "midnight" or Name == "night" or Name == "dark" then
+        return "Midnight"
     end
 
     return "Default"

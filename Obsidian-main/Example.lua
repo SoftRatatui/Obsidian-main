@@ -14,7 +14,10 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local ExecutorRequest = request or http_request or (syn and syn.request)
+local ExecutorEnvironment = getfenv()
+local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
+local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
+local ExecutorRequest = request or http_request or SynRequest
 
 local function DownloadSource(Url)
 	local RequestError
@@ -153,7 +156,7 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.12,
+	TabTransitionTime = 0.11,
 	TabSwipeOffset = 4,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
@@ -758,7 +761,7 @@ RuntimeTab:AddLabel("A compact tab container inside a normal page.", true)
 RuntimeTab:AddToggle("RuntimeEnabled", { Text = "Runtime enabled", Default = true })
 
 local StyleTab = AdvancedTabbox:AddTab("Style")
-StyleTab:AddLabel("Default stays neutral gray. Metal uses the restrained violet profile from the release reference.", true)
+StyleTab:AddLabel("Default is neutral gray, Metal is restrained violet, and Midnight is near-black with a muted steel accent.", true)
 
 
 Tabs.KeySystem:AddLabel({

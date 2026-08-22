@@ -119,13 +119,13 @@ local Window = Library:CreateWindow({
         Dropdown = true,
         KeyPicker = true,
     },
-    TabTransitionTime = 0.12,
+    TabTransitionTime = 0.11,
     TabSwipeOffset = 4,
     TabSwipeFrom = "bottom",
 })
 ```
 
-`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette uses soft separators, full-width sidebar tabs, and fixed icon/text alignment. `Metal` is the optional violet preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette uses soft separators, full-width sidebar tabs, and fixed icon/text alignment. `Metal` is the violet reference preset and `Midnight` is the near-black neutral preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -441,13 +441,14 @@ Loading:Continue()
 
 ### Built-in themes
 
-The release ships exactly two palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a restrained violet accent inspired by the release reference. Both use Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
+The release ships exactly three palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a restrained violet accent inspired by the release reference. `Midnight` uses near-black neutral surfaces and a muted steel accent. All three use Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
 
-`Library.Themes` contains only `Default` and `Metal`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
+`Library.Themes` contains only `Default`, `Metal`, and `Midnight`. Legacy preset names resolve safely to one of these built-ins, while raw legacy theme tables and individual saved color fields are ignored so they cannot leave a mixed palette.
 
 ```luau
 Library:SetTheme("Default")
 Library:SetTheme("Metal")
+Library:SetTheme("Midnight")
 ```
 
 ### Font policy
@@ -456,7 +457,7 @@ Gotham Regular is the default UI font. It stays readable at small Roblox control
 
 ### ThemeManager preset selector
 
-`ThemeManager.lua` exposes a minimal two-item preset dropdown without a palette editor or custom theme files:
+`ThemeManager.lua` exposes a minimal three-item preset dropdown without a palette editor or custom theme files:
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
@@ -467,7 +468,7 @@ ThemeManager:SetLibrary(Library)
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 ```
 
-The selector uses the ID `ThemeManager_ThemeList`, so SaveManager can persist `Default` or `Metal` with the rest of a configuration. Old marker files and raw color fields remain ignored rather than deleted. This keeps user files recoverable while preventing stale colors from repainting only part of the interface.
+The selector uses the ID `ThemeManager_ThemeList`, so SaveManager can persist `Default`, `Metal`, or `Midnight` with the rest of a configuration. Old marker files and raw color fields remain ignored rather than deleted. This keeps user files recoverable while preventing stale colors from repainting only part of the interface.
 
 ### SaveManager
 
@@ -516,7 +517,7 @@ Library.ToggleKeybind = Library.Options.MenuKeybind
 Library:SetKeybindMenuVisible(true)
 ```
 
-Set `Library.ToggleKeybind` to the menu keybind or point it at an `AddKeyPicker` option. A menu `KeyPicker` is saved with normal configurations by default and restored safely during config loading; `SetValue` never opens or closes the window. The keybind menu intentionally displays only entries with actual configured binds. Use `NoUI = true` for the menu keybind itself.
+Set `Library.ToggleKeybind` to the menu keybind or point it at an `AddKeyPicker` option. A menu `KeyPicker` is saved with normal configurations by default and restored safely during config loading; `SetValue` never opens or closes the window. The keybind menu intentionally displays only entries with actual configured binds. Toggle rows use a fixed 14×14 checkmark, an 18px row, and layout-managed spacing so DPI scaling cannot move the label or indicator. The overlay uses a 70ms opacity-only transition and rows settle in 75ms. Use `NoUI = true` for the menu keybind itself.
 
 Only add the menu key picker to `SaveManager:SetIgnoreIndexes()` when the bind must remain global and independent from every configuration. The keybind overlay visibility and position are also stored with each configuration.
 
@@ -646,7 +647,7 @@ Library:AddToRegistry(CustomFrame, {
 
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window show and hide use 90ms and 50ms opacity-only transitions, with no scale or font resizing. Tabs use a 120ms entry and a 60ms exit fade with a 4px maximum offset. Standard controls use 110ms state transitions. Gotham Regular remains the default readable UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window opening and closing use 90ms and 60ms opacity-only transitions, with no scale or font resizing. Tabs use a 110ms entry and a 70ms exit fade with a 4px maximum offset. Keybind overlays use a 70ms fade, keybind rows use 75ms, and standard controls use 110ms state transitions. Gotham Regular remains the default readable UI font. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -655,7 +656,7 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.12, 4, "bottom")
+}, 0.11, 4, "bottom")
 
 Library:Notify({
     Title = "Saved",
@@ -685,7 +686,7 @@ The loader received HTML or another non-Luau response. Use a raw GitHub URL, not
 
 ### The UI starts with an old or mixed theme
 
-Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields are ignored, while a valid `ThemeManager_ThemeList` value restores `Default` or `Metal`. Old custom-theme files remain on disk but are not executed or applied.
+Use the current `Library.lua` and call `SaveManager:IgnoreThemeSettings()` while migrating old configs. Raw legacy palette fields are ignored, while a valid `ThemeManager_ThemeList` value restores `Default`, `Metal`, or `Midnight`. Old custom-theme files remain on disk but are not executed or applied.
 
 ### A config does not load
 
@@ -707,7 +708,7 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] The window is readable at desktop and narrow/mobile widths.
 - [ ] Every danger control has a clear confirmation or an intentional opt-out.
 - [ ] Old appearance keys are ignored while legacy configs are migrated.
-- [ ] `Default` starts in gray and `Metal` applies the violet preset without stale colors.
+- [ ] `Default` starts in gray, `Metal` applies violet, and `Midnight` applies near-black without stale colors.
 - [ ] `ThemeManager_ThemeList` saves and restores with configurations.
 - [ ] Watermark, keybind menu, compact launcher, and unload are tested.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.

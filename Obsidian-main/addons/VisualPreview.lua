@@ -259,9 +259,10 @@ end
 
 function VisualPreview.Create(Library, Tab, Info)
     assert(Library and Library.AddToRegistry and Library.ScreenGui, "VisualPreview requires an active MonHub library")
-    assert(Tab, "VisualPreview requires a regular tab")
 
     Info = Info or {}
+    Tab = Tab or (type(Info.Groupbox) == "table" and Info.Groupbox.Tab or nil)
+    assert(Tab, "VisualPreview requires a regular tab")
     local MainWindow = Info.Window or Library.Window
     assert(MainWindow and MainWindow.Frame, "VisualPreview requires a window with a frame")
     local MainFrame = MainWindow.Frame
@@ -269,6 +270,12 @@ function VisualPreview.Create(Library, Tab, Info)
     local TabCanvas = Tab.Canvas
     local PanelWidth = math.clamp(tonumber(Info.Width) or 300, 180, 720)
     local PanelHeight = math.clamp(tonumber(Info.Height) or 420, 220, 900)
+    local EmbeddedRequested = type(Info.Groupbox) == "table" or IsClass(Info.Parent, "GuiObject")
+    local ShowHeader = Info.ShowHeader
+    if ShowHeader == nil then
+        ShowHeader = not EmbeddedRequested
+    end
+    local HeaderHeight = ShowHeader and 35 or 0
 
     local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
@@ -313,6 +320,7 @@ function VisualPreview.Create(Library, Tab, Info)
     Header.TextColor3 = Library.Scheme.FontColor
     Header.TextSize = 14
     Header.TextXAlignment = Enum.TextXAlignment.Left
+    Header.Visible = ShowHeader
     Header.ZIndex = 12
     Header.Parent = Holder
     Library:AddToRegistry(Header, {
@@ -325,6 +333,7 @@ function VisualPreview.Create(Library, Tab, Info)
     HeaderLine.BorderSizePixel = 0
     HeaderLine.Position = UDim2.fromOffset(0, 34)
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    HeaderLine.Visible = ShowHeader
     HeaderLine.ZIndex = 12
     HeaderLine.Parent = Holder
     Library:AddToRegistry(HeaderLine, {
@@ -334,8 +343,8 @@ function VisualPreview.Create(Library, Tab, Info)
     local Content = Instance.new("Frame")
     Content.BackgroundColor3 = Library.Scheme.SurfaceColor or Library:GetBetterColor(Library.Scheme.BackgroundColor, 2)
     Content.BorderSizePixel = 0
-    Content.Position = UDim2.fromOffset(0, 35)
-    Content.Size = UDim2.new(1, 0, 1, -35)
+    Content.Position = UDim2.fromOffset(0, HeaderHeight)
+    Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
     Content.ZIndex = 11
     Content.Parent = Holder
     Library:AddToRegistry(Content, {
@@ -376,19 +385,27 @@ function VisualPreview.Create(Library, Tab, Info)
     Chams.Parent = ViewportFrame
 
     local AccentColor = typeof(Info.Color) == "Color3" and Info.Color or Library.Scheme.AccentColor
-    local Overlay = CreateOverlay(Content, AccentColor, 12, Info.Renderer)
+    local RendererAdapter = type(Info.Renderer) == "table" and Info.Renderer.Available ~= false and Info.Renderer or nil
+    local Overlay = RendererAdapter and {} or CreateOverlay(Content, AccentColor, 12, Info.Renderer)
     local Preview = {
         Holder = Holder,
         Frame = ViewportFrame,
         Camera = Camera,
         Model = Model,
         Overlay = Overlay,
+        Renderer = RendererAdapter,
         Chams = Chams,
         Side = Info.Side or "Auto",
         Alignment = Info.Alignment or "Center",
         Gap = math.clamp(tonumber(Info.Gap) or 12, 6, 32),
         Color = AccentColor,
         GradientColor = typeof(Info.GradientColor) == "Color3" and Info.GradientColor or AccentColor,
+        GradientEnabled = Info.Gradient == true,
+        BoxVisible = Info.Box ~= false,
+        HealthVisible = Info.Health ~= false,
+        TracerVisible = Info.Tracer == true,
+        Health = 1,
+        Bounds = nil,
         Enabled = false,
         Destroyed = false,
         NameVisible = Info.NameVisible ~= false,
@@ -407,11 +424,15 @@ function VisualPreview.Create(Library, Tab, Info)
         ChamsEnabled = false,
         BoxScale = math.clamp(tonumber(Info.BoxScale) or 92, 70, 115),
         DynamicBoxes = Info.DynamicBoxes == true,
+        Embedded = false,
+        EmbeddedElement = nil,
         Yaw = 0,
         Pitch = 0,
         Zoom = 1.9,
         Connections = {},
     }
+    local UpdateRenderer = function() end
+    local SetRendererVisible = function() end
 
     if Overlay.InfoTop then
         Library:AddToRegistry(Overlay.InfoTop, {
@@ -520,18 +541,22 @@ function VisualPreview.Create(Library, Tab, Info)
                 Preview.Distance = math.max(0, math.floor(Distance + 0.5))
             end
         end
-        if IsClass(Overlay.HealthFill, "GuiObject") and IsClass(Humanoid, "Humanoid") then
+        if IsClass(Humanoid, "Humanoid") then
             local Success, Health = pcall(function()
-                return math.clamp(Humanoid.Health / math.max(Humanoid.MaxHealth, 100), 0, 1)
+                return math.clamp(Humanoid.Health / math.max(Humanoid.MaxHealth, 1), 0, 1)
             end)
             if Success then
-                pcall(function()
-                    Overlay.HealthFill.Size = UDim2.new(1, 0, Health, 0)
-                    Overlay.HealthFill.BackgroundColor3 = Color3.fromHSV(Health * 0.33, 0.9, 1)
-                end)
+                Preview.Health = Health
+                if IsClass(Overlay.HealthFill, "GuiObject") then
+                    pcall(function()
+                        Overlay.HealthFill.Size = UDim2.new(1, 0, Health, 0)
+                        Overlay.HealthFill.BackgroundColor3 = Color3.fromHSV(Health * 0.33, 0.9, 1)
+                    end)
+                end
             end
         end
         UpdateInfoLabels()
+        UpdateRenderer()
     end
 
     local function IsR6(ModelObject)
@@ -644,14 +669,29 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         local TargetBox = GetOverlayBox()
-        if not TargetBox then
-            return
-        end
+        local Left = CenterX - Width * 0.5
+        local Top = CenterY - Height * 0.5
+        local AbsolutePosition = Content.AbsolutePosition
+        Preview.Bounds = {
+            X = Left,
+            Y = Top,
+            Width = Width,
+            Height = Height,
+            CenterX = CenterX,
+            CenterY = CenterY,
+            AbsoluteX = AbsolutePosition.X + Left,
+            AbsoluteY = AbsolutePosition.Y + Top,
+            AbsoluteCenterX = AbsolutePosition.X + CenterX,
+            AbsoluteCenterY = AbsolutePosition.Y + CenterY,
+        }
 
-        pcall(function()
-            TargetBox.Position = UDim2.fromOffset(math.floor(CenterX + 0.5), math.floor(CenterY + 0.5))
-            TargetBox.Size = UDim2.fromOffset(math.floor(Width + 0.5), math.floor(Height + 0.5))
-        end)
+        if TargetBox then
+            pcall(function()
+                TargetBox.Position = UDim2.fromOffset(math.floor(CenterX + 0.5), math.floor(CenterY + 0.5))
+                TargetBox.Size = UDim2.fromOffset(math.floor(Width + 0.5), math.floor(Height + 0.5))
+            end)
+        end
+        UpdateRenderer()
     end
 
     local function UpdateCamera()
@@ -680,6 +720,7 @@ function VisualPreview.Create(Library, Tab, Info)
             Model = nil
         end
         Preview.Model = nil
+        Preview.Bounds = nil
         if IsClass(Chams, "Highlight") then
             pcall(function()
                 Chams.Adornee = nil
@@ -784,6 +825,14 @@ function VisualPreview.Create(Library, Tab, Info)
             return
         end
 
+        if Preview.Embedded then
+            Holder.AnchorPoint = Vector2.zero
+            Holder.Position = UDim2.fromScale(0, 0)
+            Holder.Size = UDim2.fromScale(1, 1)
+            UpdateOverlayBounds()
+            return
+        end
+
         local CameraObject = workspace.CurrentCamera
         if not IsClass(CameraObject, "Camera") or not IsLiveInstance(CameraObject) or not IsLiveInstance(MainFrame) then
             return
@@ -861,6 +910,72 @@ function VisualPreview.Create(Library, Tab, Info)
         return Preview.Enabled and Library.Toggled and Library.ActiveTab == Tab and IsTabVisible() and IsMainVisible()
     end
 
+    local function BuildRendererContext()
+        local ContentPosition = Content.AbsolutePosition
+        return {
+            Preview = Preview,
+            Parent = Content,
+            Viewport = ViewportFrame,
+            Camera = Camera,
+            Model = Model,
+            SourceCharacter = Preview.SourceCharacter,
+            Bounds = Preview.Bounds,
+            ContentPosition = ContentPosition,
+            ContentSize = Content.AbsoluteSize,
+            Visible = IsDisplayable(),
+            Color = Preview.Color,
+            GradientColor = Preview.GradientColor,
+            GradientEnabled = Preview.GradientEnabled,
+            BoxVisible = Preview.BoxVisible,
+            NameVisible = Preview.NameVisible,
+            DistanceVisible = Preview.DistanceVisible,
+            TeamVisible = Preview.TeamVisible,
+            WeaponVisible = Preview.WeaponVisible,
+            HealthVisible = Preview.HealthVisible,
+            TracerVisible = Preview.TracerVisible,
+            HighlightVisible = Preview.ChamsEnabled,
+            Name = Preview.TargetName,
+            Team = Preview.TeamName,
+            Weapon = Preview.WeaponName,
+            Distance = Preview.Distance,
+            Health = Preview.Health,
+            Project = function(Point, Absolute)
+                local X, Y, Depth = ProjectPoint(Point, Content.AbsoluteSize)
+                if X and Absolute == true then
+                    X += ContentPosition.X
+                    Y += ContentPosition.Y
+                end
+                return X, Y, Depth
+            end,
+        }
+    end
+
+    function Preview:GetRendererContext()
+        return BuildRendererContext()
+    end
+
+    UpdateRenderer = function()
+        if Preview.Destroyed or not RendererAdapter then
+            return
+        end
+
+        local Callback = RendererAdapter.UpdatePreview or RendererAdapter.Update
+        if type(Callback) == "function" then
+            pcall(Callback, RendererAdapter, Preview, BuildRendererContext())
+        end
+    end
+
+    SetRendererVisible = function(Visible)
+        if Preview.Destroyed or not RendererAdapter then
+            return
+        end
+
+        local Callback = RendererAdapter.SetPreviewVisible or RendererAdapter.SetVisible
+        if type(Callback) == "function" then
+            pcall(Callback, RendererAdapter, Preview, Visible == true)
+        end
+    end
+
     local function UpdateVisibility()
         if Preview.Destroyed or not Holder.Parent then
             return
@@ -869,8 +984,12 @@ function VisualPreview.Create(Library, Tab, Info)
         VisibilitySequence += 1
         local Sequence = VisibilitySequence
         local Visible = IsDisplayable()
+        SetRendererVisible(Visible)
 
         if Visible then
+            if Preview.EmbeddedElement and Preview.EmbeddedElement.Visible ~= true then
+                Preview.EmbeddedElement:SetVisible(true)
+            end
             RefreshTarget()
             PositionPanel()
             UpdateCamera()
@@ -897,12 +1016,18 @@ function VisualPreview.Create(Library, Tab, Info)
 
         if not Tween then
             Holder.Visible = false
+            if Preview.EmbeddedElement and Preview.EmbeddedElement.Visible ~= false then
+                Preview.EmbeddedElement:SetVisible(false)
+            end
             return
         end
 
         Tween.Completed:Once(function(State)
             if State == Enum.PlaybackState.Completed and Sequence == VisibilitySequence and not IsDisplayable() then
                 Holder.Visible = false
+                if Preview.EmbeddedElement and Preview.EmbeddedElement.Visible ~= false then
+                    Preview.EmbeddedElement:SetVisible(false)
+                end
             end
         end)
     end
@@ -1057,6 +1182,13 @@ function VisualPreview.Create(Library, Tab, Info)
             RefreshTarget()
         end
     end))
+    if RendererAdapter and RendererAdapter.Continuous == true then
+        AddConnection(RunService.RenderStepped:Connect(function()
+            if not Preview.Destroyed and IsDisplayable() then
+                UpdateRenderer()
+            end
+        end))
+    end
 
     function Preview:SetEnabled(Enabled)
         if Preview.Destroyed then
@@ -1085,6 +1217,7 @@ function VisualPreview.Create(Library, Tab, Info)
                 Overlay.Tracer.BackgroundColor3 = Color
             end)
         end
+        UpdateRenderer()
     end
 
     function Preview:SetBoxScale(Scale)
@@ -1114,13 +1247,17 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     function Preview:SetGradientEnabled(Enabled)
-        if Preview.Destroyed or not IsClass(Overlay.BoxGradient, "UIGradient") then
+        if Preview.Destroyed then
             return
         end
 
-        pcall(function()
-            Overlay.BoxGradient.Enabled = Enabled == true
-        end)
+        Preview.GradientEnabled = Enabled == true
+        if IsClass(Overlay.BoxGradient, "UIGradient") then
+            pcall(function()
+                Overlay.BoxGradient.Enabled = Preview.GradientEnabled
+            end)
+        end
+        UpdateRenderer()
     end
 
     function Preview:SetGradientColor(Color)
@@ -1130,6 +1267,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         Preview.GradientColor = Color
         ApplyGradientColor()
+        UpdateRenderer()
     end
 
     function Preview:SetOpacity()
@@ -1159,12 +1297,57 @@ function VisualPreview.Create(Library, Tab, Info)
         PositionPanel()
     end
 
+    function Preview:Mount(Parent, Height)
+        if Preview.Destroyed or not IsClass(Parent, "GuiObject") then
+            return false
+        end
+
+        if Preview.EmbeddedElement then
+            Holder.Parent = nil
+            Preview.EmbeddedElement:Destroy()
+            Preview.EmbeddedElement = nil
+        end
+        Preview.Embedded = true
+        Holder.Parent = Parent
+        Holder.AnchorPoint = Vector2.zero
+        Holder.Position = UDim2.fromScale(0, 0)
+        Holder.Size = UDim2.new(1, 0, 0, math.max(1, tonumber(Height) or PanelHeight))
+        PositionPanel()
+        UpdateVisibility()
+        return true
+    end
+
+    function Preview:Embed(Groupbox, Idx, Height)
+        if Preview.Destroyed or type(Groupbox) ~= "table" or type(Groupbox.AddUIPassthrough) ~= "function" then
+            return nil
+        end
+
+        if Preview.EmbeddedElement then
+            return Preview.EmbeddedElement
+        end
+
+        Preview.Embedded = true
+        Holder.AnchorPoint = Vector2.zero
+        Holder.Position = UDim2.fromScale(0, 0)
+        Holder.Size = UDim2.fromScale(1, 1)
+        Preview.EmbeddedElement = Groupbox:AddUIPassthrough(Idx or "VisualPreview", {
+            Instance = Holder,
+            Height = math.max(1, tonumber(Height) or PanelHeight),
+            Visible = Preview.Enabled,
+        })
+        PositionPanel()
+        UpdateVisibility()
+        return Preview.EmbeddedElement
+    end
+
     function Preview:SetBoxVisible(Visible)
         if Preview.Destroyed then
             return
         end
 
-        SetVisible(Overlay.Box or Overlay.Container, Visible)
+        Preview.BoxVisible = Visible == true
+        SetVisible(Overlay.Box or Overlay.Container, Preview.BoxVisible)
+        UpdateRenderer()
     end
 
     function Preview:SetNameVisible(Visible)
@@ -1174,6 +1357,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         Preview.NameVisible = Visible == true
         UpdateInfoLabels()
+        UpdateRenderer()
     end
 
     function Preview:SetDistanceVisible(Visible)
@@ -1183,6 +1367,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         Preview.DistanceVisible = Visible == true
         UpdateInfoLabels()
+        UpdateRenderer()
     end
 
     function Preview:SetTeamVisible(Visible)
@@ -1192,6 +1377,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         Preview.TeamVisible = Visible == true
         UpdateInfoLabels()
+        UpdateRenderer()
     end
 
     function Preview:SetWeaponVisible(Visible)
@@ -1201,6 +1387,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
         Preview.WeaponVisible = Visible == true
         UpdateInfoLabels()
+        UpdateRenderer()
     end
 
     function Preview:SetTracerVisible(Visible)
@@ -1208,7 +1395,9 @@ function VisualPreview.Create(Library, Tab, Info)
             return
         end
 
-        SetVisible(Overlay.Tracer, Visible)
+        Preview.TracerVisible = Visible == true
+        SetVisible(Overlay.Tracer, Preview.TracerVisible)
+        UpdateRenderer()
     end
 
     function Preview:SetHealthVisible(Visible)
@@ -1216,7 +1405,9 @@ function VisualPreview.Create(Library, Tab, Info)
             return
         end
 
-        SetVisible(Overlay.HealthBack, Visible)
+        Preview.HealthVisible = Visible == true
+        SetVisible(Overlay.HealthBack, Preview.HealthVisible)
+        UpdateRenderer()
     end
 
     function Preview:SetHighlightVisible(Visible)
@@ -1228,6 +1419,7 @@ function VisualPreview.Create(Library, Tab, Info)
         pcall(function()
             Chams.Enabled = Preview.ChamsEnabled and IsR6(Model)
         end)
+        UpdateRenderer()
     end
 
     function Preview:SetChams(Enabled, FillColor, OutlineColor, FillTransparency, OutlineTransparency)
@@ -1253,6 +1445,7 @@ function VisualPreview.Create(Library, Tab, Info)
         pcall(function()
             Chams.Enabled = Preview.ChamsEnabled and IsR6(Model)
         end)
+        UpdateRenderer()
     end
 
     function Preview:SetDistance(Value)
@@ -1264,6 +1457,7 @@ function VisualPreview.Create(Library, Tab, Info)
         if NumericValue then
             Preview.Distance = math.max(0, math.floor(NumericValue + 0.5))
             UpdateInfoLabels()
+            UpdateRenderer()
         end
     end
 
@@ -1273,6 +1467,12 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.Destroyed = true
+        if RendererAdapter then
+            local Callback = RendererAdapter.DetachPreview or RendererAdapter.DestroyPreview
+            if type(Callback) == "function" then
+                pcall(Callback, RendererAdapter, Preview)
+            end
+        end
         Rotating = false
         LastPointerPosition = nil
         if Preview.TargetConnection then
@@ -1305,7 +1505,12 @@ function VisualPreview.Create(Library, Tab, Info)
         end
         Preview.Target = nil
         Preview.SourceCharacter = nil
-        if Holder then
+        if Preview.EmbeddedElement then
+            pcall(function()
+                Preview.EmbeddedElement:Destroy()
+            end)
+            Preview.EmbeddedElement = nil
+        elseif Holder then
             pcall(function()
                 Holder:Destroy()
             end)
@@ -1316,6 +1521,17 @@ function VisualPreview.Create(Library, Tab, Info)
         Preview:Destroy()
     end)
 
+    if RendererAdapter then
+        local Callback = RendererAdapter.AttachPreview or RendererAdapter.CreatePreview
+        if type(Callback) == "function" then
+            pcall(Callback, RendererAdapter, Preview, BuildRendererContext())
+        end
+    end
+    if type(Info.Groupbox) == "table" then
+        Preview:Embed(Info.Groupbox, Info.Id or Info.Idx or "VisualPreview", Info.Height)
+    elseif IsClass(Info.Parent, "GuiObject") then
+        Preview:Mount(Info.Parent, Info.Height)
+    end
     Preview:SetTarget(Info.Target or Info.Player or Players.LocalPlayer)
     Preview:SetBoxVisible(Info.Box ~= false)
     Preview:SetNameVisible(Preview.NameVisible)
@@ -1331,6 +1547,12 @@ function VisualPreview.Create(Library, Tab, Info)
     Preview:SetEnabled(Info.Enabled == true)
 
     return Preview
+end
+
+function VisualPreview.CreateEmbedded(Library, Groupbox, Info)
+    local Options = table.clone(Info or {})
+    Options.Groupbox = Groupbox
+    return VisualPreview.Create(Library, Groupbox and Groupbox.Tab, Options)
 end
 
 return VisualPreview

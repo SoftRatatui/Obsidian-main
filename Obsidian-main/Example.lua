@@ -126,6 +126,8 @@ end
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
+local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
+local TracerPreview = LoadModule("addons/TracerPreview.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -435,24 +437,119 @@ MediaRight:AddUIPassthrough("CustomUI", {
 })
 
 
-local ESPPreview
-if VisualPreview then
-	local Created, PreviewOrError = pcall(VisualPreview.Create, Library, Tabs.Visuals, {
-		Name = "ESP preview",
-		Width = 300,
-		Height = 420,
-		Color = Color3.fromRGB(119, 166, 209),
-	})
+local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
+local VisualPreviewBox = Tabs.Visuals:AddRightGroupbox("Live previews", "scan-eye")
+VisualControls:AddLabel("The preview uses the same renderer contract that can draw live player ESP.", true)
 
-	if Created then
-		ESPPreview = PreviewOrError
-	else
-		warn("[MonHub Example] VisualPreview disabled: " .. tostring(PreviewOrError))
-	end
+local ESPPreview
+local SharedESPRenderer = DrawingESPPreview and DrawingESPPreview.Create({
+    Color = Color3.fromRGB(119, 166, 209),
+    GradientColor = Color3.fromRGB(202, 220, 239),
+}) or nil
+if SharedESPRenderer then
+	Library:OnUnload(function()
+		SharedESPRenderer:Destroy()
+	end)
+end
+if VisualPreview then
+    local Created, PreviewOrError = pcall(VisualPreview.CreateEmbedded, Library, VisualPreviewBox, {
+        Id = "EmbeddedESPPreview",
+        Name = "ESP preview",
+        Height = 320,
+        Color = Color3.fromRGB(119, 166, 209),
+        GradientColor = Color3.fromRGB(202, 220, 239),
+        Gradient = true,
+        DynamicBoxes = true,
+        Renderer = SharedESPRenderer,
+    })
+
+    if Created then
+        ESPPreview = PreviewOrError
+    else
+        warn("[MonHub Example] VisualPreview disabled: " .. tostring(PreviewOrError))
+    end
 end
 
-local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
-VisualControls:AddLabel("This local R6 preview is isolated from players and shows the selected ESP appearance.", true)
+local TracerLook
+if TracerPreview then
+    local Created, PreviewOrError = pcall(TracerPreview.CreateEmbedded, Library, VisualPreviewBox, "EmbeddedTracerPreview", {
+        Name = "asset tracer",
+        AssetId = "rbxasset://textures/particles/sparkles_main.dds",
+        Height = 92,
+        ColorA = Color3.fromRGB(255, 213, 58),
+        ColorB = Color3.fromRGB(255, 246, 166),
+        Glow = 0.82,
+        Speed = 1.25,
+    })
+    if Created then
+        TracerLook = PreviewOrError
+    else
+        warn("[MonHub Example] TracerPreview disabled: " .. tostring(PreviewOrError))
+    end
+end
+
+VisualControls:AddInput("TracerAssetId", {
+	Text = "Tracer asset ID",
+	Default = "rbxasset://textures/particles/sparkles_main.dds",
+	ClearTextOnFocus = false,
+	Callback = function(Value)
+		if TracerLook then
+			TracerLook:SetAssetId(Value)
+		end
+	end,
+})
+
+VisualControls:AddSlider("TracerGlow", {
+	Text = "Tracer glow",
+	Default = 82,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if TracerLook then
+			TracerLook:SetGlow(Value / 100)
+		end
+	end,
+})
+
+VisualControls:AddSlider("TracerMotion", {
+	Text = "Tracer motion",
+	Default = 125,
+	Min = 0,
+	Max = 400,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if TracerLook then
+			TracerLook:SetSpeed(Value / 100)
+		end
+	end,
+})
+
+local TracerColors = VisualControls:AddLabel("Tracer colors")
+local TracerColorA = Color3.fromRGB(255, 213, 58)
+local TracerColorB = Color3.fromRGB(255, 246, 166)
+TracerColors:AddColorPicker("TracerColorA", {
+	Title = "Tracer start",
+	Default = TracerColorA,
+	Callback = function(Value)
+		TracerColorA = Value
+		if TracerLook then
+			TracerLook:SetColors(TracerColorA, TracerColorB)
+		end
+	end,
+})
+TracerColors:AddColorPicker("TracerColorB", {
+	Title = "Tracer end",
+	Default = TracerColorB,
+	Callback = function(Value)
+		TracerColorB = Value
+		if TracerLook then
+			TracerLook:SetColors(TracerColorA, TracerColorB)
+		end
+	end,
+})
 
 local ESPEnabled = VisualControls:AddToggle("ESPEnabled", {
 	Text = "Enable ESP preview",
@@ -977,5 +1074,7 @@ return {
 	SaveManager = SaveManager,
 	ThemeManager = ThemeManager,
 	ESPPreview = ESPPreview,
+	ESPRenderer = SharedESPRenderer,
+	TracerPreview = TracerLook,
 	Repository = ActiveRepository,
 }

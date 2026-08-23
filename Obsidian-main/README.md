@@ -140,24 +140,25 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Visual preview module
 
-`addons/VisualPreview.lua` renders a clone of a real Roblox character inside a separate preview for one regular tab. Supply a `Player`, `Model`, or resolver function through `Target`; when omitted, it uses the current `LocalPlayer` character. It opens beside the main window without changing the tab layout, stays inside the viewport, and hides whenever the main menu hides. Its box, text placement, gradient, health bar, tracer, and R6-only chams mirror the supplied ESP settings. The preview never changes the original character.
+`addons/VisualPreview.lua` renders a clone of a real Roblox character in a side panel, arbitrary GUI parent, or groupbox. `addons/DrawingESPPreview.lua` supplies one Drawing renderer for both live entities and the preview, so the preview can show the project's real box, text, health, and tracer implementation instead of maintaining a second fake overlay. `addons/TracerPreview.lua` provides a theme-aware two-color tracer sample driven by an image asset ID.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-final-theme-5"
+))()
 local Players = game:GetService("Players")
 
-local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
+local PreviewGroup = Tabs.Visuals:AddRightGroupbox("Live preview", "scan-eye")
+local ESPRenderer = DrawingESPPreview.Create()
+local Preview = VisualPreview.CreateEmbedded(Library, PreviewGroup, {
     Name = "ESP preview",
-    Window = Window,
     Target = Players.LocalPlayer,
-    Width = 300,
-    Height = 420,
+    Height = 320,
     Enabled = false,
-    Side = "Auto",
-    Alignment = "Center",
-    Gap = 12,
+    Renderer = ESPRenderer,
 })
 
 Preview:SetEnabled(true)
@@ -170,11 +171,11 @@ Preview:SetGradientEnabled(true)
 Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
 
-`Window` is required when the library is used through the legacy API: pass the return value of `Library:CreateWindow`. `Renderer` is optional; provide it only when your own project exposes a function that builds the same objects as its live ESP. The generic module clones and previews a real target character without it. Box Scale and Dynamic Boxes use the same FOV/depth calculation as the live renderer. Call `Preview:SetTarget(PlayerOrModel)` to follow another real character.
+Use `VisualPreview.Create` for the external side panel, `VisualPreview.CreateEmbedded` for a groupbox, or pass `Parent = SomeGuiObject` for a direct mount. `Renderer` is optional; without one, the preview uses its built-in theme-aware fallback. A custom renderer can implement `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, and `DetachPreview`.
 
 Drag the character with the left mouse button or touch to rotate it. Use the mouse wheel to zoom. `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-For a ready-to-use binding from real ESP controls, see the ESP preview section in [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
+For the shared live-entity contract, embedded asset tracer, and complete integration examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
 ## Theme presets
 

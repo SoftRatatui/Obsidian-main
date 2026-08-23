@@ -1,3 +1,22 @@
+## 23.08.2026
+
+```diff
+[visual modules]
++ Added embedded, direct-parent, and fixed-panel mounting modes to the real-character VisualPreview addon
++ Added a renderer adapter contract so the same live ESP backend can render the preview clone without a separate fake overlay
++ Added DrawingESPPreview with one reusable entity path for boxes, two-tone edges, names, distance, weapons, health bars, and tracers
++ Added TracerPreview with asset-ID input, two-color gradient, glow, speed, direct mounting, and groupbox embedding
++ Added ready-to-run embedded ESP and tracer controls to Example.lua
+
+[performance]
++ Kept the Drawing backend allocation-stable by creating objects once per entity and mutating them in place
++ Kept tracer motion off RenderStepped by animating existing UIGradient offsets with managed tweens
++ Preserved the built-in GUI fallback when Drawing is unavailable
+
+[documentation]
++ Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract and both preview mounting modes
+```
+
 ## 22.08.2026
 
 ```diff

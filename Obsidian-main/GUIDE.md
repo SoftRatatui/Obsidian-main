@@ -556,24 +556,34 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ## Media and ESP preview
 
-`addons/VisualPreview.lua` creates a separate preview beside one regular tab. It clones a real Roblox character from a `Player`, `Model`, or resolver function; it never changes the original character. It hides with the menu, stays within the viewport, supports drag rotation and scroll-wheel zoom, and follows the active theme surface and lighting profile.
+`addons/VisualPreview.lua` clones a real Roblox character into a `ViewportFrame`. It can open as a fixed side panel, mount into any `GuiObject`, or live directly inside a MonHub groupbox. The clone keeps the target's rig, body colors, clothing, accessories, and current appearance without changing the source character. Drag or touch rotates it, the mouse wheel zooms it, and it hides with the main interface.
+
+`addons/DrawingESPPreview.lua` is the ready-made shared Drawing backend. Its `UpdateEntity` method draws the same box, name, distance, weapon, health, and tracer state for a live player or the preview clone. The preview therefore does not need a second decorative ESP implementation.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-final-theme-5"
+))()
 local Players = game:GetService("Players")
 
-local Preview = VisualPreview.Create(Library, Tabs.Visuals, {
+local PreviewGroup = Tabs.Visuals:AddRightGroupbox("Live preview", "scan-eye")
+local ESPRenderer = DrawingESPPreview.Create({
+    Color = Color3.fromRGB(119, 166, 209),
+    GradientColor = Color3.fromRGB(202, 220, 239),
+})
+
+local Preview = VisualPreview.CreateEmbedded(Library, PreviewGroup, {
+    Id = "PlayerPreview",
     Name = "ESP preview",
-    Window = Window,
     Target = Players.LocalPlayer,
-    Width = 300,
-    Height = 420,
+    Height = 320,
     Enabled = false,
-    Side = "Auto",
-    Alignment = "Center",
-    Gap = 12,
+    Gradient = true,
+    DynamicBoxes = true,
+    Renderer = ESPRenderer,
 })
 
 Preview:SetEnabled(true)
@@ -586,7 +596,68 @@ Preview:SetGradientEnabled(true)
 Preview:SetChams(true, Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255), 0.25, 0)
 ```
 
-Use `Preview:SetTarget(PlayerOrModel)`, `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` for custom controls. `Renderer` is optional. It must return a table with a live GuiObject in `Container`; `BoxFrame`, `BoxStroke`, `BoxGradient`, `InfoTop`, `InfoBottom`, `HealthBack`, and `HealthFill` are optional and are safely skipped when absent. Do not paste an undefined `State.CreateESPPreview` placeholder into a project.
+Use `VisualPreview.Create(Library, Tab, Info)` without `Groupbox` for the fixed side-panel form. Set `Parent = SomeGuiObject` for a direct mount. Use `Preview:Mount(Parent, Height)` or `Preview:Embed(Groupbox, Id, Height)` to move an existing preview. `Preview:SetTarget(PlayerOrModel)`, `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` remain available in every form.
+
+The shared renderer exposes `CreateEntity`, `UpdateEntity`, `SetEntityVisible`, and `RemoveEntity`. Feed the absolute screen bounds already calculated by the live ESP into the same method:
+
+```luau
+local Entity = ESPRenderer:CreateEntity()
+
+ESPRenderer:UpdateEntity(Entity, {
+    Visible = true,
+    Bounds = {
+        AbsoluteX = BoxX,
+        AbsoluteY = BoxY,
+        Width = BoxWidth,
+        Height = BoxHeight,
+    },
+    ContentPosition = Vector2.zero,
+    ContentSize = workspace.CurrentCamera.ViewportSize,
+    Color = Config.BoxColor,
+    GradientColor = Config.BoxGradientColor,
+    BoxVisible = Config.Boxes,
+    NameVisible = Config.Names,
+    DistanceVisible = Config.Distance,
+    WeaponVisible = Config.Weapons,
+    HealthVisible = Config.HealthBar,
+    TracerVisible = Config.Tracers,
+    Name = Player.DisplayName,
+    Distance = Distance,
+    Weapon = WeaponName,
+    Health = HealthRatio,
+})
+```
+
+Call `UpdateEntity` from the live ESP's existing frame scheduler and call `RemoveEntity` when its player entry is removed. There is no extra heartbeat in the renderer itself. Call `ESPRenderer:Destroy()` during script unload. When the executor has no Drawing API, `DrawingESPPreview.Create(...).Available` is false and `VisualPreview` uses its theme-aware GUI fallback.
+
+For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview, Context)`, `UpdatePreview(Preview, Context)`, `SetPreviewVisible(Preview, Visible)`, and `DetachPreview(Preview)`. `Context.Bounds` contains absolute and local box coordinates, while `Context.Model` is the real cloned model. This makes the preview use the project's actual renderer rather than approximating its visual style.
+
+### Asset tracer preview
+
+`addons/TracerPreview.lua` builds a reusable layered tracer sample from a Roblox image asset. It accepts a numeric asset ID, `rbxassetid://` URL, built-in texture path, or custom asset path. The animation changes only `UIGradient.Offset`; it does not rebuild gradients or use `RenderStepped`.
+
+```luau
+local TracerPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TracerPreview.lua?monhub=0.0.1-final-theme-5"
+))()
+
+local Tracer = TracerPreview.CreateEmbedded(Library, PreviewGroup, "TracerSample", {
+    AssetId = 1234567890,
+    Name = "tracer",
+    Height = 92,
+    ColorA = Color3.fromRGB(255, 213, 58),
+    ColorB = Color3.fromRGB(255, 246, 166),
+    Glow = 0.82,
+    Speed = 1.25,
+})
+
+Tracer:SetAssetId(1234567890)
+Tracer:SetColors(Color3.fromRGB(255, 213, 58), Color3.fromRGB(255, 246, 166))
+Tracer:SetGlow(0.82)
+Tracer:SetSpeed(1.25)
+```
+
+Use `TracerPreview.Create(Library, { Parent = SomeGuiObject, ... })` to mount it directly without a groupbox. `SetEnabled`, `SetVisible`, `SetName`, `SetHeight`, and `Destroy` complete its lifecycle API.
 
 ## Declarative API
 

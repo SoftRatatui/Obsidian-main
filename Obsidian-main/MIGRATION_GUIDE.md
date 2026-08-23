@@ -18,6 +18,8 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
 - [VisualPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/VisualPreview.lua)
 - [Raw VisualPreview.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua)
+- [DrawingESPPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DrawingESPPreview.lua)
+- [TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
 - [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
 - [Changelog](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
 - [Original Obsidian](https://github.com/deividcomsono/Obsidian)
@@ -445,7 +447,7 @@ Zoom is clamped relative to model size. `Object` must be a `BasePart` or `Model`
 
 ## ESP preview addon
 
-`addons/VisualPreview.lua` is intended for an ESP settings tab. It clones a real character from `Target` into a fixed panel beside the window: appearance, rig, and accessories remain real, while the source character is not changed. With no `Target`, it uses `Players.LocalPlayer`. The panel hides with the main UI, does not alter the tab layout, and only displays items enabled by your ESP controls.
+`addons/VisualPreview.lua` clones a real character from `Target` without changing the source. It supports a fixed panel beside the window, a direct `GuiObject` parent, and a MonHub groupbox. `addons/DrawingESPPreview.lua` provides a shared Drawing backend so live players and the preview use the same entity update path. `addons/TracerPreview.lua` creates reusable asset-ID tracer samples.
 
 Load the addon from the same commit as `Library.lua`:
 
@@ -453,22 +455,29 @@ Load the addon from the same commit as `Library.lua`:
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-final-theme-5"
+))()
 local Players = game:GetService("Players")
 
-local Preview = VisualPreview.Create(Library, VisualsTab, {
+local PreviewGroup = VisualsTab:AddRightGroupbox("Live preview", "scan-eye")
+local ESPRenderer = DrawingESPPreview.Create({
+    Color = Color3.fromRGB(119, 166, 209),
+    GradientColor = Color3.fromRGB(202, 220, 239),
+})
+
+local Preview = VisualPreview.CreateEmbedded(Library, PreviewGroup, {
     Name = "ESP preview",
-    Window = Window,
     Target = Players.LocalPlayer,
-    Width = 300,
-    Height = 420,
+    Height = 320,
     Enabled = false,
-    Side = "Auto",
-    Alignment = "Center",
-    Gap = 12,
+    Gradient = true,
+    DynamicBoxes = true,
+    Renderer = ESPRenderer,
 })
 ```
 
-`Window` is required for the legacy API; pass the return value of `Library:CreateWindow`. `VisualsTab` must be a normal tab created by `Window:AddTab`.
+Use `VisualPreview.Create(Library, VisualsTab, Info)` for the external panel. Pass `Parent = SomeGuiObject` or call `Preview:Mount(Parent, Height)` for direct mounting. `VisualPreview.CreateEmbedded` and `Preview:Embed` place the preview directly in a groupbox.
 
 Bind the preview to the same callbacks that change the live ESP:
 
@@ -495,9 +504,30 @@ local function SyncPreview()
 end
 ```
 
-`Renderer` is optional. Supply it only when your project has a function that constructs exactly the same objects as the live ESP. Without it, the addon clones a real character and builds the preview itself. Box Scale and Dynamic Boxes use the same FOV/depth calculation as the live renderer. `Preview:SetTarget(PlayerOrModel)` switches targets and refreshes after `CharacterAdded` when given a `Player`.
+To migrate the live ESP to the shared backend, keep the project's existing player iteration, visibility checks, projection, and throttling. Replace only the final object writes with `ESPRenderer:UpdateEntity(Entity, State)`. `State.Bounds` uses absolute screen coordinates and `State.Health` is a normalized value from `0` to `1`. Call `ESPRenderer:CreateEntity()` once per tracked player and `ESPRenderer:RemoveEntity(Entity)` when that player is removed. The preview passes the same state fields automatically.
+
+Projects that already have a polished renderer do not need to replace it. Pass an adapter with `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, and `DetachPreview`; each update receives the cloned `Context.Model`, projected `Context.Bounds`, colors, visibility flags, text values, and health. With no adapter or Drawing support, the preview retains its theme-aware GUI fallback.
 
 Use `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` and `SetPanelGap(number)` only for panel placement. Drag the character with left mouse or touch to rotate it; use the mouse wheel for zoom. `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
+
+Create an embedded asset tracer with:
+
+```luau
+local TracerPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TracerPreview.lua?monhub=0.0.1-final-theme-5"
+))()
+
+local Tracer = TracerPreview.CreateEmbedded(Library, PreviewGroup, "TracerSample", {
+    AssetId = 1234567890,
+    ColorA = Color3.fromRGB(255, 213, 58),
+    ColorB = Color3.fromRGB(255, 246, 166),
+    Glow = 0.82,
+    Speed = 1.25,
+    Height = 92,
+})
+```
+
+Use `TracerPreview.Create(Library, { Parent = SomeGuiObject, ... })` outside a groupbox. Numeric IDs are normalized to `rbxassetid://`; complete asset URLs and custom asset paths are accepted unchanged.
 
 ## Image, Video, and UIPassthrough
 

@@ -446,76 +446,67 @@ local AddonTracerGroup = Tabs.Addons:AddRightGroupbox("Tracer preview", "sparkle
 
 local GalleryItems = {
 	{
-		Id = "aurora",
-		Name = "Aurora",
-		Category = "Rifles",
-		Subtitle = "Soft blue finish",
-		Image = "rbxasset://textures/particles/sparkles_main.dds",
-		Color = Color3.fromRGB(129, 181, 225),
+		Id = "neptune",
+		Name = "Neptune",
+		Category = "Space",
+		Subtitle = "Deep blue skybox",
+		Image = "rbxassetid://218954524",
 	},
 	{
-		Id = "ember",
-		Name = "Ember",
-		Category = "Rifles",
-		Subtitle = "Warm red finish",
-		Image = "rbxasset://textures/particles/fire_main.dds",
-		Color = Color3.fromRGB(231, 123, 100),
+		Id = "nebula",
+		Name = "Nebula",
+		Category = "Space",
+		Subtitle = "Classic nebula skybox",
+		Image = "rbxassetid://159454293",
 	},
 	{
-		Id = "glacier",
-		Name = "Glacier",
-		Category = "Rifles",
-		Subtitle = "Cold white finish",
-		Image = "rbxasset://textures/particles/smoke_main.dds",
-		Color = Color3.fromRGB(192, 220, 236),
+		Id = "vaporwave",
+		Name = "Vaporwave",
+		Category = "Space",
+		Subtitle = "Purple horizon skybox",
+		Image = "rbxassetid://1417494253",
 	},
 	{
-		Id = "violet",
-		Name = "Violet",
-		Category = "Melee",
-		Subtitle = "Muted violet finish",
-		Image = "rbxasset://textures/particles/sparkles_main.dds",
-		Color = Color3.fromRGB(170, 142, 220),
+		Id = "clouds",
+		Name = "Clouds",
+		Category = "Atmosphere",
+		Subtitle = "Soft daytime clouds",
+		Image = "rbxassetid://570557559",
 	},
 	{
-		Id = "mint",
-		Name = "Mint",
-		Category = "Melee",
-		Subtitle = "Fresh green finish",
-		Image = "rbxasset://textures/particles/smoke_main.dds",
-		Color = Color3.fromRGB(124, 207, 171),
+		Id = "twilight",
+		Name = "Twilight",
+		Category = "Atmosphere",
+		Subtitle = "Muted evening skybox",
+		Image = "rbxassetid://264909420",
 	},
 	{
-		Id = "solar",
-		Name = "Solar",
-		Category = "Melee",
-		Subtitle = "Soft gold finish",
-		Image = "rbxasset://textures/particles/fire_main.dds",
-		Color = Color3.fromRGB(235, 195, 105),
+		Id = "blue-aurora",
+		Name = "Blue Aurora",
+		Category = "Atmosphere",
+		Subtitle = "Cold aurora skybox",
+		Image = "rbxassetid://12064152",
 	},
 	{
-		Id = "ash",
-		Name = "Ash",
-		Category = "Utility",
-		Subtitle = "Neutral gray finish",
-		Image = "rbxasset://textures/particles/smoke_main.dds",
-		Color = Color3.fromRGB(166, 172, 182),
+		Id = "minecraft",
+		Name = "Minecraft",
+		Category = "Worlds",
+		Subtitle = "Block world skybox",
+		Image = "rbxassetid://1876542941",
 	},
 	{
-		Id = "ocean",
-		Name = "Ocean",
-		Category = "Utility",
-		Subtitle = "Deep blue finish",
-		Image = "rbxasset://textures/particles/sparkles_main.dds",
-		Color = Color3.fromRGB(91, 148, 207),
+		Id = "jungle",
+		Name = "Jungle",
+		Category = "Worlds",
+		Subtitle = "Dense green skybox",
+		Image = "rbxassetid://214399894",
 	},
 	{
-		Id = "rose",
-		Name = "Rose",
-		Category = "Utility",
-		Subtitle = "Quiet pink finish",
-		Image = "rbxasset://textures/particles/fire_main.dds",
-		Color = Color3.fromRGB(218, 132, 167),
+		Id = "winter-mountain",
+		Name = "Winter Mountain",
+		Category = "Worlds",
+		Subtitle = "Snow mountain skybox",
+		Image = "rbxassetid://402229293",
 	},
 }
 
@@ -553,7 +544,7 @@ if ImageGallery then
 	})
 	if Created then
 		AddonGallery = Result
-		AddonGallery:Select("aurora", true)
+		AddonGallery:Select("neptune", true)
 	else
 		warn("[MonHub Example] ImageGallery disabled: " .. tostring(Result))
 	end
@@ -572,7 +563,7 @@ AddonGalleryGroup:AddInput("AddonGallerySearch", {
 
 AddonGalleryGroup:AddDropdown("AddonGalleryCategory", {
 	Text = "Gallery category",
-	Values = { "All", "Rifles", "Melee", "Utility" },
+	Values = { "All", "Space", "Atmosphere", "Worlds" },
 	Default = "All",
 	Callback = function(Value)
 		if AddonGallery then
@@ -634,13 +625,13 @@ AddonGalleryGroup:AddButton("Add gallery item", function()
 		return
 	end
 	AddedGalleryItems += 1
+	local SourceItem = GalleryItems[((AddedGalleryItems - 1) % #GalleryItems) + 1]
 	AddonGallery:AddItem({
 		Id = "custom-" .. tostring(AddedGalleryItems),
 		Name = "Custom " .. tostring(AddedGalleryItems),
-		Category = "Utility",
-		Subtitle = "Added at runtime",
-		Image = "rbxasset://textures/particles/sparkles_main.dds",
-		Color = Color3.fromHSV((AddedGalleryItems * 0.13) % 1, 0.42, 1),
+		Category = "Worlds",
+		Subtitle = "Runtime copy of " .. SourceItem.Name,
+		Image = SourceItem.Image,
 	})
 end)
 
@@ -657,13 +648,13 @@ end)
 AddonGalleryGroup:AddButton("Reset gallery items", function()
 	if AddonGallery then
 		AddonGallery:SetItems(GalleryItems)
-		AddonGallery:Select("aurora", true)
+		AddonGallery:Select("neptune", true)
 	end
 end)
 
 AddonGalleryGroup:AddButton("Select first gallery item", function()
 	if AddonGallery then
-		AddonGallery:Select("aurora")
+		AddonGallery:Select("neptune")
 	end
 end)
 
@@ -735,10 +726,21 @@ AddonImageGroup:AddButton("Clear image preview", function()
 end)
 
 local AddonTracer
+local TracerAssetPresets = {
+	Beam = "rbxassetid://12781852245",
+	Lightning = "rbxassetid://446111271",
+	Heartrate = "rbxassetid://5830549480",
+	Chain = "rbxassetid://9632168658",
+	Glitch = "rbxassetid://8089467613",
+	Swirl = "rbxassetid://5638168605",
+	Neon = "rbxassetid://6361963422",
+	Plasma = "rbxassetid://8993645509",
+	Laser = "rbxassetid://14549123968",
+}
 if TracerPreview then
 	local Created, Result = pcall(TracerPreview.CreateEmbedded, Library, AddonTracerGroup, "AddonTracerPreview", {
 		Name = "Tracer preview",
-		AssetId = "rbxasset://textures/particles/sparkles_main.dds",
+		AssetId = TracerAssetPresets.Beam,
 		Height = 92,
 		ColorA = Color3.fromRGB(255, 213, 58),
 		ColorB = Color3.fromRGB(255, 246, 166),
@@ -754,11 +756,22 @@ end
 
 AddonTracerGroup:AddInput("AddonTracerAsset", {
 	Text = "Tracer asset ID",
-	Default = "rbxasset://textures/particles/sparkles_main.dds",
+	Default = TracerAssetPresets.Beam,
 	ClearTextOnFocus = false,
 	Callback = function(Value)
 		if AddonTracer then
 			AddonTracer:SetAssetId(Value)
+		end
+	end,
+})
+
+AddonTracerGroup:AddDropdown("AddonTracerPreset", {
+	Text = "Tracer preset",
+	Values = { "Beam", "Lightning", "Heartrate", "Chain", "Glitch", "Swirl", "Neon", "Plasma", "Laser" },
+	Default = "Beam",
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetAssetId(TracerAssetPresets[Value])
 		end
 	end,
 })

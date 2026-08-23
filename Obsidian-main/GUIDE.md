@@ -633,7 +633,7 @@ For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview
 
 ### Optional image gallery and animated preview
 
-`addons/ImageGallery.lua` and `addons/ImagePreview.lua` are opt-in addons for skin changers, weapon catalogues, skybox selectors, map cards, and other image-heavy tools. `Library.lua` never loads them automatically. The complete `Example.lua` imports them explicitly because it is the visual addon showcase; projects that do not request them create no related instances, connections, tweens, or network requests.
+`addons/ImageGallery.lua` and `addons/ImagePreview.lua` are opt-in addons for skin changers, weapon catalogues, skybox selectors, map cards, and other image-heavy tools. `Library.lua` never loads them automatically. The complete `Example.lua` imports them explicitly because it is the visual addon showcase; projects that do not request them create no related instances, connections, tweens, or network requests. Its current test data contains nine real skybox assets split into Space, Atmosphere, and Worlds categories instead of recolored placeholder textures.
 
 The gallery uses a fixed cell pool for one page. With `PageSize = 15`, only fifteen cards exist even if `Items` contains thousands of skins. Search is debounced by 80ms, hidden pages do not assign image URLs, and there is no heartbeat or render loop. The full preview uses two recycled image layers for a short crossfade and zoom transition.
 
@@ -702,7 +702,7 @@ Keep the item list as plain data and load thumbnails rather than full-resolution
 
 ### Optional tracer asset addon
 
-`addons/TracerPreview.lua` is also an independent opt-in addon. It is not referenced by `Library.lua`, `VisualPreview.lua`, or `DrawingESPPreview.lua`; only the complete `Example.lua` imports it for demonstration. It creates its layered image tracer only when a project explicitly loads and constructs it, and stops its tweens while disabled or hidden.
+`addons/TracerPreview.lua` is also an independent opt-in addon. It is not referenced by `Library.lua`, `VisualPreview.lua`, or `DrawingESPPreview.lua`; only the complete `Example.lua` imports it for demonstration. It creates its layered image tracer only when a project explicitly loads and constructs it, and stops its tweens while disabled or hidden. The showcase includes Beam, Lightning, Heartrate, Chain, Glitch, Swirl, Neon, Plasma, and Laser asset presets plus a free-form asset ID input.
 
 ```luau
 local TracerPreview = loadstring(game:HttpGet(

@@ -10,12 +10,15 @@
 + Restored TracerPreview as an independent opt-in addon that is never loaded by the core library
 + Expanded Example.lua into a complete interactive showcase for every addon and its primary runtime setters
 + Removed tracer rendering from the main ESP preview while retaining a harmless compatibility setter for older integrations
++ Replaced synthetic gallery entries with real skybox image assets and added nine tracer texture presets to the addon showcase
++ Removed the separate sidebar selection strip in favor of the existing soft selected-tab surface, label, and icon state
 
 [performance]
 + Kept the Drawing backend allocation-stable by creating objects once per entity and mutating them in place
 + Limited image gallery allocation to one reusable page and kept both image addons free of frame loops
 + Preserved the built-in GUI fallback when Drawing is unavailable
 + Added explicit tween cancellation, connection cleanup, and registry removal for manually destroyed visual addons
++ Removed two decorative instances from every sidebar tab
 
 [documentation]
 + Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract, optional gallery, and animated 2D preview

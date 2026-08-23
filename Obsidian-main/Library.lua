@@ -3110,7 +3110,7 @@ function Library:AnimateTabHover(Button: TextButton, Label: TextLabel, Icon: Ima
     end
 end
 
-function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Indicator: Frame, Icon: ImageLabel?, Selected: boolean)
+function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon: ImageLabel?, Selected: boolean)
     Library:CancelTween(Button, "TabHover")
     Library:CancelTween(Label, "TabHover")
     if Icon then
@@ -3122,10 +3122,6 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Indic
     Library:PlayTween(Label, "TabSelection", Library.TweenInfo, {
         TextTransparency = Selected and 0 or 0.5,
     })
-    Library:PlayTween(Indicator, "TabSelection", Library.TweenInfo, {
-        BackgroundTransparency = Selected and 0 or 1,
-    })
-
     if Icon then
         Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, {
             ImageTransparency = Selected and 0 or 0.5,
@@ -12760,8 +12756,6 @@ function Library:CreateWindow(WindowInfo)
         local TabButton: TextButton
         local TabLabel
         local TabIcon
-        local TabIndicator
-
         local TabContainer
         local TabCanvas
         local TabLeft
@@ -12784,18 +12778,6 @@ function Library:CreateWindow(WindowInfo)
             New("UICorner", {
                 CornerRadius = UDim.new(0, math.max(WindowInfo.CornerRadius - 2, 2)),
                 Parent = TabButton,
-            })
-            TabIndicator = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "AccentColor",
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 18),
-                Parent = TabButton,
-            })
-            New("UICorner", {
-                CornerRadius = UDim.new(1, 0),
-                Parent = TabIndicator,
             })
             TabLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
@@ -13888,7 +13870,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
 
-            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, true)
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, true)
 
             if Description then
                 Window:ShowTabInfo(Name, Description)
@@ -13909,7 +13891,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -14034,8 +14016,6 @@ function Library:CreateWindow(WindowInfo)
         local TabButton: TextButton
         local TabLabel
         local TabIcon
-        local TabIndicator
-
         local TabCanvas
         local TabContainer
 
@@ -14054,19 +14034,6 @@ function Library:CreateWindow(WindowInfo)
                 CornerRadius = UDim.new(0, math.max(WindowInfo.CornerRadius - 2, 2)),
                 Parent = TabButton,
             })
-            TabIndicator = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "AccentColor",
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.fromOffset(2, 18),
-                Parent = TabButton,
-            })
-            New("UICorner", {
-                CornerRadius = UDim.new(1, 0),
-                Parent = TabIndicator,
-            })
-
             TabLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(NavigationLabelX, 0),
@@ -14280,7 +14247,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
 
-            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, true)
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, true)
 
             Library:PlayTabAnimation(TabCanvas, true)
 
@@ -14302,7 +14269,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            Library:AnimateTabSelection(TabButton, TabLabel, TabIndicator, TabIcon, false)
+            Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()

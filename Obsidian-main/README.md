@@ -140,7 +140,7 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ## Visual preview module
 
-`addons/VisualPreview.lua` renders a clone of a real Roblox character in a side panel, arbitrary GUI parent, or groupbox. `addons/DrawingESPPreview.lua` supplies one Drawing renderer for both live entities and the preview, so the preview can show the project's real box, text, health, and tracer implementation instead of maintaining a second fake overlay. `addons/TracerPreview.lua` provides a theme-aware two-color tracer sample driven by an image asset ID.
+`addons/VisualPreview.lua` renders a clone of a real Roblox character in a side panel, arbitrary GUI parent, or groupbox. `addons/DrawingESPPreview.lua` supplies one Drawing renderer for both live entities and the preview, so the preview can show the project's real box, text, and health implementation instead of maintaining a second fake overlay.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -175,7 +175,7 @@ Use `VisualPreview.Create` for the external side panel, `VisualPreview.CreateEmb
 
 Drag the character with the left mouse button or touch to rotate it. Use the mouse wheel to zoom. `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-For the shared live-entity contract, embedded asset tracer, and complete integration examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
+Optional `ImageGallery.lua`, `ImagePreview.lua`, and `TracerPreview.lua` addons provide pooled skin grids, animated full-size 2D previews, and an asset-based tracer sample. They are never loaded by the core library; `Example.lua` imports every addon explicitly as a complete interactive showcase. For the shared live-entity contract and complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
 ## Theme presets
 

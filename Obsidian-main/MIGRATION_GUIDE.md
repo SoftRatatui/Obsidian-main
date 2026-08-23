@@ -19,6 +19,8 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [VisualPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/VisualPreview.lua)
 - [Raw VisualPreview.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua)
 - [DrawingESPPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DrawingESPPreview.lua)
+- [ImageGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImageGallery.lua)
+- [ImagePreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImagePreview.lua)
 - [TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
 - [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
 - [Changelog](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
@@ -447,7 +449,7 @@ Zoom is clamped relative to model size. `Object` must be a `BasePart` or `Model`
 
 ## ESP preview addon
 
-`addons/VisualPreview.lua` clones a real character from `Target` without changing the source. It supports a fixed panel beside the window, a direct `GuiObject` parent, and a MonHub groupbox. `addons/DrawingESPPreview.lua` provides a shared Drawing backend so live players and the preview use the same entity update path. `addons/TracerPreview.lua` creates reusable asset-ID tracer samples.
+`addons/VisualPreview.lua` clones a real character from `Target` without changing the source. It supports a fixed panel beside the window, a direct `GuiObject` parent, and a MonHub groupbox. `addons/DrawingESPPreview.lua` provides a shared Drawing backend so live players and the preview use the same entity update path.
 
 Load the addon from the same commit as `Library.lua`:
 
@@ -490,7 +492,6 @@ local function SyncPreview()
     Preview:SetWeaponVisible(Config.ESPWeapons == true)
     Preview:SetDistanceVisible(Config.ESPDistance == true)
     Preview:SetHealthVisible(Config.ESPHealth == true)
-    Preview:SetTracerVisible(Config.TracersEnabled == true)
     Preview:SetColor(Config.ESPGradient and Config.ESPGradientStart or Config.BoxColor)
     Preview:SetGradientEnabled(Config.ESPGradient == true)
     Preview:SetGradientColor(Config.ESPGradientEnd)
@@ -510,24 +511,34 @@ Projects that already have a polished renderer do not need to replace it. Pass a
 
 Use `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` and `SetPanelGap(number)` only for panel placement. Drag the character with left mouse or touch to rotate it; use the mouse wheel for zoom. `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-Create an embedded asset tracer with:
+Image-heavy selectors are separate opt-in addons and are never loaded by the core library. The complete `Example.lua` imports them explicitly as a showcase:
 
 ```luau
-local TracerPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TracerPreview.lua?monhub=0.0.1-final-theme-5"
+local ImageGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-final-theme-5"
+))()
+local ImagePreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-final-theme-5"
 ))()
 
-local Tracer = TracerPreview.CreateEmbedded(Library, PreviewGroup, "TracerSample", {
-    AssetId = 1234567890,
-    ColorA = Color3.fromRGB(255, 213, 58),
-    ColorB = Color3.fromRGB(255, 246, 166),
-    Glow = 0.82,
-    Speed = 1.25,
-    Height = 92,
+local Look = ImagePreview.CreateEmbedded(Library, PreviewGroup, "SkinLook", {
+    Height = 280,
+    Motion = true,
+})
+
+local Gallery = ImageGallery.CreateEmbedded(Library, SkinGroup, "SkinGrid", {
+    Height = 344,
+    Columns = 5,
+    PageSize = 15,
+    Preview = Look,
+    Items = SkinDefinitions,
+    OnSelected = function(Item)
+        ApplySkin(Item.Id)
+    end,
 })
 ```
 
-Use `TracerPreview.Create(Library, { Parent = SomeGuiObject, ... })` outside a groupbox. Numeric IDs are normalized to `rbxassetid://`; complete asset URLs and custom asset paths are accepted unchanged.
+The gallery creates only `PageSize` reusable cards, assigns images only for the active filtered page, and debounces search. The preview recycles two image layers for crossfade and zoom. Neither addon has a frame loop. See the current image-addon section in `GUIDE.md` for the complete method list and item schema.
 
 ## Image, Video, and UIPassthrough
 

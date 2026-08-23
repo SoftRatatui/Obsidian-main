@@ -558,7 +558,7 @@ The first argument is the asset ID and the second is volume from `0` to `1`.
 
 `addons/VisualPreview.lua` clones a real Roblox character into a `ViewportFrame`. It can open as a fixed side panel, mount into any `GuiObject`, or live directly inside a MonHub groupbox. The clone keeps the target's rig, body colors, clothing, accessories, and current appearance without changing the source character. Drag or touch rotates it, the mouse wheel zooms it, and it hides with the main interface.
 
-`addons/DrawingESPPreview.lua` is the ready-made shared Drawing backend. Its `UpdateEntity` method draws the same box, name, distance, weapon, health, and tracer state for a live player or the preview clone. The preview therefore does not need a second decorative ESP implementation.
+`addons/DrawingESPPreview.lua` is the ready-made shared Drawing backend. Its `UpdateEntity` method draws the same box, name, distance, weapon, and health state for a live player or the preview clone. The preview therefore does not need a second decorative ESP implementation.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -620,7 +620,6 @@ ESPRenderer:UpdateEntity(Entity, {
     DistanceVisible = Config.Distance,
     WeaponVisible = Config.Weapons,
     HealthVisible = Config.HealthBar,
-    TracerVisible = Config.Tracers,
     Name = Player.DisplayName,
     Distance = Distance,
     Weapon = WeaponName,
@@ -632,18 +631,87 @@ Call `UpdateEntity` from the live ESP's existing frame scheduler and call `Remov
 
 For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview, Context)`, `UpdatePreview(Preview, Context)`, `SetPreviewVisible(Preview, Visible)`, and `DetachPreview(Preview)`. `Context.Bounds` contains absolute and local box coordinates, while `Context.Model` is the real cloned model. This makes the preview use the project's actual renderer rather than approximating its visual style.
 
-### Asset tracer preview
+### Optional image gallery and animated preview
 
-`addons/TracerPreview.lua` builds a reusable layered tracer sample from a Roblox image asset. It accepts a numeric asset ID, `rbxassetid://` URL, built-in texture path, or custom asset path. The animation changes only `UIGradient.Offset`; it does not rebuild gradients or use `RenderStepped`.
+`addons/ImageGallery.lua` and `addons/ImagePreview.lua` are opt-in addons for skin changers, weapon catalogues, skybox selectors, map cards, and other image-heavy tools. `Library.lua` never loads them automatically. The complete `Example.lua` imports them explicitly because it is the visual addon showcase; projects that do not request them create no related instances, connections, tweens, or network requests.
+
+The gallery uses a fixed cell pool for one page. With `PageSize = 15`, only fifteen cards exist even if `Items` contains thousands of skins. Search is debounced by 80ms, hidden pages do not assign image URLs, and there is no heartbeat or render loop. The full preview uses two recycled image layers for a short crossfade and zoom transition.
+
+```luau
+local ImageGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-final-theme-5"
+))()
+local ImagePreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-final-theme-5"
+))()
+
+local SkinGrid = Tabs.Visuals:AddLeftGroupbox("Skins", "layout-grid")
+local SkinLook = Tabs.Visuals:AddRightGroupbox("Selected skin", "image")
+
+local Preview = ImagePreview.CreateEmbedded(Library, SkinLook, "SkinPreview", {
+    Height = 280,
+    ScaleType = "Fit",
+    Title = "Select a skin",
+    Motion = true,
+})
+
+local Gallery = ImageGallery.CreateEmbedded(Library, SkinGrid, "SkinGallery", {
+    Height = 344,
+    Columns = 5,
+    PageSize = 15,
+    CellHeight = 78,
+    Preview = Preview,
+    Items = {
+        {
+            Id = "aurora",
+            Name = "Aurora",
+            Category = "Rifles",
+            Subtitle = "Assault rifle",
+            Thumbnail = 1234567890,
+            PreviewImage = 1234567891,
+        },
+        {
+            Id = "ember",
+            Name = "Ember",
+            Category = "Melee",
+            Subtitle = "Knife",
+            Image = "rbxassetid://9876543210",
+        },
+    },
+    OnSelected = function(Item)
+        if Item then
+            SelectSkin(Item.Id)
+        end
+    end,
+})
+```
+
+`Image`, `AssetId`, and primitive numeric IDs are normalized to `rbxassetid://`. Use `Thumbnail` or `ThumbnailId` for the light grid image and `PreviewImage` or `FullImage` for the larger selected view. When those fields are omitted, both views use `Image`. Complete `rbxassetid://`, `rbxasset://`, and executor-provided custom asset strings pass through unchanged.
+
+Gallery methods are `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Clicking the category button cycles only categories present in the current item list.
+
+Preview methods are `SetImage`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetMotion`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Use `CreateEmbedded` for a groupbox or `Create(Library, { Parent = Frame, ... })` for a direct 2D panel.
+
+Recommended layouts:
+
+- Skin or weapon changer: `Columns = 5`, `PageSize = 15`, `CellHeight = 78`, `ScaleType = "Fit"`, with `ImagePreview` in the opposite column.
+- Skybox, arena, or background selector: `Columns = 1`, `PageSize = 5`, `CellHeight = 58`, `ScaleType = "Crop"` for wide image rows.
+- Compact icon picker: `Columns = 7`, `PageSize = 21`, `CellHeight = 58`, with the external preview omitted.
+
+Keep the item list as plain data and load thumbnails rather than full-resolution promotional images in the grid. Reserve the larger image for `ImagePreview`. Roblox asset IDs must be accessible to the running client; executor custom assets should be converted with the executor's asset function before being passed to the addon.
+
+### Optional tracer asset addon
+
+`addons/TracerPreview.lua` is also an independent opt-in addon. It is not referenced by `Library.lua`, `VisualPreview.lua`, or `DrawingESPPreview.lua`; only the complete `Example.lua` imports it for demonstration. It creates its layered image tracer only when a project explicitly loads and constructs it, and stops its tweens while disabled or hidden.
 
 ```luau
 local TracerPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TracerPreview.lua?monhub=0.0.1-final-theme-5"
 ))()
 
-local Tracer = TracerPreview.CreateEmbedded(Library, PreviewGroup, "TracerSample", {
+local Tracer = TracerPreview.CreateEmbedded(Library, PreviewGroup, "TracerLook", {
     AssetId = 1234567890,
-    Name = "tracer",
+    Name = "Tracer preview",
     Height = 92,
     ColorA = Color3.fromRGB(255, 213, 58),
     ColorB = Color3.fromRGB(255, 246, 166),
@@ -655,9 +723,10 @@ Tracer:SetAssetId(1234567890)
 Tracer:SetColors(Color3.fromRGB(255, 213, 58), Color3.fromRGB(255, 246, 166))
 Tracer:SetGlow(0.82)
 Tracer:SetSpeed(1.25)
+Tracer:SetVisible(true)
 ```
 
-Use `TracerPreview.Create(Library, { Parent = SomeGuiObject, ... })` to mount it directly without a groupbox. `SetEnabled`, `SetVisible`, `SetName`, `SetHeight`, and `Destroy` complete its lifecycle API.
+Use `TracerPreview.Create(Library, { Parent = Frame, ... })` for direct mounting. `SetEnabled(false)`, `SetVisible(false)`, and `Destroy()` stop all tracer animation work.
 
 ## Declarative API
 

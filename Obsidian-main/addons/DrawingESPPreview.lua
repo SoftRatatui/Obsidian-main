@@ -100,7 +100,6 @@ function DrawingESPPreview.Create(Info)
         Thickness = math.clamp(tonumber(Info.Thickness) or 1, 1, 4),
         OutlineThickness = math.clamp(tonumber(Info.OutlineThickness) or 3, 2, 6),
         TextSize = math.clamp(tonumber(Info.TextSize) or 13, 10, 24),
-        TracerThickness = math.clamp(tonumber(Info.TracerThickness) or 1, 1, 4),
     }
 
     function Renderer:CreateEntity()
@@ -111,8 +110,6 @@ function DrawingESPPreview.Create(Info)
             Distance = NewDrawing("Text"),
             HealthBack = NewDrawing("Line"),
             HealthFill = NewDrawing("Line"),
-            TracerOutline = NewDrawing("Line"),
-            Tracer = NewDrawing("Line"),
             Visible = false,
         }
         for Index = 1, 4 do
@@ -137,7 +134,7 @@ function DrawingESPPreview.Create(Info)
         for _, Object in Entity.BoxOutline do
             Set(Object, "Visible", false)
         end
-        for _, Key in { "Name", "Distance", "HealthBack", "HealthFill", "TracerOutline", "Tracer" } do
+        for _, Key in { "Name", "Distance", "HealthBack", "HealthFill" } do
             Set(Entity[Key], "Visible", false)
         end
     end
@@ -192,12 +189,6 @@ function DrawingESPPreview.Create(Info)
         SetLine(Entity.HealthBack, Vector2.new(HealthX, HealthBottom), Vector2.new(HealthX, HealthTop), Color3.fromRGB(5, 7, 10), 4, 0.92, State.HealthVisible == true)
         SetLine(Entity.HealthFill, Vector2.new(HealthX, HealthBottom), Vector2.new(HealthX, HealthFillTop), Color3.fromHSV(Health * 0.33, 0.82, 1), 2, 1, State.HealthVisible == true)
 
-        local ContentPosition = State.ContentPosition or Vector2.zero
-        local ContentSize = State.ContentSize or Vector2.zero
-        local TracerStart = Vector2.new(ContentPosition.X + ContentSize.X * 0.5, ContentPosition.Y + ContentSize.Y - 2)
-        local TracerEnd = Vector2.new(X + Width * 0.5, Y + Height)
-        SetLine(Entity.TracerOutline, TracerStart, TracerEnd, Color3.fromRGB(5, 7, 10), Renderer.TracerThickness + 2, 0.82, State.TracerVisible == true)
-        SetLine(Entity.Tracer, TracerStart, TracerEnd, ColorB, Renderer.TracerThickness, 1, State.TracerVisible == true)
     end
 
     function Renderer:RemoveEntity(Entity)
@@ -210,7 +201,7 @@ function DrawingESPPreview.Create(Info)
         for _, Object in Entity.BoxOutline do
             Remove(Object)
         end
-        for _, Key in { "Name", "Distance", "HealthBack", "HealthFill", "TracerOutline", "Tracer" } do
+        for _, Key in { "Name", "Distance", "HealthBack", "HealthFill" } do
             Remove(Entity[Key])
         end
         local Index = table.find(Renderer.Entities, Entity)

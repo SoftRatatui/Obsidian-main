@@ -127,6 +127,8 @@ local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
 local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
+local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
+local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
 local TracerPreview = LoadModule("addons/TracerPreview.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
@@ -195,6 +197,7 @@ local Tabs = {
 	Controls = Window:AddTab("Controls", "sliders-horizontal"),
 	Media = Window:AddTab("Media", "gallery-horizontal-end"),
 	Visuals = Window:AddTab("Visuals", "eye"),
+	Addons = Window:AddTab("Addons", "package-plus"),
 	Advanced = Window:AddTab("Advanced", "wand-sparkles"),
 	KeySystem = Window:AddKeyTab("Key System"),
 	Settings = Window:AddTab("UI Settings", "settings-2"),
@@ -437,6 +440,427 @@ MediaRight:AddUIPassthrough("CustomUI", {
 })
 
 
+local AddonGalleryGroup = Tabs.Addons:AddLeftGroupbox("Asset gallery", "layout-grid")
+local AddonImageGroup = Tabs.Addons:AddRightGroupbox("Image preview", "image")
+local AddonTracerGroup = Tabs.Addons:AddRightGroupbox("Tracer preview", "sparkles")
+
+local GalleryItems = {
+	{
+		Id = "aurora",
+		Name = "Aurora",
+		Category = "Rifles",
+		Subtitle = "Soft blue finish",
+		Image = "rbxasset://textures/particles/sparkles_main.dds",
+		Color = Color3.fromRGB(129, 181, 225),
+	},
+	{
+		Id = "ember",
+		Name = "Ember",
+		Category = "Rifles",
+		Subtitle = "Warm red finish",
+		Image = "rbxasset://textures/particles/fire_main.dds",
+		Color = Color3.fromRGB(231, 123, 100),
+	},
+	{
+		Id = "glacier",
+		Name = "Glacier",
+		Category = "Rifles",
+		Subtitle = "Cold white finish",
+		Image = "rbxasset://textures/particles/smoke_main.dds",
+		Color = Color3.fromRGB(192, 220, 236),
+	},
+	{
+		Id = "violet",
+		Name = "Violet",
+		Category = "Melee",
+		Subtitle = "Muted violet finish",
+		Image = "rbxasset://textures/particles/sparkles_main.dds",
+		Color = Color3.fromRGB(170, 142, 220),
+	},
+	{
+		Id = "mint",
+		Name = "Mint",
+		Category = "Melee",
+		Subtitle = "Fresh green finish",
+		Image = "rbxasset://textures/particles/smoke_main.dds",
+		Color = Color3.fromRGB(124, 207, 171),
+	},
+	{
+		Id = "solar",
+		Name = "Solar",
+		Category = "Melee",
+		Subtitle = "Soft gold finish",
+		Image = "rbxasset://textures/particles/fire_main.dds",
+		Color = Color3.fromRGB(235, 195, 105),
+	},
+	{
+		Id = "ash",
+		Name = "Ash",
+		Category = "Utility",
+		Subtitle = "Neutral gray finish",
+		Image = "rbxasset://textures/particles/smoke_main.dds",
+		Color = Color3.fromRGB(166, 172, 182),
+	},
+	{
+		Id = "ocean",
+		Name = "Ocean",
+		Category = "Utility",
+		Subtitle = "Deep blue finish",
+		Image = "rbxasset://textures/particles/sparkles_main.dds",
+		Color = Color3.fromRGB(91, 148, 207),
+	},
+	{
+		Id = "rose",
+		Name = "Rose",
+		Category = "Utility",
+		Subtitle = "Quiet pink finish",
+		Image = "rbxasset://textures/particles/fire_main.dds",
+		Color = Color3.fromRGB(218, 132, 167),
+	},
+}
+
+local AddonImagePreview
+if ImagePreview then
+	local Created, Result = pcall(ImagePreview.CreateEmbedded, Library, AddonImageGroup, "AddonImagePreview", {
+		Height = 220,
+		ScaleType = "Fit",
+		Title = "Select an asset",
+		Subtitle = "Gallery selection appears here",
+		Motion = true,
+	})
+	if Created then
+		AddonImagePreview = Result
+	else
+		warn("[MonHub Example] ImagePreview disabled: " .. tostring(Result))
+	end
+end
+
+local AddonGallery
+if ImageGallery then
+	local Created, Result = pcall(ImageGallery.CreateEmbedded, Library, AddonGalleryGroup, "AddonImageGallery", {
+		Height = 330,
+		Columns = 3,
+		PageSize = 9,
+		CellHeight = 78,
+		ScaleType = "Fit",
+		Preview = AddonImagePreview,
+		Items = GalleryItems,
+		OnSelected = function(Item)
+			if Item then
+				Notify("Gallery selection", Item.Name)
+			end
+		end,
+	})
+	if Created then
+		AddonGallery = Result
+		AddonGallery:Select("aurora", true)
+	else
+		warn("[MonHub Example] ImageGallery disabled: " .. tostring(Result))
+	end
+end
+
+AddonGalleryGroup:AddInput("AddonGallerySearch", {
+	Text = "Gallery search",
+	Default = "",
+	ClearTextOnFocus = false,
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetSearch(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddDropdown("AddonGalleryCategory", {
+	Text = "Gallery category",
+	Values = { "All", "Rifles", "Melee", "Utility" },
+	Default = "All",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetCategory(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddDropdown("AddonGalleryColumns", {
+	Text = "Gallery columns",
+	Values = { "1", "2", "3", "4", "5" },
+	Default = "3",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetColumns(tonumber(Value))
+		end
+	end,
+})
+
+AddonGalleryGroup:AddToggle("AddonGalleryVisible", {
+	Text = "Gallery visible",
+	Default = true,
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetVisible(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryHeight", {
+	Text = "Gallery height",
+	Default = 330,
+	Min = 220,
+	Max = 500,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetHeight(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddButton("Previous gallery page", function()
+	if AddonGallery then
+		AddonGallery:PreviousPage()
+	end
+end)
+
+AddonGalleryGroup:AddButton("Next gallery page", function()
+	if AddonGallery then
+		AddonGallery:NextPage()
+	end
+end)
+
+local AddedGalleryItems = 0
+AddonGalleryGroup:AddButton("Add gallery item", function()
+	if not AddonGallery then
+		return
+	end
+	AddedGalleryItems += 1
+	AddonGallery:AddItem({
+		Id = "custom-" .. tostring(AddedGalleryItems),
+		Name = "Custom " .. tostring(AddedGalleryItems),
+		Category = "Utility",
+		Subtitle = "Added at runtime",
+		Image = "rbxasset://textures/particles/sparkles_main.dds",
+		Color = Color3.fromHSV((AddedGalleryItems * 0.13) % 1, 0.42, 1),
+	})
+end)
+
+AddonGalleryGroup:AddButton("Remove selected item", function()
+	if not AddonGallery then
+		return
+	end
+	local _, Item = AddonGallery:GetSelected()
+	if Item then
+		AddonGallery:RemoveItem(Item.Id)
+	end
+end)
+
+AddonGalleryGroup:AddButton("Reset gallery items", function()
+	if AddonGallery then
+		AddonGallery:SetItems(GalleryItems)
+		AddonGallery:Select("aurora", true)
+	end
+end)
+
+AddonGalleryGroup:AddButton("Select first gallery item", function()
+	if AddonGallery then
+		AddonGallery:Select("aurora")
+	end
+end)
+
+AddonImageGroup:AddDropdown("AddonImageScaleType", {
+	Text = "Preview scale type",
+	Values = { "Fit", "Crop", "Stretch" },
+	Default = "Fit",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetScaleType(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddToggle("AddonImageMotion", {
+	Text = "Preview motion",
+	Default = true,
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetMotion(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageTransparency", {
+	Text = "Image transparency",
+	Default = 0,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetImageTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageHeight", {
+	Text = "Preview height",
+	Default = 220,
+	Min = 140,
+	Max = 360,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetHeight(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddToggle("AddonImageVisible", {
+	Text = "Image preview visible",
+	Default = true,
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetVisible(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddButton("Clear image preview", function()
+	if AddonImagePreview then
+		AddonImagePreview:SetImage("")
+		AddonImagePreview:SetTitle("Select an asset")
+		AddonImagePreview:SetSubtitle("")
+	end
+end)
+
+local AddonTracer
+if TracerPreview then
+	local Created, Result = pcall(TracerPreview.CreateEmbedded, Library, AddonTracerGroup, "AddonTracerPreview", {
+		Name = "Tracer preview",
+		AssetId = "rbxasset://textures/particles/sparkles_main.dds",
+		Height = 92,
+		ColorA = Color3.fromRGB(255, 213, 58),
+		ColorB = Color3.fromRGB(255, 246, 166),
+		Glow = 0.82,
+		Speed = 1.25,
+	})
+	if Created then
+		AddonTracer = Result
+	else
+		warn("[MonHub Example] TracerPreview disabled: " .. tostring(Result))
+	end
+end
+
+AddonTracerGroup:AddInput("AddonTracerAsset", {
+	Text = "Tracer asset ID",
+	Default = "rbxasset://textures/particles/sparkles_main.dds",
+	ClearTextOnFocus = false,
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetAssetId(Value)
+		end
+	end,
+})
+
+AddonTracerGroup:AddInput("AddonTracerName", {
+	Text = "Tracer name",
+	Default = "Tracer preview",
+	ClearTextOnFocus = false,
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetName(Value)
+		end
+	end,
+})
+
+AddonTracerGroup:AddToggle("AddonTracerEnabled", {
+	Text = "Tracer enabled",
+	Default = true,
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetEnabled(Value)
+		end
+	end,
+})
+
+AddonTracerGroup:AddToggle("AddonTracerVisible", {
+	Text = "Tracer visible",
+	Default = true,
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetVisible(Value)
+		end
+	end,
+})
+
+AddonTracerGroup:AddSlider("AddonTracerGlow", {
+	Text = "Tracer glow",
+	Default = 82,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetGlow(Value / 100)
+		end
+	end,
+})
+
+AddonTracerGroup:AddSlider("AddonTracerSpeed", {
+	Text = "Tracer speed",
+	Default = 125,
+	Min = 0,
+	Max = 400,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetSpeed(Value / 100)
+		end
+	end,
+})
+
+AddonTracerGroup:AddSlider("AddonTracerHeight", {
+	Text = "Tracer height",
+	Default = 92,
+	Min = 56,
+	Max = 180,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonTracer then
+			AddonTracer:SetHeight(Value)
+		end
+	end,
+})
+
+local AddonTracerColorA = Color3.fromRGB(255, 213, 58)
+local AddonTracerColorB = Color3.fromRGB(255, 246, 166)
+local AddonTracerColors = AddonTracerGroup:AddLabel("Tracer colors")
+AddonTracerColors:AddColorPicker("AddonTracerColorA", {
+	Title = "Tracer start",
+	Default = AddonTracerColorA,
+	Callback = function(Value)
+		AddonTracerColorA = Value
+		if AddonTracer then
+			AddonTracer:SetColors(AddonTracerColorA, AddonTracerColorB)
+		end
+	end,
+})
+AddonTracerColors:AddColorPicker("AddonTracerColorB", {
+	Title = "Tracer end",
+	Default = AddonTracerColorB,
+	Callback = function(Value)
+		AddonTracerColorB = Value
+		if AddonTracer then
+			AddonTracer:SetColors(AddonTracerColorA, AddonTracerColorB)
+		end
+	end,
+})
+
+
 local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
 local VisualPreviewBox = Tabs.Visuals:AddRightGroupbox("Live previews", "scan-eye")
 VisualControls:AddLabel("The preview uses the same renderer contract that can draw live player ESP.", true)
@@ -470,87 +894,6 @@ if VisualPreview then
     end
 end
 
-local TracerLook
-if TracerPreview then
-    local Created, PreviewOrError = pcall(TracerPreview.CreateEmbedded, Library, VisualPreviewBox, "EmbeddedTracerPreview", {
-        Name = "asset tracer",
-        AssetId = "rbxasset://textures/particles/sparkles_main.dds",
-        Height = 92,
-        ColorA = Color3.fromRGB(255, 213, 58),
-        ColorB = Color3.fromRGB(255, 246, 166),
-        Glow = 0.82,
-        Speed = 1.25,
-    })
-    if Created then
-        TracerLook = PreviewOrError
-    else
-        warn("[MonHub Example] TracerPreview disabled: " .. tostring(PreviewOrError))
-    end
-end
-
-VisualControls:AddInput("TracerAssetId", {
-	Text = "Tracer asset ID",
-	Default = "rbxasset://textures/particles/sparkles_main.dds",
-	ClearTextOnFocus = false,
-	Callback = function(Value)
-		if TracerLook then
-			TracerLook:SetAssetId(Value)
-		end
-	end,
-})
-
-VisualControls:AddSlider("TracerGlow", {
-	Text = "Tracer glow",
-	Default = 82,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if TracerLook then
-			TracerLook:SetGlow(Value / 100)
-		end
-	end,
-})
-
-VisualControls:AddSlider("TracerMotion", {
-	Text = "Tracer motion",
-	Default = 125,
-	Min = 0,
-	Max = 400,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if TracerLook then
-			TracerLook:SetSpeed(Value / 100)
-		end
-	end,
-})
-
-local TracerColors = VisualControls:AddLabel("Tracer colors")
-local TracerColorA = Color3.fromRGB(255, 213, 58)
-local TracerColorB = Color3.fromRGB(255, 246, 166)
-TracerColors:AddColorPicker("TracerColorA", {
-	Title = "Tracer start",
-	Default = TracerColorA,
-	Callback = function(Value)
-		TracerColorA = Value
-		if TracerLook then
-			TracerLook:SetColors(TracerColorA, TracerColorB)
-		end
-	end,
-})
-TracerColors:AddColorPicker("TracerColorB", {
-	Title = "Tracer end",
-	Default = TracerColorB,
-	Callback = function(Value)
-		TracerColorB = Value
-		if TracerLook then
-			TracerLook:SetColors(TracerColorA, TracerColorB)
-		end
-	end,
-})
-
 local ESPEnabled = VisualControls:AddToggle("ESPEnabled", {
 	Text = "Enable ESP preview",
 	Default = false,
@@ -561,12 +904,35 @@ local ESPEnabled = VisualControls:AddToggle("ESPEnabled", {
 	end,
 })
 
+local ESPPreviewColor = Color3.fromRGB(119, 166, 209)
+local ESPPreviewGradientColor = Color3.fromRGB(202, 220, 239)
 ESPEnabled:AddColorPicker("ESPPreviewColor", {
 	Title = "ESP color",
-	Default = Color3.fromRGB(119, 166, 209),
+	Default = ESPPreviewColor,
 	Callback = function(Value)
+		ESPPreviewColor = Value
 		if ESPPreview then
 			ESPPreview:SetColor(Value)
+		end
+	end,
+})
+ESPEnabled:AddColorPicker("ESPPreviewGradientColor", {
+	Title = "ESP gradient color",
+	Default = ESPPreviewGradientColor,
+	Callback = function(Value)
+		ESPPreviewGradientColor = Value
+		if ESPPreview then
+			ESPPreview:SetGradientColor(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPGradient", {
+	Text = "Gradient box",
+	Default = true,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetGradientEnabled(Value)
 		end
 	end,
 })
@@ -601,6 +967,26 @@ VisualControls:AddToggle("ESPDistance", {
 	end,
 })
 
+VisualControls:AddToggle("ESPTeam", {
+	Text = "Team",
+	Default = false,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetTeamVisible(Value)
+		end
+	end,
+})
+
+VisualControls:AddToggle("ESPWeapon", {
+	Text = "Weapon",
+	Default = false,
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetWeaponVisible(Value)
+		end
+	end,
+})
+
 VisualControls:AddSlider("ESPPreviewDistance", {
 	Text = "Preview distance",
 	Default = 86,
@@ -625,35 +1011,125 @@ VisualControls:AddToggle("ESPHealth", {
 	end,
 })
 
-VisualControls:AddToggle("ESPTracer", {
-	Text = "Tracer",
-	Default = false,
+VisualControls:AddToggle("ESPDynamicBoxes", {
+	Text = "Dynamic boxes",
+	Default = true,
 	Callback = function(Value)
 		if ESPPreview then
-			ESPPreview:SetTracerVisible(Value)
+			ESPPreview:SetDynamicBoxes(Value)
 		end
 	end,
 })
 
-VisualControls:AddToggle("ESPHighlight", {
+VisualControls:AddSlider("ESPBoxScale", {
+	Text = "Box scale",
+	Default = 92,
+	Min = 70,
+	Max = 115,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetBoxScale(Value)
+		end
+	end,
+})
+
+VisualControls:AddSlider("ESPPreviewZoom", {
+	Text = "Preview zoom",
+	Default = 190,
+	Min = 120,
+	Max = 320,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if ESPPreview then
+			ESPPreview:SetZoom(Value / 100)
+		end
+	end,
+})
+
+local ESPChamsFill = Color3.fromRGB(119, 166, 209)
+local ESPChamsOutline = Color3.fromRGB(235, 241, 248)
+local ESPChamsTransparency = 25
+local ESPHighlightToggle = VisualControls:AddToggle("ESPHighlight", {
 	Text = "Highlight",
 	Default = false,
 	Callback = function(Value)
 		if ESPPreview then
-			ESPPreview:SetHighlightVisible(Value)
+			ESPPreview:SetChams(Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
 		end
 	end,
 })
+ESPHighlightToggle:AddColorPicker("ESPChamsFill", {
+	Title = "Highlight fill",
+	Default = ESPChamsFill,
+	Callback = function(Value)
+		ESPChamsFill = Value
+		if ESPPreview then
+			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
+		end
+	end,
+})
+ESPHighlightToggle:AddColorPicker("ESPChamsOutline", {
+	Title = "Highlight outline",
+	Default = ESPChamsOutline,
+	Callback = function(Value)
+		ESPChamsOutline = Value
+		if ESPPreview then
+			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
+		end
+	end,
+})
+
+VisualControls:AddSlider("ESPChamsTransparency", {
+	Text = "Highlight transparency",
+	Default = ESPChamsTransparency,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		ESPChamsTransparency = Value
+		if ESPPreview then
+			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
+		end
+	end,
+})
+
+VisualControls:AddButton("Rotate preview left", function()
+	if ESPPreview then
+		ESPPreview:Rotate(-24, 0)
+	end
+end)
+
+VisualControls:AddButton("Rotate preview right", function()
+	if ESPPreview then
+		ESPPreview:Rotate(24, 0)
+	end
+end)
+
+VisualControls:AddButton("Reset preview camera", function()
+	if ESPPreview then
+		ESPPreview:ResetView()
+	end
+end)
 
 if ESPPreview then
 	ESPPreview:SetEnabled(ESPEnabled.Value)
 	ESPPreview:SetBoxVisible(Toggles.ESPBox.Value)
 	ESPPreview:SetNameVisible(Toggles.ESPName.Value)
 	ESPPreview:SetDistanceVisible(Toggles.ESPDistance.Value)
+	ESPPreview:SetTeamVisible(Toggles.ESPTeam.Value)
+	ESPPreview:SetWeaponVisible(Toggles.ESPWeapon.Value)
 	ESPPreview:SetDistance(Options.ESPPreviewDistance.Value)
 	ESPPreview:SetHealthVisible(Toggles.ESPHealth.Value)
-	ESPPreview:SetTracerVisible(Toggles.ESPTracer.Value)
-	ESPPreview:SetHighlightVisible(Toggles.ESPHighlight.Value)
+	ESPPreview:SetDynamicBoxes(Toggles.ESPDynamicBoxes.Value)
+	ESPPreview:SetBoxScale(Options.ESPBoxScale.Value)
+	ESPPreview:SetZoom(Options.ESPPreviewZoom.Value / 100)
+	ESPPreview:SetGradientEnabled(Toggles.ESPGradient.Value)
+	ESPPreview:SetGradientColor(ESPPreviewGradientColor)
+	ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
 end
 
 
@@ -1075,6 +1551,19 @@ return {
 	ThemeManager = ThemeManager,
 	ESPPreview = ESPPreview,
 	ESPRenderer = SharedESPRenderer,
-	TracerPreview = TracerLook,
+	AddonModules = {
+		ImageGallery = ImageGallery,
+		ImagePreview = ImagePreview,
+		TracerPreview = TracerPreview,
+		VisualPreview = VisualPreview,
+		DrawingESPPreview = DrawingESPPreview,
+		SaveManager = SaveManager,
+		ThemeManager = ThemeManager,
+	},
+	AddonExamples = {
+		ImageGallery = AddonGallery,
+		ImagePreview = AddonImagePreview,
+		TracerPreview = AddonTracer,
+	},
 	Repository = ActiveRepository,
 }

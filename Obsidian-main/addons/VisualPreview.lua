@@ -14,6 +14,24 @@ local function IsClass(Object, ClassName)
     return Success and Result
 end
 
+local function RemoveRegistryTree(Library, Root)
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or not IsClass(Root, "GuiObject") then
+        return
+    end
+    local Owned = {}
+    for Object in Library.Registry do
+        local Success, Matches = pcall(function()
+            return Object == Root or Object:IsDescendantOf(Root)
+        end)
+        if Success and Matches then
+            table.insert(Owned, Object)
+        end
+    end
+    for _, Object in Owned do
+        Library:RemoveFromRegistry(Object)
+    end
+end
+
 local function SetVisible(Object, Visible)
     if IsClass(Object, "GuiObject") then
         pcall(function()
@@ -227,23 +245,6 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer)
     Health.ZIndex = BaseZIndex + 3
     Health.Parent = HealthBack
 
-    local Tracer = Instance.new("Frame")
-    Tracer.AnchorPoint = Vector2.new(0.5, 1)
-    Tracer.BackgroundColor3 = AccentColor
-    Tracer.BorderSizePixel = 0
-    Tracer.Position = UDim2.new(0.5, 0, 0.98, 0)
-    Tracer.Size = UDim2.new(0, 1, 0.28, 0)
-    Tracer.ZIndex = BaseZIndex + 2
-    Tracer.Parent = Overlay
-
-    local TracerGradient = Instance.new("UIGradient")
-    TracerGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.35, 0.34),
-        NumberSequenceKeypoint.new(1, 0.12),
-    })
-    TracerGradient.Parent = Tracer
-
     return {
         Overlay = Overlay,
         Box = Box,
@@ -253,7 +254,6 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer)
         InfoBottom = InfoBottom,
         HealthBack = HealthBack,
         HealthFill = Health,
-        Tracer = Tracer,
     }
 end
 
@@ -403,7 +403,6 @@ function VisualPreview.Create(Library, Tab, Info)
         GradientEnabled = Info.Gradient == true,
         BoxVisible = Info.Box ~= false,
         HealthVisible = Info.Health ~= false,
-        TracerVisible = Info.Tracer == true,
         Health = 1,
         Bounds = nil,
         Enabled = false,
@@ -932,7 +931,6 @@ function VisualPreview.Create(Library, Tab, Info)
             TeamVisible = Preview.TeamVisible,
             WeaponVisible = Preview.WeaponVisible,
             HealthVisible = Preview.HealthVisible,
-            TracerVisible = Preview.TracerVisible,
             HighlightVisible = Preview.ChamsEnabled,
             Name = Preview.TargetName,
             Team = Preview.TeamName,
@@ -1212,11 +1210,6 @@ function VisualPreview.Create(Library, Tab, Info)
             end)
         end
         ApplyGradientColor()
-        if IsClass(Overlay.Tracer, "GuiObject") then
-            pcall(function()
-                Overlay.Tracer.BackgroundColor3 = Color
-            end)
-        end
         UpdateRenderer()
     end
 
@@ -1390,14 +1383,10 @@ function VisualPreview.Create(Library, Tab, Info)
         UpdateRenderer()
     end
 
-    function Preview:SetTracerVisible(Visible)
+    function Preview:SetTracerVisible(_Visible)
         if Preview.Destroyed then
             return
         end
-
-        Preview.TracerVisible = Visible == true
-        SetVisible(Overlay.Tracer, Preview.TracerVisible)
-        UpdateRenderer()
     end
 
     function Preview:SetHealthVisible(Visible)
@@ -1467,6 +1456,9 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.Destroyed = true
+        if type(Library.CancelTween) == "function" then
+            Library:CancelTween(AnimationScale, "VisualPreviewVisibility")
+        end
         if RendererAdapter then
             local Callback = RendererAdapter.DetachPreview or RendererAdapter.DestroyPreview
             if type(Callback) == "function" then
@@ -1505,6 +1497,7 @@ function VisualPreview.Create(Library, Tab, Info)
         end
         Preview.Target = nil
         Preview.SourceCharacter = nil
+        RemoveRegistryTree(Library, Holder)
         if Preview.EmbeddedElement then
             pcall(function()
                 Preview.EmbeddedElement:Destroy()
@@ -1538,7 +1531,6 @@ function VisualPreview.Create(Library, Tab, Info)
     Preview:SetDistanceVisible(Preview.DistanceVisible)
     Preview:SetTeamVisible(Preview.TeamVisible)
     Preview:SetWeaponVisible(Preview.WeaponVisible)
-    Preview:SetTracerVisible(Info.Tracer == true)
     Preview:SetHealthVisible(Info.Health ~= false)
     Preview:SetChams(Info.Highlight == true, Info.ChamsFillColor, Info.ChamsOutlineColor, Info.ChamsFillTransparency, Info.ChamsOutlineTransparency)
     Preview:SetGradientColor(Preview.GradientColor)

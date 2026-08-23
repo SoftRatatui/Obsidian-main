@@ -4,17 +4,21 @@
 [visual modules]
 + Added embedded, direct-parent, and fixed-panel mounting modes to the real-character VisualPreview addon
 + Added a renderer adapter contract so the same live ESP backend can render the preview clone without a separate fake overlay
-+ Added DrawingESPPreview with one reusable entity path for boxes, two-tone edges, names, distance, weapons, health bars, and tracers
-+ Added TracerPreview with asset-ID input, two-color gradient, glow, speed, direct mounting, and groupbox embedding
-+ Added ready-to-run embedded ESP and tracer controls to Example.lua
++ Added DrawingESPPreview with one reusable entity path for boxes, two-tone edges, names, distance, weapons, and health bars
++ Added opt-in ImageGallery with pooled pagination, category cycling, debounced search, selection binding, and asset-ID normalization
++ Added opt-in ImagePreview with full-size images, recycled crossfade layers, short zoom motion, direct mounting, and groupbox embedding
++ Restored TracerPreview as an independent opt-in addon that is never loaded by the core library
++ Expanded Example.lua into a complete interactive showcase for every addon and its primary runtime setters
++ Removed tracer rendering from the main ESP preview while retaining a harmless compatibility setter for older integrations
 
 [performance]
 + Kept the Drawing backend allocation-stable by creating objects once per entity and mutating them in place
-+ Kept tracer motion off RenderStepped by animating existing UIGradient offsets with managed tweens
++ Limited image gallery allocation to one reusable page and kept both image addons free of frame loops
 + Preserved the built-in GUI fallback when Drawing is unavailable
++ Added explicit tween cancellation, connection cleanup, and registry removal for manually destroyed visual addons
 
 [documentation]
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract and both preview mounting modes
++ Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract, optional gallery, and animated 2D preview
 ```
 
 ## 22.08.2026

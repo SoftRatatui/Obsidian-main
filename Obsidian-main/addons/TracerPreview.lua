@@ -22,6 +22,24 @@ local function AddRegistry(Library, Object, Properties)
     end
 end
 
+local function RemoveRegistryTree(Library, Root)
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
+        return
+    end
+    local Owned = {}
+    for Object in Library.Registry do
+        local Success, Matches = pcall(function()
+            return Object == Root or Object:IsDescendantOf(Root)
+        end)
+        if Success and Matches then
+            table.insert(Owned, Object)
+        end
+    end
+    for _, Object in Owned do
+        Library:RemoveFromRegistry(Object)
+    end
+end
+
 function TracerPreview.Create(Library, Info)
     Info = Info or {}
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 92), 56, 260)
@@ -170,14 +188,14 @@ function TracerPreview.Create(Library, Info)
 
     local function StartTweens()
         StopTweens()
-        if not Preview.Enabled or Preview.Speed <= 0 then
+        if not Preview.Enabled or not Preview.Visible or Preview.Speed <= 0 then
             return
         end
         for _, Layer in Preview.Layers do
             Layer.Gradient.Offset = Vector2.new(-0.24, 0)
             Layer.Tween = TweenService:Create(
                 Layer.Gradient,
-                TweenInfo.new(math.max(0.12, 2 / Preview.Speed), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+                TweenInfo.new(math.max(0.12, 2 / Preview.Speed), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true),
                 { Offset = Vector2.new(0.24, 0) }
             )
             Layer.Tween:Play()
@@ -267,6 +285,7 @@ function TracerPreview.Create(Library, Info)
         if Preview.Element then
             Preview.Element:SetVisible(Preview.Visible)
         end
+        StartTweens()
     end
 
     function Preview:Mount(Parent)
@@ -283,6 +302,7 @@ function TracerPreview.Create(Library, Info)
         end
         Preview.Destroyed = true
         StopTweens()
+        RemoveRegistryTree(Library, Root)
         if Preview.Element then
             Preview.Element:Destroy()
             Preview.Element = nil

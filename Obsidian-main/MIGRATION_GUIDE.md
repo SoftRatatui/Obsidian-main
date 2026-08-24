@@ -13,9 +13,6 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [Raw Library.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua)
 - [Complete Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua)
 - [Raw Example.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Example.lua)
-- [Experimental.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Experimental.lua)
-- [ExperimentalLibrary.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/ExperimentalLibrary.lua)
-- [ExperimentalExample.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/ExperimentalExample.lua)
 - [QuickStart.luau](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/QuickStart.luau)
 - [ThemeManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ThemeManager.lua)
 - [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
@@ -27,6 +24,7 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [CharacterTrail.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/CharacterTrail.lua)
 - [TextureGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TextureGallery.lua)
 - [FixedR6Preview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/FixedR6Preview.lua)
+- [DashboardWindow.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DashboardWindow.lua)
 - [Inter-Bold.ttf](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/assets/Inter-Bold.ttf)
 - [Legacy TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
 - [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
@@ -400,19 +398,14 @@ The release contains exactly these six built-ins. Legacy preset names resolve sa
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 
-Gotham Regular is the zero-download fallback because it remains clear at small UI sizes without making dense settings pages look overly heavy. The release repository packages Inter Bold for projects that want the showcase typography:
+Inter Bold is now loaded automatically before the first window is created and becomes the shared font for the core UI and every theme-aware addon:
 
 ```luau
-local InterBoldFont = Library:LoadCustomFont(
-    "MonHubInterBold",
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Bold.ttf?monhub=0.0.1-release-6",
-    700
-)
-
-Library:SetThemeFont(InterBoldFont or Enum.Font.Gotham)
+local ActiveFont = Library.DefaultFont
+local FontError = Library.DefaultFontError
 ```
 
-Load and set the custom font before `CreateWindow`. The font override remains active through theme changes. Numeric weights from `100` through `900` resolve to the matching `Enum.FontWeight` when the executor supports custom assets.
+The TTF is validated and cached in `MonHub/assets`. The font override remains active through theme changes. Executors without the required filesystem or custom-asset APIs receive Gotham automatically, so no project-side font loader is required.
 
 ## Click sound
 
@@ -567,34 +560,64 @@ Use `SetColors`, `SetTransparency`, `SetWidthScale`, `SetAttachmentWidth`, `SetV
 
 The old `TracerPreview.lua` remains available only for compatibility with scripts that intentionally need a decorative menu image. It is not used by the current `Example.lua` and must not be treated as an in-world effect.
 
-## Experimental entry point
+## Focused visual and dashboard addons
 
-Use `Experimental.lua` when testing the next layout without editing the production library. It loads the complete `ExperimentalLibrary.lua` copy, then attaches the optional `CharacterTrail`, `TextureGallery`, `VisualPreview`, `DrawingESPPreview`, and `FixedR6Preview` modules. Local files are preferred when file APIs are available; otherwise each file is loaded from the matching versioned repository path.
-
-The experimental window defaults to a fixed 68px icon-only rail, 46px navigation buttons, 22px centered icons, hidden navigation labels, wider content, and refined 40px module headers. The copy preserves the production API, so an existing page can be tested by changing only its loader. Keep release scripts on `Library.lua` until the experimental layout is accepted.
+These modules remain standalone and are loaded only by projects that need them:
 
 ```luau
-local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
+local TextureGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6"
 ))()
-
-local CharacterTrail = Library.Experimental.CharacterTrail
-local TextureGallery = Library.Experimental.TextureGallery
+local DashboardWindow = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6"
+))()
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+))()
+local FixedR6Preview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-6"
+))()
 ```
 
-Run `ExperimentalExample.lua` for the complete icon-rail, trail-texture, native Trail, and fixed R6 showcase. Move accepted core changes into `Library.lua` deliberately; standalone visual modules can remain optional addons.
+Use `DashboardWindow` for information or actions that must remain independent from the main tab layout. A string creates static text, a function creates automatically refreshed text, `Type = "Metric"` creates a named dynamic value, `Type = "Button"` runs a callback, and `Type = "Custom"` mounts a supplied `GuiObject`. The addon uses one scheduler for all providers and stops it while hidden.
 
-The experimental copy contains every production `Library` method. Its loader also exposes `CreateCharacterTrail`, `CreateTextureGallery`, `CreateFixedR6Preview`, `CreateVisualPreview`, `CreateEmbeddedVisualPreview`, and `CreateDrawingESPPreview`. Each remote source is validated before execution, and a failed request identifies the exact file instead of producing an anonymous line-one parser error.
+```luau
+local Dashboard = DashboardWindow.Create(Library, {
+    Title = "Runtime",
+    Position = "Right",
+    Draggable = true,
+})
+
+local Status = Dashboard:AddSection("Status")
+Status:Add("Loaded")
+Status:Add({
+    Type = "Metric",
+    Label = "Player",
+    Value = function()
+        return game:GetService("Players").LocalPlayer.DisplayName
+    end,
+})
+Status:Add({
+    Type = "Button",
+    Text = "Refresh",
+    Callback = function()
+        Dashboard:Refresh()
+    end,
+})
+```
 
 The texture selector is intentionally smaller than the general image gallery. It creates no search box, category control, pagination state, or frame loop:
 
 ```luau
 local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
 
-local Gallery = Library:CreateTextureGallery(TextureGroup, "TrailTextures", {
+local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextures", {
     Height = 302,
     Columns = 2,
-    Items = Library.Experimental.TextureGallery.DefaultItems,
+    Items = TextureGallery.DefaultItems,
     Selected = "beam",
     OnSelected = function(Item)
         TrailController:SetTexture(Item.Texture)
@@ -606,7 +629,7 @@ local Gallery = Library:CreateTextureGallery(TextureGroup, "TrailTextures", {
 The fixed preview creates an actual R6 from the current player's applied appearance. Its built-in renderer is suitable for UI testing; pass the renderer adapter used by the real ESP through `Renderer` when the preview must follow the exact production drawing path.
 
 ```luau
-local Preview = Library:CreateFixedR6Preview(Tabs.Visuals, {
+local Preview = FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tabs.Visuals, {
     Target = game:GetService("Players").LocalPlayer,
     Renderer = LiveESPRenderer,
     Side = "Right",
@@ -984,7 +1007,7 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 - [ ] Search has no visible delay.
 - [ ] Unload cleans up UI and external connections.
 - [ ] `CharacterTrail:Destroy()` runs on unload when the addon is enabled.
-- [ ] Experimental layout tests load `ExperimentalLibrary.lua`; production loaders still use `Library.lua`.
+- [ ] A separate dashboard closes, reopens, clamps to the viewport, and is destroyed on unload.
 - [ ] The texture gallery and fixed R6 preview are loaded only on pages that use them.
 - [ ] The script is tested on desktop and mobile.
 

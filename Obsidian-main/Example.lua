@@ -130,6 +130,7 @@ local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, Acti
 local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
 local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
+local DashboardWindow = LoadModule("addons/DashboardWindow.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -138,17 +139,6 @@ local Toggles = Library.Toggles
 
 Library.ForceCheckbox = true
 Library.ShowToggleFrameInKeybinds = true
-
-local InterBoldFont, InterBoldError = Library:LoadCustomFont(
-	"MonHubInterBold",
-	ActiveRepository .. "assets/Inter-Bold.ttf?monhub=" .. RELEASE_VERSION,
-	700
-)
-if InterBoldFont then
-	Library:SetThemeFont(InterBoldFont)
-else
-	warn("[MonHub Example] Inter Bold unavailable: " .. tostring(InterBoldError))
-end
 
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -165,7 +155,7 @@ local Window = Library:CreateWindow({
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
-	Font = InterBoldFont or Enum.Font.Gotham,
+	Font = Library.Scheme.Font,
 	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
@@ -408,7 +398,7 @@ local CardText = Instance.new("TextLabel")
 CardText.BackgroundTransparency = 1
 CardText.Position = UDim2.fromOffset(12, 8)
 CardText.Size = UDim2.new(1, -24, 1, -16)
-CardText.Font = Enum.Font.Gotham
+CardText.FontFace = Library.Scheme.Font
 CardText.Text = "Custom GuiBase2d embedded through UIPassthrough"
 CardText.TextColor3 = Library.Scheme.FontColor
 CardText.TextSize = 14
@@ -424,6 +414,7 @@ Library:AddToRegistry(CardStroke, {
 	Color = "OutlineColor",
 })
 Library:AddToRegistry(CardText, {
+	FontFace = "Font",
 	TextColor3 = "FontColor",
 })
 
@@ -453,6 +444,50 @@ MediaRight:AddUIPassthrough("CustomUI", {
 local AddonGalleryGroup = Tabs.Addons:AddLeftGroupbox("Asset gallery", "layout-grid")
 local AddonImageGroup = Tabs.Addons:AddRightGroupbox("Image preview", "image")
 local CharacterTrailGroup = Tabs.Addons:AddRightGroupbox("Character trail", "sparkles")
+local DashboardGroup = Tabs.Addons:AddLeftGroupbox("Dashboard window", "layout-dashboard")
+
+local Dashboard = DashboardWindow.Create(Library, {
+	Title = "MonHub dashboard",
+	Icon = "layout-dashboard",
+	Width = 316,
+	Height = 330,
+	Position = "Right",
+	Visible = false,
+	Draggable = true,
+})
+
+local DashboardRuntime = Dashboard:AddSection("Runtime")
+DashboardRuntime:AddText("A separate window for compact script information and actions.")
+DashboardRuntime:AddMetric({
+	Label = "Player",
+	Value = function()
+		return Library.LocalPlayer.DisplayName
+	end,
+	Interval = 1,
+})
+DashboardRuntime:AddMetric({
+	Label = "Menu",
+	Value = function()
+		return Library.Toggled and "Open" or "Hidden"
+	end,
+	Interval = 0.2,
+})
+
+local DashboardActions = Dashboard:AddSection("Actions")
+DashboardActions:AddButton({
+	Text = "Show notification",
+	Callback = function()
+		Notify("Dashboard", "The standalone dashboard action is working.", 3)
+	end,
+})
+
+DashboardGroup:AddLabel("A draggable opt-in window for text, values, actions, and custom GUI content.", true)
+DashboardGroup:AddButton("Toggle dashboard", function()
+	Dashboard:Toggle()
+end)
+DashboardGroup:AddButton("Refresh dashboard", function()
+	Dashboard:Refresh()
+end)
 
 local GalleryItems = {
 	{
@@ -1786,6 +1821,7 @@ return {
 		ImageGallery = ImageGallery,
 		ImagePreview = ImagePreview,
 		CharacterTrail = CharacterTrail,
+		DashboardWindow = DashboardWindow,
 		VisualPreview = VisualPreview,
 		DrawingESPPreview = DrawingESPPreview,
 		SaveManager = SaveManager,
@@ -1795,6 +1831,7 @@ return {
 		ImageGallery = AddonGallery,
 		ImagePreview = AddonImagePreview,
 		CharacterTrail = TrailController,
+		DashboardWindow = Dashboard,
 	},
 	Repository = ActiveRepository,
 }

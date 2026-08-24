@@ -142,11 +142,11 @@ local function FocusCamera(Object, Camera, Yaw, Pitch, Zoom)
     end)
 end
 
-local function CreateText(Parent, Position, Size, ZIndex)
+local function CreateText(Parent, Position, Size, ZIndex, FontFace)
     local Label = Instance.new("TextLabel")
     Label.AnchorPoint = Vector2.new(0.5, 0.5)
     Label.BackgroundTransparency = 1
-    Label.FontFace = Font.fromEnum(Enum.Font.Gotham)
+    Label.FontFace = FontFace
     Label.Position = Position
     Label.Size = Size
     Label.TextColor3 = Color3.fromRGB(245, 247, 250)
@@ -159,7 +159,7 @@ local function CreateText(Parent, Position, Size, ZIndex)
     return Label
 end
 
-local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer)
+local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer, FontFace)
     if type(Renderer) == "function" then
         local Success, Result = pcall(Renderer, Parent)
         local Container = Success and type(Result) == "table" and Result.Container or nil
@@ -218,10 +218,10 @@ local function CreateOverlay(Parent, AccentColor, BaseZIndex, Renderer)
     BoxGradient.Color = ColorSequence.new(AccentColor, AccentColor)
     BoxGradient.Parent = BoxStroke
 
-    local InfoTop = CreateText(Box, UDim2.new(0.5, 0, 0, -4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3)
+    local InfoTop = CreateText(Box, UDim2.new(0.5, 0, 0, -4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3, FontFace)
     InfoTop.AnchorPoint = Vector2.new(0.5, 1)
 
-    local InfoBottom = CreateText(Box, UDim2.new(0.5, 0, 1, 4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3)
+    local InfoBottom = CreateText(Box, UDim2.new(0.5, 0, 1, 4), UDim2.new(1.7, 0, 0, 16), BaseZIndex + 3, FontFace)
     InfoBottom.AnchorPoint = Vector2.new(0.5, 0)
     InfoBottom.TextColor3 = Color3.fromRGB(205, 225, 255)
     InfoBottom.TextSize = 11
@@ -386,7 +386,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
     local AccentColor = typeof(Info.Color) == "Color3" and Info.Color or Library.Scheme.AccentColor
     local RendererAdapter = type(Info.Renderer) == "table" and Info.Renderer.Available ~= false and Info.Renderer or nil
-    local Overlay = RendererAdapter and {} or CreateOverlay(Content, AccentColor, 12, Info.Renderer)
+    local Overlay = RendererAdapter and {} or CreateOverlay(Content, AccentColor, 12, Info.Renderer, Library.Scheme.Font)
     local Preview = {
         Holder = Holder,
         Frame = ViewportFrame,

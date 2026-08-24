@@ -454,19 +454,14 @@ Library:SetTheme("Ash")
 
 ### Font policy
 
-Gotham Regular remains the zero-download fallback. The repository now packages `assets/Inter-Bold.ttf` for the denser, softer title and control typography used by the complete showcase. Load it once and install it as a persistent theme font before creating the window:
+Inter Bold is loaded automatically by `Library.lua` before the first window is created. The same `Library.Scheme.Font` is used by windows, controls, overlays, notifications, keybind rows, previews, galleries, and dashboard addons. The downloaded TTF and its generated metadata are cached in `MonHub/assets`, so the network is used only when the cached font is missing or invalid.
 
 ```luau
-local InterBoldFont = Library:LoadCustomFont(
-    "MonHubInterBold",
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Bold.ttf?monhub=0.0.1-release-6",
-    700
-)
-
-Library:SetThemeFont(InterBoldFont or Enum.Font.Gotham)
+local ActiveFont = Library.DefaultFont
+local FontError = Library.DefaultFontError
 ```
 
-`LoadCustomFont` validates the downloaded font header, resolves numeric weights from `100` through `900`, caches the TTF and generated metadata in `MonHub/assets`, and returns an error instead of executing invalid content. `SetThemeFont` keeps the selected font active across every `SetTheme` call. Clients without `isfile`, `writefile`, `makefolder`, and `getcustomasset` use the Gotham fallback. Keep `Inter-Bold.ttf` in the repository when publishing; the font is data and must never be passed through `loadstring`.
+`LoadCustomFont` validates the downloaded font header and never executes font data. Clients without `isfile`, `writefile`, `makefolder`, and `getcustomasset` automatically use Gotham. The default override remains active through every theme switch. Call `Library:SetThemeFont(AnotherFont)` only when a project intentionally replaces the global typography.
 
 Theme updates are transactional. Every registered property is isolated during repaint, stateful controls refresh after the base pass, and a final pass applies descriptors created by those state changes. A faulty dynamic property can no longer prevent the remaining colors on the same element from updating.
 
@@ -635,16 +630,25 @@ For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview
 
 ### Fixed real-R6 visual preview
 
-The experimental build includes `addons/FixedR6Preview.lua`. It requests the current player's applied `HumanoidDescription`, asks Roblox to create an actual R6 model, mounts that model in the fixed `VisualPreview` side panel, and uses `DrawingESPPreview` or a supplied renderer adapter. The panel is tied to one tab, hides with the main window, stays fixed to the selected side, supports drag rotation and wheel zoom, and refreshes the R6 appearance after character appearance changes.
+`addons/FixedR6Preview.lua` requests the current player's applied `HumanoidDescription`, creates an actual R6 model, mounts that model in the fixed `VisualPreview` side panel, and uses `DrawingESPPreview` or a supplied renderer adapter. The panel is tied to one tab, hides with the main window, stays fixed to the selected side, supports drag rotation and wheel zoom, and refreshes the R6 appearance after character appearance changes.
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+))()
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+))()
+local FixedR6Preview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-6"
 ))()
 
 local Window = Library:CreateWindow({ Title = "Visual test" })
 local Visuals = Window:AddTab("Visuals", "scan-eye")
-local Preview = Library:CreateFixedR6Preview(Visuals, {
+local Preview = FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Visuals, {
     Target = game:GetService("Players").LocalPlayer,
     Enabled = true,
     Side = "Right",
@@ -763,14 +767,17 @@ Controller methods are `SetEnabled`, `SetTarget`, `SetColors`, `SetTransparency`
 
 ### Trail texture gallery
 
-`addons/TextureGallery.lua` is the experimental texture-specific selector. It replaces square skybox cards with a wide selected preview and compact two-column trail cards. It has no search, category, pagination, or frame loop; the default ten-item list is created only when the addon is explicitly loaded. Every card shows its texture over a two-color track, so transparent trail assets and the texture-free `Clean` option remain visible.
+`addons/TextureGallery.lua` is the optional texture-specific selector. It replaces square skybox cards with a wide selected preview and compact two-column trail cards. It has no search, category, pagination, or frame loop; the default ten-item list is created only when the addon is explicitly loaded. Every card shows its texture over a two-color track, so transparent trail assets and the texture-free `Clean` option remain visible.
 
 ```luau
+local TextureGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6"
+))()
 local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
-local Gallery = Library:CreateTextureGallery(TextureGroup, "TrailTextures", {
+local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextures", {
     Height = 302,
     Columns = 2,
-    Items = Library.Experimental.TextureGallery.DefaultItems,
+    Items = TextureGallery.DefaultItems,
     Selected = "beam",
     OnSelected = function(Item)
         TrailController:SetTexture(Item.Texture)
@@ -781,35 +788,58 @@ local Gallery = Library:CreateTextureGallery(TextureGroup, "TrailTextures", {
 
 The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`, `SetVisible`, `Mount`, and `Destroy`. Item fields are `Id`, `Name`, `Texture`, `ColorA`, and `ColorB`. Numeric IDs and complete Roblox asset strings are accepted.
 
-### Experimental entry point
+### Separate dashboard window
 
-`ExperimentalLibrary.lua` is now a complete copy of the current production library and is the only file receiving this redesign. Production `Library.lua` remains unchanged by experimental layout work. The experimental copy defaults to a fixed 68px icon rail, 46px navigation buttons, 22px centered icons, hidden sidebar labels, wider content, 40px module headers, and slightly increased internal spacing without increasing global rounding.
-
-`Experimental.lua` loads that copy plus `CharacterTrail`, `TextureGallery`, `VisualPreview`, `DrawingESPPreview`, and `FixedR6Preview`. Local files are preferred when filesystem functions are available; otherwise every module comes from the same versioned repository path. `ExperimentalExample.lua` is the focused showcase for the new navigation, texture selector, native Trail, and fixed R6 panel.
+`addons/DashboardWindow.lua` creates an independent theme-aware window for compact runtime information and script actions. It is optional and creates nothing until `Create` is called. Static text starts no scheduler. All function-backed text and metrics share one update task, which starts with the first provider, pauses while the dashboard is hidden, and ends when the final dynamic widget is removed.
 
 ```luau
-local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
+local DashboardWindow = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6"
 ))()
 
-local Window = Library:CreateWindow({
-    Title = "MonHub Experimental",
-    IconOnlySidebar = true,
-    SidebarCompactWidth = 68,
-    NavigationButtonHeight = 46,
-    NavigationIconSize = 22,
+local Dashboard = DashboardWindow.Create(Library, {
+    Title = "Script dashboard",
+    Icon = "layout-dashboard",
+    Width = 316,
+    Height = 330,
+    Position = "Right",
+    Draggable = true,
+})
+
+local Runtime = Dashboard:AddSection("Runtime")
+Runtime:Add("Connected and ready.")
+Runtime:Add(function()
+    local Character = game:GetService("Players").LocalPlayer.Character
+    return Character and "Character: " .. Character.Name or "Character: waiting"
+end)
+Runtime:Add({
+    Type = "Metric",
+    Label = "Place ID",
+    Value = function()
+        return game.PlaceId
+    end,
+    Interval = 1,
+})
+Runtime:Add({
+    Type = "Button",
+    Text = "Refresh data",
+    Callback = function()
+        Dashboard:Refresh()
+    end,
+})
+
+local CustomFrame = Instance.new("Frame")
+CustomFrame.BorderSizePixel = 0
+Runtime:Add({
+    Type = "Custom",
+    Instance = CustomFrame,
+    Height = 40,
 })
 ```
 
-Run `ExperimentalExample.lua` for the complete test page. Use `Experimental.lua` only for feature experiments; production projects should continue loading `Library.lua` plus the exact addons they need until the redesign is accepted.
+The generic `Section:Add` method accepts a string, a provider function, or a table with `Type = "Text"`, `"Metric"`, `"Button"`, or `"Custom"`. Explicit methods are `AddText`, `AddMetric`, `AddButton`, and `AddCustom`. Dashboard-level calls use a lazily created `Overview` section. Dashboard methods are `AddSection`, `Add`, `AddText`, `AddMetric`, `AddButton`, `AddCustom`, `SetTitle`, `SetVisible`, `Toggle`, `SetDraggable`, `SetPosition`, `SetSize`, `Refresh`, and `Destroy`. Every section and widget also supports `SetVisible` and `Destroy`; dynamic text and metric widgets expose `SetProvider`.
 
-```luau
-loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/ExperimentalExample.lua?monhub=0.0.1-experimental-2"
-))()
-```
-
-The experimental loader validates every downloaded source before execution, removes a UTF-8 byte-order mark when present, prefers `game:HttpGet`, falls back to the executor request function, and reports the exact failing path instead of forwarding an HTTP response to `loadstring`. It exposes the complete production core API plus `CreateCharacterTrail`, `CreateTextureGallery`, `CreateFixedR6Preview`, `CreateVisualPreview`, `CreateEmbeddedVisualPreview`, and `CreateDrawingESPPreview` convenience methods.
+Closing the dashboard only hides it, so it can be reopened through `Dashboard:Toggle()` without rebuilding its contents. The complete production showcase in `Example.lua` loads this addon directly.
 
 ## Declarative API
 
@@ -960,9 +990,9 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] `ThemeManager_ThemeList` saves and restores with configurations.
 - [ ] Watermark, keybind menu, compact launcher, and unload are tested.
 - [ ] `CharacterTrail:Destroy()` is called during project unload when the addon is used.
-- [ ] Experimental tests load `ExperimentalLibrary.lua`; production projects still load `Library.lua`.
+- [ ] `Dashboard:Destroy()` is called automatically by library unload or explicitly by project cleanup.
 - [ ] A fixed R6 preview receives the live renderer adapter when it must match production ESP exactly.
 - [ ] `assets/Inter-Bold.ttf` is published with the same release when the custom font is enabled.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 
-For historical Obsidian migration notes, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md). For the production showcase, see [Example.lua](Example.lua). For the redesigned icon-rail showcase, see [ExperimentalExample.lua](ExperimentalExample.lua) and [Experimental.lua](Experimental.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau).
+For historical Obsidian migration notes, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md). For the complete showcase, see [Example.lua](Example.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau).

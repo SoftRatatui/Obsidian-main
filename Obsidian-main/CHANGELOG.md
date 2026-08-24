@@ -9,26 +9,22 @@
 [stability]
 + Repainted keybind state rows synchronously after every theme transaction so a finishing hover tween cannot restore stale palette colors
 + Reclamped window size and position after the first absolute-layout update and every viewport resize to prevent first-frame edge overflow
-+ Rebuilt the experimental loader to validate HTTP bodies, strip UTF-8 BOM data, prefer game.HttpGet, use the executor request as fallback, and report the exact failing module
 
 [typography]
-+ Packaged assets/Inter-Bold.ttf and installed it in Example.lua and Experimental.lua with Gotham fallback
++ Installed assets/Inter-Bold.ttf automatically from Library.lua as the global core and addon font with a cached Gotham fallback
 + Resolved custom font weights from 100 through 900 instead of always requesting Regular from the generated family
-
-[experimental]
-+ Added ExperimentalLibrary.lua as a complete production-compatible copy for isolated redesign work while leaving Library.lua unchanged
-+ Rebuilt the experimental navigation as a fixed 68px icon rail with 46px buttons, centered 22px icons, hidden labels, wider content, and refined module headers
-+ Added ExperimentalExample.lua as the complete icon-rail, texture, native Trail, and fixed R6 showcase
-+ Verified that ExperimentalLibrary contains every production core method and exposed convenience constructors for all experimental modules
 
 [visual addons]
 + Added the optional TextureGallery addon with a wide selected preview, compact trail cards, ten built-in textures, and direct CharacterTrail binding
 + Added the optional FixedR6Preview addon that creates an actual R6 from the current player appearance and accepts the live ESP renderer adapter
++ Added the optional DashboardWindow addon with sections, static and function-backed text, metrics, callbacks, custom GuiObject mounting, dragging, clamping, and complete theme registration
 
 [performance]
-+ Kept both experimental visual addons opt-in; TextureGallery has no frame loop, search worker, or pagination state, while FixedR6Preview reuses the existing preview scheduler and adds only an appearance-change connection
++ Kept TextureGallery and FixedR6Preview opt-in; TextureGallery has no frame loop, search worker, or pagination state, while FixedR6Preview reuses the existing preview scheduler and adds only an appearance-change connection
++ Used one lazy scheduler for every dashboard provider and stopped it automatically while the separate window is hidden or has no dynamic widgets
 
 [maintenance]
++ Removed the temporary alternate loader, duplicate library build, and alternate showcase so Library.lua is the only maintained core
 + Standardized repository documentation in English and repaired the Wally/Studio section link
 + Verified that executable source and documented code examples contain no comments or authoring metadata
 + Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and release URLs for 0.0.1-release-6

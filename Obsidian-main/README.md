@@ -7,7 +7,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 ## What changed
 
 - Six focused visual presets: neutral-gray `Default`, violet `Metal`, near-black `Midnight`, cool `Steel`, green-gray `Sage`, and warm-neutral `Ash`; all use semantic background, card, raised, control, hover, muted-text, and accent layers, with a feature-gated soft shadow on elevated surfaces.
-- Packaged Inter Bold typography through `LoadCustomFont` and `SetThemeFont`, with Gotham fallback and persistence across theme switches.
+- Inter Bold is installed automatically as the global font for the core UI and every theme-aware addon, with a cached TTF and Gotham fallback.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -177,13 +177,13 @@ Drag the character with the left mouse button or touch to rotate it. Use the mou
 
 Optional `ImageGallery.lua` and `ImagePreview.lua` addons provide pooled skin grids and animated full-size 2D previews. `CharacterTrail.lua` adds a native Roblox `Trail` with gradient colors, independent start/end transparency, width curves, texture presets, lighting, character respawn support, and no frame loop. These addons are never loaded by the core library; `Example.lua` imports them explicitly as a complete interactive showcase. `TracerPreview.lua` remains only as a legacy decorative image sample and is not imported by the current example. For the complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
-The redesign is isolated in `ExperimentalLibrary.lua`, a complete copy of the production API with a fixed icon-only navigation rail, larger centered icons, wider content, and refined module headers. `Experimental.lua` loads that copy and exposes `CharacterTrail`, `TextureGallery`, `VisualPreview`, `DrawingESPPreview`, `FixedR6Preview`, and the packaged Inter Bold font through `Library.Experimental`. `TextureGallery` is a lightweight trail-texture selector with a wide selected preview and compact cards. `FixedR6Preview` creates an actual R6 from the selected player's current `HumanoidDescription`, keeps the panel fixed to its assigned tab, and accepts the same renderer adapter used by the live ESP. Run `ExperimentalExample.lua` to test the complete experimental layout. Production `Library.lua` is unchanged by this redesign.
+Optional production addons include `TextureGallery`, `FixedR6Preview`, and `DashboardWindow`. The texture selector uses a wide trail preview and compact cards. The fixed preview creates an actual R6 from the selected player's current `HumanoidDescription` and accepts the same renderer adapter used by live ESP. The dashboard adds a draggable separate window for static text, function-backed values, callbacks, and custom GUI content while sharing one paused-when-hidden updater. `Example.lua` demonstrates the maintained addon set.
 
 ## Theme presets
 
 The release contains six built-ins: `Default`, the neutral-gray startup theme; `Metal`, the desaturated violet reference theme; `Midnight`, the near-black neutral theme; `Steel`, a cool blue-gray theme; `Sage`, a quiet green-gray theme; and `Ash`, a warm neutral theme. Switch directly with `Library:SetTheme("ThemeName")`. Raw legacy palette tables and saved color fields are ignored.
 
-`ThemeManager.lua` adds a minimal six-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable zero-download fallback; `assets/Inter-Bold.ttf` is the packaged showcase font.
+`ThemeManager.lua` adds a minimal six-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. `assets/Inter-Bold.ttf` is the automatic global font; Gotham remains the fallback when custom-asset filesystem APIs are unavailable.
 
 ## Legacy API
 

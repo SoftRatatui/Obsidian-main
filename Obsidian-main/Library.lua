@@ -527,6 +527,12 @@ function Library:SetThemeFont(FontFace): any
     return Library
 end
 
+Library.DefaultFontName = "MonHubInterBold"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Bold.ttf?monhub=0.0.1-release-6-font-default"
+Library.DefaultFontWeight = 700
+Library.DefaultFont = nil
+Library.DefaultFontError = nil
+
 Library.DefaultTheme = "Default"
 Library.CurrentTheme = "Default"
 Library.Themes = {
@@ -16375,6 +16381,15 @@ function Library:Unload()
         getgenv().Library = nil
     end
 end
+
+local DefaultFont, DefaultFontError = Library:LoadCustomFont(
+    Library.DefaultFontName,
+    Library.DefaultFontURL,
+    Library.DefaultFontWeight
+)
+Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.Gotham)
+Library.DefaultFontError = DefaultFontError
+Library:SetThemeFont(Library.DefaultFont)
 
 getgenv().Library = Library
 return Library

@@ -59,16 +59,18 @@ function DashboardWindow.Create(Library, Info)
         Connections = {},
         SchedulerRunning = false,
         SchedulerRevision = 0,
+        VisibilityRevision = 0,
         SectionOrder = 0,
         DefaultSection = nil,
     }
 
-    local Holder = Instance.new("Frame")
+    local Holder = Instance.new("CanvasGroup")
     Holder.Name = "MonHubDashboardWindow"
     Holder.Active = true
     Holder.BackgroundColor3 = Library.Scheme.BackgroundColor
     Holder.BorderSizePixel = 0
     Holder.ClipsDescendants = true
+    Holder.GroupTransparency = Dashboard.Visible and 0 or 1
     Holder.Size = UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
     Holder.Visible = Dashboard.Visible
     Holder.ZIndex = 40
@@ -76,6 +78,9 @@ function DashboardWindow.Create(Library, Info)
     Dashboard.Root = Holder
     ApplyCorner(Holder, math.min((Library.CornerRadius or 6) + 1, 8))
     Library:AddToRegistry(Holder, { BackgroundColor3 = "BackgroundColor" })
+    if type(Library.AddSoftShadow) == "function" then
+        Library:AddSoftShadow(Holder, 16, 0.5, UDim2.fromOffset(0, 4))
+    end
 
     local HolderStroke = Instance.new("UIStroke")
     HolderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -87,24 +92,28 @@ function DashboardWindow.Create(Library, Info)
     local Header = Instance.new("Frame")
     Header.Name = "Header"
     Header.Active = true
-    Header.BackgroundColor3 = Library.Scheme.SurfaceColor
+    Header.BackgroundColor3 = Library.Scheme.TopBarColor
     Header.BorderSizePixel = 0
-    Header.Size = UDim2.new(1, 0, 0, 40)
+    Header.Size = UDim2.new(1, 0, 0, 38)
     Header.ZIndex = 41
     Header.Parent = Holder
     Dashboard.Header = Header
-    Library:AddToRegistry(Header, { BackgroundColor3 = "SurfaceColor" })
+    Library:AddToRegistry(Header, { BackgroundColor3 = "TopBarColor" })
 
     local HeaderLine = Instance.new("Frame")
     HeaderLine.AnchorPoint = Vector2.new(0, 1)
-    HeaderLine.BackgroundColor3 = Library.Scheme.OutlineColor
-    HeaderLine.BackgroundTransparency = 0.35
+    HeaderLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
+    HeaderLine.BackgroundTransparency = 0.42
     HeaderLine.BorderSizePixel = 0
     HeaderLine.Position = UDim2.fromScale(0, 1)
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
     HeaderLine.ZIndex = 42
     HeaderLine.Parent = Header
-    Library:AddToRegistry(HeaderLine, { BackgroundColor3 = "OutlineColor" })
+    Library:AddToRegistry(HeaderLine, {
+        BackgroundColor3 = function()
+            return Library:GetAccentSurfaceColor(0.1)
+        end,
+    })
 
     local HeaderIconData = Library:GetCustomIcon(Info.Icon or "layout-dashboard")
     local HeaderIcon
@@ -115,8 +124,8 @@ function DashboardWindow.Create(Library, Info)
         HeaderIcon.ImageColor3 = Library.Scheme.AccentColor
         HeaderIcon.ImageRectOffset = HeaderIconData.ImageRectOffset
         HeaderIcon.ImageRectSize = HeaderIconData.ImageRectSize
-        HeaderIcon.Position = UDim2.fromOffset(12, 10)
-        HeaderIcon.Size = UDim2.fromOffset(20, 20)
+        HeaderIcon.Position = UDim2.fromOffset(11, 10)
+        HeaderIcon.Size = UDim2.fromOffset(18, 18)
         HeaderIcon.ZIndex = 42
         HeaderIcon.Parent = Header
         Library:AddToRegistry(HeaderIcon, { ImageColor3 = "AccentColor" })
@@ -125,8 +134,8 @@ function DashboardWindow.Create(Library, Info)
     local Title = Instance.new("TextLabel")
     Title.BackgroundTransparency = 1
     Title.FontFace = Library.Scheme.Font
-    Title.Position = UDim2.fromOffset(HeaderIcon and 40 or 12, 0)
-    Title.Size = UDim2.new(1, HeaderIcon and -80 or -52, 1, 0)
+    Title.Position = UDim2.fromOffset(HeaderIcon and 38 or 12, 0)
+    Title.Size = UDim2.new(1, HeaderIcon and -78 or -52, 1, 0)
     Title.Text = NormalizeText(Info.Title, "Dashboard")
     Title.TextColor3 = Library.Scheme.FontColor
     Title.TextSize = 14
@@ -137,23 +146,23 @@ function DashboardWindow.Create(Library, Info)
     Dashboard.TitleLabel = Title
     Library:AddToRegistry(Title, { FontFace = "Font", TextColor3 = "FontColor" })
 
-    local CloseButton = Instance.new("TextButton")
+    local CloseIconData = Library:GetCustomIcon("x")
+    local CloseButton = Instance.new("ImageButton")
     CloseButton.AutoButtonColor = false
     CloseButton.BackgroundColor3 = Library.Scheme.ElementColor
     CloseButton.BorderSizePixel = 0
-    CloseButton.FontFace = Library.Scheme.Font
-    CloseButton.Position = UDim2.new(1, -34, 0, 7)
+    CloseButton.Image = CloseIconData and CloseIconData.Url or ""
+    CloseButton.ImageColor3 = Library.Scheme.MutedFontColor
+    CloseButton.ImageRectOffset = CloseIconData and CloseIconData.ImageRectOffset or Vector2.zero
+    CloseButton.ImageRectSize = CloseIconData and CloseIconData.ImageRectSize or Vector2.zero
+    CloseButton.Position = UDim2.new(1, -32, 0, 6)
     CloseButton.Size = UDim2.fromOffset(26, 26)
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = Library.Scheme.MutedFontColor
-    CloseButton.TextSize = 17
     CloseButton.ZIndex = 43
     CloseButton.Parent = Header
     ApplyCorner(CloseButton, math.min(Library.CornerRadius or 6, 6))
     Library:AddToRegistry(CloseButton, {
         BackgroundColor3 = "ElementColor",
-        FontFace = "Font",
-        TextColor3 = "MutedFontColor",
+        ImageColor3 = "MutedFontColor",
     })
 
     local Content = Instance.new("ScrollingFrame")
@@ -163,26 +172,26 @@ function DashboardWindow.Create(Library, Info)
     Content.BackgroundTransparency = 1
     Content.BorderSizePixel = 0
     Content.CanvasSize = UDim2.fromScale(0, 0)
-    Content.Position = UDim2.fromOffset(0, 40)
+    Content.Position = UDim2.fromOffset(0, 38)
     Content.ScrollBarImageColor3 = Library.Scheme.AccentColor
     Content.ScrollBarImageTransparency = 0.38
     Content.ScrollBarThickness = 2
     Content.ScrollingDirection = Enum.ScrollingDirection.Y
-    Content.Size = UDim2.new(1, 0, 1, -40)
+    Content.Size = UDim2.new(1, 0, 1, -38)
     Content.ZIndex = 41
     Content.Parent = Holder
     Dashboard.Content = Content
     Library:AddToRegistry(Content, { ScrollBarImageColor3 = "AccentColor" })
 
     local ContentPadding = Instance.new("UIPadding")
-    ContentPadding.PaddingBottom = UDim.new(0, 10)
-    ContentPadding.PaddingLeft = UDim.new(0, 10)
-    ContentPadding.PaddingRight = UDim.new(0, 12)
-    ContentPadding.PaddingTop = UDim.new(0, 10)
+    ContentPadding.PaddingBottom = UDim.new(0, 8)
+    ContentPadding.PaddingLeft = UDim.new(0, 8)
+    ContentPadding.PaddingRight = UDim.new(0, 10)
+    ContentPadding.PaddingTop = UDim.new(0, 8)
     ContentPadding.Parent = Content
 
     local ContentLayout = Instance.new("UIListLayout")
-    ContentLayout.Padding = UDim.new(0, 8)
+    ContentLayout.Padding = UDim.new(0, 6)
     ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ContentLayout.Parent = Content
 
@@ -361,50 +370,100 @@ function DashboardWindow.Create(Library, Info)
 
         local Root = Instance.new("Frame")
         Root.AutomaticSize = Enum.AutomaticSize.Y
-        Root.BackgroundColor3 = Library.Scheme.RaisedColor
+        Root.BackgroundColor3 = Library.Scheme.SurfaceColor
         Root.BorderSizePixel = 0
         Root.LayoutOrder = tonumber(SectionInfo.Order) or Dashboard.SectionOrder
         Root.Size = UDim2.new(1, 0, 0, 0)
         Root.ZIndex = 42
         Root.Parent = Content
         Section.Root = Root
-        ApplyCorner(Root, math.min((Library.CornerRadius or 6) + 1, 8))
-        Library:AddToRegistry(Root, { BackgroundColor3 = "RaisedColor" })
+        ApplyCorner(Root, math.min(Library.CornerRadius or 6, 6))
+        Library:AddToRegistry(Root, { BackgroundColor3 = "SurfaceColor" })
 
         local Stroke = Instance.new("UIStroke")
         Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         Stroke.Color = Library.Scheme.OutlineColor
-        Stroke.Transparency = 0.2
+        Stroke.Transparency = 0.42
         Stroke.Parent = Root
         Library:AddToRegistry(Stroke, { Color = "OutlineColor" })
 
-        local Padding = Instance.new("UIPadding")
-        Padding.PaddingBottom = UDim.new(0, 8)
-        Padding.PaddingLeft = UDim.new(0, 9)
-        Padding.PaddingRight = UDim.new(0, 9)
-        Padding.PaddingTop = UDim.new(0, 8)
-        Padding.Parent = Root
+        local RootLayout = Instance.new("UIListLayout")
+        RootLayout.Padding = UDim.new(0, 0)
+        RootLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        RootLayout.Parent = Root
 
-        local Layout = Instance.new("UIListLayout")
-        Layout.Padding = UDim.new(0, 6)
-        Layout.SortOrder = Enum.SortOrder.LayoutOrder
-        Layout.Parent = Root
+        local SectionHeader = Instance.new("Frame")
+        SectionHeader.BackgroundTransparency = 1
+        SectionHeader.LayoutOrder = 0
+        SectionHeader.Size = UDim2.new(1, 0, 0, SectionInfo.ShowTitle == false and 0 or 32)
+        SectionHeader.Visible = SectionInfo.ShowTitle ~= false
+        SectionHeader.ZIndex = 43
+        SectionHeader.Parent = Root
+
+        local SectionIconData = Library:GetCustomIcon(SectionInfo.Icon or SectionInfo.IconName)
+        if SectionIconData then
+            local SectionIcon = Instance.new("ImageLabel")
+            SectionIcon.BackgroundTransparency = 1
+            SectionIcon.Image = SectionIconData.Url
+            SectionIcon.ImageColor3 = Library.Scheme.AccentColor
+            SectionIcon.ImageRectOffset = SectionIconData.ImageRectOffset
+            SectionIcon.ImageRectSize = SectionIconData.ImageRectSize
+            SectionIcon.Position = UDim2.fromOffset(8, 7)
+            SectionIcon.Size = UDim2.fromOffset(18, 18)
+            SectionIcon.ZIndex = 44
+            SectionIcon.Parent = SectionHeader
+            Library:AddToRegistry(SectionIcon, { ImageColor3 = "AccentColor" })
+        end
 
         local SectionTitle = Instance.new("TextLabel")
         SectionTitle.BackgroundTransparency = 1
         SectionTitle.FontFace = Library.Scheme.Font
-        SectionTitle.LayoutOrder = 0
-        SectionTitle.Size = UDim2.new(1, 0, 0, SectionInfo.ShowTitle == false and 0 or 20)
+        SectionTitle.Position = UDim2.fromOffset(SectionIconData and 32 or 10, 0)
+        SectionTitle.Size = UDim2.new(1, SectionIconData and -42 or -20, 1, -1)
         SectionTitle.Text = Section.Title
         SectionTitle.TextColor3 = Library.Scheme.FontColor
         SectionTitle.TextSize = 13
         SectionTitle.TextTruncate = Enum.TextTruncate.AtEnd
         SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-        SectionTitle.Visible = SectionInfo.ShowTitle ~= false
-        SectionTitle.ZIndex = 43
-        SectionTitle.Parent = Root
+        SectionTitle.ZIndex = 44
+        SectionTitle.Parent = SectionHeader
         Section.TitleLabel = SectionTitle
         Library:AddToRegistry(SectionTitle, { FontFace = "Font", TextColor3 = "FontColor" })
+
+        local SectionLine = Instance.new("Frame")
+        SectionLine.AnchorPoint = Vector2.new(0, 1)
+        SectionLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
+        SectionLine.BackgroundTransparency = 0.5
+        SectionLine.BorderSizePixel = 0
+        SectionLine.Position = UDim2.fromScale(0, 1)
+        SectionLine.Size = UDim2.new(1, 0, 0, 1)
+        SectionLine.ZIndex = 44
+        SectionLine.Parent = SectionHeader
+        Library:AddToRegistry(SectionLine, {
+            BackgroundColor3 = function()
+                return Library:GetAccentSurfaceColor(0.1)
+            end,
+        })
+
+        local Body = Instance.new("Frame")
+        Body.AutomaticSize = Enum.AutomaticSize.Y
+        Body.BackgroundTransparency = 1
+        Body.LayoutOrder = 1
+        Body.Size = UDim2.new(1, 0, 0, 0)
+        Body.ZIndex = 43
+        Body.Parent = Root
+
+        local BodyPadding = Instance.new("UIPadding")
+        BodyPadding.PaddingBottom = UDim.new(0, 8)
+        BodyPadding.PaddingLeft = UDim.new(0, 9)
+        BodyPadding.PaddingRight = UDim.new(0, 9)
+        BodyPadding.PaddingTop = UDim.new(0, 7)
+        BodyPadding.Parent = Body
+
+        local BodyLayout = Instance.new("UIListLayout")
+        BodyLayout.Padding = UDim.new(0, 4)
+        BodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        BodyLayout.Parent = Body
 
         function Section:NextOrder()
             assert(not Section.Destroyed, "Dashboard section is destroyed")
@@ -429,7 +488,7 @@ function DashboardWindow.Create(Library, Info)
             Row.LayoutOrder = tonumber(TextInfo.Order) or Section:NextOrder()
             Row.Size = UDim2.new(1, 0, 0, 0)
             Row.ZIndex = 43
-            Row.Parent = Root
+            Row.Parent = Body
 
             local Label = Instance.new("TextLabel")
             Label.AutomaticSize = Enum.AutomaticSize.Y
@@ -476,14 +535,14 @@ function DashboardWindow.Create(Library, Info)
             local Row = Instance.new("Frame")
             Row.BackgroundTransparency = 1
             Row.LayoutOrder = tonumber(MetricInfo.Order) or Section:NextOrder()
-            Row.Size = UDim2.new(1, 0, 0, 28)
+            Row.Size = UDim2.new(1, 0, 0, 23)
             Row.ZIndex = 43
-            Row.Parent = Root
+            Row.Parent = Body
 
             local NameLabel = Instance.new("TextLabel")
             NameLabel.BackgroundTransparency = 1
             NameLabel.FontFace = Library.Scheme.Font
-            NameLabel.Size = UDim2.new(0.58, -4, 1, 0)
+            NameLabel.Size = UDim2.new(0.46, -4, 1, 0)
             NameLabel.Text = NormalizeText(MetricInfo.Label or MetricInfo.Text, "Value")
             NameLabel.TextColor3 = Library.Scheme.MutedFontColor
             NameLabel.TextSize = 12
@@ -498,7 +557,7 @@ function DashboardWindow.Create(Library, Info)
             ValueLabel.BackgroundTransparency = 1
             ValueLabel.FontFace = Library.Scheme.Font
             ValueLabel.Position = UDim2.fromScale(1, 0)
-            ValueLabel.Size = UDim2.new(0.42, 0, 1, 0)
+            ValueLabel.Size = UDim2.new(0.54, 0, 1, 0)
             ValueLabel.Text = ""
             ValueLabel.TextColor3 = Library.Scheme.FontColor
             ValueLabel.TextSize = 12
@@ -563,14 +622,14 @@ function DashboardWindow.Create(Library, Info)
             Button.BorderSizePixel = 0
             Button.FontFace = Library.Scheme.Font
             Button.LayoutOrder = tonumber(ButtonInfo.Order) or Section:NextOrder()
-            Button.Size = UDim2.new(1, 0, 0, 32)
+            Button.Size = UDim2.new(1, 0, 0, 28)
             Button.Text = NormalizeText(ButtonInfo.Text, "Action")
             Button.TextColor3 = Library.Scheme.FontColor
             Button.TextSize = 12
             Button.TextTruncate = Enum.TextTruncate.AtEnd
             Button.ZIndex = 44
-            Button.Parent = Root
-            ApplyCorner(Button, math.min(Library.CornerRadius or 6, 6))
+            Button.Parent = Body
+            ApplyCorner(Button, math.min(Library.CornerRadius or 6, 5))
             Library:AddToRegistry(Button, {
                 BackgroundColor3 = "ElementColor",
                 FontFace = "Font",
@@ -653,7 +712,7 @@ function DashboardWindow.Create(Library, Info)
             Row.LayoutOrder = tonumber(CustomInfo.Order) or Section:NextOrder()
             Row.Size = UDim2.new(1, 0, 0, math.clamp(math.floor(tonumber(CustomInfo.Height) or 80), 20, 480))
             Row.ZIndex = 43
-            Row.Parent = Root
+            Row.Parent = Body
 
             CustomInstance.Parent = Row
             if CustomInfo.Fill ~= false then
@@ -757,12 +816,48 @@ function DashboardWindow.Create(Library, Info)
         if Dashboard.Destroyed then
             return Dashboard
         end
-        Dashboard.Visible = Value == true
-        Holder.Visible = Dashboard.Visible
-        if Dashboard.Visible then
+        local NewVisible = Value == true
+        if Dashboard.Visible == NewVisible then
+            if NewVisible then
+                task.defer(ClampToViewport)
+            end
+            return Dashboard
+        end
+        Dashboard.Visible = NewVisible
+        Dashboard.VisibilityRevision += 1
+        local Revision = Dashboard.VisibilityRevision
+        local Animate = Library.Animations and Library.Animations.ToggleWindow
+        if NewVisible then
+            Holder.Visible = true
+            if Animate then
+                Holder.GroupTransparency = 1
+                Library:PlayTween(Holder, "DashboardVisibility", Library.WindowOpenAnimationInfo or Library.TweenInfo, {
+                    GroupTransparency = 0,
+                })
+            else
+                Library:CancelTween(Holder, "DashboardVisibility")
+                Holder.GroupTransparency = 0
+            end
             task.defer(ClampToViewport)
             Dashboard:Refresh()
             EnsureScheduler()
+        elseif Animate then
+            local Tween = Library:PlayTween(Holder, "DashboardVisibility", Library.WindowCloseAnimationInfo or Library.TweenInfo, {
+                GroupTransparency = 1,
+            })
+            if Tween then
+                Tween.Completed:Once(function()
+                    if not Dashboard.Destroyed and not Dashboard.Visible and Dashboard.VisibilityRevision == Revision then
+                        Holder.Visible = false
+                    end
+                end)
+            else
+                Holder.Visible = false
+            end
+        else
+            Library:CancelTween(Holder, "DashboardVisibility")
+            Holder.GroupTransparency = 1
+            Holder.Visible = false
         end
         return Dashboard
     end
@@ -830,7 +925,7 @@ function DashboardWindow.Create(Library, Info)
         if not Dashboard.Destroyed then
             Library:PlayTween(CloseButton, "DashboardCloseHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.HoverColor,
-                TextColor3 = Library.Scheme.FontColor,
+                ImageColor3 = Library.Scheme.FontColor,
             })
         end
     end))
@@ -838,7 +933,7 @@ function DashboardWindow.Create(Library, Info)
         if not Dashboard.Destroyed then
             Library:PlayTween(CloseButton, "DashboardCloseHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.ElementColor,
-                TextColor3 = Library.Scheme.MutedFontColor,
+                ImageColor3 = Library.Scheme.MutedFontColor,
             })
         end
     end))

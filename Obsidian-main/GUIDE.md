@@ -790,23 +790,23 @@ The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`
 
 ### Separate dashboard window
 
-`addons/DashboardWindow.lua` creates an independent theme-aware window for compact runtime information and script actions. It is optional and creates nothing until `Create` is called. Static text starts no scheduler. All function-backed text and metrics share one update task, which starts with the first provider, pauses while the dashboard is hidden, and ends when the final dynamic widget is removed.
+`addons/DashboardWindow.lua` creates an independent theme-aware window for compact runtime information and script actions. Its top bar, section headers, outlines, typography, accent lines, spacing, and fast visibility transition follow the main MonHub interface. It is optional and creates nothing until `Create` is called. Static text starts no scheduler. All function-backed text and metrics share one update task, which starts with the first provider, pauses while the dashboard is hidden, and ends when the final dynamic widget is removed.
 
 ```luau
 local DashboardWindow = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
 ))()
 
 local Dashboard = DashboardWindow.Create(Library, {
     Title = "Script dashboard",
     Icon = "layout-dashboard",
-    Width = 316,
-    Height = 330,
+    Width = 304,
+    Height = 320,
     Position = "Right",
     Draggable = true,
 })
 
-local Runtime = Dashboard:AddSection("Runtime")
+local Runtime = Dashboard:AddSection({ Title = "Runtime", Icon = "activity" })
 Runtime:Add("Connected and ready.")
 Runtime:Add(function()
     local Character = game:GetService("Players").LocalPlayer.Character
@@ -837,7 +837,7 @@ Runtime:Add({
 })
 ```
 
-The generic `Section:Add` method accepts a string, a provider function, or a table with `Type = "Text"`, `"Metric"`, `"Button"`, or `"Custom"`. Explicit methods are `AddText`, `AddMetric`, `AddButton`, and `AddCustom`. Dashboard-level calls use a lazily created `Overview` section. Dashboard methods are `AddSection`, `Add`, `AddText`, `AddMetric`, `AddButton`, `AddCustom`, `SetTitle`, `SetVisible`, `Toggle`, `SetDraggable`, `SetPosition`, `SetSize`, `Refresh`, and `Destroy`. Every section and widget also supports `SetVisible` and `Destroy`; dynamic text and metric widgets expose `SetProvider`.
+The generic `Section:Add` method accepts a string, a provider function, or a table with `Type = "Text"`, `"Metric"`, `"Button"`, or `"Custom"`. `AddSection` accepts either a title string or `{ Title, Icon, Order, ShowTitle }`. Explicit methods are `AddText`, `AddMetric`, `AddButton`, and `AddCustom`. Dashboard-level calls use a lazily created `Overview` section. Dashboard methods are `AddSection`, `Add`, `AddText`, `AddMetric`, `AddButton`, `AddCustom`, `SetTitle`, `SetVisible`, `Toggle`, `SetDraggable`, `SetPosition`, `SetSize`, `Refresh`, and `Destroy`. Every section and widget also supports `SetVisible` and `Destroy`; dynamic text and metric widgets expose `SetProvider`.
 
 Closing the dashboard only hides it, so it can be reopened through `Dashboard:Toggle()` without rebuilding its contents. The complete production showcase in `Example.lua` loads this addon directly.
 

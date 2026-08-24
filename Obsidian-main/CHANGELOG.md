@@ -18,6 +18,7 @@
 + Added the optional TextureGallery addon with a wide selected preview, compact trail cards, ten built-in textures, and direct CharacterTrail binding
 + Added the optional FixedR6Preview addon that creates an actual R6 from the current player appearance and accepts the live ESP renderer adapter
 + Added the optional DashboardWindow addon with sections, static and function-backed text, metrics, callbacks, custom GuiObject mounting, dragging, clamping, and complete theme registration
++ Refined DashboardWindow into a compact main-UI style with a themed top bar, groupbox headers, thinner spacing, native close icon, soft shadow, and fast visibility transition
 
 [performance]
 + Kept TextureGallery and FixedR6Preview opt-in; TextureGallery has no frame loop, search worker, or pagination state, while FixedR6Preview reuses the existing preview scheduler and adds only an appearance-change connection

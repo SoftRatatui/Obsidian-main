@@ -569,7 +569,7 @@ local TextureGallery = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6"
 ))()
 local DashboardWindow = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
 ))()
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
@@ -582,7 +582,7 @@ local FixedR6Preview = loadstring(game:HttpGet(
 ))()
 ```
 
-Use `DashboardWindow` for information or actions that must remain independent from the main tab layout. A string creates static text, a function creates automatically refreshed text, `Type = "Metric"` creates a named dynamic value, `Type = "Button"` runs a callback, and `Type = "Custom"` mounts a supplied `GuiObject`. The addon uses one scheduler for all providers and stops it while hidden.
+Use `DashboardWindow` for information or actions that must remain independent from the main tab layout. Its compact top bar, section cards, metric spacing, outline colors, font, and visibility transition are synchronized with the main interface. A string creates static text, a function creates automatically refreshed text, `Type = "Metric"` creates a named dynamic value, `Type = "Button"` runs a callback, and `Type = "Custom"` mounts a supplied `GuiObject`. The addon uses one scheduler for all providers and stops it while hidden.
 
 ```luau
 local Dashboard = DashboardWindow.Create(Library, {

@@ -15,6 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-6"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-dashboard-ui-2"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -57,7 +58,7 @@ local function CleanPreview(Source)
 end
 
 local function TryModule(BaseUrl, Path)
-	local Url = BaseUrl .. Path .. "?monhub=" .. RELEASE_VERSION
+	local Url = BaseUrl .. Path .. "?monhub=" .. SOURCE_CACHE_KEY
 	local Downloaded, Source = DownloadSource(Url)
 
 	if not Downloaded then
@@ -444,50 +445,52 @@ MediaRight:AddUIPassthrough("CustomUI", {
 local AddonGalleryGroup = Tabs.Addons:AddLeftGroupbox("Asset gallery", "layout-grid")
 local AddonImageGroup = Tabs.Addons:AddRightGroupbox("Image preview", "image")
 local CharacterTrailGroup = Tabs.Addons:AddRightGroupbox("Character trail", "sparkles")
-local DashboardGroup = Tabs.Addons:AddLeftGroupbox("Dashboard window", "layout-dashboard")
+local Dashboard
+if DashboardWindow then
+	local DashboardGroup = Tabs.Addons:AddLeftGroupbox("Dashboard window", "layout-dashboard")
+	Dashboard = DashboardWindow.Create(Library, {
+		Title = "MonHub dashboard",
+		Icon = "layout-dashboard",
+		Width = 304,
+		Height = 320,
+		Position = "Right",
+		Visible = false,
+		Draggable = true,
+	})
 
-local Dashboard = DashboardWindow.Create(Library, {
-	Title = "MonHub dashboard",
-	Icon = "layout-dashboard",
-	Width = 316,
-	Height = 330,
-	Position = "Right",
-	Visible = false,
-	Draggable = true,
-})
+	local DashboardRuntime = Dashboard:AddSection({ Title = "Runtime", Icon = "activity" })
+	DashboardRuntime:AddText("Compact script information and actions in a separate window.")
+	DashboardRuntime:AddMetric({
+		Label = "Player",
+		Value = function()
+			return Library.LocalPlayer.DisplayName
+		end,
+		Interval = 1,
+	})
+	DashboardRuntime:AddMetric({
+		Label = "Menu",
+		Value = function()
+			return Library.Toggled and "Open" or "Hidden"
+		end,
+		Interval = 0.2,
+	})
 
-local DashboardRuntime = Dashboard:AddSection("Runtime")
-DashboardRuntime:AddText("A separate window for compact script information and actions.")
-DashboardRuntime:AddMetric({
-	Label = "Player",
-	Value = function()
-		return Library.LocalPlayer.DisplayName
-	end,
-	Interval = 1,
-})
-DashboardRuntime:AddMetric({
-	Label = "Menu",
-	Value = function()
-		return Library.Toggled and "Open" or "Hidden"
-	end,
-	Interval = 0.2,
-})
+	local DashboardActions = Dashboard:AddSection({ Title = "Actions", Icon = "mouse-pointer-click" })
+	DashboardActions:AddButton({
+		Text = "Show notification",
+		Callback = function()
+			Notify("Dashboard", "The standalone dashboard action is working.", 3)
+		end,
+	})
 
-local DashboardActions = Dashboard:AddSection("Actions")
-DashboardActions:AddButton({
-	Text = "Show notification",
-	Callback = function()
-		Notify("Dashboard", "The standalone dashboard action is working.", 3)
-	end,
-})
-
-DashboardGroup:AddLabel("A draggable opt-in window for text, values, actions, and custom GUI content.", true)
-DashboardGroup:AddButton("Toggle dashboard", function()
-	Dashboard:Toggle()
-end)
-DashboardGroup:AddButton("Refresh dashboard", function()
-	Dashboard:Refresh()
-end)
+	DashboardGroup:AddLabel("A compact theme-aware window for values, actions, and custom GUI content.", true)
+	DashboardGroup:AddButton("Toggle dashboard", function()
+		Dashboard:Toggle()
+	end)
+	DashboardGroup:AddButton("Refresh dashboard", function()
+		Dashboard:Refresh()
+	end)
+end
 
 local GalleryItems = {
 	{

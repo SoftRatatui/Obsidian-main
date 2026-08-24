@@ -238,7 +238,7 @@ end
 
 local Library = {
     ReleaseVersion = "0.0.1-release-6",
-    ExperimentalBuild = "0.0.1-experimental-1",
+    ExperimentalBuild = "0.0.1-experimental-2",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 

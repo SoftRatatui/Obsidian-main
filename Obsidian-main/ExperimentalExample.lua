@@ -1,7 +1,7 @@
 assert(type(loadstring) == "function", "ExperimentalExample.lua requires loadstring support.")
 
 local REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-6"
+local EXPERIMENTAL_BUILD = "0.0.1-experimental-2"
 local Environment = getfenv()
 local NativeReadFile = type(Environment) == "table" and rawget(Environment, "readfile") or nil
 local NativeIsFile = type(Environment) == "table" and rawget(Environment, "isfile") or nil
@@ -15,11 +15,21 @@ local function Load(Path)
         end
     end
     if not Source then
-        Source = game:HttpGet(REPOSITORY .. Path .. "?monhub=" .. RELEASE_VERSION)
+        local Success, Result = pcall(game.HttpGet, game, REPOSITORY .. Path .. "?monhub=" .. EXPERIMENTAL_BUILD)
+        assert(Success, "Failed to download " .. Path .. ": " .. tostring(Result))
+        Source = Result
     end
+    if string.sub(Source, 1, 3) == "\239\187\191" then
+        Source = string.sub(Source, 4)
+    end
+    local Head = string.lower(string.sub(Source, 1, 192)):match("^%s*(.*)") or ""
+    assert(string.find(Source, "%S"), "Empty response for " .. Path)
+    assert(string.sub(Head, 1, 1) ~= "<" and string.sub(Head, 1, 1) ~= "{" and string.find(Head, "404", 1, true) ~= 1, "Non-Luau response for " .. Path)
     local Chunk, CompileError = loadstring(Source)
-    assert(Chunk, tostring(CompileError))
-    return Chunk()
+    assert(Chunk, "Failed to compile " .. Path .. ": " .. tostring(CompileError))
+    local Success, Result = pcall(Chunk)
+    assert(Success, "Failed to execute " .. Path .. ": " .. tostring(Result))
+    return Result
 end
 
 local Library = Load("Experimental.lua")
@@ -214,7 +224,7 @@ local PreviewHelp = Tabs.Visuals:AddRightGroupbox("Preview behavior", "mouse-poi
 PreviewHelp:AddLabel("Drag the R6 model to rotate it. Use the mouse wheel to zoom.", true)
 PreviewHelp:AddLabel("Pass your live renderer as Renderer to use the exact production ESP path.", true)
 
-local TrailController = Modules.CharacterTrail.Create({
+local TrailController = Library:CreateCharacterTrail({
     Target = Players.LocalPlayer,
     Enabled = false,
     TransparencyMin = 0.04,

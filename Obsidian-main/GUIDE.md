@@ -639,7 +639,7 @@ The experimental build includes `addons/FixedR6Preview.lua`. It requests the cur
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
 ))()
 
 local Window = Library:CreateWindow({ Title = "Visual test" })
@@ -789,7 +789,7 @@ The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
 ))()
 
 local Window = Library:CreateWindow({
@@ -802,6 +802,14 @@ local Window = Library:CreateWindow({
 ```
 
 Run `ExperimentalExample.lua` for the complete test page. Use `Experimental.lua` only for feature experiments; production projects should continue loading `Library.lua` plus the exact addons they need until the redesign is accepted.
+
+```luau
+loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/ExperimentalExample.lua?monhub=0.0.1-experimental-2"
+))()
+```
+
+The experimental loader validates every downloaded source before execution, removes a UTF-8 byte-order mark when present, prefers `game:HttpGet`, falls back to the executor request function, and reports the exact failing path instead of forwarding an HTTP response to `loadstring`. It exposes the complete production core API plus `CreateCharacterTrail`, `CreateTextureGallery`, `CreateFixedR6Preview`, `CreateVisualPreview`, `CreateEmbeddedVisualPreview`, and `CreateDrawingESPPreview` convenience methods.
 
 ## Declarative API
 

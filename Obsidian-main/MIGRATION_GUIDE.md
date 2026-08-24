@@ -575,7 +575,7 @@ The experimental window defaults to a fixed 68px icon-only rail, 46px navigation
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-experimental-2"
 ))()
 
 local CharacterTrail = Library.Experimental.CharacterTrail
@@ -583,6 +583,8 @@ local TextureGallery = Library.Experimental.TextureGallery
 ```
 
 Run `ExperimentalExample.lua` for the complete icon-rail, trail-texture, native Trail, and fixed R6 showcase. Move accepted core changes into `Library.lua` deliberately; standalone visual modules can remain optional addons.
+
+The experimental copy contains every production `Library` method. Its loader also exposes `CreateCharacterTrail`, `CreateTextureGallery`, `CreateFixedR6Preview`, `CreateVisualPreview`, `CreateEmbeddedVisualPreview`, and `CreateDrawingESPPreview`. Each remote source is validated before execution, and a failed request identifies the exact file instead of producing an anonymous line-one parser error.
 
 The texture selector is intentionally smaller than the general image gallery. It creates no search box, category control, pagination state, or frame loop:
 

@@ -9,6 +9,7 @@
 [stability]
 + Repainted keybind state rows synchronously after every theme transaction so a finishing hover tween cannot restore stale palette colors
 + Reclamped window size and position after the first absolute-layout update and every viewport resize to prevent first-frame edge overflow
++ Rebuilt the experimental loader to validate HTTP bodies, strip UTF-8 BOM data, prefer game.HttpGet, use the executor request as fallback, and report the exact failing module
 
 [typography]
 + Packaged assets/Inter-Bold.ttf and installed it in Example.lua and Experimental.lua with Gotham fallback
@@ -18,6 +19,7 @@
 + Added ExperimentalLibrary.lua as a complete production-compatible copy for isolated redesign work while leaving Library.lua unchanged
 + Rebuilt the experimental navigation as a fixed 68px icon rail with 46px buttons, centered 22px icons, hidden labels, wider content, and refined module headers
 + Added ExperimentalExample.lua as the complete icon-rail, texture, native Trail, and fixed R6 showcase
++ Verified that ExperimentalLibrary contains every production core method and exposed convenience constructors for all experimental modules
 
 [visual addons]
 + Added the optional TextureGallery addon with a wide selected preview, compact trail cards, ten built-in textures, and direct CharacterTrail binding

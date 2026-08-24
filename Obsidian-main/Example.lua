@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-final-theme-5"
+local RELEASE_VERSION = "0.0.1-release-6"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -129,7 +129,7 @@ local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveReposi
 local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
 local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
-local TracerPreview = LoadModule("addons/TracerPreview.lua", false, ActiveRepository)
+local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -139,6 +139,16 @@ local Toggles = Library.Toggles
 Library.ForceCheckbox = true
 Library.ShowToggleFrameInKeybinds = true
 
+local InterBoldFont, InterBoldError = Library:LoadCustomFont(
+	"MonHubInterBold",
+	ActiveRepository .. "assets/Inter-Bold.ttf?monhub=" .. RELEASE_VERSION,
+	700
+)
+if InterBoldFont then
+	Library:SetThemeFont(InterBoldFont)
+else
+	warn("[MonHub Example] Inter Bold unavailable: " .. tostring(InterBoldError))
+end
 
 Library:SetClickSound(92679954573730, 0.3)
 
@@ -155,7 +165,7 @@ local Window = Library:CreateWindow({
 	SingleColumnWidth = 540,
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
-	Font = Enum.Font.Gotham,
+	Font = InterBoldFont or Enum.Font.Gotham,
 	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
@@ -442,7 +452,7 @@ MediaRight:AddUIPassthrough("CustomUI", {
 
 local AddonGalleryGroup = Tabs.Addons:AddLeftGroupbox("Asset gallery", "layout-grid")
 local AddonImageGroup = Tabs.Addons:AddRightGroupbox("Image preview", "image")
-local AddonTracerGroup = Tabs.Addons:AddRightGroupbox("Tracer preview", "sparkles")
+local CharacterTrailGroup = Tabs.Addons:AddRightGroupbox("Character trail", "sparkles")
 
 local GalleryItems = {
 	{
@@ -725,153 +735,361 @@ AddonImageGroup:AddButton("Clear image preview", function()
 	end
 end)
 
-local AddonTracer
-local TracerAssetPresets = {
-	Beam = "rbxassetid://12781852245",
-	Lightning = "rbxassetid://446111271",
-	Heartrate = "rbxassetid://5830549480",
-	Chain = "rbxassetid://9632168658",
-	Glitch = "rbxassetid://8089467613",
-	Swirl = "rbxassetid://5638168605",
-	Neon = "rbxassetid://6361963422",
-	Plasma = "rbxassetid://8993645509",
-	Laser = "rbxassetid://14549123968",
-}
-if TracerPreview then
-	local Created, Result = pcall(TracerPreview.CreateEmbedded, Library, AddonTracerGroup, "AddonTracerPreview", {
-		Name = "Tracer preview",
-		AssetId = TracerAssetPresets.Beam,
-		Height = 92,
-		ColorA = Color3.fromRGB(255, 213, 58),
-		ColorB = Color3.fromRGB(255, 246, 166),
-		Glow = 0.82,
-		Speed = 1.25,
-	})
-	if Created then
-		AddonTracer = Result
-	else
-		warn("[MonHub Example] TracerPreview disabled: " .. tostring(Result))
-	end
+local TrailController = CharacterTrail and CharacterTrail.Create({
+	Target = game:GetService("Players").LocalPlayer,
+	Enabled = false,
+	TransparencyStart = 0.04,
+	TransparencyEnd = 0.18,
+	WidthStart = 1,
+	WidthEnd = 0.08,
+	Lifetime = 0.42,
+	AttachmentWidth = 1.7,
+}) or nil
+
+if TrailController then
+	Library:OnUnload(function()
+		TrailController:Destroy()
+	end)
 end
 
-AddonTracerGroup:AddInput("AddonTracerAsset", {
-	Text = "Tracer asset ID",
-	Default = TracerAssetPresets.Beam,
+local TrailColorStart = Color3.fromRGB(146, 178, 214)
+local TrailColorEnd = Color3.fromRGB(196, 168, 232)
+local TrailTransparencyStart = 4
+local TrailTransparencyEnd = 18
+local TrailWidthStart = 100
+local TrailWidthEnd = 8
+local SyncTrailControls
+
+local TrailToggle = CharacterTrailGroup:AddToggle("CharacterTrailEnabled", {
+	Text = "Character trail",
+	Default = false,
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetEnabled(Value)
+		end
+	end,
+})
+
+TrailToggle:AddColorPicker("CharacterTrailColorStart", {
+	Title = "Gradient start",
+	Default = TrailColorStart,
+	Callback = function(Value)
+		TrailColorStart = Value
+		if TrailController then
+			TrailController:SetColors(TrailColorStart, TrailColorEnd)
+		end
+	end,
+})
+
+TrailToggle:AddColorPicker("CharacterTrailColorEnd", {
+	Title = "Gradient end",
+	Default = TrailColorEnd,
+	Callback = function(Value)
+		TrailColorEnd = Value
+		if TrailController then
+			TrailController:SetColors(TrailColorStart, TrailColorEnd)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddDropdown("CharacterTrailPreset", {
+	Text = "Trail preset",
+	Values = { "Soft", "Energy", "Plasma", "Minimal" },
+	Default = "Soft",
+	Callback = function(Value)
+		if TrailController and TrailController:ApplyPreset(Value) then
+			task.defer(function()
+				if SyncTrailControls then
+					SyncTrailControls(TrailController:GetState())
+				end
+			end)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddDropdown("CharacterTrailTexturePreset", {
+	Text = "Texture preset",
+	Values = { "None", "Beam", "Lightning", "Heartrate", "Chain", "Glitch", "Swirl", "Neon", "Plasma", "Laser" },
+	Default = "None",
+	Callback = function(Value)
+		if TrailController and CharacterTrail then
+			TrailController:SetTexture(CharacterTrail.TexturePresets[Value])
+		end
+	end,
+})
+
+CharacterTrailGroup:AddInput("CharacterTrailTexture", {
+	Text = "Custom texture",
+	Default = "",
 	ClearTextOnFocus = false,
 	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetAssetId(Value)
+		if TrailController then
+			TrailController:SetTexture(Value)
 		end
 	end,
 })
 
-AddonTracerGroup:AddDropdown("AddonTracerPreset", {
-	Text = "Tracer preset",
-	Values = { "Beam", "Lightning", "Heartrate", "Chain", "Glitch", "Swirl", "Neon", "Plasma", "Laser" },
-	Default = "Beam",
-	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetAssetId(TracerAssetPresets[Value])
-		end
-	end,
-})
-
-AddonTracerGroup:AddInput("AddonTracerName", {
-	Text = "Tracer name",
-	Default = "Tracer preview",
-	ClearTextOnFocus = false,
-	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetName(Value)
-		end
-	end,
-})
-
-AddonTracerGroup:AddToggle("AddonTracerEnabled", {
-	Text = "Tracer enabled",
-	Default = true,
-	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetEnabled(Value)
-		end
-	end,
-})
-
-AddonTracerGroup:AddToggle("AddonTracerVisible", {
-	Text = "Tracer visible",
-	Default = true,
-	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetVisible(Value)
-		end
-	end,
-})
-
-AddonTracerGroup:AddSlider("AddonTracerGlow", {
-	Text = "Tracer glow",
-	Default = 82,
+CharacterTrailGroup:AddSlider("CharacterTrailTransparencyStart", {
+	Text = "Minimum transparency",
+	Default = TrailTransparencyStart,
 	Min = 0,
 	Max = 100,
 	Rounding = 0,
 	Suffix = "%",
 	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetGlow(Value / 100)
+		TrailTransparencyStart = Value
+		if TrailController then
+			TrailController:SetTransparency(TrailTransparencyStart / 100, TrailTransparencyEnd / 100)
 		end
 	end,
 })
 
-AddonTracerGroup:AddSlider("AddonTracerSpeed", {
-	Text = "Tracer speed",
-	Default = 125,
+CharacterTrailGroup:AddSlider("CharacterTrailTransparencyEnd", {
+	Text = "Maximum transparency",
+	Default = TrailTransparencyEnd,
 	Min = 0,
-	Max = 400,
+	Max = 100,
 	Rounding = 0,
 	Suffix = "%",
 	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetSpeed(Value / 100)
+		TrailTransparencyEnd = Value
+		if TrailController then
+			TrailController:SetTransparency(TrailTransparencyStart / 100, TrailTransparencyEnd / 100)
 		end
 	end,
 })
 
-AddonTracerGroup:AddSlider("AddonTracerHeight", {
-	Text = "Tracer height",
-	Default = 92,
-	Min = 56,
-	Max = 180,
+CharacterTrailGroup:AddSlider("CharacterTrailWidthStart", {
+	Text = "Start width scale",
+	Default = TrailWidthStart,
+	Min = 0,
+	Max = 100,
 	Rounding = 0,
-	Suffix = "px",
+	Suffix = "%",
 	Callback = function(Value)
-		if AddonTracer then
-			AddonTracer:SetHeight(Value)
+		TrailWidthStart = Value
+		if TrailController then
+			TrailController:SetWidthScale(TrailWidthStart / 100, TrailWidthEnd / 100)
 		end
 	end,
 })
 
-local AddonTracerColorA = Color3.fromRGB(255, 213, 58)
-local AddonTracerColorB = Color3.fromRGB(255, 246, 166)
-local AddonTracerColors = AddonTracerGroup:AddLabel("Tracer colors")
-AddonTracerColors:AddColorPicker("AddonTracerColorA", {
-	Title = "Tracer start",
-	Default = AddonTracerColorA,
+CharacterTrailGroup:AddSlider("CharacterTrailWidthEnd", {
+	Text = "End width scale",
+	Default = TrailWidthEnd,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
 	Callback = function(Value)
-		AddonTracerColorA = Value
-		if AddonTracer then
-			AddonTracer:SetColors(AddonTracerColorA, AddonTracerColorB)
+		TrailWidthEnd = Value
+		if TrailController then
+			TrailController:SetWidthScale(TrailWidthStart / 100, TrailWidthEnd / 100)
 		end
 	end,
 })
-AddonTracerColors:AddColorPicker("AddonTracerColorB", {
-	Title = "Tracer end",
-	Default = AddonTracerColorB,
+
+CharacterTrailGroup:AddSlider("CharacterTrailAttachmentWidth", {
+	Text = "Ribbon width",
+	Default = 1.7,
+	Min = 0.1,
+	Max = 6,
+	Rounding = 2,
+	Suffix = " studs",
 	Callback = function(Value)
-		AddonTracerColorB = Value
-		if AddonTracer then
-			AddonTracer:SetColors(AddonTracerColorA, AddonTracerColorB)
+		if TrailController then
+			TrailController:SetAttachmentWidth(Value)
 		end
 	end,
 })
+
+CharacterTrailGroup:AddSlider("CharacterTrailLifetime", {
+	Text = "Lifetime",
+	Default = 0.42,
+	Min = 0.05,
+	Max = 3,
+	Rounding = 2,
+	Suffix = "s",
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetLifetime(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailVerticalOffset", {
+	Text = "Vertical offset",
+	Default = 0,
+	Min = -4,
+	Max = 4,
+	Rounding = 2,
+	Suffix = " studs",
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetVerticalOffset(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailMinLength", {
+	Text = "Minimum segment",
+	Default = 0.05,
+	Min = 0,
+	Max = 3,
+	Rounding = 2,
+	Suffix = " studs",
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetMinLength(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailMaxLength", {
+	Text = "Maximum length",
+	Default = 0,
+	Min = 0,
+	Max = 50,
+	Rounding = 1,
+	Suffix = " studs",
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetMaxLength(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddDropdown("CharacterTrailTextureMode", {
+	Text = "Texture mode",
+	Values = { "Wrap", "Stretch", "Static" },
+	Default = "Wrap",
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetTextureMode(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailTextureLength", {
+	Text = "Texture length",
+	Default = 1.25,
+	Min = 0.1,
+	Max = 10,
+	Rounding = 2,
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetTextureLength(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddToggle("CharacterTrailFaceCamera", {
+	Text = "Face camera",
+	Default = true,
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetFaceCamera(Value)
+		end
+	end,
+})
+
+local TrailLightEmission = 28
+local TrailLightInfluence = 0
+CharacterTrailGroup:AddSlider("CharacterTrailLightEmission", {
+	Text = "Light emission",
+	Default = TrailLightEmission,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		TrailLightEmission = Value
+		if TrailController then
+			TrailController:SetLight(TrailLightEmission / 100, TrailLightInfluence / 100)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailLightInfluence", {
+	Text = "Light influence",
+	Default = TrailLightInfluence,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		TrailLightInfluence = Value
+		if TrailController then
+			TrailController:SetLight(TrailLightEmission / 100, TrailLightInfluence / 100)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddSlider("CharacterTrailBrightness", {
+	Text = "Brightness",
+	Default = 1,
+	Min = 0,
+	Max = 3,
+	Rounding = 2,
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetBrightness(Value)
+		end
+	end,
+})
+
+CharacterTrailGroup:AddInput("CharacterTrailPart", {
+	Text = "Attachment part",
+	Default = "HumanoidRootPart",
+	ClearTextOnFocus = false,
+	Callback = function(Value)
+		if TrailController then
+			TrailController:SetAttachmentPart(Value)
+		end
+	end,
+})
+
+SyncTrailControls = function(State)
+	TrailColorStart = State.ColorStart
+	TrailColorEnd = State.ColorEnd
+	TrailTransparencyStart = math.round(State.TransparencyStart * 100)
+	TrailTransparencyEnd = math.round(State.TransparencyEnd * 100)
+	TrailWidthStart = math.round(State.WidthStart * 100)
+	TrailWidthEnd = math.round(State.WidthEnd * 100)
+	TrailLightEmission = math.round(State.LightEmission * 100)
+	TrailLightInfluence = math.round(State.LightInfluence * 100)
+	Options.CharacterTrailColorStart:SetValueRGB(State.ColorStart)
+	Options.CharacterTrailColorEnd:SetValueRGB(State.ColorEnd)
+	Options.CharacterTrailTransparencyStart:SetValue(TrailTransparencyStart)
+	Options.CharacterTrailTransparencyEnd:SetValue(TrailTransparencyEnd)
+	Options.CharacterTrailWidthStart:SetValue(TrailWidthStart)
+	Options.CharacterTrailWidthEnd:SetValue(TrailWidthEnd)
+	Options.CharacterTrailAttachmentWidth:SetValue(State.AttachmentWidth)
+	Options.CharacterTrailLifetime:SetValue(State.Lifetime)
+	Options.CharacterTrailVerticalOffset:SetValue(State.VerticalOffset)
+	Options.CharacterTrailMinLength:SetValue(State.MinLength)
+	Options.CharacterTrailMaxLength:SetValue(State.MaxLength)
+	Options.CharacterTrailTextureLength:SetValue(State.TextureLength)
+	Options.CharacterTrailLightEmission:SetValue(TrailLightEmission)
+	Options.CharacterTrailLightInfluence:SetValue(TrailLightInfluence)
+	Options.CharacterTrailBrightness:SetValue(State.Brightness)
+	Options.CharacterTrailPart:SetValue(State.AttachmentPart)
+	Options.CharacterTrailTexture:SetValue(State.Texture)
+	Options.CharacterTrailTextureMode:SetValue(State.TextureMode.Name)
+	Toggles.CharacterTrailFaceCamera:SetValue(State.FaceCamera)
+	for Name, Asset in CharacterTrail.TexturePresets do
+		if Asset == State.Texture then
+			Options.CharacterTrailTexturePreset:SetValue(Name)
+			break
+		end
+	end
+end
+
+CharacterTrailGroup:AddButton("Rebind character trail", function()
+	if TrailController then
+		TrailController:Refresh()
+	end
+end)
 
 
 local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
@@ -1567,7 +1785,7 @@ return {
 	AddonModules = {
 		ImageGallery = ImageGallery,
 		ImagePreview = ImagePreview,
-		TracerPreview = TracerPreview,
+		CharacterTrail = CharacterTrail,
 		VisualPreview = VisualPreview,
 		DrawingESPPreview = DrawingESPPreview,
 		SaveManager = SaveManager,
@@ -1576,7 +1794,7 @@ return {
 	AddonExamples = {
 		ImageGallery = AddonGallery,
 		ImagePreview = AddonImagePreview,
-		TracerPreview = AddonTracer,
+		CharacterTrail = TrailController,
 	},
 	Repository = ActiveRepository,
 }

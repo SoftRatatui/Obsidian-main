@@ -238,6 +238,7 @@ end
 
 local Library = {
     ReleaseVersion = "0.0.1-release-6",
+    ExperimentalBuild = "0.0.1-experimental-1",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -789,15 +790,18 @@ local Templates = {
         EnableSidebarResize = false,
         EnableCompacting = true,
         DisableCompactingSnap = false,
-        SidebarCompacted = false,
+        SidebarCompacted = true,
+        IconOnlySidebar = true,
+        NavigationButtonHeight = 46,
+        NavigationIconSize = 22,
         MinContainerWidth = 256,
         ResponsiveLayout = true,
-        SingleColumnWidth = 540,
+        SingleColumnWidth = 620,
         HideSearchAtWidth = 210,
 
         
         MinSidebarWidth = 128,
-        SidebarCompactWidth = 48,
+        SidebarCompactWidth = 68,
         SidebarCollapseThreshold = 0.5,
 
         
@@ -11497,7 +11501,10 @@ function Library:CreateWindow(WindowInfo)
         WindowInfo.MinSidebarWidth = WindowInfo.SidebarMinWidth
     end
     WindowInfo.MinSidebarWidth = math.max(64, WindowInfo.MinSidebarWidth)
-    WindowInfo.SidebarCompactWidth = math.max(48, WindowInfo.SidebarCompactWidth)
+    WindowInfo.SidebarCompactWidth = math.clamp(tonumber(WindowInfo.SidebarCompactWidth) or 68, 56, 88)
+    WindowInfo.NavigationButtonHeight = math.clamp(tonumber(WindowInfo.NavigationButtonHeight) or 46, 40, 56)
+    WindowInfo.NavigationIconSize = math.clamp(tonumber(WindowInfo.NavigationIconSize) or 22, 18, 26)
+    WindowInfo.IconOnlySidebar = WindowInfo.IconOnlySidebar ~= false
     WindowInfo.SidebarCollapseThreshold = math.clamp(WindowInfo.SidebarCollapseThreshold, 0.1, 0.9)
     WindowInfo.CompactWidthActivation = math.max(48, WindowInfo.CompactWidthActivation)
     WindowInfo.SingleColumnWidth = math.max(240, WindowInfo.SingleColumnWidth)
@@ -11566,13 +11573,14 @@ function Library:CreateWindow(WindowInfo)
     local CompactLauncherMotionScale
     local BottomBarHeight = 20
 
-    local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
-    local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
+    local InitialLeftWidth = WindowInfo.IconOnlySidebar and WindowInfo.SidebarCompactWidth or math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
+    local IsCompact = WindowInfo.IconOnlySidebar or WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
     local LastExpandedWidth = InitialLeftWidth
     local LastCompactState = nil
-    local NavigationIconSize = 17
+    local NavigationIconSize = WindowInfo.NavigationIconSize
     local NavigationIconX = 10
     local NavigationLabelX = 36
+    local NavigationButtonHeight = WindowInfo.NavigationButtonHeight
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
     local HeaderControlWidth = WindowInfo.ShowCompactLauncher and 84 or 50
 
@@ -12656,8 +12664,8 @@ function Library:CreateWindow(WindowInfo)
     end
 
     local function ApplyCompact()
-        local Compact = Window:GetSidebarWidth() == WindowInfo.SidebarCompactWidth
-        if WindowInfo.DisableCompactingSnap then
+        local Compact = WindowInfo.IconOnlySidebar or Window:GetSidebarWidth() == WindowInfo.SidebarCompactWidth
+        if not WindowInfo.IconOnlySidebar and WindowInfo.DisableCompactingSnap then
             Compact = Window:GetSidebarWidth() <= WindowInfo.CompactWidthActivation
         end
         IsCompact = Compact
@@ -12690,6 +12698,10 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:SetCompact(State)
+        if WindowInfo.IconOnlySidebar then
+            Window:SetSidebarWidth(WindowInfo.SidebarCompactWidth)
+            return
+        end
         Window:SetSidebarWidth(State and WindowInfo.SidebarCompactWidth or LastExpandedWidth)
     end
 
@@ -12698,6 +12710,9 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:SetSidebarWidth(Width)
+        if WindowInfo.IconOnlySidebar then
+            Width = WindowInfo.SidebarCompactWidth
+        end
         local MaxSidebarWidth = math.max(48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
         Width = math.floor(math.clamp(Width, 48, MaxSidebarWidth) + 0.5)
 
@@ -12845,7 +12860,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -8, 0, 34),
+                Size = UDim2.new(1, -12, 0, NavigationButtonHeight),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
@@ -13630,9 +13645,9 @@ function Library:CreateWindow(WindowInfo)
 
             local GroupboxCollapseArrow
             local GroupboxLine
-            local GroupboxHeaderHeight = 35
-            local GroupboxTopPadding = 7
-            local GroupboxBottomPadding = 12
+            local GroupboxHeaderHeight = 40
+            local GroupboxTopPadding = 9
+            local GroupboxBottomPadding = 13
 
             do
                 GroupboxHolder = New("Frame", {
@@ -13644,7 +13659,7 @@ function Library:CreateWindow(WindowInfo)
                 table.insert(
                     Library.Corners,
                     New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                        CornerRadius = UDim.new(0, math.min(WindowInfo.CornerRadius + 1, 8)),
                         Parent = GroupboxHolder,
                     })
                 )
@@ -13654,7 +13669,7 @@ function Library:CreateWindow(WindowInfo)
                     Color = function()
                         return Library:GetAccentSurfaceColor(0.1)
                     end,
-                    Position = UDim2.fromOffset(0, 34),
+                    Position = UDim2.fromOffset(0, GroupboxHeaderHeight - 1),
                     Size = UDim2.new(1, 0, 0, 1),
                     Transparency = 0.42,
                 })
@@ -13666,16 +13681,16 @@ function Library:CreateWindow(WindowInfo)
                         ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
                         ImageRectOffset = BoxIcon.ImageRectOffset,
                         ImageRectSize = BoxIcon.ImageRectSize,
-                        Position = UDim2.fromOffset(6, 6),
-                        Size = UDim2.fromOffset(22, 22),
+                        Position = UDim2.fromOffset(10, 10),
+                        Size = UDim2.fromOffset(20, 20),
                         Parent = GroupboxHolder,
                     })
                 end
 
                 GroupboxLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
-                    Size = UDim2.new(1, -(BoxIcon and 24 or 0), 0, 34),
+                    Position = UDim2.fromOffset(BoxIcon and 28 or 0, 0),
+                    Size = UDim2.new(1, -(BoxIcon and 28 or 0), 0, GroupboxHeaderHeight - 1),
                     Text = Info.Name,
                     TextSize = 15,
                     TextTruncate = Enum.TextTruncate.AtEnd,
@@ -13696,16 +13711,16 @@ function Library:CreateWindow(WindowInfo)
                         ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
                         BackgroundTransparency = 1,
                         Rotation = 180,
-                        Position = UDim2.new(1, -(22 + 6), 0, 6),
-                        Size = UDim2.fromOffset(22, 22),
+                        Position = UDim2.new(1, -32, 0, 8),
+                        Size = UDim2.fromOffset(24, 24),
                         Parent = GroupboxHolder,
                     })
                 end
 
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 1, -35),
+                    Position = UDim2.fromOffset(0, GroupboxHeaderHeight),
+                    Size = UDim2.new(1, 0, 1, -GroupboxHeaderHeight),
                     Parent = GroupboxHolder,
                 })
 
@@ -13759,7 +13774,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 local ExpandedHeight = GroupboxHeaderHeight + ContentBottom + GroupboxBottomPadding
-                local TargetSize = UDim2.new(1, 0, 0, Groupbox.Collapsed and 34 or math.ceil(ExpandedHeight))
+                local TargetSize = UDim2.new(1, 0, 0, Groupbox.Collapsed and GroupboxHeaderHeight - 1 or math.ceil(ExpandedHeight))
 
                 GroupboxLine.Visible = not Groupbox.Collapsed
                 local AnimateResize = Library.Animations
@@ -14101,7 +14116,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -8, 0, 34),
+                Size = UDim2.new(1, -12, 0, NavigationButtonHeight),
                 Text = "",
                 Parent = Tabs,
             })

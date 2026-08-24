@@ -1,13 +1,13 @@
 # MonHub UI
 
-A polished Roblox UI library with six restrained semantic themes, responsive layouts, fast smooth animations, mobile support, configuration saving, and full access to the original Obsidian/Linoria-style API.
+A Roblox UI library with six semantic themes, responsive layouts, short interface transitions, mobile input support, configuration persistence, and compatibility with the original Obsidian/Linoria-style API.
 
 Read the canonical [complete guide](GUIDE.md) for installation, API usage, themes, configs, launcher behavior, and troubleshooting. Migrating from the original Obsidian: read the [migration guide](MIGRATION_GUIDE.md).
 
 ## What changed
 
 - Six focused visual presets: neutral-gray `Default`, violet `Metal`, near-black `Midnight`, cool `Steel`, green-gray `Sage`, and warm-neutral `Ash`; all use semantic background, card, raised, control, hover, muted-text, and accent layers, with a feature-gated soft shadow on elevated surfaces.
-- Optional cached Inter Medium typography through `LoadCustomFont` and `SetThemeFont`, with GothamMedium fallback and persistence across theme switches.
+- Packaged Inter Bold typography through `LoadCustomFont` and `SetThemeFont`, with Gotham fallback and persistence across theme switches.
 - Motion controller prevents duplicate transitions for window, tab, groupbox, dropdown, key picker, slider, and toggle interactions.
 - New declarative API: create a complete interface from one readable table.
 - Backwards compatible: `CreateWindow`, `AddTab`, `AddToggle`, and the existing addons still work.
@@ -15,7 +15,7 @@ Read the canonical [complete guide](GUIDE.md) for installation, API usage, theme
 - Less work while typing and changing controls: search is debounced, text measurements are cached, dependency updates are batched, and unchanged values are ignored.
 - Responsive geometry: windows remain inside the viewport, resize work is coalesced, and narrow content switches from two cramped columns to one readable vertical layout.
 - Consistent layout: footer, resize handle, group headers, and content columns use separate aligned regions.
-- Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, and refined sliders.
+- Centralized click sound, draggable clamped Watermark, FPS/ping settings, R6 ESP preview, a real native character Trail addon, and refined sliders.
 - Theme changes are atomic: registered instances and stateful controls are refreshed together, while raw legacy palette fields are ignored so old colors cannot remain in the top bar, overlays, controls, or footer.
 
 ## Quick start
@@ -47,10 +47,10 @@ local function Fetch(URL)
     return game:HttpGet(URL)
 end
 
-local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5")
+local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6")
 local Library = assert(loadstring(Source))()
-if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
 
 local App = Library:Create({
@@ -105,11 +105,11 @@ App:Get("speed"):SetValue(50)
 
 ## Current interface
 
-`Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` is the dark violet reference preset, while `Midnight` provides a near-black neutral profile with a muted steel accent. All three use Gotham Regular, compact 16×16 checkmarks inside a 22px row, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. Cards, popups, inputs, hover states, and secondary text have separate semantic colors, which creates depth without blur or blanket rounding. Sidebar tabs use an inset full-width row with a soft background transition. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
+`Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` is the dark violet reference preset, while `Midnight` provides a near-black neutral profile with a muted steel accent. All three use Gotham Regular as the zero-download fallback, compact 16×16 checkmarks inside a 22px row, restrained 6px outer geometry, subtle single-pixel outlines, and a fixed footer. The complete showcase installs the packaged Inter Bold font before creating its window. Cards, popups, inputs, hover states, and secondary text have separate semantic colors, which creates depth without blur or blanket rounding. Sidebar tabs use an inset full-width row with a soft background transition. Hover tooltips are disabled by default. The window stays within the viewport; use the move icon in the top-right corner to reposition it. The adjacent minimize icon collapses the window into a centered draggable launcher with the script title; closing by keybind keeps the screen clear and is reopened by the same keybind. Watermark starts in the top-left corner, can be dragged, can be snapped left or right, stays clamped inside the viewport, and does not display time.
 
 For a mobile-first size, use `Library.IsMobile` when creating the window. The library automatically changes narrow two-column content into a readable single column and coalesces resize updates to avoid animation stutter.
 
-Buttons support `Default`, `Primary`, and `Ghost` variants. `Secondary` remains an alias for `Default`. Warning and danger button styling and automatic semantic icons were removed from the current API; use clear text, an explicit icon, or a confirmation dialog instead.
+Buttons support `Default`, `Primary`, and `Ghost` variants. `Secondary` remains an alias for `Default`. Warning and danger button styling and automatic semantic icons were removed from the current API; maintained projects must migrate those variants to the current set and use clear text, an explicit icon, or a confirmation dialog instead.
 
 Toggles support `Default`, `Warning`, and `Danger` through `Variant`. Their active track and outline use the semantic color while inactive controls remain neutral, so dense settings pages stay calm. Activating a `Danger` toggle opens a short `Cancel` / `Continue` confirmation; turning it off stays immediate for a quick exit. Set `ConfirmDanger = false` to opt out, or provide `ConfirmTitle` and `ConfirmDescription` for the dialog copy. `Caution` and `Destructive` are accepted aliases; legacy `Risky = true` maps to `Danger`.
 
@@ -123,7 +123,7 @@ The library retains ordinary defensive guards where they are free, but reduced-f
 
 ### Wally / Roblox Studio
 
-The current public Wally package metadata points to upstream Obsidian. To guarantee this exact MonHub build, vendor `Library.lua`, `Library.d.luau`, and `addons`, or publish a package pinned to this repository. See [Wally or Studio installation](MIGRATION_GUIDE.md#установка-через-wally-или-studio).
+The current public Wally package metadata points to upstream Obsidian. To guarantee this exact MonHub build, vendor `Library.lua`, `Library.d.luau`, and `addons`, or publish a package pinned to this repository. See [Wally or Studio installation](MIGRATION_GUIDE.md#wally-or-studio-installation).
 
 ## Declarative structure
 
@@ -144,10 +144,10 @@ Use `Id` only when code needs to access an element later. `App:Get(Id)` returns 
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
 ))()
 local Players = game:GetService("Players")
 
@@ -175,13 +175,15 @@ Use `VisualPreview.Create` for the external side panel, `VisualPreview.CreateEmb
 
 Drag the character with the left mouse button or touch to rotate it. Use the mouse wheel to zoom. `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-Optional `ImageGallery.lua`, `ImagePreview.lua`, and `TracerPreview.lua` addons provide pooled skin grids, animated full-size 2D previews, and an asset-based tracer sample. They are never loaded by the core library; `Example.lua` imports every addon explicitly as a complete interactive showcase. For the shared live-entity contract and complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
+Optional `ImageGallery.lua` and `ImagePreview.lua` addons provide pooled skin grids and animated full-size 2D previews. `CharacterTrail.lua` adds a native Roblox `Trail` with gradient colors, independent start/end transparency, width curves, texture presets, lighting, character respawn support, and no frame loop. These addons are never loaded by the core library; `Example.lua` imports them explicitly as a complete interactive showcase. `TracerPreview.lua` remains only as a legacy decorative image sample and is not imported by the current example. For the complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
+
+The redesign is isolated in `ExperimentalLibrary.lua`, a complete copy of the production API with a fixed icon-only navigation rail, larger centered icons, wider content, and refined module headers. `Experimental.lua` loads that copy and exposes `CharacterTrail`, `TextureGallery`, `VisualPreview`, `DrawingESPPreview`, `FixedR6Preview`, and the packaged Inter Bold font through `Library.Experimental`. `TextureGallery` is a lightweight trail-texture selector with a wide selected preview and compact cards. `FixedR6Preview` creates an actual R6 from the selected player's current `HumanoidDescription`, keeps the panel fixed to its assigned tab, and accepts the same renderer adapter used by the live ESP. Run `ExperimentalExample.lua` to test the complete experimental layout. Production `Library.lua` is unchanged by this redesign.
 
 ## Theme presets
 
 The release contains six built-ins: `Default`, the neutral-gray startup theme; `Metal`, the desaturated violet reference theme; `Midnight`, the near-black neutral theme; `Steel`, a cool blue-gray theme; `Sage`, a quiet green-gray theme; and `Ash`, a warm neutral theme. Switch directly with `Library:SetTheme("ThemeName")`. Raw legacy palette tables and saved color fields are ignored.
 
-`ThemeManager.lua` adds a minimal six-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable UI default.
+`ThemeManager.lua` adds a minimal six-preset dropdown. Its `ThemeManager_ThemeList` option is saved by SaveManager even when `IgnoreThemeSettings()` filters obsolete raw color fields. Gotham Regular is the readable zero-download fallback; `assets/Inter-Bold.ttf` is the packaged showcase font.
 
 ## Legacy API
 

@@ -4,7 +4,7 @@ The canonical API guide is [GUIDE.md](GUIDE.md). This document focuses on moving
 
 MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` now provides a minimal built-in preset selector.
 
-The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Regular typography, responsive sidebar behavior, compact checkmark toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, optimized search, and a declarative API.
+The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Regular fallback typography, packaged Inter Bold support, responsive sidebar behavior, compact checkmark toggles, short motion, click sound support, a draggable clamped watermark, R6 ESP preview support, a native character Trail addon, optimized search, and a declarative API.
 
 ## Useful links
 
@@ -13,6 +13,9 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [Raw Library.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua)
 - [Complete Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua)
 - [Raw Example.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Example.lua)
+- [Experimental.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Experimental.lua)
+- [ExperimentalLibrary.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/ExperimentalLibrary.lua)
+- [ExperimentalExample.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/ExperimentalExample.lua)
 - [QuickStart.luau](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/QuickStart.luau)
 - [ThemeManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ThemeManager.lua)
 - [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
@@ -21,7 +24,11 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [DrawingESPPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DrawingESPPreview.lua)
 - [ImageGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImageGallery.lua)
 - [ImagePreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImagePreview.lua)
-- [TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
+- [CharacterTrail.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/CharacterTrail.lua)
+- [TextureGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TextureGallery.lua)
+- [FixedR6Preview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/FixedR6Preview.lua)
+- [Inter-Bold.ttf](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/assets/Inter-Bold.ttf)
+- [Legacy TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
 - [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
 - [Changelog](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/CHANGELOG.md)
 - [Original Obsidian](https://github.com/deividcomsono/Obsidian)
@@ -36,7 +43,7 @@ For most projects, complete these steps in order:
 1. Back up the working script and configuration folder.
 2. Replace the upstream `Library.lua` URL with the MonHub raw URL.
 3. Keep existing control IDs unchanged.
-4. Update `SaveManager.lua`; add `ThemeManager.lua` when the settings page should expose the two theme presets.
+4. Update `SaveManager.lua`; add `ThemeManager.lua` when the settings page should expose the six built-in presets.
 5. Run a smoke test for callbacks, configs, keybinds, mobile layout, and unload.
 
 ## Step 1: replace the loader
@@ -53,10 +60,10 @@ Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
 ```
 
@@ -68,10 +75,10 @@ Do not move to the declarative API during the first migration. Existing code can
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
 
 local Window = Library:CreateWindow({
@@ -317,6 +324,8 @@ end)
 
 Available button variants are `Default`, `Primary`, and `Ghost`. `Secondary` remains an alias for `Default`. Older `Warning`, `Danger`, `Caution`, `Destructive`, and `Risky` button styling now resolves to `Default`, so legacy scripts remain functional without carrying colored outlines into the current design. Use an explicit icon or confirmation dialog when the action needs extra context.
 
+This button migration is required for maintained code. Replace every legacy semantic button variant explicitly rather than relying on the compatibility fallback. Warning and danger toggle variants remain supported because their visual state stays visible after the click.
+
 Toggles also accept `Variant = "Warning"` or `Variant = "Danger"`. In the enabled state only the track and outline become semantic, so key-picker rows do not shift. Enabling a danger toggle opens a short `Cancel` / `Continue` dialog. Turning it off is immediate. Set `ConfirmDanger = false` to disable confirmation, or set `ConfirmTitle` and `ConfirmDescription` for custom dialog copy.
 
 The title-bar minimize button collapses the UI to a centered draggable launcher with the script title. When the menu is hidden by keybind, the launcher does not appear; use the same bind to restore the menu. Configure this through `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow`.
@@ -391,7 +400,19 @@ The release contains exactly these six built-ins. Legacy preset names resolve sa
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 
-Gotham Regular is the production font because it remains clear at small UI sizes without making dense settings pages look overly heavy.
+Gotham Regular is the zero-download fallback because it remains clear at small UI sizes without making dense settings pages look overly heavy. The release repository packages Inter Bold for projects that want the showcase typography:
+
+```luau
+local InterBoldFont = Library:LoadCustomFont(
+    "MonHubInterBold",
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Bold.ttf?monhub=0.0.1-release-6",
+    700
+)
+
+Library:SetThemeFont(InterBoldFont or Enum.Font.Gotham)
+```
+
+Load and set the custom font before `CreateWindow`. The font override remains active through theme changes. Numeric weights from `100` through `900` resolve to the matching `Enum.FontWeight` when the executor supports custom assets.
 
 ## Click sound
 
@@ -455,10 +476,10 @@ Load the addon from the same commit as `Library.lua`:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
 ))()
 local Players = game:GetService("Players")
 
@@ -511,14 +532,98 @@ Projects that already have a polished renderer do not need to replace it. Pass a
 
 Use `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` and `SetPanelGap(number)` only for panel placement. Drag the character with left mouse or touch to rotate it; use the mouse wheel for zoom. `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
+## Real character Trail addon
+
+Replace decorative `TracerPreview` usage with `addons/CharacterTrail.lua` when the effect must exist on the real player. The addon creates a native Roblox `Trail`, follows respawns, and creates no Trail or Attachment instances while disabled.
+
+```luau
+local CharacterTrail = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-6"
+))()
+
+local TrailController = CharacterTrail.Create({
+    Enabled = false,
+    Target = game:GetService("Players").LocalPlayer,
+    ColorA = Color3.fromRGB(120, 166, 209),
+    ColorB = Color3.fromRGB(203, 221, 239),
+    TransparencyMin = 0.04,
+    TransparencyMax = 0.18,
+    WidthStart = 1,
+    WidthEnd = 0,
+    AttachmentWidth = 1.3,
+    Lifetime = 0.34,
+    Texture = "Beam",
+    FaceCamera = true,
+})
+
+TrailController:SetEnabled(true)
+
+Library:OnUnload(function()
+    TrailController:Destroy()
+end)
+```
+
+Use `SetColors`, `SetTransparency`, `SetWidthScale`, `SetAttachmentWidth`, `SetVerticalOffset`, `SetAttachmentPart`, `SetLifetime`, `SetMinLength`, `SetMaxLength`, `SetTexture`, `SetTextureMode`, `SetTextureLength`, `SetFaceCamera`, `SetLight`, and `SetBrightness` for direct settings. `ApplyPreset("Soft" | "Energy" | "Plasma" | "Minimal")` changes a complete visual profile. Texture names include `None`, `Beam`, `Lightning`, `Heartrate`, `Chain`, `Glitch`, `Swirl`, `Neon`, `Plasma`, and `Laser`; numeric asset IDs and `rbxassetid://` strings are also accepted.
+
+The old `TracerPreview.lua` remains available only for compatibility with scripts that intentionally need a decorative menu image. It is not used by the current `Example.lua` and must not be treated as an in-world effect.
+
+## Experimental entry point
+
+Use `Experimental.lua` when testing the next layout without editing the production library. It loads the complete `ExperimentalLibrary.lua` copy, then attaches the optional `CharacterTrail`, `TextureGallery`, `VisualPreview`, `DrawingESPPreview`, and `FixedR6Preview` modules. Local files are preferred when file APIs are available; otherwise each file is loaded from the matching versioned repository path.
+
+The experimental window defaults to a fixed 68px icon-only rail, 46px navigation buttons, 22px centered icons, hidden navigation labels, wider content, and refined 40px module headers. The copy preserves the production API, so an existing page can be tested by changing only its loader. Keep release scripts on `Library.lua` until the experimental layout is accepted.
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Experimental.lua?monhub=0.0.1-release-6"
+))()
+
+local CharacterTrail = Library.Experimental.CharacterTrail
+local TextureGallery = Library.Experimental.TextureGallery
+```
+
+Run `ExperimentalExample.lua` for the complete icon-rail, trail-texture, native Trail, and fixed R6 showcase. Move accepted core changes into `Library.lua` deliberately; standalone visual modules can remain optional addons.
+
+The texture selector is intentionally smaller than the general image gallery. It creates no search box, category control, pagination state, or frame loop:
+
+```luau
+local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
+
+local Gallery = Library:CreateTextureGallery(TextureGroup, "TrailTextures", {
+    Height = 302,
+    Columns = 2,
+    Items = Library.Experimental.TextureGallery.DefaultItems,
+    Selected = "beam",
+    OnSelected = function(Item)
+        TrailController:SetTexture(Item.Texture)
+        TrailController:SetColors(Item.ColorA, Item.ColorB)
+    end,
+})
+```
+
+The fixed preview creates an actual R6 from the current player's applied appearance. Its built-in renderer is suitable for UI testing; pass the renderer adapter used by the real ESP through `Renderer` when the preview must follow the exact production drawing path.
+
+```luau
+local Preview = Library:CreateFixedR6Preview(Tabs.Visuals, {
+    Target = game:GetService("Players").LocalPlayer,
+    Renderer = LiveESPRenderer,
+    Side = "Right",
+    Alignment = "Center",
+    Box = true,
+    Health = true,
+    Gradient = true,
+    DynamicBoxes = true,
+})
+```
+
 Image-heavy selectors are separate opt-in addons and are never loaded by the core library. The complete `Example.lua` imports them explicitly as a showcase:
 
 ```luau
 local ImageGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6"
 ))()
 local ImagePreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6"
 ))()
 
 local Look = ImagePreview.CreateEmbedded(Library, PreviewGroup, "SkinLook", {
@@ -569,7 +674,7 @@ Load `ThemeManager.lua` when the UI Settings page should expose the six built-in
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-6"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -582,7 +687,7 @@ The addon creates a minimal `Default` / `Metal` / `Midnight` / `Steel` / `Sage` 
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-6"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -820,7 +925,7 @@ Fix: verify the URL and restart the session.
 
 ### Font Face becomes Code
 
-Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Regular. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
+Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Regular until a project explicitly installs the packaged Inter Bold font. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
 
 ### A configuration does not load
 
@@ -847,6 +952,8 @@ Use a responsive size and call:
 Window:FitToViewport()
 ```
 
+The current fitter reclamps after Roblox publishes the updated `AbsoluteSize` and after every viewport resize. If a custom embedded element still overflows, remove its fixed width and size it from the groupbox's available width.
+
 ### The viewport rotates but the model is invisible
 
 Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Model`, set a `PrimaryPart` when possible.
@@ -855,16 +962,18 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 
 - [ ] The raw URL points to MonHub.
 - [ ] Library and addons come from one version.
+- [ ] `Library.ReleaseVersion` reports `0.0.1-release-6`; a mismatch is informational and never blocks startup.
 - [ ] Existing control IDs are preserved.
 - [ ] Default applies as the neutral-gray startup theme.
 - [ ] Metal applies as the violet alternate theme.
-- [ ] Gotham Regular is not replaced by Code.
+- [ ] Gotham Regular is not replaced by Code, or packaged Inter Bold loads successfully before window creation.
 - [ ] The window fits the desktop viewport.
 - [ ] Sidebar compact works on mobile.
 - [ ] Toggle and checkbox callbacks work.
 - [ ] Slider works with mouse and touch.
 - [ ] Dropdown single and multi values persist.
 - [ ] KeyPicker and ColorPicker work.
+- [ ] Maintained buttons use only `Default`, `Primary`, or `Ghost` variants.
 - [ ] Old appearance fields are ignored when configurations load.
 - [ ] `ThemeManager_ThemeList` saves and restores the selected built-in theme.
 - [ ] Old configurations load, or are deliberately moved to a new folder.
@@ -872,6 +981,9 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 - [ ] Watermark, FPS, and ping controls work.
 - [ ] Search has no visible delay.
 - [ ] Unload cleans up UI and external connections.
+- [ ] `CharacterTrail:Destroy()` runs on unload when the addon is enabled.
+- [ ] Experimental layout tests load `ExperimentalLibrary.lua`; production loaders still use `Library.lua`.
+- [ ] The texture gallery and fixed R6 preview are loaded only on pages that use them.
 - [ ] The script is tested on desktop and mobile.
 
 ## Recommended real migration order
@@ -884,6 +996,7 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 6. Enable autoload.
 7. Add Watermark and click sound.
 8. Test desktop, mobile, DPI, and resizing.
-9. Move to the declarative API only after all previous steps pass.
+9. Add optional `CharacterTrail`, texture, image, or preview addons one at a time and verify cleanup.
+10. Move to the declarative API only after all previous steps pass.
 
 This order localizes errors and makes each stage easy to roll back.

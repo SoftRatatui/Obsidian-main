@@ -1,3 +1,37 @@
+## 24.08.2026
+
+```diff
+[character trail]
++ Added the optional native CharacterTrail addon with two-color gradients, start/end transparency, width curves, texture presets, attachment placement, lighting, and character respawn support
++ Kept the disabled controller allocation-free and used native Roblox rendering without a frame loop
++ Replaced the decorative tracer section in Example.lua with complete controls for the real character Trail
+
+[stability]
++ Repainted keybind state rows synchronously after every theme transaction so a finishing hover tween cannot restore stale palette colors
++ Reclamped window size and position after the first absolute-layout update and every viewport resize to prevent first-frame edge overflow
+
+[typography]
++ Packaged assets/Inter-Bold.ttf and installed it in Example.lua and Experimental.lua with Gotham fallback
++ Resolved custom font weights from 100 through 900 instead of always requesting Regular from the generated family
+
+[experimental]
++ Added ExperimentalLibrary.lua as a complete production-compatible copy for isolated redesign work while leaving Library.lua unchanged
++ Rebuilt the experimental navigation as a fixed 68px icon rail with 46px buttons, centered 22px icons, hidden labels, wider content, and refined module headers
++ Added ExperimentalExample.lua as the complete icon-rail, texture, native Trail, and fixed R6 showcase
+
+[visual addons]
++ Added the optional TextureGallery addon with a wide selected preview, compact trail cards, ten built-in textures, and direct CharacterTrail binding
++ Added the optional FixedR6Preview addon that creates an actual R6 from the current player appearance and accepts the live ESP renderer adapter
+
+[performance]
++ Kept both experimental visual addons opt-in; TextureGallery has no frame loop, search worker, or pagination state, while FixedR6Preview reuses the existing preview scheduler and adds only an appearance-change connection
+
+[maintenance]
++ Standardized repository documentation in English and repaired the Wally/Studio section link
++ Verified that executable source and documented code examples contain no comments or authoring metadata
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and release URLs for 0.0.1-release-6
+```
+
 ## 23.08.2026
 
 ```diff

@@ -1,8 +1,8 @@
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-final-theme-5"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-final-theme-5" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-final-theme-5", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
 
 Library:SetClickSound(92679954573730, 0.3)

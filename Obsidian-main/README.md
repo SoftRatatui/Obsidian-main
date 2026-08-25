@@ -47,7 +47,7 @@ local function Fetch(URL)
     return game:HttpGet(URL)
 end
 
-local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6")
+local Source = Fetch("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3")
 local Library = assert(loadstring(Source))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -175,7 +175,7 @@ Use `VisualPreview.Create` for the external side panel, `VisualPreview.CreateEmb
 
 Drag the character with the left mouse button or touch to rotate it. Use the mouse wheel to zoom. `Preview:Rotate(x, y)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
 
-Optional `ImageGallery.lua` and `ImagePreview.lua` addons provide pooled skin grids and animated full-size 2D previews. `CharacterTrail.lua` adds a native Roblox `Trail` with gradient colors, independent start/end transparency, width curves, texture presets, lighting, character respawn support, and no frame loop. These addons are never loaded by the core library; `Example.lua` imports them explicitly as a complete interactive showcase. `TracerPreview.lua` remains only as a legacy decorative image sample and is not imported by the current example. For the complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
+Optional `ImageGallery.lua` and `ImagePreview.lua` addons provide pooled skin grids and animated full-size 2D previews with independent asset, image-area, card, caption, container, and outline transparency. Global size, position, anchor, scale, tile, rotation, and sprite settings can be overridden per gallery item. `CharacterTrail.lua` adds a native Roblox `Trail` with gradient colors, independent start/end transparency, width curves, texture presets, lighting, character respawn support, and no frame loop. These addons are never loaded by the core library; `Example.lua` imports them explicitly as a complete interactive showcase. `TracerPreview.lua` remains only as a legacy decorative image sample and is not imported by the current example. For the complete opt-in addon examples, see [GUIDE.md](GUIDE.md#media-and-esp-preview) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md#esp-preview-addon).
 
 Optional production addons include `TextureGallery`, `FixedR6Preview`, and `DashboardWindow`. The texture selector uses a wide trail preview and compact cards. The fixed preview creates an actual R6 from the selected player's current `HumanoidDescription` and accepts the same renderer adapter used by live ESP. The dashboard adds a compact draggable window with the same themed top bar, groupbox structure, Inter typography, fast visibility transition, static text, function-backed values, callbacks, and custom GUI content while sharing one paused-when-hidden updater. `Example.lua` demonstrates the maintained addon set.
 

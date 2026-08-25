@@ -930,10 +930,21 @@ local Templates = {
         Image = "",
         Transparency = 0,
         BackgroundTransparency = 0,
+        OutlineTransparency = 0.42,
+        OutlineThickness = 1,
+        CornerRadius = 4,
+        Padding = 6,
         Color = Color3.new(1, 1, 1),
         RectOffset = Vector2.zero,
         RectSize = Vector2.zero,
         ScaleType = Enum.ScaleType.Fit,
+        ImageSize = UDim2.fromScale(1, 1),
+        ImagePosition = UDim2.fromScale(0.5, 0.5),
+        ImageAnchorPoint = Vector2.new(0.5, 0.5),
+        ImageScale = 1,
+        TileSize = UDim2.fromOffset(64, 64),
+        Rotation = 0,
+        AspectRatio = 0,
         Height = 200,
         Visible = true,
     },
@@ -10222,8 +10233,21 @@ do
             RectSize = Info.RectSize,
             Height = Info.Height,
             ScaleType = Info.ScaleType,
-            Transparency = Info.Transparency,
-            BackgroundTransparency = Info.BackgroundTransparency,
+            Transparency = math.clamp(tonumber(Info.Transparency) or 0, 0, 1),
+            BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1),
+            BackgroundColor = typeof(Info.BackgroundColor) == "Color3" and Info.BackgroundColor or nil,
+            OutlineColor = typeof(Info.OutlineColor) == "Color3" and Info.OutlineColor or nil,
+            OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or 0.42, 0, 1),
+            OutlineThickness = math.clamp(tonumber(Info.OutlineThickness) or 1, 0, 4),
+            CornerRadius = math.clamp(tonumber(Info.CornerRadius) or 4, 0, 24),
+            Padding = math.clamp(tonumber(Info.Padding) or 6, 0, math.max(0, math.min(48, math.floor((tonumber(Info.Height) or 200) * 0.5) - 1))),
+            ImageSize = typeof(Info.ImageSize) == "UDim2" and Info.ImageSize or UDim2.fromScale(1, 1),
+            ImagePosition = typeof(Info.ImagePosition) == "UDim2" and Info.ImagePosition or UDim2.fromScale(0.5, 0.5),
+            ImageAnchorPoint = typeof(Info.ImageAnchorPoint) == "Vector2" and Info.ImageAnchorPoint or Vector2.new(0.5, 0.5),
+            ImageScale = math.clamp(tonumber(Info.ImageScale) or 1, 0.1, 4),
+            TileSize = typeof(Info.TileSize) == "UDim2" and Info.TileSize or UDim2.fromOffset(64, 64),
+            Rotation = tonumber(Info.Rotation) or 0,
+            AspectRatio = math.max(0, tonumber(Info.AspectRatio) or 0),
 
             Visible = Info.Visible,
             Type = "Image",
@@ -10237,33 +10261,59 @@ do
         })
 
         local Box = New("Frame", {
-            AnchorPoint = Vector2.new(0, 1),
-            BackgroundColor3 = "MainColor",
-            BorderColor3 = "OutlineColor",
-            BorderSizePixel = 1,
+            BackgroundColor3 = Image.BackgroundColor or Library.Scheme.MainColor,
+            BorderSizePixel = 0,
             BackgroundTransparency = Image.BackgroundTransparency,
-            Position = UDim2.fromScale(0, 1),
+            ClipsDescendants = true,
+            Position = UDim2.fromScale(0, 0),
             Size = UDim2.fromScale(1, 1),
             Parent = Holder,
         })
 
-        New("UIPadding", {
-            PaddingBottom = UDim.new(0, 3),
-            PaddingLeft = UDim.new(0, 8),
-            PaddingRight = UDim.new(0, 8),
-            PaddingTop = UDim.new(0, 4),
+        local BoxCorner = New("UICorner", {
+            CornerRadius = UDim.new(0, Image.CornerRadius),
             Parent = Box,
         })
 
+        local BoxStroke = New("UIStroke", {
+            Color = Image.OutlineColor or Library.Scheme.OutlineColor,
+            Thickness = Image.OutlineThickness,
+            Transparency = Image.OutlineTransparency,
+            Parent = Box,
+        })
+
+        local BoxPadding = New("UIPadding", {
+            PaddingBottom = UDim.new(0, Image.Padding),
+            PaddingLeft = UDim.new(0, Image.Padding),
+            PaddingRight = UDim.new(0, Image.Padding),
+            PaddingTop = UDim.new(0, Image.Padding),
+            Parent = Box,
+        })
+
+        Library:AddToRegistry(Box, {
+            BackgroundColor3 = function()
+                return Image.BackgroundColor or Library.Scheme.MainColor
+            end,
+        })
+        Library:AddToRegistry(BoxStroke, {
+            Color = function()
+                return Image.OutlineColor or Library.Scheme.OutlineColor
+            end,
+        })
+
         local ImageProperties = {
+            AnchorPoint = Image.ImageAnchorPoint,
             BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 1),
+            Position = Image.ImagePosition,
+            Size = Image.ImageSize,
             Image = Image.Image,
             ImageTransparency = Image.Transparency,
             ImageColor3 = Image.Color,
             ImageRectOffset = Image.RectOffset,
             ImageRectSize = Image.RectSize,
             ScaleType = Image.ScaleType,
+            TileSize = Image.TileSize,
+            Rotation = Image.Rotation,
             Parent = Box,
         }
 
@@ -10275,12 +10325,38 @@ do
         ImageProperties.ImageRectSize = Icon.ImageRectSize
 
         local ImageLabel = New("ImageLabel", ImageProperties)
+        local ImageScale = New("UIScale", {
+            Scale = Image.ImageScale,
+            Parent = ImageLabel,
+        })
+        local AspectConstraint
+
+        local function ApplyAspectRatio()
+            if Image.AspectRatio > 0 then
+                if not AspectConstraint then
+                    AspectConstraint = New("UIAspectRatioConstraint", {
+                        AspectRatio = Image.AspectRatio,
+                        AspectType = Enum.AspectType.ScaleWithParentSize,
+                        DominantAxis = Enum.DominantAxis.Width,
+                        Parent = ImageLabel,
+                    })
+                else
+                    AspectConstraint.AspectRatio = Image.AspectRatio
+                end
+            elseif AspectConstraint then
+                AspectConstraint:Destroy()
+                AspectConstraint = nil
+            end
+        end
+
+        ApplyAspectRatio()
 
         function Image:SetHeight(Height: number)
             assert(Height > 0, "Height must be greater than 0.")
 
             Image.Height = Height
             Holder.Size = UDim2.new(1, 0, 0, Height)
+            Image:SetPadding(Image.Padding)
             Groupbox:Resize()
         end
 
@@ -10295,6 +10371,8 @@ do
             Image.RectSize = Icon.ImageRectSize
 
             ImageLabel.Image = NewImage
+            ImageLabel.ImageRectOffset = Image.RectOffset
+            ImageLabel.ImageRectSize = Image.RectSize
             Image.Image = NewImage
         end
 
@@ -10329,12 +10407,93 @@ do
             Image.ScaleType = ScaleType
         end
 
+        function Image:SetImageSize(Size: UDim2)
+            assert(typeof(Size) == "UDim2", "Image size must be a UDim2 value.")
+            Image.ImageSize = Size
+            ImageLabel.Size = Size
+        end
+
+        function Image:SetImageScale(Scale: number)
+            assert(typeof(Scale) == "number", "Image scale must be a number.")
+            Image.ImageScale = math.clamp(Scale, 0.1, 4)
+            ImageScale.Scale = Image.ImageScale
+        end
+
+        function Image:SetImagePosition(Position: UDim2, AnchorPoint: Vector2?)
+            assert(typeof(Position) == "UDim2", "Image position must be a UDim2 value.")
+            if AnchorPoint ~= nil then
+                assert(typeof(AnchorPoint) == "Vector2", "Image anchor point must be a Vector2 value.")
+                Image.ImageAnchorPoint = AnchorPoint
+                ImageLabel.AnchorPoint = AnchorPoint
+            end
+            Image.ImagePosition = Position
+            ImageLabel.Position = Position
+        end
+
+        function Image:SetTileSize(Size: UDim2)
+            assert(typeof(Size) == "UDim2", "Tile size must be a UDim2 value.")
+            Image.TileSize = Size
+            ImageLabel.TileSize = Size
+        end
+
+        function Image:SetRotation(Rotation: number)
+            assert(typeof(Rotation) == "number", "Rotation must be a number.")
+            Image.Rotation = Rotation
+            ImageLabel.Rotation = Rotation
+        end
+
+        function Image:SetAspectRatio(Ratio: number)
+            assert(typeof(Ratio) == "number" and Ratio >= 0, "Aspect ratio must be zero or greater.")
+            Image.AspectRatio = Ratio
+            ApplyAspectRatio()
+        end
+
         function Image:SetTransparency(Transparency: number)
             assert(typeof(Transparency) == "number", "Transparency must be a number between 0 and 1.")
             assert(Transparency >= 0 and Transparency <= 1, "Transparency must be between 0 and 1.")
 
             ImageLabel.ImageTransparency = Transparency
             Image.Transparency = Transparency
+        end
+
+        function Image:SetBackgroundTransparency(Transparency: number)
+            assert(typeof(Transparency) == "number" and Transparency >= 0 and Transparency <= 1, "Background transparency must be between 0 and 1.")
+            Image.BackgroundTransparency = Transparency
+            Box.BackgroundTransparency = Transparency
+        end
+
+        function Image:SetOutlineTransparency(Transparency: number)
+            assert(typeof(Transparency) == "number" and Transparency >= 0 and Transparency <= 1, "Outline transparency must be between 0 and 1.")
+            Image.OutlineTransparency = Transparency
+            BoxStroke.Transparency = Transparency
+        end
+
+        function Image:SetBackgroundColor(Color: Color3?)
+            assert(Color == nil or typeof(Color) == "Color3", "Background color must be a Color3 value or nil.")
+            Image.BackgroundColor = Color
+            Box.BackgroundColor3 = Color or Library.Scheme.MainColor
+        end
+
+        function Image:SetOutlineColor(Color: Color3?)
+            assert(Color == nil or typeof(Color) == "Color3", "Outline color must be a Color3 value or nil.")
+            Image.OutlineColor = Color
+            BoxStroke.Color = Color or Library.Scheme.OutlineColor
+        end
+
+        function Image:SetPadding(Padding: number)
+            assert(typeof(Padding) == "number" and Padding >= 0, "Padding must be zero or greater.")
+            Image.Padding = math.clamp(Padding, 0, math.max(0, math.min(48, math.floor(Image.Height * 0.5) - 1)))
+            local Value = UDim.new(0, Image.Padding)
+            BoxPadding.PaddingBottom = Value
+            BoxPadding.PaddingLeft = Value
+            BoxPadding.PaddingRight = Value
+            BoxPadding.PaddingTop = Value
+        end
+
+        function Image:SetCornerRadius(Radius: number)
+            assert(typeof(Radius) == "number" and Radius >= 0, "Corner radius must be zero or greater.")
+            Image.CornerRadius = math.clamp(Radius, 0, 24)
+            BoxCorner.CornerRadius = UDim.new(0, Image.CornerRadius)
         end
 
         function Image:SetVisible(Visible: boolean)
@@ -10347,6 +10506,10 @@ do
         Groupbox:Resize()
 
         Image.Holder = Holder
+        Image.Box = Box
+        Image.ImageLabel = ImageLabel
+        Image.ImageScaleObject = ImageScale
+        Image.Stroke = BoxStroke
         table.insert(Groupbox.Elements, Image)
 
         Options[Idx] = Image

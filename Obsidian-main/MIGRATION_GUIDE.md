@@ -58,7 +58,7 @@ Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -73,7 +73,7 @@ Do not move to the declarative API during the first migration. Existing code can
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -566,7 +566,7 @@ These modules remain standalone and are loaded only by projects that need them:
 
 ```luau
 local TextureGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 local DashboardWindow = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
@@ -645,14 +645,19 @@ Image-heavy selectors are separate opt-in addons and are never loaded by the cor
 
 ```luau
 local ImageGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 local ImagePreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 
 local Look = ImagePreview.CreateEmbedded(Library, PreviewGroup, "SkinLook", {
     Height = 280,
+    ImagePadding = 12,
+    ImageScale = 1,
+    CanvasTransparency = 0.18,
+    CaptionTransparency = 0.08,
+    OutlineTransparency = 0.48,
     Motion = true,
 })
 
@@ -660,6 +665,11 @@ local Gallery = ImageGallery.CreateEmbedded(Library, SkinGroup, "SkinGrid", {
     Height = 344,
     Columns = 5,
     PageSize = 15,
+    CellTransparency = 0.06,
+    OutlineTransparency = 0.48,
+    ImageBackgroundTransparency = 0.22,
+    ImagePadding = 5,
+    ImageScale = 1,
     Preview = Look,
     Items = SkinDefinitions,
     OnSelected = function(Item)
@@ -668,7 +678,7 @@ local Gallery = ImageGallery.CreateEmbedded(Library, SkinGroup, "SkinGrid", {
 })
 ```
 
-The gallery creates only `PageSize` reusable cards, assigns images only for the active filtered page, and debounces search. The preview recycles two image layers for crossfade and zoom. Neither addon has a frame loop. See the current image-addon section in `GUIDE.md` for the complete method list and item schema.
+The gallery creates only `PageSize` reusable cards, assigns images only for the active filtered page, and debounces search. The preview recycles two image layers for crossfade and zoom. Neither addon has a frame loop. Card, image-area, asset, caption, container, and outline transparency are independent. Global image layout can be overridden per item with size, position, anchor, zoom, scale type, tile size, rotation, and sprite rectangle fields. See the current image-addon section in `GUIDE.md` for the complete method list and item schema.
 
 ## Image, Video, and UIPassthrough
 
@@ -678,6 +688,14 @@ local MediaGroup = Tabs.Visuals:AddRightGroupbox("Media", "image")
 MediaGroup:AddImage("PreviewImage", {
     Image = "sparkles",
     Color = Color3.fromRGB(184, 189, 201),
+    Transparency = 0,
+    BackgroundTransparency = 0.12,
+    OutlineTransparency = 0.48,
+    Padding = 10,
+    CornerRadius = 5,
+    ImageSize = UDim2.fromScale(1, 1),
+    ImagePosition = UDim2.fromScale(0.5, 0.5),
+    ImageScale = 1,
     ScaleType = Enum.ScaleType.Fit,
     Height = 82,
 })
@@ -691,7 +709,7 @@ MediaGroup:AddVideo("PreviewVideo", {
 })
 ```
 
-`AddUIPassthrough` accepts an existing `GuiBase2d` and places it inside a groupbox.
+`AddImage` exposes independent setters for the asset, panel, outline, padding, corner radius, size, position, tile size, rotation, aspect ratio, height, and visibility. `AddUIPassthrough` accepts an existing `GuiBase2d` and places it inside a groupbox.
 
 ## ThemeManager presets
 

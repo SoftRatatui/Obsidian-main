@@ -29,6 +29,21 @@ local function NormalizeAsset(Value)
     return Value
 end
 
+local function ResolveScaleType(Value)
+    if typeof(Value) == "EnumItem" and Value.EnumType == Enum.ScaleType then
+        return Value
+    end
+    local Key = string.lower(tostring(Value or "Stretch"))
+    if Key == "fit" then
+        return Enum.ScaleType.Fit
+    elseif Key == "crop" then
+        return Enum.ScaleType.Crop
+    elseif Key == "tile" then
+        return Enum.ScaleType.Tile
+    end
+    return Enum.ScaleType.Stretch
+end
+
 local function RemoveRegistryTree(Library, Root)
     if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
         return
@@ -67,6 +82,13 @@ function TextureGallery.Create(Library, Info)
         Visible = Info.Visible ~= false,
         Destroyed = false,
         Connections = {},
+        PreviewTransparency = math.clamp(tonumber(Info.PreviewTransparency) or 0, 0, 1),
+        CardTransparency = math.clamp(tonumber(Info.CardTransparency) or 0, 0, 1),
+        ImageTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0.04, 0, 1),
+        PreviewImageTransparency = math.clamp(tonumber(Info.PreviewImageTransparency or Info.ImageTransparency) or 0.05, 0, 1),
+        ImageScale = math.clamp(tonumber(Info.ImageScale or Info.Zoom) or 1, 0.1, 4),
+        OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or 0.24, 0, 1),
+        ScaleType = ResolveScaleType(Info.ScaleType),
     }
 
     local Root = Instance.new("Frame")
@@ -78,6 +100,7 @@ function TextureGallery.Create(Library, Info)
 
     local Preview = Instance.new("Frame")
     Preview.BackgroundColor3 = Library.Scheme.ElementColor
+    Preview.BackgroundTransparency = Gallery.PreviewTransparency
     Preview.BorderSizePixel = 0
     Preview.ClipsDescendants = true
     Preview.Size = UDim2.new(1, 0, 0, 76)
@@ -88,7 +111,7 @@ function TextureGallery.Create(Library, Info)
     local PreviewStroke = Instance.new("UIStroke")
     PreviewStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     PreviewStroke.Color = Library.Scheme.OutlineColor
-    PreviewStroke.Transparency = 0.18
+    PreviewStroke.Transparency = Gallery.OutlineTransparency
     PreviewStroke.Parent = Preview
     Library:AddToRegistry(PreviewStroke, { Color = "OutlineColor" })
 
@@ -110,11 +133,15 @@ function TextureGallery.Create(Library, Info)
     PreviewImage.BackgroundTransparency = 1
     PreviewImage.Image = ""
     PreviewImage.ImageColor3 = Color3.new(1, 1, 1)
-    PreviewImage.ImageTransparency = 0.05
+    PreviewImage.ImageTransparency = Gallery.PreviewImageTransparency
     PreviewImage.Position = UDim2.new(0.5, 0, 0.5, -4)
-    PreviewImage.ScaleType = Enum.ScaleType.Stretch
+    PreviewImage.ScaleType = Gallery.ScaleType
     PreviewImage.Size = UDim2.new(1, -24, 0, 34)
     PreviewImage.Parent = Preview
+
+    local PreviewScale = Instance.new("UIScale")
+    PreviewScale.Scale = Gallery.ImageScale
+    PreviewScale.Parent = PreviewImage
 
     local PreviewGradient = Instance.new("UIGradient")
     PreviewGradient.Color = ColorSequence.new(Color3.fromRGB(168, 181, 199), Color3.fromRGB(105, 116, 133))
@@ -174,18 +201,22 @@ function TextureGallery.Create(Library, Info)
         for Item, Card in Gallery.Cards do
             local Selected = Item == Gallery.Selected
             Card.Stroke.Color = Selected and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-            Card.Stroke.Transparency = Selected and 0 or 0.24
+            Card.Stroke.Transparency = Selected and math.min(0.06, Gallery.OutlineTransparency) or Gallery.OutlineTransparency
             Card.Name.TextColor3 = Selected and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
         end
         local Item = Gallery.Selected
         if not Item then
             PreviewImage.Image = ""
+            PreviewScale.Scale = Gallery.ImageScale
             PreviewName.Text = "Select texture"
             PreviewGradient.Color = ColorSequence.new(Library.Scheme.AccentColor, Library.Scheme.MutedFontColor)
             PreviewTrackGradient.Color = PreviewGradient.Color
             return
         end
         PreviewImage.Image = NormalizeAsset(Item.Texture or Item.AssetId or Item.Image)
+        PreviewScale.Scale = math.clamp(tonumber(Item.PreviewImageScale or Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        PreviewImage.ImageTransparency = math.clamp(tonumber(Item.PreviewImageTransparency or Item.ImageTransparency) or Gallery.PreviewImageTransparency, 0, 1)
+        PreviewImage.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
         PreviewName.Text = tostring(Item.Name or Item.Id or "Texture")
         local ColorA = typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor
         local ColorB = typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
@@ -208,6 +239,7 @@ function TextureGallery.Create(Library, Info)
         local Button = Instance.new("TextButton")
         Button.AutoButtonColor = false
         Button.BackgroundColor3 = Library.Scheme.ElementColor
+        Button.BackgroundTransparency = Gallery.CardTransparency
         Button.BorderSizePixel = 0
         Button.LayoutOrder = Index
         Button.Size = UDim2.fromScale(1, 1)
@@ -219,7 +251,7 @@ function TextureGallery.Create(Library, Info)
         local Stroke = Instance.new("UIStroke")
         Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         Stroke.Color = Library.Scheme.OutlineColor
-        Stroke.Transparency = 0.24
+        Stroke.Transparency = Gallery.OutlineTransparency
         Stroke.Parent = Button
         Library:AddToRegistry(Stroke, {
             Color = function()
@@ -247,11 +279,15 @@ function TextureGallery.Create(Library, Info)
         Image.BackgroundTransparency = 1
         Image.Image = NormalizeAsset(Item.Texture or Item.AssetId or Item.Image)
         Image.ImageColor3 = Color3.new(1, 1, 1)
-        Image.ImageTransparency = 0.04
+        Image.ImageTransparency = math.clamp(tonumber(Item.ImageTransparency or Item.Transparency) or Gallery.ImageTransparency, 0, 1)
         Image.Position = UDim2.fromOffset(8, 8)
-        Image.ScaleType = Enum.ScaleType.Stretch
+        Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
         Image.Size = UDim2.new(1, -16, 0, 28)
         Image.Parent = Button
+
+        local ImageScale = Instance.new("UIScale")
+        ImageScale.Scale = math.clamp(tonumber(Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        ImageScale.Parent = Image
 
         local Gradient = Instance.new("UIGradient")
         Gradient.Color = ColorSequence.new(
@@ -282,6 +318,8 @@ function TextureGallery.Create(Library, Info)
         Gallery.Cards[Item] = {
             Root = Button,
             Stroke = Stroke,
+            Image = Image,
+            Scale = ImageScale,
             Name = Name,
         }
 
@@ -365,6 +403,59 @@ function TextureGallery.Create(Library, Info)
         Gallery.Columns = math.clamp(math.floor(tonumber(Columns) or Gallery.Columns), 1, 3)
         GridLayout.FillDirectionMaxCells = Gallery.Columns
         GridLayout.CellSize = UDim2.new(1 / Gallery.Columns, -6, 0, 64)
+        return Gallery
+    end
+
+    function Gallery:SetImageTransparency(Value)
+        Gallery.ImageTransparency = math.clamp(tonumber(Value) or Gallery.ImageTransparency, 0, 1)
+        for Item, Card in Gallery.Cards do
+            Card.Image.ImageTransparency = math.clamp(tonumber(Item.ImageTransparency or Item.Transparency) or Gallery.ImageTransparency, 0, 1)
+        end
+        return Gallery
+    end
+
+    function Gallery:SetPreviewImageTransparency(Value)
+        Gallery.PreviewImageTransparency = math.clamp(tonumber(Value) or Gallery.PreviewImageTransparency, 0, 1)
+        UpdateSelection()
+        return Gallery
+    end
+
+    function Gallery:SetCardTransparency(Value)
+        Gallery.CardTransparency = math.clamp(tonumber(Value) or Gallery.CardTransparency, 0, 1)
+        for _, Card in Gallery.Cards do
+            Card.Root.BackgroundTransparency = Gallery.CardTransparency
+        end
+        return Gallery
+    end
+
+    function Gallery:SetPreviewTransparency(Value)
+        Gallery.PreviewTransparency = math.clamp(tonumber(Value) or Gallery.PreviewTransparency, 0, 1)
+        Preview.BackgroundTransparency = Gallery.PreviewTransparency
+        return Gallery
+    end
+
+    function Gallery:SetOutlineTransparency(Value)
+        Gallery.OutlineTransparency = math.clamp(tonumber(Value) or Gallery.OutlineTransparency, 0, 1)
+        PreviewStroke.Transparency = Gallery.OutlineTransparency
+        UpdateSelection()
+        return Gallery
+    end
+
+    function Gallery:SetScaleType(Value)
+        Gallery.ScaleType = ResolveScaleType(Value)
+        for Item, Card in Gallery.Cards do
+            Card.Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+        end
+        UpdateSelection()
+        return Gallery
+    end
+
+    function Gallery:SetImageScale(Value)
+        Gallery.ImageScale = math.clamp(tonumber(Value) or Gallery.ImageScale, 0.1, 4)
+        PreviewScale.Scale = Gallery.ImageScale
+        for Item, Card in Gallery.Cards do
+            Card.Scale.Scale = math.clamp(tonumber(Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        end
         return Gallery
     end
 

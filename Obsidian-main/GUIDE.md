@@ -33,7 +33,7 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -50,7 +50,7 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -324,6 +324,18 @@ local Media = Visuals:AddLeftGroupbox("Media", "image")
 Media:AddImage("Logo", {
     Image = "sparkles",
     Color = Color3.fromRGB(184, 189, 201),
+    Transparency = 0,
+    BackgroundTransparency = 0.12,
+    OutlineTransparency = 0.48,
+    OutlineThickness = 1,
+    CornerRadius = 5,
+    Padding = 10,
+    ImageSize = UDim2.fromScale(1, 1),
+    ImagePosition = UDim2.fromScale(0.5, 0.5),
+    ImageAnchorPoint = Vector2.new(0.5, 0.5),
+    ImageScale = 1,
+    Rotation = 0,
+    AspectRatio = 0,
     Height = 82,
 })
 
@@ -342,6 +354,8 @@ Media:AddUIPassthrough("Custom", {
 ```
 
 `AddViewport` accepts a `BasePart` or `Model`. Set `Clone = true` for an isolated copy, `AutoFocus = true` to fit it, and `Interactive = true` for mouse/touch rotation.
+
+`AddImage` keeps the asset, its container, and its outline independent. `Transparency` affects only the asset; `BackgroundTransparency` affects the panel behind it; `OutlineTransparency` affects only the stroke. Layout controls are `Padding`, `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImageScale`, `Rotation`, `AspectRatio`, and `TileSize`. Runtime methods are `SetImage`, `SetColor`, `SetTransparency`, `SetBackgroundTransparency`, `SetOutlineTransparency`, `SetBackgroundColor`, `SetOutlineColor`, `SetPadding`, `SetCornerRadius`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetAspectRatio`, `SetHeight`, `SetVisible`, and `Destroy`. `ImageScale` is the easiest way to enlarge an asset that contains excessive transparent margins without changing its panel size. Pass `nil` to `SetBackgroundColor` or `SetOutlineColor` to resume theme colors.
 
 ## Values, callbacks, and dependencies
 
@@ -634,7 +648,7 @@ For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 local VisualPreview = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
@@ -670,10 +684,10 @@ The gallery uses a fixed cell pool for one page. With `PageSize = 15`, only fift
 
 ```luau
 local ImageGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 local ImagePreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 
 local SkinGrid = Tabs.Visuals:AddLeftGroupbox("Skins", "layout-grid")
@@ -682,6 +696,14 @@ local SkinLook = Tabs.Visuals:AddRightGroupbox("Selected skin", "image")
 local Preview = ImagePreview.CreateEmbedded(Library, SkinLook, "SkinPreview", {
     Height = 280,
     ScaleType = "Fit",
+    ImageTransparency = 0,
+    ImagePadding = 12,
+    ImageScale = 1,
+    BackgroundTransparency = 0.04,
+    CanvasTransparency = 0.18,
+    CaptionTransparency = 0.08,
+    OutlineTransparency = 0.48,
+    ShadeTransparency = 0.62,
     Title = "Select a skin",
     Motion = true,
 })
@@ -691,6 +713,13 @@ local Gallery = ImageGallery.CreateEmbedded(Library, SkinGrid, "SkinGallery", {
     Columns = 5,
     PageSize = 15,
     CellHeight = 78,
+    CellTransparency = 0.06,
+    OutlineTransparency = 0.48,
+    ImageTransparency = 0,
+    ImageBackgroundTransparency = 0.22,
+    ImagePadding = 5,
+    ImageScale = 1,
+    ForwardItemStyle = true,
     Preview = Preview,
     Items = {
         {
@@ -700,6 +729,12 @@ local Gallery = ImageGallery.CreateEmbedded(Library, SkinGrid, "SkinGallery", {
             Subtitle = "Assault rifle",
             Thumbnail = 1234567890,
             PreviewImage = 1234567891,
+            ImageTransparency = 0.05,
+            ImageBackgroundTransparency = 0.35,
+            ScaleType = "Fit",
+            ImageSize = UDim2.fromScale(0.9, 0.9),
+            ImageScale = 1.2,
+            ImagePosition = UDim2.fromScale(0.5, 0.5),
         },
         {
             Id = "ember",
@@ -717,11 +752,11 @@ local Gallery = ImageGallery.CreateEmbedded(Library, SkinGrid, "SkinGallery", {
 })
 ```
 
-`Image`, `AssetId`, and primitive numeric IDs are normalized to `rbxassetid://`. Use `Thumbnail` or `ThumbnailId` for the light grid image and `PreviewImage` or `FullImage` for the larger selected view. When those fields are omitted, both views use `Image`. Complete `rbxassetid://`, `rbxasset://`, and executor-provided custom asset strings pass through unchanged.
+`Image`, `AssetId`, and primitive numeric IDs are normalized to `rbxassetid://`. Use `Thumbnail` or `ThumbnailId` for the light grid image and `PreviewImage` or `FullImage` for the larger selected view. When those fields are omitted, both views use `Image`. Complete `rbxassetid://`, `rbxasset://`, and executor-provided custom asset strings pass through unchanged. Each item can override `Color`, `ImageTransparency`, `ImageBackgroundTransparency`, `ScaleType`, `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImageScale` or `Zoom`, `TileSize`, `Rotation`, `RectOffset`, and `RectSize`. Set `ForwardItemStyle = true` only when those compatible overrides should also replace the bound `ImagePreview` style; otherwise the preview keeps its independent runtime settings.
 
-Gallery methods are `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Clicking the category button cycles only categories present in the current item list.
+Gallery methods are `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `SetCellHeight`, `SetScaleType`, `SetImageTransparency`, `SetImageBackgroundTransparency`, `SetBackgroundTransparency`, `SetCellTransparency`, `SetOutlineTransparency`, `SetContainerOutlineTransparency`, `SetImagePadding`, `SetLabelHeight`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetCornerRadius`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Clicking the category button cycles only categories present in the current item list.
 
-Preview methods are `SetImage`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetMotion`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Use `CreateEmbedded` for a groupbox or `Create(Library, { Parent = Frame, ... })` for a direct 2D panel.
+Preview methods are `SetImage`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetImagePadding`, `SetTileSize`, `SetRotation`, `SetBackgroundTransparency`, `SetCanvasTransparency`, `SetCaptionTransparency`, `SetOutlineTransparency`, `SetOutlineThickness`, `SetCornerRadius`, `SetShade`, `SetCaptionVisible`, `SetMotion`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`. Use `CreateEmbedded` for a groupbox or `Create(Library, { Parent = Frame, ... })` for a direct 2D panel.
 
 Recommended layouts:
 
@@ -771,12 +806,19 @@ Controller methods are `SetEnabled`, `SetTarget`, `SetColors`, `SetTransparency`
 
 ```luau
 local TextureGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
 local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextures", {
     Height = 302,
     Columns = 2,
+    ImageTransparency = 0.04,
+    PreviewImageTransparency = 0.05,
+    ImageScale = 1,
+    CardTransparency = 0.04,
+    PreviewTransparency = 0.04,
+    OutlineTransparency = 0.42,
+    ScaleType = "Stretch",
     Items = TextureGallery.DefaultItems,
     Selected = "beam",
     OnSelected = function(Item)
@@ -786,7 +828,7 @@ local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextu
 })
 ```
 
-The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`, `SetVisible`, `Mount`, and `Destroy`. Item fields are `Id`, `Name`, `Texture`, `ColorA`, and `ColorB`. Numeric IDs and complete Roblox asset strings are accepted.
+The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`, `SetImageTransparency`, `SetPreviewImageTransparency`, `SetCardTransparency`, `SetPreviewTransparency`, `SetOutlineTransparency`, `SetScaleType`, `SetImageScale`, `SetVisible`, `Mount`, and `Destroy`. Item fields are `Id`, `Name`, `Texture`, `ColorA`, `ColorB`, `ImageTransparency`, `PreviewImageTransparency`, `ImageScale`, `PreviewImageScale`, and `ScaleType`. Numeric IDs and complete Roblox asset strings are accepted.
 
 ### Separate dashboard window
 

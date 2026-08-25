@@ -15,7 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-6"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-dashboard-ui-2"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-image-ui-3"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -363,12 +363,63 @@ local function CreateR6Preview()
 end
 
 local MediaLeft = Tabs.Media:AddLeftGroupbox("R6 character preview", "user-round")
-MediaLeft:AddImage("ShowcaseImage", {
+local ShowcaseImage = MediaLeft:AddImage("ShowcaseImage", {
 	Image = "sparkles",
 	Color = Color3.fromRGB(184, 189, 201),
-	BackgroundTransparency = 0.08,
+	BackgroundTransparency = 0.12,
+	OutlineTransparency = 0.48,
+	CornerRadius = 5,
+	Padding = 10,
 	ScaleType = Enum.ScaleType.Fit,
 	Height = 82,
+})
+
+MediaLeft:AddSlider("ShowcaseImageTransparency", {
+	Text = "Image transparency",
+	Default = 0,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		ShowcaseImage:SetTransparency(Value / 100)
+	end,
+})
+
+MediaLeft:AddSlider("ShowcaseImageBackgroundTransparency", {
+	Text = "Image background transparency",
+	Default = 12,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		ShowcaseImage:SetBackgroundTransparency(Value / 100)
+	end,
+})
+
+MediaLeft:AddSlider("ShowcaseImagePadding", {
+	Text = "Image padding",
+	Default = 10,
+	Min = 0,
+	Max = 28,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		ShowcaseImage:SetPadding(Value)
+	end,
+})
+
+MediaLeft:AddSlider("ShowcaseImageScale", {
+	Text = "Image zoom",
+	Default = 100,
+	Min = 25,
+	Max = 300,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		ShowcaseImage:SetImageScale(Value / 100)
+	end,
 })
 
 MediaLeft:AddViewport("ShowcaseViewport", {
@@ -563,6 +614,12 @@ if ImagePreview then
 	local Created, Result = pcall(ImagePreview.CreateEmbedded, Library, AddonImageGroup, "AddonImagePreview", {
 		Height = 220,
 		ScaleType = "Fit",
+		ImagePadding = 12,
+		BackgroundTransparency = 0.04,
+		CanvasTransparency = 0.18,
+		CaptionTransparency = 0.08,
+		OutlineTransparency = 0.48,
+		ShadeTransparency = 0.62,
 		Title = "Select an asset",
 		Subtitle = "Gallery selection appears here",
 		Motion = true,
@@ -582,6 +639,10 @@ if ImageGallery then
 		PageSize = 9,
 		CellHeight = 78,
 		ScaleType = "Fit",
+		CellTransparency = 0.06,
+		OutlineTransparency = 0.48,
+		ImageBackgroundTransparency = 0.22,
+		ImagePadding = 5,
 		Preview = AddonImagePreview,
 		Items = GalleryItems,
 		OnSelected = function(Item)
@@ -627,6 +688,115 @@ AddonGalleryGroup:AddDropdown("AddonGalleryColumns", {
 	Callback = function(Value)
 		if AddonGallery then
 			AddonGallery:SetColumns(tonumber(Value))
+		end
+	end,
+})
+
+AddonGalleryGroup:AddDropdown("AddonGalleryScaleType", {
+	Text = "Gallery image scale",
+	Values = { "Fit", "Crop", "Stretch" },
+	Default = "Fit",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetScaleType(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryImageTransparency", {
+	Text = "Gallery image transparency",
+	Default = 0,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetImageTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryImageBackgroundTransparency", {
+	Text = "Image area transparency",
+	Default = 22,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetImageBackgroundTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryCellTransparency", {
+	Text = "Card transparency",
+	Default = 6,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetCellTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryOutlineTransparency", {
+	Text = "Card outline transparency",
+	Default = 48,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetOutlineTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryImagePadding", {
+	Text = "Gallery image padding",
+	Default = 5,
+	Min = 0,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetImagePadding(Value)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryImageScale", {
+	Text = "Gallery image zoom",
+	Default = 100,
+	Min = 25,
+	Max = 300,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetImageScale(Value / 100)
+		end
+	end,
+})
+
+AddonGalleryGroup:AddSlider("AddonGalleryCellHeight", {
+	Text = "Gallery card height",
+	Default = 78,
+	Min = 52,
+	Max = 140,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonGallery then
+			AddonGallery:SetCellHeight(Value)
 		end
 	end,
 })
@@ -737,6 +907,100 @@ AddonImageGroup:AddSlider("AddonImageTransparency", {
 	Callback = function(Value)
 		if AddonImagePreview then
 			AddonImagePreview:SetImageTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageCanvasTransparency", {
+	Text = "Canvas transparency",
+	Default = 18,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetCanvasTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageCaptionTransparency", {
+	Text = "Caption transparency",
+	Default = 8,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetCaptionTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageOutlineTransparency", {
+	Text = "Preview outline transparency",
+	Default = 48,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetOutlineTransparency(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImagePadding", {
+	Text = "Preview image padding",
+	Default = 12,
+	Min = 0,
+	Max = 48,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetImagePadding(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageScale", {
+	Text = "Preview image zoom",
+	Default = 100,
+	Min = 25,
+	Max = 300,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetImageScale(Value / 100)
+		end
+	end,
+})
+
+AddonImageGroup:AddSlider("AddonImageRotation", {
+	Text = "Preview rotation",
+	Default = 0,
+	Min = -180,
+	Max = 180,
+	Rounding = 0,
+	Suffix = "°",
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetRotation(Value)
+		end
+	end,
+})
+
+AddonImageGroup:AddToggle("AddonImageShade", {
+	Text = "Preview shade",
+	Default = true,
+	Callback = function(Value)
+		if AddonImagePreview then
+			AddonImagePreview:SetShade(Value, 0.62)
 		end
 	end,
 })

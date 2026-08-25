@@ -1,3 +1,19 @@
+## 25.08.2026
+
+```diff
+[image system]
++ Expanded core AddImage with independent asset, background, and outline transparency plus color, padding, corner, transform, zoom, tiling, rotation, and aspect-ratio controls
++ Rebuilt ImageGallery cards with a separate clipped image viewport and global or per-item size, position, anchor, zoom, scale, tile, rotation, sprite, tint, and transparency settings
++ Expanded ImagePreview with canvas, caption, container, outline, shade, padding, position, size, tile, rotation, and caption-visibility controls
++ Added matching transparency and scale controls to TextureGallery
+
+[showcase]
++ Added interactive image styling controls to Example.lua and documented the complete current API and item schema
+
+[performance]
++ Preserved the fixed gallery cell pool, recycled two-layer preview transition, lazy asset assignment, and zero frame-loop design
+```
+
 ## 24.08.2026
 
 ```diff

@@ -58,14 +58,32 @@ end
 function ImagePreview.Create(Library, Info)
     Info = Info or {}
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 260), 96, 720)
-    local CaptionHeight = Info.Caption == false and 0 or math.clamp(math.floor(tonumber(Info.CaptionHeight) or 48), 32, 80)
+    local CaptionHeight = math.clamp(math.floor(tonumber(Info.CaptionHeight) or 48), 32, 80)
+    local CaptionVisible = Info.Caption ~= false
+    local CaptionOffset = CaptionVisible and CaptionHeight or 0
     local Radius = math.clamp(math.floor(tonumber(Info.CornerRadius) or 5), 0, 12)
     local Motion = Info.Motion ~= false
     local TargetTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0, 0, 1)
+    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1)
+    local CanvasTransparency = math.clamp(tonumber(Info.CanvasTransparency) or 0, 0, 1)
+    local CaptionTransparency = math.clamp(tonumber(Info.CaptionTransparency) or 0, 0, 1)
+    local OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or 0.42, 0, 1)
+    local OutlineThickness = math.clamp(tonumber(Info.OutlineThickness) or 1, 0, 4)
+    local SizeFromPadding = typeof(Info.ImageSize) ~= "UDim2"
+    local ImagePadding = math.clamp(tonumber(Info.ImagePadding) or 8, 0, math.max(0, math.floor((Height - CaptionOffset) * 0.5) - 1))
+    local ImageSize = not SizeFromPadding and Info.ImageSize or UDim2.new(1, -ImagePadding * 2, 1, -ImagePadding * 2)
+    local ImagePosition = typeof(Info.ImagePosition) == "UDim2" and Info.ImagePosition or UDim2.fromScale(0.5, 0.5)
+    local ImageAnchorPoint = typeof(Info.ImageAnchorPoint) == "Vector2" and Info.ImageAnchorPoint or Vector2.new(0.5, 0.5)
+    local ImageScale = math.clamp(tonumber(Info.ImageScale) or 1, 0.1, 4)
+    local TileSize = typeof(Info.TileSize) == "UDim2" and Info.TileSize or UDim2.fromOffset(64, 64)
+    local Rotation = tonumber(Info.Rotation) or 0
+    local ShadeVisible = Info.Shade ~= false
+    local ShadeTransparency = math.clamp(tonumber(Info.ShadeTransparency) or 0.32, 0, 1)
 
     local Root = Instance.new("Frame")
     Root.Name = "MonHubImagePreview"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(18, 20, 24)
+    Root.BackgroundTransparency = BackgroundTransparency
     Root.BorderSizePixel = 0
     Root.ClipsDescendants = true
     Root.Size = UDim2.new(1, 0, 0, Height)
@@ -76,8 +94,9 @@ function ImagePreview.Create(Library, Info)
         end,
     })
 
+    local Corner
     if Radius > 0 then
-        local Corner = Instance.new("UICorner")
+        Corner = Instance.new("UICorner")
         Corner.CornerRadius = UDim.new(0, Radius)
         Corner.Parent = Root
     end
@@ -85,34 +104,38 @@ function ImagePreview.Create(Library, Info)
     local Stroke = Instance.new("UIStroke")
     Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Stroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
-    Stroke.Transparency = 0.22
+    Stroke.Thickness = OutlineThickness
+    Stroke.Transparency = OutlineTransparency
     Stroke.Parent = Root
     AddRegistry(Library, Stroke, { Color = "OutlineColor" })
 
     local Canvas = Instance.new("Frame")
     Canvas.BackgroundColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(11, 13, 16)
+    Canvas.BackgroundTransparency = CanvasTransparency
     Canvas.BorderSizePixel = 0
     Canvas.ClipsDescendants = true
-    Canvas.Size = UDim2.new(1, 0, 1, -CaptionHeight)
+    Canvas.Size = UDim2.new(1, 0, 1, -CaptionOffset)
     Canvas.Parent = Root
     AddRegistry(Library, Canvas, { BackgroundColor3 = "BackgroundColor" })
 
     local Layers = {}
     for Index = 1, 2 do
         local Layer = Instance.new("ImageLabel")
-        Layer.AnchorPoint = Vector2.new(0.5, 0.5)
+        Layer.AnchorPoint = ImageAnchorPoint
         Layer.BackgroundTransparency = 1
         Layer.Image = ""
         Layer.ImageColor3 = typeof(Info.ImageColor) == "Color3" and Info.ImageColor or Color3.new(1, 1, 1)
         Layer.ImageTransparency = 1
-        Layer.Position = UDim2.fromScale(0.5, 0.5)
+        Layer.Position = ImagePosition
         Layer.ScaleType = ResolveScaleType(Info.ScaleType)
-        Layer.Size = UDim2.fromScale(1, 1)
+        Layer.Size = ImageSize
+        Layer.TileSize = TileSize
+        Layer.Rotation = Rotation
         Layer.Visible = Index == 1
         Layer.Parent = Canvas
 
         local Scale = Instance.new("UIScale")
-        Scale.Scale = 1
+        Scale.Scale = ImageScale
         Scale.Parent = Layer
 
         Layers[Index] = {
@@ -124,11 +147,12 @@ function ImagePreview.Create(Library, Info)
     local Shade = Instance.new("Frame")
     Shade.AnchorPoint = Vector2.new(0, 1)
     Shade.BackgroundColor3 = Color3.fromRGB(4, 5, 7)
-    Shade.BackgroundTransparency = 0.32
+    Shade.BackgroundTransparency = ShadeTransparency
     Shade.BorderSizePixel = 0
     Shade.Position = UDim2.fromScale(0, 1)
     Shade.Size = UDim2.new(1, 0, 0, math.min(72, math.max(42, Height * 0.28)))
     Shade.ZIndex = 3
+    Shade.Visible = ShadeVisible
     Shade.Parent = Canvas
 
     local ShadeGradient = Instance.new("UIGradient")
@@ -157,10 +181,11 @@ function ImagePreview.Create(Library, Info)
 
     local Caption = Instance.new("Frame")
     Caption.BackgroundColor3 = Library and (Library.Scheme.RaisedColor or Library.Scheme.SurfaceColor) or Color3.fromRGB(22, 24, 29)
+    Caption.BackgroundTransparency = CaptionTransparency
     Caption.BorderSizePixel = 0
     Caption.Position = UDim2.new(0, 0, 1, -CaptionHeight)
     Caption.Size = UDim2.new(1, 0, 0, CaptionHeight)
-    Caption.Visible = CaptionHeight > 0
+    Caption.Visible = CaptionVisible
     Caption.ZIndex = 4
     Caption.Parent = Root
     AddRegistry(Library, Caption, {
@@ -211,6 +236,9 @@ function ImagePreview.Create(Library, Info)
     local Preview = {
         Root = Root,
         Canvas = Canvas,
+        Stroke = Stroke,
+        Caption = Caption,
+        Shade = Shade,
         Layers = Layers,
         TitleLabel = Title,
         SubtitleLabel = Subtitle,
@@ -222,6 +250,25 @@ function ImagePreview.Create(Library, Info)
         CurrentImage = "",
         ImageColor = typeof(Info.ImageColor) == "Color3" and Info.ImageColor or Color3.new(1, 1, 1),
         ImageTransparency = TargetTransparency,
+        ScaleType = ResolveScaleType(Info.ScaleType),
+        BackgroundTransparency = BackgroundTransparency,
+        CanvasTransparency = CanvasTransparency,
+        CaptionTransparency = CaptionTransparency,
+        OutlineTransparency = OutlineTransparency,
+        OutlineThickness = OutlineThickness,
+        CornerRadius = Radius,
+        ImagePadding = ImagePadding,
+        SizeFromPadding = SizeFromPadding,
+        ImageSize = ImageSize,
+        ImagePosition = ImagePosition,
+        ImageAnchorPoint = ImageAnchorPoint,
+        ImageScale = ImageScale,
+        TileSize = TileSize,
+        Rotation = Rotation,
+        ShadeVisible = ShadeVisible,
+        ShadeTransparency = ShadeTransparency,
+        CaptionVisible = CaptionVisible,
+        CaptionHeight = CaptionHeight,
         Height = Height,
         Visible = Info.Visible ~= false,
         Motion = Motion,
@@ -286,13 +333,13 @@ function ImagePreview.Create(Library, Info)
         Next.Image.ImageColor3 = Preview.ImageColor
         Next.Image.ImageTransparency = 1
         Next.Image.Visible = Asset ~= ""
-        Next.Scale.Scale = Preview.Motion and 1.025 or 1
+        Next.Scale.Scale = Preview.Motion and Preview.ImageScale * 1.025 or Preview.ImageScale
 
         local Animated = Preview.Motion and Transition ~= false and Asset ~= ""
         if Animated then
             Play(Previous.Image, "PreviousImage", 0.1, { ImageTransparency = 1 })
             Play(Next.Image, "NextImage", 0.14, { ImageTransparency = Preview.ImageTransparency })
-            Play(Next.Scale, "NextScale", 0.2, { Scale = 1 })
+            Play(Next.Scale, "NextScale", 0.2, { Scale = Preview.ImageScale })
             task.delay(0.11, function()
                 if not Preview.Destroyed and Sequence == Preview.TransitionSequence and Preview.CurrentLayer ~= PreviousIndex then
                     Previous.Image.Visible = false
@@ -302,7 +349,7 @@ function ImagePreview.Create(Library, Info)
             Previous.Image.ImageTransparency = 1
             Previous.Image.Visible = false
             Next.Image.ImageTransparency = Asset == "" and 1 or Preview.ImageTransparency
-            Next.Scale.Scale = 1
+            Next.Scale.Scale = Preview.ImageScale
         end
         Preview.CurrentLayer = NextIndex
     end
@@ -342,8 +389,162 @@ function ImagePreview.Create(Library, Info)
             return
         end
         local ScaleType = ResolveScaleType(Value)
+        Preview.ScaleType = ScaleType
         for _, Layer in Preview.Layers do
             Layer.Image.ScaleType = ScaleType
+        end
+    end
+
+    function Preview:SetImageSize(Value)
+        if Preview.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        Preview.ImageSize = Value
+        Preview.SizeFromPadding = false
+        for _, Layer in Preview.Layers do
+            Layer.Image.Size = Value
+        end
+    end
+
+    function Preview:SetImageScale(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.ImageScale = math.clamp(tonumber(Value) or Preview.ImageScale, 0.1, 4)
+        for _, Layer in Preview.Layers do
+            Layer.Scale.Scale = Preview.ImageScale
+        end
+    end
+
+    function Preview:SetImagePosition(Value, AnchorPoint)
+        if Preview.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        if AnchorPoint ~= nil and typeof(AnchorPoint) ~= "Vector2" then
+            return
+        end
+        Preview.ImagePosition = Value
+        if AnchorPoint then
+            Preview.ImageAnchorPoint = AnchorPoint
+        end
+        for _, Layer in Preview.Layers do
+            Layer.Image.Position = Preview.ImagePosition
+            Layer.Image.AnchorPoint = Preview.ImageAnchorPoint
+        end
+    end
+
+    function Preview:SetImagePadding(Value)
+        if Preview.Destroyed then
+            return
+        end
+        local CaptionSpace = Preview.CaptionVisible and Preview.CaptionHeight or 0
+        local Maximum = math.max(0, math.floor((Preview.Height - CaptionSpace) * 0.5) - 1)
+        Preview.ImagePadding = math.clamp(tonumber(Value) or Preview.ImagePadding, 0, Maximum)
+        Preview.ImageSize = UDim2.new(1, -Preview.ImagePadding * 2, 1, -Preview.ImagePadding * 2)
+        Preview.SizeFromPadding = true
+        for _, Layer in Preview.Layers do
+            Layer.Image.Size = Preview.ImageSize
+        end
+    end
+
+    function Preview:SetTileSize(Value)
+        if Preview.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        Preview.TileSize = Value
+        for _, Layer in Preview.Layers do
+            Layer.Image.TileSize = Value
+        end
+    end
+
+    function Preview:SetRotation(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.Rotation = tonumber(Value) or Preview.Rotation
+        for _, Layer in Preview.Layers do
+            Layer.Image.Rotation = Preview.Rotation
+        end
+    end
+
+    function Preview:SetBackgroundTransparency(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.BackgroundTransparency = math.clamp(tonumber(Value) or Preview.BackgroundTransparency, 0, 1)
+        Root.BackgroundTransparency = Preview.BackgroundTransparency
+    end
+
+    function Preview:SetCanvasTransparency(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.CanvasTransparency = math.clamp(tonumber(Value) or Preview.CanvasTransparency, 0, 1)
+        Canvas.BackgroundTransparency = Preview.CanvasTransparency
+    end
+
+    function Preview:SetCaptionTransparency(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.CaptionTransparency = math.clamp(tonumber(Value) or Preview.CaptionTransparency, 0, 1)
+        Caption.BackgroundTransparency = Preview.CaptionTransparency
+    end
+
+    function Preview:SetOutlineTransparency(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.OutlineTransparency = math.clamp(tonumber(Value) or Preview.OutlineTransparency, 0, 1)
+        Stroke.Transparency = Preview.OutlineTransparency
+    end
+
+    function Preview:SetOutlineThickness(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.OutlineThickness = math.clamp(tonumber(Value) or Preview.OutlineThickness, 0, 4)
+        Stroke.Thickness = Preview.OutlineThickness
+    end
+
+    function Preview:SetCornerRadius(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.CornerRadius = math.clamp(tonumber(Value) or Preview.CornerRadius, 0, 12)
+        if Preview.CornerRadius > 0 then
+            if not Corner then
+                Corner = Instance.new("UICorner")
+                Corner.Parent = Root
+            end
+            Corner.CornerRadius = UDim.new(0, Preview.CornerRadius)
+        elseif Corner then
+            Corner:Destroy()
+            Corner = nil
+        end
+    end
+
+    function Preview:SetShade(Visible, Transparency)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.ShadeVisible = Visible == true
+        if Transparency ~= nil then
+            Preview.ShadeTransparency = math.clamp(tonumber(Transparency) or Preview.ShadeTransparency, 0, 1)
+        end
+        Shade.Visible = Preview.ShadeVisible
+        Shade.BackgroundTransparency = Preview.ShadeTransparency
+    end
+
+    function Preview:SetCaptionVisible(Value)
+        if Preview.Destroyed then
+            return
+        end
+        Preview.CaptionVisible = Value == true
+        Caption.Visible = Preview.CaptionVisible
+        Canvas.Size = UDim2.new(1, 0, 1, Preview.CaptionVisible and -Preview.CaptionHeight or 0)
+        if Preview.SizeFromPadding then
+            Preview:SetImagePadding(Preview.ImagePadding)
         end
     end
 
@@ -359,6 +560,9 @@ function ImagePreview.Create(Library, Info)
         end
         Preview.Height = math.clamp(math.floor(tonumber(Value) or Preview.Height), 96, 720)
         Root.Size = UDim2.new(1, 0, 0, Preview.Height)
+        if Preview.SizeFromPadding then
+            Preview:SetImagePadding(Preview.ImagePadding)
+        end
         if Preview.Element then
             Preview.Element:SetHeight(Preview.Height)
         end
@@ -411,13 +615,13 @@ function ImagePreview.Create(Library, Info)
             if Preview.Destroyed or not Preview.Motion then
                 return
             end
-            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = 1.012 })
+            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = Preview.ImageScale * 1.012 })
         end))
         table.insert(Preview.Connections, Canvas.MouseLeave:Connect(function()
             if Preview.Destroyed then
                 return
             end
-            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = 1 })
+            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = Preview.ImageScale })
         end))
     end
 

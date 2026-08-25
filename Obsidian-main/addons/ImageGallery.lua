@@ -83,6 +83,17 @@ local function NormalizeItem(Item, Index)
         Thumbnail = Item.Thumbnail or Item.ThumbnailId or Image,
         PreviewImage = Item.PreviewImage or Item.FullImage or Image,
         Color = typeof(Item.Color) == "Color3" and Item.Color or Color3.new(1, 1, 1),
+        ImageTransparency = tonumber(Item.ImageTransparency or Item.Transparency),
+        ImageBackgroundTransparency = tonumber(Item.ImageBackgroundTransparency or Item.BackgroundTransparency),
+        ScaleType = Item.ScaleType,
+        ImageSize = typeof(Item.ImageSize) == "UDim2" and Item.ImageSize or nil,
+        ImagePosition = typeof(Item.ImagePosition) == "UDim2" and Item.ImagePosition or nil,
+        ImageAnchorPoint = typeof(Item.ImageAnchorPoint) == "Vector2" and Item.ImageAnchorPoint or nil,
+        ImageScale = tonumber(Item.ImageScale or Item.Zoom),
+        TileSize = typeof(Item.TileSize) == "UDim2" and Item.TileSize or nil,
+        Rotation = tonumber(Item.Rotation),
+        RectOffset = typeof(Item.RectOffset) == "Vector2" and Item.RectOffset or Vector2.zero,
+        RectSize = typeof(Item.RectSize) == "Vector2" and Item.RectSize or Vector2.zero,
         Category = Category,
         Subtitle = tostring(Item.Subtitle or Item.Description or ""),
         Disabled = Item.Disabled == true,
@@ -99,10 +110,26 @@ function ImageGallery.Create(Library, Info)
     local CellHeight = math.clamp(math.floor(tonumber(Info.CellHeight) or 78), 52, 150)
     local Gap = math.clamp(math.floor(tonumber(Info.Gap) or 6), 2, 14)
     local ScaleType = ResolveScaleType(Info.ScaleType)
+    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1)
+    local ContainerOutlineTransparency = math.clamp(tonumber(Info.ContainerOutlineTransparency) or 0.42, 0, 1)
+    local CellTransparency = math.clamp(tonumber(Info.CellTransparency) or 0, 0, 1)
+    local CellOutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency or Info.CellOutlineTransparency) or 0.42, 0, 1)
+    local ImageTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0, 0, 1)
+    local ImageBackgroundTransparency = math.clamp(tonumber(Info.ImageBackgroundTransparency) or 0.08, 0, 1)
+    local LabelHeight = math.clamp(math.floor(tonumber(Info.LabelHeight) or 22), 0, 40)
+    local ImagePadding = math.clamp(math.floor(tonumber(Info.ImagePadding) or 5), 0, math.max(0, CellHeight - LabelHeight - 1))
+    local CornerRadius = math.clamp(math.floor(tonumber(Info.CornerRadius) or 4), 0, 12)
+    local ImageSize = typeof(Info.ImageSize) == "UDim2" and Info.ImageSize or UDim2.fromScale(1, 1)
+    local ImagePosition = typeof(Info.ImagePosition) == "UDim2" and Info.ImagePosition or UDim2.fromScale(0.5, 0.5)
+    local ImageAnchorPoint = typeof(Info.ImageAnchorPoint) == "Vector2" and Info.ImageAnchorPoint or Vector2.new(0.5, 0.5)
+    local ImageScale = math.clamp(tonumber(Info.ImageScale or Info.Zoom) or 1, 0.1, 4)
+    local TileSize = typeof(Info.TileSize) == "UDim2" and Info.TileSize or UDim2.fromOffset(64, 64)
+    local Rotation = tonumber(Info.Rotation) or 0
 
     local Root = Instance.new("Frame")
     Root.Name = "MonHubImageGallery"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(18, 20, 24)
+    Root.BackgroundTransparency = BackgroundTransparency
     Root.BorderSizePixel = 0
     Root.ClipsDescendants = true
     Root.Size = UDim2.new(1, 0, 0, Height)
@@ -116,7 +143,7 @@ function ImageGallery.Create(Library, Info)
     local Stroke = Instance.new("UIStroke")
     Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Stroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
-    Stroke.Transparency = 0.22
+    Stroke.Transparency = ContainerOutlineTransparency
     Stroke.Parent = Root
     AddRegistry(Library, Stroke, { Color = "OutlineColor" })
 
@@ -298,6 +325,8 @@ function ImageGallery.Create(Library, Info)
         Connections = {},
         Element = nil,
         Preview = Info.Preview,
+        PreviewDefaults = nil,
+        ForwardItemStyle = Info.ForwardItemStyle == true,
         SelectedId = nil,
         Search = "",
         Category = "All",
@@ -306,6 +335,23 @@ function ImageGallery.Create(Library, Info)
         PageSize = PageSize,
         Columns = Columns,
         Height = Height,
+        CellHeight = CellHeight,
+        ScaleType = ScaleType,
+        BackgroundTransparency = BackgroundTransparency,
+        ContainerOutlineTransparency = ContainerOutlineTransparency,
+        CellTransparency = CellTransparency,
+        CellOutlineTransparency = CellOutlineTransparency,
+        ImageTransparency = ImageTransparency,
+        ImageBackgroundTransparency = ImageBackgroundTransparency,
+        ImagePadding = ImagePadding,
+        LabelHeight = LabelHeight,
+        CornerRadius = CornerRadius,
+        ImageSize = ImageSize,
+        ImagePosition = ImagePosition,
+        ImageAnchorPoint = ImageAnchorPoint,
+        ImageScale = ImageScale,
+        TileSize = TileSize,
+        Rotation = Rotation,
         Visible = Info.Visible ~= false,
         Destroyed = false,
         OnSelected = Info.OnSelected or Info.Callback,
@@ -350,7 +396,7 @@ function ImageGallery.Create(Library, Info)
             Slot.Button.BackgroundColor3 = Color
         end
         Slot.Stroke.Color = Slot.Selected and (Library and Library.Scheme.AccentColor or Color3.fromRGB(123, 149, 183)) or (Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66))
-        Slot.Stroke.Transparency = Slot.Selected and 0.05 or 0.38
+        Slot.Stroke.Transparency = Slot.Selected and math.min(0.08, Gallery.CellOutlineTransparency) or Gallery.CellOutlineTransparency
     end
 
     local function BindPreview(Item)
@@ -358,6 +404,20 @@ function ImageGallery.Create(Library, Info)
         if type(Preview) ~= "table" then
             return
         end
+        if Gallery.ForwardItemStyle and not Gallery.PreviewDefaults then
+            Gallery.PreviewDefaults = {
+                ImageTransparency = tonumber(Preview.ImageTransparency) or 0,
+                CanvasTransparency = tonumber(Preview.CanvasTransparency) or 0,
+                ScaleType = Preview.ScaleType or Enum.ScaleType.Fit,
+                ImageSize = Preview.ImageSize or UDim2.fromScale(1, 1),
+                ImagePosition = Preview.ImagePosition or UDim2.fromScale(0.5, 0.5),
+                ImageAnchorPoint = Preview.ImageAnchorPoint or Vector2.new(0.5, 0.5),
+                ImageScale = tonumber(Preview.ImageScale) or 1,
+                TileSize = Preview.TileSize or UDim2.fromOffset(64, 64),
+                Rotation = tonumber(Preview.Rotation) or 0,
+            }
+        end
+        local Defaults = Gallery.PreviewDefaults
         if not Item then
             if type(Preview.SetImage) == "function" then
                 Preview:SetImage("")
@@ -371,6 +431,32 @@ function ImageGallery.Create(Library, Info)
             if type(Preview.SetImageColor) == "function" then
                 Preview:SetImageColor(Color3.new(1, 1, 1))
             end
+            if Defaults then
+                if type(Preview.SetImageTransparency) == "function" then
+                    Preview:SetImageTransparency(Defaults.ImageTransparency)
+                end
+                if type(Preview.SetCanvasTransparency) == "function" then
+                    Preview:SetCanvasTransparency(Defaults.CanvasTransparency)
+                end
+                if type(Preview.SetScaleType) == "function" then
+                    Preview:SetScaleType(Defaults.ScaleType)
+                end
+                if type(Preview.SetImageSize) == "function" then
+                    Preview:SetImageSize(Defaults.ImageSize)
+                end
+                if type(Preview.SetImagePosition) == "function" then
+                    Preview:SetImagePosition(Defaults.ImagePosition, Defaults.ImageAnchorPoint)
+                end
+                if type(Preview.SetImageScale) == "function" then
+                    Preview:SetImageScale(Defaults.ImageScale)
+                end
+                if type(Preview.SetTileSize) == "function" then
+                    Preview:SetTileSize(Defaults.TileSize)
+                end
+                if type(Preview.SetRotation) == "function" then
+                    Preview:SetRotation(Defaults.Rotation)
+                end
+            end
             return
         end
         if type(Preview.SetImage) == "function" then
@@ -378,6 +464,32 @@ function ImageGallery.Create(Library, Info)
         end
         if type(Preview.SetImageColor) == "function" then
             Preview:SetImageColor(Item.Color)
+        end
+        if Defaults then
+            if type(Preview.SetImageTransparency) == "function" then
+                Preview:SetImageTransparency(math.clamp(tonumber(Item.ImageTransparency) or Defaults.ImageTransparency, 0, 1))
+            end
+            if type(Preview.SetCanvasTransparency) == "function" then
+                Preview:SetCanvasTransparency(math.clamp(tonumber(Item.ImageBackgroundTransparency) or Defaults.CanvasTransparency, 0, 1))
+            end
+            if type(Preview.SetScaleType) == "function" then
+                Preview:SetScaleType(Item.ScaleType or Defaults.ScaleType)
+            end
+            if type(Preview.SetImageSize) == "function" then
+                Preview:SetImageSize(Item.ImageSize or Defaults.ImageSize)
+            end
+            if type(Preview.SetImagePosition) == "function" then
+                Preview:SetImagePosition(Item.ImagePosition or Defaults.ImagePosition, Item.ImageAnchorPoint or Defaults.ImageAnchorPoint)
+            end
+            if type(Preview.SetImageScale) == "function" then
+                Preview:SetImageScale(Item.ImageScale or Defaults.ImageScale)
+            end
+            if type(Preview.SetTileSize) == "function" then
+                Preview:SetTileSize(Item.TileSize or Defaults.TileSize)
+            end
+            if type(Preview.SetRotation) == "function" then
+                Preview:SetRotation(Item.Rotation or Defaults.Rotation)
+            end
         end
         if type(Preview.SetTitle) == "function" then
             Preview:SetTitle(Item.Name)
@@ -398,6 +510,7 @@ function ImageGallery.Create(Library, Info)
         local Button = Instance.new("TextButton")
         Button.AutoButtonColor = false
         Button.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(27, 30, 35)
+        Button.BackgroundTransparency = Gallery.CellTransparency
         Button.BorderSizePixel = 0
         Button.ClipsDescendants = true
         Button.LayoutOrder = Index
@@ -406,35 +519,57 @@ function ImageGallery.Create(Library, Info)
         Button.Parent = GridHolder
 
         local Corner = Instance.new("UICorner")
-        Corner.CornerRadius = UDim.new(0, 4)
+        Corner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
         Corner.Parent = Button
 
         local CellStroke = Instance.new("UIStroke")
         CellStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         CellStroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
-        CellStroke.Transparency = 0.38
+        CellStroke.Transparency = Gallery.CellOutlineTransparency
         CellStroke.Parent = Button
 
+        local ImageViewport = Instance.new("Frame")
+        ImageViewport.BackgroundColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(11, 13, 16)
+        ImageViewport.BackgroundTransparency = Gallery.ImageBackgroundTransparency
+        ImageViewport.BorderSizePixel = 0
+        ImageViewport.ClipsDescendants = true
+        ImageViewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
+        ImageViewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
+        ImageViewport.Parent = Button
+        AddRegistry(Library, ImageViewport, { BackgroundColor3 = "BackgroundColor" })
+
+        local ImageCorner = Instance.new("UICorner")
+        ImageCorner.CornerRadius = UDim.new(0, math.max(0, Gallery.CornerRadius - 1))
+        ImageCorner.Parent = ImageViewport
+
         local Image = Instance.new("ImageLabel")
-        Image.BackgroundColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(11, 13, 16)
+        Image.AnchorPoint = Gallery.ImageAnchorPoint
+        Image.BackgroundTransparency = 1
         Image.BorderSizePixel = 0
         Image.Image = ""
-        Image.Position = UDim2.fromOffset(5, 5)
-        Image.ScaleType = ScaleType
-        Image.Size = UDim2.new(1, -10, 1, -27)
-        Image.Parent = Button
-        AddRegistry(Library, Image, { BackgroundColor3 = "BackgroundColor" })
+        Image.ImageTransparency = Gallery.ImageTransparency
+        Image.Position = Gallery.ImagePosition
+        Image.Rotation = Gallery.Rotation
+        Image.ScaleType = Gallery.ScaleType
+        Image.Size = Gallery.ImageSize
+        Image.TileSize = Gallery.TileSize
+        Image.Parent = ImageViewport
+
+        local Scale = Instance.new("UIScale")
+        Scale.Scale = Gallery.ImageScale
+        Scale.Parent = Image
 
         local Name = Instance.new("TextLabel")
         Name.AnchorPoint = Vector2.new(0, 1)
         Name.BackgroundTransparency = 1
         Name.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
         Name.Position = UDim2.fromScale(0, 1)
-        Name.Size = UDim2.new(1, 0, 0, 22)
+        Name.Size = UDim2.new(1, 0, 0, Gallery.LabelHeight)
         Name.Text = ""
         Name.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
         Name.TextSize = 10
         Name.TextTruncate = Enum.TextTruncate.AtEnd
+        Name.Visible = Gallery.LabelHeight > 0
         Name.Parent = Button
         AddRegistry(Library, Name, {
             FontFace = "Font",
@@ -444,7 +579,11 @@ function ImageGallery.Create(Library, Info)
         local Slot = {
             Index = Index,
             Button = Button,
+            Corner = Corner,
+            Viewport = ImageViewport,
+            ImageCorner = ImageCorner,
             Image = Image,
+            Scale = Scale,
             Name = Name,
             Stroke = CellStroke,
             Item = nil,
@@ -533,7 +672,21 @@ function ImageGallery.Create(Library, Info)
             Slot.Button.Visible = Item ~= nil
             Slot.Image.Image = Item and NormalizeAsset(Item.Thumbnail) or ""
             Slot.Image.ImageColor3 = Item and Item.Color or Color3.new(1, 1, 1)
-            Slot.Image.ImageTransparency = Item and Item.Disabled and 0.58 or 0
+            local ItemTransparency = Item and math.clamp(tonumber(Item.ImageTransparency) or Gallery.ImageTransparency, 0, 1) or 1
+            if Item and Item.Disabled then
+                ItemTransparency = math.max(ItemTransparency, 0.58)
+            end
+            Slot.Image.ImageTransparency = ItemTransparency
+            Slot.Viewport.BackgroundTransparency = Item and math.clamp(tonumber(Item.ImageBackgroundTransparency) or Gallery.ImageBackgroundTransparency, 0, 1) or 1
+            Slot.Image.ScaleType = Item and Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+            Slot.Image.Size = Item and Item.ImageSize or Gallery.ImageSize
+            Slot.Image.Position = Item and Item.ImagePosition or Gallery.ImagePosition
+            Slot.Image.AnchorPoint = Item and Item.ImageAnchorPoint or Gallery.ImageAnchorPoint
+            Slot.Scale.Scale = Item and math.clamp(tonumber(Item.ImageScale) or Gallery.ImageScale, 0.1, 4) or Gallery.ImageScale
+            Slot.Image.TileSize = Item and Item.TileSize or Gallery.TileSize
+            Slot.Image.Rotation = Item and (Item.Rotation or Gallery.Rotation) or Gallery.Rotation
+            Slot.Image.ImageRectOffset = Item and (Item.RectOffset or Vector2.zero) or Vector2.zero
+            Slot.Image.ImageRectSize = Item and (Item.RectSize or Vector2.zero) or Vector2.zero
             Slot.Name.Text = Item and Item.Name or ""
             UpdateSlotState(Slot, false)
         end
@@ -657,7 +810,162 @@ function ImageGallery.Create(Library, Info)
         end
         Gallery.Columns = math.clamp(math.floor(tonumber(Value) or Gallery.Columns), 1, 10)
         Grid.FillDirectionMaxCells = Gallery.Columns
-        Grid.CellSize = UDim2.new(1 / Gallery.Columns, -math.ceil(Gap * (Gallery.Columns - 1) / Gallery.Columns), 0, CellHeight)
+        Grid.CellSize = UDim2.new(1 / Gallery.Columns, -math.ceil(Gap * (Gallery.Columns - 1) / Gallery.Columns), 0, Gallery.CellHeight)
+    end
+
+    function Gallery:SetCellHeight(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.CellHeight = math.clamp(math.floor(tonumber(Value) or Gallery.CellHeight), 52, 150)
+        Gallery.ImagePadding = math.min(Gallery.ImagePadding, math.max(0, Gallery.CellHeight - Gallery.LabelHeight - 1))
+        Grid.CellSize = UDim2.new(1 / Gallery.Columns, -math.ceil(Gap * (Gallery.Columns - 1) / Gallery.Columns), 0, Gallery.CellHeight)
+        for _, Slot in Gallery.Slots do
+            Slot.Viewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
+            Slot.Viewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
+        end
+    end
+
+    function Gallery:SetScaleType(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ScaleType = ResolveScaleType(Value)
+        Refresh()
+    end
+
+    function Gallery:SetImageTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ImageTransparency = math.clamp(tonumber(Value) or Gallery.ImageTransparency, 0, 1)
+        Refresh()
+    end
+
+    function Gallery:SetImageBackgroundTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ImageBackgroundTransparency = math.clamp(tonumber(Value) or Gallery.ImageBackgroundTransparency, 0, 1)
+        Refresh()
+    end
+
+    function Gallery:SetBackgroundTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.BackgroundTransparency = math.clamp(tonumber(Value) or Gallery.BackgroundTransparency, 0, 1)
+        Root.BackgroundTransparency = Gallery.BackgroundTransparency
+    end
+
+    function Gallery:SetCellTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.CellTransparency = math.clamp(tonumber(Value) or Gallery.CellTransparency, 0, 1)
+        for _, Slot in Gallery.Slots do
+            Slot.Button.BackgroundTransparency = Gallery.CellTransparency
+        end
+    end
+
+    function Gallery:SetOutlineTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.CellOutlineTransparency = math.clamp(tonumber(Value) or Gallery.CellOutlineTransparency, 0, 1)
+        for _, Slot in Gallery.Slots do
+            UpdateSlotState(Slot, false)
+        end
+    end
+
+    function Gallery:SetContainerOutlineTransparency(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ContainerOutlineTransparency = math.clamp(tonumber(Value) or Gallery.ContainerOutlineTransparency, 0, 1)
+        Stroke.Transparency = Gallery.ContainerOutlineTransparency
+    end
+
+    function Gallery:SetImagePadding(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ImagePadding = math.clamp(math.floor(tonumber(Value) or Gallery.ImagePadding), 0, math.max(0, Gallery.CellHeight - Gallery.LabelHeight - 1))
+        for _, Slot in Gallery.Slots do
+            Slot.Viewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
+            Slot.Viewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
+        end
+    end
+
+    function Gallery:SetLabelHeight(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.LabelHeight = math.clamp(math.floor(tonumber(Value) or Gallery.LabelHeight), 0, 40)
+        Gallery.ImagePadding = math.min(Gallery.ImagePadding, math.max(0, Gallery.CellHeight - Gallery.LabelHeight - 1))
+        for _, Slot in Gallery.Slots do
+            Slot.Viewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
+            Slot.Viewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
+            Slot.Name.Size = UDim2.new(1, 0, 0, Gallery.LabelHeight)
+            Slot.Name.Visible = Gallery.LabelHeight > 0
+        end
+    end
+
+    function Gallery:SetImageSize(Value)
+        if Gallery.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        Gallery.ImageSize = Value
+        Refresh()
+    end
+
+    function Gallery:SetImageScale(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.ImageScale = math.clamp(tonumber(Value) or Gallery.ImageScale, 0.1, 4)
+        Refresh()
+    end
+
+    function Gallery:SetImagePosition(Value, AnchorPoint)
+        if Gallery.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        if AnchorPoint ~= nil and typeof(AnchorPoint) ~= "Vector2" then
+            return
+        end
+        Gallery.ImagePosition = Value
+        if AnchorPoint then
+            Gallery.ImageAnchorPoint = AnchorPoint
+        end
+        Refresh()
+    end
+
+    function Gallery:SetTileSize(Value)
+        if Gallery.Destroyed or typeof(Value) ~= "UDim2" then
+            return
+        end
+        Gallery.TileSize = Value
+        Refresh()
+    end
+
+    function Gallery:SetRotation(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.Rotation = tonumber(Value) or Gallery.Rotation
+        Refresh()
+    end
+
+    function Gallery:SetCornerRadius(Value)
+        if Gallery.Destroyed then
+            return
+        end
+        Gallery.CornerRadius = math.clamp(math.floor(tonumber(Value) or Gallery.CornerRadius), 0, 12)
+        for _, Slot in Gallery.Slots do
+            Slot.Corner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
+            Slot.ImageCorner.CornerRadius = UDim.new(0, math.max(0, Gallery.CornerRadius - 1))
+        end
     end
 
     function Gallery:Select(Id, Silent)
@@ -697,6 +1005,7 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.Preview = Preview
+        Gallery.PreviewDefaults = nil
         local _, Item = Gallery:GetSelected()
         BindPreview(Item)
     end

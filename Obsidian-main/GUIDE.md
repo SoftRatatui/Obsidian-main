@@ -11,13 +11,15 @@
 5. [Values, callbacks, and dependencies](#values-callbacks-and-dependencies)
 6. [Dialogs, notifications, and loading](#dialogs-notifications-and-loading)
 7. [Themes and configuration](#themes-and-configuration)
-8. [Watermark, keybinds, launcher, and sound](#watermark-keybinds-launcher-and-sound)
+8. [Watermark, keybinds, and launcher](#watermark-keybinds-and-launcher)
 9. [Media and ESP preview](#media-and-esp-preview)
 10. [Declarative API](#declarative-api)
 11. [Advanced utilities](#advanced-utilities)
 12. [Motion, performance, and lifecycle](#motion-performance-and-lifecycle)
 13. [Troubleshooting](#troubleshooting)
-14. [Release checklist](#release-checklist)
+14. [Migration from Obsidian](#migration-from-obsidian)
+15. [Release checklist](#release-checklist)
+16. [Changelog](#changelog)
 
 ## Which version is running
 
@@ -55,8 +57,6 @@ local Library = loadstring(game:HttpGet(
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
-
-Library:SetClickSound(92679954573730, 0.3)
 
 local Window = Library:CreateWindow({
     Title = "MonHub Private",
@@ -515,7 +515,7 @@ SaveManager:LoadAutoloadConfig()
 
 `IgnoreThemeSettings()` is recommended while migrating old configurations. It skips stale raw appearance entries but intentionally keeps `ThemeManager_ThemeList`, allowing the selected built-in preset to save and restore normally. Configuration parser errors return a readable error instead of silently reporting success. Config names must be plain file names: do not use slashes, `..`, reserved marker names, or leading/trailing spaces.
 
-## Watermark, keybinds, launcher, and sound
+## Watermark, keybinds, and launcher
 
 ### Watermark
 
@@ -556,14 +556,6 @@ Window:SetCompactLauncherWidth(172)
 Window:SetCompactLauncherPosition(UDim2.fromScale(0.5, 0.5))
 Window:SetCompactLauncherDraggable(true)
 ```
-
-### Click sound
-
-```luau
-Library:SetClickSound(92679954573730, 0.3)
-```
-
-The first argument is the asset ID and the second is volume from `0` to `1`.
 
 ## Media and ESP preview
 
@@ -1018,6 +1010,1029 @@ The current window fitter clamps both size and position after Roblox publishes t
 
 Pass a real `Player` or `Model` as `Target`, create it after the target character exists, and keep the preview addon from the same revision as Library. The generic preview needs no `Renderer`; only use one when your project provides it.
 
+## Migration from Obsidian
+
+This section focuses on moving an existing Obsidian project to MonHub without rewriting its application logic.
+
+MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` now provides a minimal built-in preset selector.
+
+The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Regular fallback typography, packaged Inter Bold support, responsive sidebar behavior, compact checkmark toggles, short motion, a draggable clamped watermark, R6 ESP preview support, a native character Trail addon, optimized search, and a declarative API.
+
+### Useful links
+
+- [MonHub UI repository](https://github.com/SoftRatatui/Obsidian-main)
+- [Library.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.lua)
+- [Raw Library.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua)
+- [Complete Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua)
+- [Raw Example.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Example.lua)
+- [QuickStart.luau](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/QuickStart.luau)
+- [ThemeManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ThemeManager.lua)
+- [SaveManager.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/SaveManager.lua)
+- [VisualPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/VisualPreview.lua)
+- [Raw VisualPreview.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua)
+- [DrawingESPPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DrawingESPPreview.lua)
+- [ImageGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImageGallery.lua)
+- [ImagePreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/ImagePreview.lua)
+- [CharacterTrail.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/CharacterTrail.lua)
+- [TextureGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TextureGallery.lua)
+- [FixedR6Preview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/FixedR6Preview.lua)
+- [DashboardWindow.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DashboardWindow.lua)
+- [Inter-Bold.ttf](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/assets/Inter-Bold.ttf)
+- [Legacy TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
+- [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
+- [Changelog](#changelog)
+- [Original Obsidian](https://github.com/deividcomsono/Obsidian)
+- [Legacy API reference](https://docs.mspaint.cc/obsidian)
+- [Lucide icon catalogue](https://lucide.dev/icons/)
+- [MIT license](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/LICENSE)
+
+### Short migration route
+
+For most projects, complete these steps in order:
+
+1. Back up the working script and configuration folder.
+2. Replace the upstream `Library.lua` URL with the MonHub raw URL.
+3. Keep existing control IDs unchanged.
+4. Update `SaveManager.lua`; add `ThemeManager.lua` when the settings page should expose the six built-in presets.
+5. Run a smoke test for callbacks, configs, keybinds, mobile layout, and unload.
+
+### Step 1: replace the loader
+
+An upstream loader usually looks like this:
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"
+))()
+```
+
+Replace it with MonHub:
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
+))()
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+end
+```
+
+Use `raw.githubusercontent.com`, not a `github.com/.../blob/...` URL. A blob page returns HTML, which causes Luau to report `Expected ident` on line 1.
+
+### Step 2: keep the legacy API
+
+Do not move to the declarative API during the first migration. Existing code can stay almost unchanged:
+
+```luau
+local Library = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
+))()
+if Library.ReleaseVersion ~= "0.0.1-release-6" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+end
+
+local Window = Library:CreateWindow({
+    Title = "My Hub",
+    Footer = "MonHub v0.0.1",
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+    GlobalSearch = true,
+    EnableSidebarResize = true,
+    Font = Enum.Font.Gotham,
+    CornerRadius = 6,
+    TabTransitionTime = 0.075,
+    TabSwipeOffset = 2,
+    Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
+})
+
+local MainTab = Window:AddTab("Main", "house")
+local GeneralGroup = MainTab:AddLeftGroupbox("General", "settings-2")
+
+GeneralGroup:AddToggle("Enabled", {
+    Text = "Enabled",
+    Default = true,
+    Callback = function(Value)
+        print("Enabled:", Value)
+    end,
+})
+```
+
+### API compatibility
+
+| Upstream Obsidian | MonHub UI | Migration action |
+|---|---|---|
+| `Library:CreateWindow` | Supported | Keep it |
+| `Window:AddTab` | Supported | Keep it |
+| `Window:AddKeyTab` | Supported | Keep it |
+| `Tab:AddLeftGroupbox` | Supported | Keep it |
+| `Tab:AddRightGroupbox` | Supported | Keep it |
+| `AddToggle` | Supported | Keep it |
+| `AddCheckbox` | Supported | Keep it |
+| `AddInput` | Supported | Keep it |
+| `AddSlider` | Supported | Keep it |
+| `AddDropdown` | Supported | Keep it |
+| `AddButton` | Supported | Keep it |
+| `AddLabel` and `AddDivider` | Supported | Keep them |
+| `AddColorPicker` | Supported | Keep it |
+| `AddKeyPicker` | Supported | Keep it |
+| `Library.Options` | Supported | Do not rename IDs |
+| `Library.Toggles` | Supported | Do not rename IDs |
+| `ThemeManager` | Minimal preset selector | Add it to expose all six built-ins |
+| `SaveManager` | Supported | Update the addon file |
+| `Library:SetWatermark` | Supported | Use when needed |
+| `Library:SetWatermarkVisibility` | Supported | Use when needed |
+| `Library:SetWatermarkSide` | Supported | Use `"Left"` or `"Right"` |
+| `Library:SetWatermarkDraggable` | Supported | Enables or disables dragging |
+
+The visual design of controls has changed, but their primary methods remain. `SetValue` does not call a callback again when the value is unchanged, which avoids redundant dependencies, tweens, and calculations.
+
+### Window settings
+
+Recommended settings:
+
+```luau
+local Window = Library:CreateWindow({
+    Title = "MonHub",
+    Footer = "MonHub v0.0.1",
+    NotifySide = "Right",
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+    GlobalSearch = true,
+    EnableSidebarResize = true,
+    EnableCompacting = true,
+    ShowCustomCursor = true,
+    Font = Enum.Font.Gotham,
+    CornerRadius = 6,
+    TabTransitionTime = 0.075,
+    TabSwipeOffset = 2,
+    TabSwipeFrom = "bottom",
+    Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
+    Animations = {
+        ToggleWindow = true,
+        TabSwitch = true,
+        Groupbox = true,
+        Dropdown = true,
+        KeyPicker = true,
+    },
+})
+```
+
+| Setting | Purpose |
+|---|---|
+| `Title` | Window title |
+| `Footer` | Bottom-bar text |
+| `Size` | Desktop or mobile size |
+| `Center` | Centers the window on creation |
+| `Resizable` | Allows resizing |
+| `GlobalSearch` | Searches controls |
+| `EnableSidebarResize` | Allows sidebar-width dragging |
+| `EnableCompacting` | Enables a compact sidebar |
+| `CornerRadius` | Outer radius from 0 to 20 |
+| `Font` | `Enum.Font` or `Font` |
+| `TabTransitionTime` | Tab transition duration |
+| `TabSwipeOffset` | Tab content entry distance |
+| `TabSwipeFrom` | `left`, `right`, `top`, or `bottom` |
+
+Call this after a viewport change or manual size change:
+
+```luau
+Window:FitToViewport()
+```
+
+### Tabs and groupboxes
+
+```luau
+local Tabs = {
+    Main = Window:AddTab("Main", "house"),
+    Visuals = Window:AddTab("Visuals", "eye"),
+    Settings = Window:AddTab("UI Settings", "settings-2"),
+}
+
+local MainLeft = Tabs.Main:AddLeftGroupbox("Player", "user")
+local MainRight = Tabs.Main:AddRightGroupbox("World", "globe")
+
+MainLeft:SetOrder(0)
+MainRight:SetOrder(0)
+```
+
+Use `SetOrder` when SaveManager sections or dynamic groupboxes need a predictable placement.
+
+### Moving controls
+
+#### Toggle and Checkbox
+
+```luau
+local FeatureToggle = MainLeft:AddToggle("FeatureEnabled", {
+    Text = "Feature enabled",
+    Default = false,
+    Tooltip = "Enables the feature",
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+
+MainLeft:AddCheckbox("SafeMode", {
+    Text = "Safe mode",
+    Default = true,
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+```
+
+`AddToggle` now defaults to a compact 16×16 square with a 3px radius and an animated checkmark while retaining the same boolean API. `AddCheckbox` uses the same square language. Set `Library.ForceCheckbox = false` before creating controls only when an older project deliberately wants the legacy sliding switch.
+
+#### Input
+
+```luau
+MainLeft:AddInput("ProfileName", {
+    Text = "Profile name",
+    Default = "Default",
+    Placeholder = "Enter a profile name",
+    Finished = true,
+    ClearTextOnFocus = false,
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+```
+
+#### Slider
+
+```luau
+MainLeft:AddSlider("PowerLevel", {
+    Text = "Power level",
+    Default = 65,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Suffix = "%",
+    AllowRightClickInput = true,
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+```
+
+The slider API is unchanged. The control has separate label/value areas, a thin track, a thumb, mouse drag, touch drag, and numeric right-click input.
+
+#### Dropdown
+
+```luau
+MainRight:AddDropdown("Quality", {
+    Text = "Quality",
+    Values = { "Low", "Balanced", "High" },
+    Default = "Balanced",
+    AllowNull = false,
+    Callback = function(Value)
+        print(Value)
+    end,
+})
+
+MainRight:AddDropdown("Modules", {
+    Text = "Enabled modules",
+    Values = { "Visuals", "Utility", "Movement" },
+    Default = { "Visuals", "Utility" },
+    Multi = true,
+})
+
+MainRight:AddDropdown("Command", {
+    Text = "Search command",
+    Values = { "Alpha", "Bravo", "Charlie", "Delta" },
+    Default = "Alpha",
+    Searchable = true,
+})
+```
+
+Large dropdown lists are virtualized. Arrays, dictionaries, multi-select values, player dropdowns, and team dropdowns remain supported.
+
+#### Button, Label, and Divider
+
+```luau
+MainLeft:AddLabel("Status: ready", true)
+MainLeft:AddDivider()
+
+MainLeft:AddButton({
+    Text = "Run action",
+    DoubleClick = false,
+    Variant = "Primary",
+    Func = function()
+        print("Action executed")
+    end,
+})
+```
+
+The short button form also remains available:
+
+```luau
+MainLeft:AddButton("Run action", function()
+    print("Action executed")
+end)
+```
+
+Available button variants are `Default`, `Primary`, and `Ghost`. `Secondary` remains an alias for `Default`. Older `Warning`, `Danger`, `Caution`, `Destructive`, and `Risky` button styling now resolves to `Default`, so legacy scripts remain functional without carrying colored outlines into the current design. Use an explicit icon or confirmation dialog when the action needs extra context.
+
+This button migration is required for maintained code. Replace every legacy semantic button variant explicitly rather than relying on the compatibility fallback. Warning and danger toggle variants remain supported because their visual state stays visible after the click.
+
+Toggles also accept `Variant = "Warning"` or `Variant = "Danger"`. In the enabled state only the track and outline become semantic, so key-picker rows do not shift. Enabling a danger toggle opens a short `Cancel` / `Continue` dialog. Turning it off is immediate. Set `ConfirmDanger = false` to disable confirmation, or set `ConfirmTitle` and `ConfirmDescription` for custom dialog copy.
+
+The title-bar minimize button collapses the UI to a centered draggable launcher with the script title. When the menu is hidden by keybind, the launcher does not appear; use the same bind to restore the menu. Configure this through `ShowCompactLauncher`, `CompactLauncherIcon`, `CompactLauncherSize`, `CompactLauncherWidth`, `CompactLauncherTitle`, `CompactLauncherPosition`, and `CompactLauncherDraggable` in `CreateWindow`.
+
+### ColorPicker and KeyPicker addons
+
+```luau
+FeatureToggle:AddColorPicker("FeatureColor", {
+    Title = "Feature color",
+    Default = Color3.fromRGB(121, 126, 139),
+    Transparency = 0,
+    Resizable = true,
+    Callback = function(Color)
+        print(Color)
+    end,
+})
+
+FeatureToggle:AddKeyPicker("FeatureKeybind", {
+    Text = "Feature keybind",
+    Default = "H",
+    Mode = "Toggle",
+    SyncToggleState = true,
+    Callback = function(State)
+        print(State)
+    end,
+})
+```
+
+Feature keybinds support `Toggle` and `Hold`. `Press` remains an action-bind mode for labels and buttons and does not appear in the keybind state panel.
+
+The keybind panel hides unassigned (`None`) or invalid entries and does not display when it is empty. Enable its animated display with:
+
+```luau
+Library:SetKeybindMenuVisible(true)
+```
+
+When the first valid key is assigned later, the panel appears automatically while this setting is enabled.
+
+### Reading values
+
+Do not change IDs when migrating configurations.
+
+```luau
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+print(Toggles.FeatureEnabled.Value)
+print(Options.PowerLevel.Value)
+print(Options.Quality.Value)
+
+Toggles.FeatureEnabled:SetValue(true)
+Options.PowerLevel:SetValue(80)
+Options.Quality:SetValue("High")
+```
+
+`Toggles` contains toggle and checkbox controls. `Options` contains inputs, sliders, dropdowns, key pickers, color pickers, and other option controls.
+
+### Theme presets and font policy
+
+`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the desaturated violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. `Steel`, `Sage`, and `Ash` add cool blue-gray, quiet green-gray, and warm-neutral alternatives. Every preset uses Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Background, card, raised overlay, control, hover, muted text, and soft accent surfaces are separate semantic tokens. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
+
+```luau
+Library:SetTheme("Default")
+Library:SetTheme("Metal")
+Library:SetTheme("Midnight")
+Library:SetTheme("Steel")
+Library:SetTheme("Sage")
+Library:SetTheme("Ash")
+```
+
+The release contains exactly these six built-ins. Legacy preset names resolve safely, but raw theme tables and old saved palette fields cannot restore a prior font, `TopBarColor`, background image, radius, or partial color palette. Theme application now updates the full instance registry and then refreshes stateful components, preventing an active toggle, popup, launcher, slider, or hover state from retaining the previous palette.
+
+Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
+
+Inter Bold is now loaded automatically before the first window is created and becomes the shared font for the core UI and every theme-aware addon:
+
+```luau
+local ActiveFont = Library.DefaultFont
+local FontError = Library.DefaultFontError
+```
+
+The TTF is validated and cached in `MonHub/assets`. The font override remains active through theme changes. Executors without the required filesystem or custom-asset APIs receive Gotham automatically, so no project-side font loader is required.
+
+### Watermark, FPS, and ping
+
+Basic API:
+
+```luau
+Library:SetWatermark("My Hub  |  Ready")
+Library:SetWatermarkVisibility(true)
+Library:SetWatermarkSide("Left")
+Library:SetWatermarkDraggable(true)
+```
+
+The watermark starts in the top-left. It can be dragged with mouse or touch, or snapped through `SetWatermarkSide("Left")` and `SetWatermarkSide("Right")`. It remains within the viewport after dragging, text changes, and screen-size changes.
+
+[Example.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Example.lua) includes ready-to-use Watermark, Show FPS, and Show Ping settings. It updates text every 0.5 seconds, counts FPS with a lightweight `RenderStepped` counter, and reads `Data Ping` safely through `Stats`.
+
+### Interactive R6 viewport
+
+```luau
+local PreviewGroup = Tabs.Visuals:AddLeftGroupbox("Character preview", "user-round")
+
+PreviewGroup:AddViewport("CharacterViewport", {
+    Object = CharacterModel,
+    Clone = true,
+    AutoFocus = true,
+    Interactive = true,
+    Height = 260,
+})
+```
+
+Controls:
+
+- Left or right mouse drag rotates the model.
+- Mouse wheel zooms.
+- Touch drag rotates.
+- Pinch zooms.
+
+Zoom is clamped relative to model size. `Object` must be a `BasePart` or `Model`.
+
+### ESP preview addon
+
+`addons/VisualPreview.lua` clones a real character from `Target` without changing the source. It supports a fixed panel beside the window, a direct `GuiObject` parent, and a MonHub groupbox. `addons/DrawingESPPreview.lua` provides a shared Drawing backend so live players and the preview use the same entity update path.
+
+Load the addon from the same commit as `Library.lua`:
+
+```luau
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+))()
+local Players = game:GetService("Players")
+
+local PreviewGroup = VisualsTab:AddRightGroupbox("Live preview", "scan-eye")
+local ESPRenderer = DrawingESPPreview.Create({
+    Color = Color3.fromRGB(119, 166, 209),
+    GradientColor = Color3.fromRGB(202, 220, 239),
+})
+
+local Preview = VisualPreview.CreateEmbedded(Library, PreviewGroup, {
+    Name = "ESP preview",
+    Target = Players.LocalPlayer,
+    Height = 320,
+    Enabled = false,
+    Gradient = true,
+    DynamicBoxes = true,
+    Renderer = ESPRenderer,
+})
+```
+
+Use `VisualPreview.Create(Library, VisualsTab, Info)` for the external panel. Pass `Parent = SomeGuiObject` or call `Preview:Mount(Parent, Height)` for direct mounting. `VisualPreview.CreateEmbedded` and `Preview:Embed` place the preview directly in a groupbox.
+
+Bind the preview to the same callbacks that change the live ESP:
+
+```luau
+local function SyncPreview()
+    Preview:SetEnabled(Config.ESPEnabled == true)
+    Preview:SetBoxVisible(Config.ESPBoxes == true)
+    Preview:SetNameVisible(Config.ESPNames == true)
+    Preview:SetTeamVisible(Config.ESPTeamText == true)
+    Preview:SetWeaponVisible(Config.ESPWeapons == true)
+    Preview:SetDistanceVisible(Config.ESPDistance == true)
+    Preview:SetHealthVisible(Config.ESPHealth == true)
+    Preview:SetColor(Config.ESPGradient and Config.ESPGradientStart or Config.BoxColor)
+    Preview:SetGradientEnabled(Config.ESPGradient == true)
+    Preview:SetGradientColor(Config.ESPGradientEnd)
+    Preview:SetChams(
+        Config.ChamsEnabled == true,
+        Config.ChamsFillColor,
+        Config.ChamsOutlineColor,
+        Config.ChamsFillTrans,
+        Config.ChamsOutlineTrans
+    )
+end
+```
+
+To migrate the live ESP to the shared backend, keep the project's existing player iteration, visibility checks, projection, and throttling. Replace only the final object writes with `ESPRenderer:UpdateEntity(Entity, State)`. `State.Bounds` uses absolute screen coordinates and `State.Health` is a normalized value from `0` to `1`. Call `ESPRenderer:CreateEntity()` once per tracked player and `ESPRenderer:RemoveEntity(Entity)` when that player is removed. The preview passes the same state fields automatically.
+
+Projects that already have a polished renderer do not need to replace it. Pass an adapter with `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, and `DetachPreview`; each update receives the cloned `Context.Model`, projected `Context.Bounds`, colors, visibility flags, text values, and health. With no adapter or Drawing support, the preview retains its theme-aware GUI fallback.
+
+Use `SetPosition("Auto" | "Right" | "Left", "Center" | "Top" | "Bottom")` and `SetPanelGap(number)` only for panel placement. Drag the character with left mouse or touch to rotate it; use the mouse wheel for zoom. `Preview:Rotate(deltaX, deltaY)`, `Preview:SetZoom(value)`, and `Preview:ResetView()` are available for custom controls.
+
+### Real character Trail addon
+
+Replace decorative `TracerPreview` usage with `addons/CharacterTrail.lua` when the effect must exist on the real player. The addon creates a native Roblox `Trail`, follows respawns, and creates no Trail or Attachment instances while disabled.
+
+```luau
+local CharacterTrail = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-6"
+))()
+
+local TrailController = CharacterTrail.Create({
+    Enabled = false,
+    Target = game:GetService("Players").LocalPlayer,
+    ColorA = Color3.fromRGB(120, 166, 209),
+    ColorB = Color3.fromRGB(203, 221, 239),
+    TransparencyMin = 0.04,
+    TransparencyMax = 0.18,
+    WidthStart = 1,
+    WidthEnd = 0,
+    AttachmentWidth = 1.3,
+    Lifetime = 0.34,
+    Texture = "Beam",
+    FaceCamera = true,
+})
+
+TrailController:SetEnabled(true)
+
+Library:OnUnload(function()
+    TrailController:Destroy()
+end)
+```
+
+Use `SetColors`, `SetTransparency`, `SetWidthScale`, `SetAttachmentWidth`, `SetVerticalOffset`, `SetAttachmentPart`, `SetLifetime`, `SetMinLength`, `SetMaxLength`, `SetTexture`, `SetTextureMode`, `SetTextureLength`, `SetFaceCamera`, `SetLight`, and `SetBrightness` for direct settings. `ApplyPreset("Soft" | "Energy" | "Plasma" | "Minimal")` changes a complete visual profile. Texture names include `None`, `Beam`, `Lightning`, `Heartrate`, `Chain`, `Glitch`, `Swirl`, `Neon`, `Plasma`, and `Laser`; numeric asset IDs and `rbxassetid://` strings are also accepted.
+
+The old `TracerPreview.lua` remains available only for compatibility with scripts that intentionally need a decorative menu image. It is not used by the current `Example.lua` and must not be treated as an in-world effect.
+
+### Focused visual and dashboard addons
+
+These modules remain standalone and are loaded only by projects that need them:
+
+```luau
+local TextureGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+))()
+local DashboardWindow = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
+))()
+local VisualPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+))()
+local DrawingESPPreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+))()
+local FixedR6Preview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-6"
+))()
+```
+
+Use `DashboardWindow` for information or actions that must remain independent from the main tab layout. Its compact top bar, section cards, metric spacing, outline colors, font, and visibility transition are synchronized with the main interface. A string creates static text, a function creates automatically refreshed text, `Type = "Metric"` creates a named dynamic value, `Type = "Button"` runs a callback, and `Type = "Custom"` mounts a supplied `GuiObject`. The addon uses one scheduler for all providers and stops it while hidden.
+
+```luau
+local Dashboard = DashboardWindow.Create(Library, {
+    Title = "Runtime",
+    Position = "Right",
+    Draggable = true,
+})
+
+local Status = Dashboard:AddSection("Status")
+Status:Add("Loaded")
+Status:Add({
+    Type = "Metric",
+    Label = "Player",
+    Value = function()
+        return game:GetService("Players").LocalPlayer.DisplayName
+    end,
+})
+Status:Add({
+    Type = "Button",
+    Text = "Refresh",
+    Callback = function()
+        Dashboard:Refresh()
+    end,
+})
+```
+
+The texture selector is intentionally smaller than the general image gallery. It creates no search box, category control, pagination state, or frame loop:
+
+```luau
+local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
+
+local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextures", {
+    Height = 302,
+    Columns = 2,
+    Items = TextureGallery.DefaultItems,
+    Selected = "beam",
+    OnSelected = function(Item)
+        TrailController:SetTexture(Item.Texture)
+        TrailController:SetColors(Item.ColorA, Item.ColorB)
+    end,
+})
+```
+
+The fixed preview creates an actual R6 from the current player's applied appearance. Its built-in renderer is suitable for UI testing; pass the renderer adapter used by the real ESP through `Renderer` when the preview must follow the exact production drawing path.
+
+```luau
+local Preview = FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tabs.Visuals, {
+    Target = game:GetService("Players").LocalPlayer,
+    Renderer = LiveESPRenderer,
+    Side = "Right",
+    Alignment = "Center",
+    Box = true,
+    Health = true,
+    Gradient = true,
+    DynamicBoxes = true,
+})
+```
+
+Image-heavy selectors are separate opt-in addons and are never loaded by the core library. The complete `Example.lua` imports them explicitly as a showcase:
+
+```luau
+local ImageGallery = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+))()
+local ImagePreview = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6-image-ui-3"
+))()
+
+local Look = ImagePreview.CreateEmbedded(Library, PreviewGroup, "SkinLook", {
+    Height = 280,
+    ImagePadding = 12,
+    ImageScale = 1,
+    CanvasTransparency = 0.18,
+    CaptionTransparency = 0.08,
+    OutlineTransparency = 0.48,
+    Motion = true,
+})
+
+local Gallery = ImageGallery.CreateEmbedded(Library, SkinGroup, "SkinGrid", {
+    Height = 344,
+    Columns = 5,
+    PageSize = 15,
+    CellTransparency = 0.06,
+    OutlineTransparency = 0.48,
+    ImageBackgroundTransparency = 0.22,
+    ImagePadding = 5,
+    ImageScale = 1,
+    Preview = Look,
+    Items = SkinDefinitions,
+    OnSelected = function(Item)
+        ApplySkin(Item.Id)
+    end,
+})
+```
+
+The gallery creates only `PageSize` reusable cards, assigns images only for the active filtered page, and debounces search. The preview recycles two image layers for crossfade and zoom. Neither addon has a frame loop. Card, image-area, asset, caption, container, and outline transparency are independent. Global image layout can be overridden per item with size, position, anchor, zoom, scale type, tile size, rotation, and sprite rectangle fields. See the current image-addon section in `GUIDE.md` for the complete method list and item schema.
+
+### Image, Video, and UIPassthrough
+
+```luau
+local MediaGroup = Tabs.Visuals:AddRightGroupbox("Media", "image")
+
+MediaGroup:AddImage("PreviewImage", {
+    Image = "sparkles",
+    Color = Color3.fromRGB(184, 189, 201),
+    Transparency = 0,
+    BackgroundTransparency = 0.12,
+    OutlineTransparency = 0.48,
+    Padding = 10,
+    CornerRadius = 5,
+    ImageSize = UDim2.fromScale(1, 1),
+    ImagePosition = UDim2.fromScale(0.5, 0.5),
+    ImageScale = 1,
+    ScaleType = Enum.ScaleType.Fit,
+    Height = 82,
+})
+
+MediaGroup:AddVideo("PreviewVideo", {
+    Video = "rbxassetid://5608324215",
+    Looped = true,
+    Playing = false,
+    Volume = 0,
+    Height = 175,
+})
+```
+
+`AddImage` exposes independent setters for the asset, panel, outline, padding, corner radius, size, position, tile size, rotation, aspect ratio, height, and visibility. `AddUIPassthrough` accepts an existing `GuiBase2d` and places it inside a groupbox.
+
+### ThemeManager presets
+
+Load `ThemeManager.lua` when the UI Settings page should expose the six built-in presets:
+
+```luau
+local ThemeManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-6"
+))()
+
+ThemeManager:SetLibrary(Library)
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+```
+
+The addon creates a minimal `Default` / `Metal` / `Midnight` / `Steel` / `Sage` / `Ash` dropdown with the ID `ThemeManager_ThemeList`. SaveManager persists that selection. It does not expose raw palette editing or load custom theme files.
+
+### SaveManager
+
+```luau
+local SaveManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-6"
+))()
+
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetFolder("MonHub")
+SaveManager:SetSubFolder(tostring(game.PlaceId))
+local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
+ConfigGroup:SetOrder(-100)
+SaveManager:LoadAutoloadConfig()
+```
+
+Configuration migration rules:
+
+1. Preserve existing control IDs.
+2. Keep the old `SetFolder` value to reuse an existing config folder.
+3. Use a new `MonHub` folder to begin with clean configurations.
+4. Do not call `LoadAutoloadConfig` before all controls are created.
+5. Call `SaveManager:IgnoreThemeSettings()` before loading legacy autoload configs; it filters old palette fields but keeps `ThemeManager_ThemeList`.
+6. The menu KeyPicker is saved normally. Add it to `SetIgnoreIndexes()` only when it must remain global across every configuration.
+
+### UI Settings layout
+
+Recommended placement:
+
+```text
+Left column
+1. Interface
+
+Right column
+1. Configuration
+```
+
+Use `Groupbox:SetOrder`:
+
+```luau
+local InterfaceGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
+InterfaceGroup:SetOrder(-100)
+
+local ConfigGroup = SaveManager:BuildConfigSection(Tabs.Settings)
+ConfigGroup:SetOrder(-100)
+```
+
+### Mobile and desktop
+
+MonHub compacts the sidebar on touch devices. On a narrow working area, content columns stack vertically: left first, right second. This preserves readable control width instead of compressing sliders, dropdowns, or inputs.
+
+```luau
+local WindowSize = Library.IsMobile
+    and UDim2.fromOffset(520, 460)
+    or UDim2.fromOffset(760, 660)
+```
+
+Responsive layout is enabled by default. Customize its thresholds for your UI:
+
+```luau
+local Window = Library:CreateWindow({
+    ResponsiveLayout = true,
+    SingleColumnWidth = 540,
+    HideSearchAtWidth = 210,
+})
+```
+
+`SingleColumnWidth` is the content width at which two columns stack vertically. `HideSearchAtWidth` is the extreme threshold where search hides instead of overlapping the title. Only call `Window:SetResponsiveLayoutEnabled(false)` when a window is guaranteed to remain desktop-sized.
+
+Recommendations:
+
+- Do not make a desktop window smaller than `480x360` without testing controls.
+- Keep tab names short.
+- Use label wrapping for long text.
+- Test both columns at 75%, 100%, 125%, and 150% DPI.
+- Test the viewport in landscape mobile orientation.
+- Call `Window:FitToViewport()` after manual resizing.
+- The relevant setting is in `UI Settings → Responsive layout` in `Example.lua`.
+
+### Motion and performance
+
+All primary transitions are enabled by default and complete after their tween; none creates a perpetual effect.
+
+```luau
+Window:SetAnimations({
+    ToggleWindow = true,
+    TabSwitch = true,
+    Groupbox = true,
+    Dropdown = true,
+    KeyPicker = true,
+}, 0.075, 2, "bottom")
+```
+
+Window opening uses a 90ms opacity-only transition and closing uses 60ms, without scale or font resizing. Tabs crossfade in 75ms and leave in 45ms with only 2px of travel. The keybind overlay fades in 70ms, its rows settle in 75ms, and standard controls use 110ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
+
+For custom controls that change multiple values in one callback, call `Library:QueueDependencyUpdate()`. The library then performs one dependency pass at the end of the current task cycle.
+
+### Notifications
+
+Legacy form:
+
+```luau
+Library:Notify({
+    Title = "Saved",
+    Description = "Configuration saved successfully.",
+    Time = 4,
+    Icon = "check",
+})
+```
+
+Notification sound:
+
+```luau
+Library:Notify({
+    Title = "Ready",
+    Description = "The interface is ready.",
+    Time = 3,
+})
+```
+
+### Dependency controls
+
+```luau
+local AdvancedToggle = MainRight:AddToggle("AdvancedMode", {
+    Text = "Advanced mode",
+    Default = false,
+})
+
+local DependencyBox = MainRight:AddDependencyBox()
+DependencyBox:AddSlider("AdvancedValue", {
+    Text = "Advanced value",
+    Default = 25,
+    Min = 0,
+    Max = 50,
+})
+DependencyBox:SetupDependencies({ { AdvancedToggle, true } })
+```
+
+### Unload and cleanup
+
+```luau
+Library:OnUnload(function()
+    print("Interface unloaded")
+end)
+
+Library:Unload()
+```
+
+MonHub disconnects registered signals, destroys UI and draggable elements, cancels active animations, and clears options and cached measurements. Register external connections through `Library:GiveSignal`, or disconnect them in `OnUnload`.
+
+### Declarative API
+
+Moving to the declarative API is optional. Do it after the legacy migration is stable.
+
+```luau
+local App = Library:Create({
+    Title = "My Interface",
+    Footer = "MonHub v0.0.1",
+    Tabs = {
+        {
+            Name = "Main",
+            Icon = "house",
+            Sections = {
+                {
+                    Name = "General",
+                    Side = "Left",
+                    Controls = {
+                        {
+                            Type = "Toggle",
+                            Id = "enabled",
+                            Text = "Enabled",
+                            Default = true,
+                            OnChanged = function(Value)
+                                print(Value)
+                            end,
+                        },
+                        {
+                            Type = "Slider",
+                            Id = "power",
+                            Text = "Power",
+                            Min = 0,
+                            Max = 100,
+                            Default = 50,
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
+App:Get("power"):SetValue(75)
+App:Toggle(true)
+```
+
+Hierarchy:
+
+```text
+App
+└── Tabs / Pages
+    └── Sections / Groups
+        └── Controls / Elements
+```
+
+`Id` is needed only for elements accessed by code. `App:Get(Id)` returns the created control.
+
+### Wally or Studio installation
+
+The repository `wally.toml` still contains upstream package metadata. Installing `deividcomsono/obsidian` from the public Wally registry can return original Obsidian rather than this MonHub build.
+
+Use one of these options for exact MonHub behavior:
+
+1. A raw loader in an executor environment.
+2. A vendor copy of current `Library.lua`, `Library.d.luau`, and `addons` in your project.
+3. A private Wally package or Git submodule pinned to a MonHub repository commit.
+
+Do not mix MonHub `Library.lua` with addons from a different version.
+
+### Troubleshooting
+
+#### `Expected ident` on line 1
+
+Cause: the loader received HTML, an error page, or a private-repository page.
+
+Check that:
+
+- The URL is a raw URL.
+- The repository and branch are accessible.
+- The path includes `Obsidian-main/Library.lua`.
+- The GitHub response is not empty.
+- The executor supports `game:HttpGet` and `loadstring`.
+
+#### The UI looks like old Obsidian
+
+Cause: the project is loading an upstream URL, upstream Wally package, or an old cached file.
+
+Fix: verify the URL and restart the session.
+
+#### Font Face becomes Code
+
+Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Regular until a project explicitly installs the packaged Inter Bold font. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
+
+#### A configuration does not load
+
+Check that:
+
+- All controls exist before `LoadAutoloadConfig`.
+- IDs were preserved.
+- `SetFolder` and `SetSubFolder` match the old project.
+- The executor supports file APIs.
+
+#### Watermark shows `0 ms`
+
+`Stats.Network.ServerStatsItem["Data Ping"]` can be unavailable immediately after joining. Wait for the next update interval.
+
+#### The UI leaves the screen
+
+Use a responsive size and call:
+
+```luau
+Window:FitToViewport()
+```
+
+The current fitter reclamps after Roblox publishes the updated `AbsoluteSize` and after every viewport resize. If a custom embedded element still overflows, remove its fixed width and size it from the groupbox's available width.
+
+#### The viewport rotates but the model is invisible
+
+Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Model`, set a `PrimaryPart` when possible.
+
+### Final checklist
+
+- [ ] The raw URL points to MonHub.
+- [ ] Library and addons come from one version.
+- [ ] `Library.ReleaseVersion` reports `0.0.1-release-6`; a mismatch is informational and never blocks startup.
+- [ ] Existing control IDs are preserved.
+- [ ] Default applies as the neutral-gray startup theme.
+- [ ] Metal applies as the violet alternate theme.
+- [ ] Gotham Regular is not replaced by Code, or packaged Inter Bold loads successfully before window creation.
+- [ ] The window fits the desktop viewport.
+- [ ] Sidebar compact works on mobile.
+- [ ] Toggle and checkbox callbacks work.
+- [ ] Slider works with mouse and touch.
+- [ ] Dropdown single and multi values persist.
+- [ ] KeyPicker and ColorPicker work.
+- [ ] Maintained buttons use only `Default`, `Primary`, or `Ghost` variants.
+- [ ] Old appearance fields are ignored when configurations load.
+- [ ] `ThemeManager_ThemeList` saves and restores the selected built-in theme.
+- [ ] Old configurations load, or are deliberately moved to a new folder.
+- [ ] Watermark, FPS, and ping controls work.
+- [ ] Search has no visible delay.
+- [ ] Unload cleans up UI and external connections.
+- [ ] `CharacterTrail:Destroy()` runs on unload when the addon is enabled.
+- [ ] A separate dashboard closes, reopens, clamps to the viewport, and is destroyed on unload.
+- [ ] The texture gallery and fixed R6 preview are loaded only on pages that use them.
+- [ ] The script is tested on desktop and mobile.
+
+### Recommended real migration order
+
+1. Replace the loader and open a window without addons.
+2. Test tabs and controls.
+3. Test `Library.Options` and `Library.Toggles`.
+4. Add SaveManager without autoload and call `IgnoreThemeSettings()` for old configurations.
+5. Create and load a test configuration.
+6. Enable autoload.
+7. Add Watermark.
+8. Test desktop, mobile, DPI, and resizing.
+9. Add optional `CharacterTrail`, texture, image, or preview addons one at a time and verify cleanup.
+10. Move to the declarative API only after all previous steps pass.
+
+This order localizes errors and makes each stage easy to roll back.
+
 ## Release checklist
 
 - [ ] `Library.lua`, `ThemeManager.lua`, `SaveManager.lua`, and optional addons come from one commit.
@@ -1037,4 +2052,615 @@ Pass a real `Player` or `Model` as `Target`, create it after the target characte
 - [ ] `assets/Inter-Bold.ttf` is published with the same release when the custom font is enabled.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 
-For historical Obsidian migration notes, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md). For the complete showcase, see [Example.lua](Example.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau).
+For the complete showcase, see [Example.lua](Example.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau). The project is distributed under the terms in [LICENSE](LICENSE).
+
+## Changelog
+
+### 26.08.2026
+
+[removed]
+- Removed automatic button audio, its shared runtime object, public methods, dashboard hooks, examples, and type declarations.
+- Removed redundant documentation files after consolidating their maintained content into `GUIDE.md`.
+
+[documentation]
+- Made `GUIDE.md` the single English documentation source for installation, the complete API, addons, migration, troubleshooting, release checks, and project history.
+
+### 25.08.2026
+
+```diff
+[image system]
++ Expanded core AddImage with independent asset, background, and outline transparency plus color, padding, corner, transform, zoom, tiling, rotation, and aspect-ratio controls
++ Rebuilt ImageGallery cards with a separate clipped image viewport and global or per-item size, position, anchor, zoom, scale, tile, rotation, sprite, tint, and transparency settings
++ Expanded ImagePreview with canvas, caption, container, outline, shade, padding, position, size, tile, rotation, and caption-visibility controls
++ Added matching transparency and scale controls to TextureGallery
+
+[showcase]
++ Added interactive image styling controls to Example.lua and documented the complete current API and item schema
+
+[performance]
++ Preserved the fixed gallery cell pool, recycled two-layer preview transition, lazy asset assignment, and zero frame-loop design
+```
+
+### 24.08.2026
+
+```diff
+[character trail]
++ Added the optional native CharacterTrail addon with two-color gradients, start/end transparency, width curves, texture presets, attachment placement, lighting, and character respawn support
++ Kept the disabled controller allocation-free and used native Roblox rendering without a frame loop
++ Replaced the decorative tracer section in Example.lua with complete controls for the real character Trail
+
+[stability]
++ Repainted keybind state rows synchronously after every theme transaction so a finishing hover tween cannot restore stale palette colors
++ Reclamped window size and position after the first absolute-layout update and every viewport resize to prevent first-frame edge overflow
+
+[typography]
++ Installed assets/Inter-Bold.ttf automatically from Library.lua as the global core and addon font with a cached Gotham fallback
++ Resolved custom font weights from 100 through 900 instead of always requesting Regular from the generated family
+
+[visual addons]
++ Added the optional TextureGallery addon with a wide selected preview, compact trail cards, ten built-in textures, and direct CharacterTrail binding
++ Added the optional FixedR6Preview addon that creates an actual R6 from the current player appearance and accepts the live ESP renderer adapter
++ Added the optional DashboardWindow addon with sections, static and function-backed text, metrics, callbacks, custom GuiObject mounting, dragging, clamping, and complete theme registration
++ Refined DashboardWindow into a compact main-UI style with a themed top bar, groupbox headers, thinner spacing, native close icon, soft shadow, and fast visibility transition
+
+[performance]
++ Kept TextureGallery and FixedR6Preview opt-in; TextureGallery has no frame loop, search worker, or pagination state, while FixedR6Preview reuses the existing preview scheduler and adds only an appearance-change connection
++ Used one lazy scheduler for every dashboard provider and stopped it automatically while the separate window is hidden or has no dynamic widgets
+
+[maintenance]
++ Removed the temporary alternate loader, duplicate library build, and alternate showcase so Library.lua is the only maintained core
++ Standardized repository documentation in English and repaired the Wally/Studio section link
++ Verified that executable source and documented code examples contain no comments or authoring metadata
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and release URLs for 0.0.1-release-6
+```
+
+### 23.08.2026
+
+```diff
+[visual modules]
++ Added embedded, direct-parent, and fixed-panel mounting modes to the real-character VisualPreview addon
++ Added a renderer adapter contract so the same live ESP backend can render the preview clone without a separate fake overlay
++ Added DrawingESPPreview with one reusable entity path for boxes, two-tone edges, names, distance, weapons, and health bars
++ Added opt-in ImageGallery with pooled pagination, category cycling, debounced search, selection binding, and asset-ID normalization
++ Added opt-in ImagePreview with full-size images, recycled crossfade layers, short zoom motion, direct mounting, and groupbox embedding
++ Restored TracerPreview as an independent opt-in addon that is never loaded by the core library
++ Expanded Example.lua into a complete interactive showcase for every addon and its primary runtime setters
++ Removed tracer rendering from the main ESP preview while retaining a harmless compatibility setter for older integrations
++ Replaced synthetic gallery entries with real skybox image assets and added nine tracer texture presets to the addon showcase
++ Removed the separate sidebar selection strip in favor of the existing soft selected-tab surface, label, and icon state
+
+[performance]
++ Kept the Drawing backend allocation-stable by creating objects once per entity and mutating them in place
++ Limited image gallery allocation to one reusable page and kept both image addons free of frame loops
++ Preserved the built-in GUI fallback when Drawing is unavailable
++ Added explicit tween cancellation, connection cleanup, and registry removal for manually destroyed visual addons
++ Removed two decorative instances from every sidebar tab
+
+[documentation]
++ Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract, optional gallery, and animated 2D preview
+```
+
+### 22.08.2026
+
+```diff
+[theme engine]
++ Replaced three overloaded palette colors with semantic Background, Surface, Raised, Element, Hover, AccentSoft, MutedFont, and Shadow layers
++ Theme changes now repaint the registry and refresh every stateful control in one transaction, including active toggles, buttons, sliders, and the compact launcher
++ Updated ThemeManager, SaveManager migration filters, VisualPreview, and type declarations for complete palette coverage
++ Isolated every registered property during repaint and added a final state pass so one invalid dynamic property cannot block the rest of an element
++ Increased surface separation in Metal, Midnight, and Ash while keeping their accents muted
++ Added validated cached Inter Medium loading with a persistent theme-font override and GothamMedium fallback
++ Added a shared release query to every remote loader so executor and raw-CDN caches cannot mix Library and addon revisions after a push
++ Automatically unloads the previous MonHub ScreenGui before a repeated run so an old interface cannot cover the new release
++ Added a dedicated core-surface binding pass for the window, header, title zone, sidebar, content, and footer so the top bar cannot retain a previous theme color
+
+[soft visual pass]
++ Rebalanced Default into a calmer layered gray palette and refined Metal and Midnight without increasing global corner radius
++ Unified the top bar, title zone, search area, and header controls on one registered top-bar surface so every theme repaints the full header
++ Added raised overlays, distinct card surfaces, softer selected-tab hover states, and two-tone slider fills
++ Increased standard control breathing room while preserving the compact 16x16 checkmark and fast interaction timings
++ Reduced tab crossfade to 75ms in, 45ms out, and 2px of travel for a faster, calmer transition
+
+[release]
++ Finalized six restrained built-in themes: neutral-gray Default, desaturated-violet Metal, near-black Midnight, cool Steel, green-gray Sage, and warm-neutral Ash
++ Removed warning and danger button styling and automatic semantic button icons; legacy values now resolve to the neutral default style
++ Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
++ Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
++ Standardized the release typography on readable Gotham Regular
++ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the six-theme release contract
+
+[design]
++ Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes
++ Added inset full-width sidebar tabs so indicators no longer sit against the frame edge
++ Refined tabbox selection into a soft accent surface with short color/transparency transitions
++ Normalized content insets and group spacing for a calmer, less crowded layout
++ Changed the default AddToggle presentation to a compact, fully filled 16x16 square checkmark without a corner mask
++ Kept the legacy sliding switch available through Library.ForceCheckbox = false
++ Rebuilt keybind rows around a fixed horizontal layout with a 14x14 checkmark and deterministic alignment
++ Replaced fractional checkmark scaling with fixed-size antialiased glyphs and opacity-only motion for cleaner small-pixel rendering
++ Removed two UICorner instances per checkbox/keybind pair so the four corner pixels stay filled and the render tree is smaller
++ Changed release checks from fatal errors to non-blocking notices so a cached patch revision cannot prevent startup
+
+[motion]
++ Window opening now uses a 90ms opacity-only transition and closing uses 60ms, without scaling or font resizing
++ Tab entry now uses a 75ms fade/2px offset and exit uses a 45ms fade
++ Standard control state transitions now use a responsive 110ms timing
++ Keybind overlays use a 70ms fade and 75ms row transitions without fractional UIScale animation
+
+[performance]
++ Removed one UIStroke from every standard outlined surface
++ Removed unused raw theme editor controls, palette file work, and repeated palette restoration paths
++ Replaced direct optional executor-global reads with cached environment lookups to avoid strict Luau unknown-global errors
+```
+
+### 19.08.2026
+
+```diff
+[design]
++ Azure is now the default visual system: deep blue-slate layers, a restrained cool-blue accent, and high-contrast soft-white typography
++ Added a solid theme-aware top-bar surface and refined accent dividers for a more composed premium layout
++ Graphite remains available as an optional neutral preset
+
+[motion]
++ Tuned window opening, closing, tab, dropdown, key picker, keybind, notification, and groupbox timings for smoother 60 FPS transitions
++ Window closing now combines a short fade with a restrained scale settle instead of an abrupt transparency-only exit
++ Tab motion uses a smaller 8px offset for a cleaner, less distracting page transition
+
+[features]
++ Added addons/VisualPreview.lua with a local white R6 3D preview and configurable box, name, distance, health, tracer, highlight, and color overlays
++ Viewport controls now expose their Box and Frame for safe module-level overlays
+
+[performance]
++ Full executor profile keeps advanced UI features enabled while reusing the existing tween deduplication and coalesced resize pipeline
+
+[changes]
+- Removed the public capability and LowSpec profile API from this full-featured build
+```
+
+### 18.08.2026
+
+```diff
+[design]
++ Graphite V2 default theme with lighter neutral layers, a restrained steel-gray accent, and compact 4px geometry
++ Restrained cool-gray surfaces for tabs, groupboxes, window chrome, controls, and focused search
++ BlackPurple remains available as an optional preset
++ Smooth animations are enabled by default and toggle transitions now animate color and position
++ Refined the default radius from 9px to 4px for a cleaner, less rounded visual system
++ Checkboxes now use a compact square shape with a clear accent-filled selected state
++ Narrower sidebar proportions and denser navigation improve usable content space
+
+[features]
++ Library:Create / Library:Mount declarative UI API
++ App:Get, App:Toggle, App:Notify, and App:Destroy lifecycle helpers
++ Graphite, BlackPurple, and Classic built-in theme presets with Library:SetTheme
++ Library.ImageManager.PreloadAssets for optional background asset downloads
++ Draggable Watermark with FPS and ping settings in Example.lua
++ Interactive R6 viewport showcase with mouse, wheel, touch, and pinch controls
++ Editable TopBarColor theme field with automatic fallback for older themes
++ Responsive content columns that switch to a readable vertical layout on narrow windows and touch devices
++ Keybind panel filters out unassigned and invalid binds, hides when empty, and animates rows and visibility
++ Central motion controller deduplicates tab, groupbox, slider, dropdown, search, and button transitions
++ Runtime capability reporting with Library:GetCapabilities and Library:Supports
++ Auto, Safe, and LowSpec compatibility modes for restricted executor environments
+
+[compatibility]
++ Module, icon, and optional image downloads now prefer request and fall back to game:HttpGet
++ Core UI falls back safely when gethui, cloneref, clonefunction, hidden-property APIs, or getgenv are unavailable
++ ThemeManager and SaveManager no longer require clonefunction and report filesystem availability
++ Config export keeps JSON in the visible input when clipboard access is unavailable
+
+[optimizations]
++ Removed four blocking optional image downloads from module initialization
++ Lucide source is cached and uses Roblox-hosted sprites instead of synchronously downloading two PNG files
++ Text bounds are cached and temporary GetTextBoundsParams instances are destroyed
++ Search input is debounced and stale requests are discarded
++ Keybind visibility updates avoid repeated tween work unless a bind or state actually changes
++ Theme registry now uses weak instance keys
++ Slider decimal rounding no longer formats strings on every drag frame
++ Resize callbacks are coalesced instead of rebuilding every tab multiple times in the same task cycle
++ Window visibility now uses one CanvasGroup tween instead of creating tweens for every descendant
++ Window closing is six times faster, uses one short CanvasGroup fade, and supports immediate reversal
++ Watermark statistics update at a fixed interval with one lightweight frame counter
++ Viewport and DPI changes are coalesced before recalculating responsive geometry
++ Dependency checks are batched for internal control updates and unchanged values skip callbacks, dependency work, and animations
++ Dropdown virtualization avoids redundant row property writes while scrolling
+
+[fixes]
++ Timed event waits no longer fire a destroyed BindableEvent
++ Unload callbacks no longer remove from the front of an array repeatedly
++ Unload only clears the global Library reference when it still owns it
++ Window dragging and resizing stay inside the active viewport
++ Window geometry is repaired automatically after viewport or DPI changes
++ Scrollable columns now expose subtle overflow indicators and safe bottom spacing
++ Footer, resize handle, and content use separate non-overlapping layout regions
++ Groupbox titles truncate correctly and no longer extend beyond icon headers
++ Added Groupbox:SetOrder for predictable addon alignment
++ ThemeManager no longer resets Gotham to Code when opening UI Settings
++ Slider labels, values, track, thumb, mouse input, and touch input now use separate aligned regions
++ Rapid menu toggles no longer get ignored or leave stale visibility state
++ Groupboxes keep a consistent bottom breathing space after their final control
++ Groupbox height follows deferred coalesced layout measurements instead of stale element sizes
++ Groupbox height includes the measured bottom edge of every visible final control
+```
+
+### 17.08.2026
+
+```diff
+[features]
++ ColorPicker.Resizable
++ Window.AlwaysOnTop, Window:SetAlwaysOnTop, Loading.AlwaysOnTop
+
+[changes]
++ TextBox focus now tweens the border between OutlineColor and AccentColor
++ Added Hover highlights on Dropdown items, KeyPicker mode-select buttons, and ColorPicker context menu items
+
+[fixes]
++ Implemented MinContainerWidth properly
+```
+
+### 12.08.2026
+
+```diff
+[features]
++ Large dropdown lists are now virtualized for faster opens and lower instance count
++ Dropdowns no longer crash the game with over 10,000 values
++ Dictionary Values support: key = selection identity, value = display label
++ Dropdown:SetValues now prunes stale selections that are no longer in Values
+
+[changes]
++ Dropdown.DisabledValues and Dropdown.ValueImages now accept dictionary keys or labels
++ Dropdown:AddValues on dictionary Values merges maps (or key=label for arrays)
++ Sparse numeric tables are treated as arrays (value identity), not dictionaries
+
+[fixes]
++ Multi-dropdown dictionary keys no longer stripped to display labels (Issue #109)
+```
+
+### 11.07.2026
+
+```diff
+[changes]
++ Loading configs now triggers element callbacks even if their value hasn't changed
+```
+
+### 09.07.2026
+
+```diff
+[changes]
++ Background Image now supports external URLs using getcustomasset
+```
+
+### 07.07.2026
+
+```diff
+[features]
++ Dropdown.DragSelect, Dropdown:SetDragSelect(Value: boolean) (only works on non-touch devices and Multi dropdowns)
++ Animations.Groupbox, Animations.KeyPicker
+
+[changes]
++ Notification appear and disappear animations are now smooth
+
+[fixes]
++ Fixed Library.ToggleKeybind
+```
+
+### 05.07.2026
+
+```diff
+[features]
++ Added Animations.ToggleWindow
++ Added Animations.TabSwitch, TabTransitionTime, TabSwipeOffset, TabSwipeFrom (left/right/top/bottom)
++ Added Animations.Dropdown
++ Window:SetAnimations(Animations, TabTransitionTime, TabSwipeOffset, TabSwipeFrom)
++ Added DisableCollapsing to AddLeftGroupbox, AddRightGroupbox
+
+[changes]
++ KeyPickers now allow setting the bind to any modifier key if it was only pressed and not held down
+
+[fixes]
++ Fixed Library.ToggleKeybind not working properly with modifier keys
++ Fixed KeyPickers firing while picking a bind for any KeyPicker
+```
+
+### 02.07.2026
+
+```diff
+[changes]
++ Save Manager and Theme Manager refactored
++ Save Manager now saves the keybind menu visibility and position
++ Save Manager and Theme Manager now show what theme is the default and what config is autoloaded inside the dropdowns
+
+[fixes]
++ Fixed dialogs buttons breaking with Destructive buttons if ThemeManager:SetDefaultTheme was used
+```
+
+### 01.07.2026
+
+```diff
+[features]
++ Confirmation dialogs to destructive actions in Save Manager and Theme Manager
++ Groupbox collapsed state now saves in configuration files
+```
+
+
+### 28.06.2026
+
+```diff
+[features]
++ Groupbox:SetVisible(Visible: boolean), Groupbox:Show(), Groupbox:Hide()
++ Groupbox:AddTabbox()
++ Collapse Groupbox arrow (disable with DisableCollapsing option)
++ TitleColor, DescriptionColor options for Library:Notify({ ... })
++ Library.Scheme.BackgroundImage and "Background Image" option in Theme Manager
++ Library.Window
+
+[changes]
++ Tabbox:AddTab() now returns Tab and TabStoringIndex
++ Window BackgroundImage can now be set even when it was previously not set during creation
+
+[fixes]
++ Fixed searching restoring hidden elements each time
++ Fixed attempt to index nil with 'Destroy' errors in Dropdown:BuildDropdownList()
++ Fixed rounded corners with Tab buttons inside Tabbox
++ Fixed Tab button spacing when it doesn't have name
+```
+
+### 26.06.2026
+
+```diff
+[features]
++ :Destroy() function for every element
++ Volume option for Library:Notify()
++ KeyPicker for buttons (Only works with 'Press' mode, Callback to the button will have an passed value FromKeyPicker which will be true if it was activated by the key picker)
++ Icon and IconPosition parameters to Library:AddDraggableLabel() and Library:AddDraggableButton()
++ Slider.AllowRightClickInput (right click/double tap to open text input for specific value)
++ Library:AddDraggableImageButton()
+
+[changes]
++ Implemented individual rounded corners for certain elements (dropdowns, right-click context menus)
++ Right-click context menus will now connect to the buttons visually
++ Dropdown:GetActiveValues() => Dropdown:GetActiveValues(ReturnCountForMulti: boolean) [true => returns value count]
++ The dropdown menu will now close if the button is not visible on the screen.
++ Other KeyPickers will no longer trigger when you are selecting the keybind
++ Mouse button KeyPickers will no longer trigger when you have the UI opened
++ Draggable labels, buttons, menus and image buttons will now find an position where they won't overlap other dragging elements
+
+[fixes]
++ Fixed AllowNull not properly working with Multi dropdowns
++ Fixed dropdown context menu not matching button size on the X axis
+
+[optimizations]
++ Obsidian Library table will now get properly garbage collected after calling Library:Unload()
+```
+
+### 21.04.2026
+
+```diff
+[features]
++ SaveManager:SetLoadingOrder(enabled: boolean, order: { })
+```
+
+### 05.04.2026
+
+```diff
+[features]
++ Library.Scheme.DestructiveColor
++ Library:CreateLoading(LoadingInfo)
+~ Read documentation at http://docs.mspaint.cc/obsidian/core/library/loading
+```
+
+### 03.04.2026
+
+```diff
+[features]
++ Tab:SetVisible()
+```
+
+### 28.03.2026
+
+```diff
+[features]
++ Dropdown.FormatListValue(Value)
+  - Randomized formatting will not be preserved as the function is called every time the context menu is rebuilt
+```
+
+### 24.03.2026
+
+```diff
+[features]
++ Input.VerifyValue(NewValue: string): boolean
++ Input.ClearTextOnBlur
++ KeyPicker.Blacklisted, KeyPicker.BlacklistedModifiers
++ KeyPicker.Whitelisted, KeyPicker.WhitelistedModifiers
+
+[changes]
++ CornerRadius now applies to more elements
++ Height of the slider increased by 1px
+```
+
+### 17.03.2026
+
+```diff
+[features]
++ Window:SetCornerRadius(Radius: number)
+
+[fixes]
++ Fixed Window:SetFooter not changing the label text
++ Fixed footer background not properly resizing
++ Fixed Tab buttons not respecting corner radius
+```
+
+### 16.01.2026
+
+```diff
+[features]
++ Library:ResetCursorIcon()
++ Library:ChangeCursorIcon(ImageId: string)
++ Library:ChangeCursorIconSize(Size: UDim2)
+```
+
+### 30.12.2025
+
+```diff
+[breaking changes]
+! Library.Scheme:
+  .Red -> .RedColor
+  .Dark -> .DarkColor
+  .White -> .WhiteColor
+! WindowInfo.Compact -> WindowInfo.SidebarCompacted
+! WindowInfo.SidebarMinWidth -> WindowInfo.MinSidebarWidth
+! WindowInfo.MinContentWidth -> WindowInfo.MinContainerWidth
+- WindowInfo.SidebarCollapseThreshold
+- WindowInfo.SidebarHighlightCallback function
+- WindowInfo.InitialSidebarWidth
+- WindowInfo.InitialSidebarScale
+
+[fixes]
++ Fixed DPI Scaling
+
+[features]
++ WindowInfo.DisableCompactingSnap
+  -> WindowInfo.CompactWidthActivation
+
+[changes]
++ WindowInfo.SidebarCompactWidth default value (54) to new value (48)
++ Library:SetWatermark is deprecated due to Library:AddDraggableLabel having the same functionality
+```
+
+### 18.12.2025
+
+```diff
++ Patched static key bypass inside Key Box
+    * The AddKeyBox function now only takes the callback function
+    * The callback function only returns the provided key, you need to implement your own handler inside the callback
+```
+
+### 09.11.2025
+
+```diff
++ Added Library.ImageManager (https://docs.mspaint.cc/obsidian/core/library/utility#custom-asset-icons)
+```
+
+### 02.11.2025
+
+```diff
++ Warning Box now follows the UI style of Obsidian (rounded corners with outlines)
++ Watermark now correctly resizes itself with new line characters
+```
+
+### 01.11.2025
+
+```diff
++ The ignored indexes (SaveManager.SetIgnoreIndexes) are no longer applied when you load a configuration that contains them
+```
+
+### 5.10.2025
+
+```diff
++ Added support for modifier keys in KeyPicker (for example: LCtrl + E)
++ Fixed DoClick not calling the correct callbacks
+```
+
+### 17.09.2025
+
+```diff
++ Added support for custom icons (rbxasset, rbxassetid, rbxthumb, getcustomasset) for Tabs and Groupboxes
+```
+
+### 14.09.2025
+
+```diff
++ Added `Press` mode to `KeyPicker`
+```
+
+### 19.08.2025
+
+```diff
++ Fixed `KeyPicker` in Toggle mode not working properly when Key is nil
+```
+
+#### 12.08.2025
+
+```diff
++ Fixed `Tab:UpdateWarningBox()` not resizing properly
+```
+
+#### 10.08.2025
+
+```diff
++ Added a LockSize option `Tab:UpdateWarningBox()` to set the maximum size of the warning box to 3.25 size of the Tab Container (optional)
++ Added support for mouse button 3 (middle click)
+```
+
+#### 17.07.2025
+
+```diff
++ Added Description parameter to `Window:AddTab()` method to set a description for the tab
++ Updated `Window:AddTab()` method to accept a table with Name, Icon, and Description or a table with Name, Icon (optional), and Description (optional)
++ Updated `Library:CreateWindow()`'s WindowInfo parameter to include a `DisableSearch` option to disable the search box in the window
+```
+
+#### 15.07.2025
+
+```diff
++ Added watermark support to the library
++ Added `Library:SetWatermarkVisibility()` method to toggle the visibility of the watermark
++ Added `Library:SetWatermark()` method to set the watermark text
+```
+
+#### 14.07.2025
+
+```diff
++ Added `AddImage` component
+```
+
+#### 13.07.2025
+
+```diff
++ Updated lucide icons to the latest version
++ Changed lucide icons to be using `getcustomasset` to bypass ContentProvider detections
++ Added `AddViewport` component
+```
+
+#### 12.07.2025
+
+```diff
++ Added `ThemeManager:SetDefaultTheme()` method to set the default theme for the library
++ Improved `Library:SafeCallback()` to handle errors correctly and return everything correctly (previously it would only return the first return value)
++ Added `BackgroundImage` parameter to `Window` constructor to set a background image for the window
+```
+
+#### 02.07.2025
+
+```diff
++ Added dropdown support for `AddDependencyBox` and `AddDependencyGroupBox`
+```
+
+#### 15.06.2025
+
+```diff
++ Fixed Obsidian's `Library:Validate()` function to ignore arrays (setting modes option on AddKeyPicker would fail previously)
+```
+
+#### 04.06.2025
+
+```diff
++ Added Notify.Persist and Notify:Destroy() methods to make persistent notifications easier to manage
++ Added Icon parameter to Groupbox constructor that matches the accent color.
+```
+
+#### 17.05.2025
+
+```diff
++ Added a new `AddDependencyBox` and `AddDependencyGroupBox` methods to the `Groupbox` class
+```
+
+#### 18.01.2024
+
+```diff
++ Added a Hover Animation to Buttons
++ Added Risky to Buttons
++ Changed Toggle's Checkbox to Switch (Checkbox is still possible with AddCheckbox)
++ Dropdown disabled values moved to the bottom
++ Fixed DPI Scale issues (Title Wrapping, Slider Fill Bar and Dropdown Menu Size)
+```

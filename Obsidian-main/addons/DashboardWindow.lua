@@ -676,9 +676,6 @@ function DashboardWindow.Create(Library, Info)
                 if Widget.Destroyed or not Widget.Enabled then
                     return
                 end
-                if Library.PlayClickSound then
-                    Library:PlayClickSound()
-                end
                 if type(Widget.Callback) == "function" then
                     Library:SafeCallback(Widget.Callback, Widget, Dashboard)
                 end
@@ -938,9 +935,6 @@ function DashboardWindow.Create(Library, Info)
         end
     end))
     AddConnection(CloseButton.MouseButton1Click:Connect(function()
-        if Library.PlayClickSound then
-            Library:PlayClickSound()
-        end
         Dashboard:SetVisible(false)
     end))
 

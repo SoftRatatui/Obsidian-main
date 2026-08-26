@@ -141,8 +141,6 @@ local Toggles = Library.Toggles
 Library.ForceCheckbox = true
 Library.ShowToggleFrameInKeybinds = true
 
-Library:SetClickSound(92679954573730, 0.3)
-
 local Window = Library:CreateWindow({
 	Title = "MonHub Private",
 	Footer = "MonHub v0.0.1",

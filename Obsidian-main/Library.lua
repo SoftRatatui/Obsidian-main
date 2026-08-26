@@ -1952,14 +1952,6 @@ local function New(ClassName: string, Properties: { [string]: any }): any
         end)
     end
 
-    if Instance:IsA("GuiButton") then
-        Instance.Activated:Connect(function()
-            if Library.PlayClickSound then
-                Library:PlayClickSound()
-            end
-        end)
-    end
-
     return Instance
 end
 
@@ -2026,51 +2018,6 @@ local ScreenGui = New("ScreenGui", {
 })
 ParentUI(ScreenGui)
 Library.ScreenGui = ScreenGui
-
-local ClickSound = New("Sound", {
-    Name = "Click",
-    SoundId = "rbxassetid://92679954573730",
-    Volume = 0.3,
-    Parent = ScreenGui,
-})
-Library.ClickSound = ClickSound
-Library.ClickSounds = true
-Library.ClickSoundId = ClickSound.SoundId
-Library.ClickSoundVolume = ClickSound.Volume
-Library.LastClickSoundAt = 0
-
-function Library:SetClickSound(SoundId: string | number | boolean, Volume: number?)
-    if SoundId == false then
-        Library.ClickSounds = false
-        ClickSound:Stop()
-        return
-    end
-
-    if typeof(SoundId) == "number" then
-        SoundId = string.format("rbxassetid://%d", SoundId)
-    end
-
-    assert(typeof(SoundId) == "string", "SoundId must be a string, number, or false.")
-    Library.ClickSounds = true
-    Library.ClickSoundId = SoundId
-    Library.ClickSoundVolume = math.clamp(tonumber(Volume) or Library.ClickSoundVolume or 0.3, 0, 10)
-    ClickSound.SoundId = Library.ClickSoundId
-    ClickSound.Volume = Library.ClickSoundVolume
-end
-
-function Library:PlayClickSound()
-    if not Library.ClickSounds or Library.Unloaded or not ClickSound.Parent then
-        return
-    end
-
-    local CurrentTime = os.clock()
-    if CurrentTime - Library.LastClickSoundAt < 0.035 then
-        return
-    end
-    Library.LastClickSoundAt = CurrentTime
-    ClickSound.TimePosition = 0
-    ClickSound:Play()
-end
 
 ScreenGui.DescendantRemoving:Connect(function(Instance)
     Library:RemoveFromRegistry(Instance)

@@ -5,8 +5,6 @@ if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
 end
 
-Library:SetClickSound(92679954573730, 0.3)
-
 local App
 App = Library:Create({
     Title = "MonHub",

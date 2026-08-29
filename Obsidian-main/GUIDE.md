@@ -35,7 +35,7 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -52,7 +52,7 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
 ))()
 if Library.ReleaseVersion ~= "0.0.1-release-6" then
     warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
@@ -562,156 +562,6 @@ Window:SetCompactLauncherDraggable(true)
 `addons/VisualPreview.lua` clones a real Roblox character into a `ViewportFrame`. It can open as a fixed side panel, mount into any `GuiObject`, or live directly inside a MonHub groupbox. The clone keeps the target's rig, body colors, clothing, accessories, and current appearance without changing the source character. Drag or touch rotates it, the mouse wheel zooms it, and it hides with the main interface.
 
 `addons/DrawingESPPreview.lua` is the ready-made shared Drawing backend. Its `UpdateEntity` method draws the same box, name, distance, weapon, and health state for a live player or the preview clone. The preview therefore does not need a second decorative ESP implementation.
-
-### Universal ESP addon
-
-`addons/esp/ESP.lua` is the standalone production renderer. It is opt-in, does not load from `Library.lua`, uses one `RenderStepped` connection, and does not require debug APIs, metatable hooks, hidden properties, or global-environment installation. It requires an executor with `Drawing.new`; the optional native Highlight mode also uses Roblox `Highlight` instances.
-
-`addons/esp/MonHubUI.lua` mounts the complete settings interface. Runtime and UI are separate so a project can use the renderer without loading any controls.
-
-Raw files:
-
-- [ESP.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/ESP.lua)
-- [ESP.d.luau](addons/esp/ESP.d.luau)
-- [MonHubUI.lua](https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/MonHubUI.lua)
-
-Complete setup:
-
-```luau
-local UniversalESP = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/ESP.lua?monhub=0.0.1-release-6-esp-1"
-))()
-local UniversalESPUI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/MonHubUI.lua?monhub=0.0.1-release-6-esp-1"
-))()
-
-local ESP = UniversalESP.new({
-    AutoStart = true,
-    WrapPlayers = true,
-    Settings = {
-        Enabled = false,
-        MaxDistance = 2500,
-        TextDistance = 600,
-    },
-})
-
-local ESPTab = Window:AddTab("ESP", "scan-eye")
-local ESPPanel = UniversalESPUI.Mount(Library, ESPTab, ESP, {
-    Prefix = "MainESP_",
-    AutoNPCs = false,
-})
-
-Library:OnUnload(function()
-    ESP:Destroy()
-end)
-```
-
-The UI adapter creates aligned MonHub groupboxes for general state, filters, boxes, text, health, tracers, model visuals, colors, runtime, and NPC tracking. Every control has a stable prefixed ID, so SaveManager stores it like any other MonHub option.
-
-Core methods:
-
-| Method | Result |
-|---|---|
-| `UniversalESP.new(info)` | Creates an isolated controller. |
-| `ESP:Start()` / `ESP:Stop()` | Starts or pauses the single frame scheduler. |
-| `ESP:Set(path, value)` / `ESP:Get(path)` | Reads or writes a dotted setting path. |
-| `ESP:ApplySettings(settings)` | Deep-merges multiple settings. |
-| `ESP:ApplyPreset(name)` | Applies `Performance`, `Balanced`, or `Quality`. |
-| `ESP:WrapPlayers(info)` | Wraps current players and watches join/leave events. |
-| `ESP:WrapObject(object, info)` | Wraps a Player, Model, NPC, or BasePart and returns its ID. |
-| `ESP:UnwrapObject(objectOrId)` | Removes one entry and all owned visuals. |
-| `ESP:GetEntry(objectOrId)` | Returns the current entry record. |
-| `ESP:ScanNPCs(container, info)` | Adds existing non-player humanoid models. |
-| `ESP:WatchNPCs(container, info)` | Scans and watches a container; returns a destroyable watcher. |
-| `ESP:SetAutomaticNPCs(enabled, container, info)` | Manages one convenient automatic NPC watcher. |
-| `ESP:CreatePreviewAdapter(info)` | Returns the live renderer adapter for VisualPreview. |
-| `ESP:GetStats()` | Returns player, NPC, part, runtime, and last-error state. |
-| `ESP:Restart(rebuild)` | Restarts the scheduler and optionally rebuilds entries. |
-| `ESP:Destroy()` | Disconnects everything and removes Drawing and Highlight objects. |
-
-Manual objects and game-specific metadata:
-
-```luau
-local CrateId = ESP:WrapObject(workspace.Crate, {
-    Kind = "Part",
-    Name = "Supply crate",
-    Category = "Loot",
-    Color = Color3.fromRGB(187, 150, 231),
-    GradientColor = Color3.fromRGB(226, 211, 244),
-    MaxDistance = 1200,
-    Flags = { "RARE", "$2500" },
-    AllowedVisuals = {
-        Skeleton = false,
-        Highlight = false,
-    },
-})
-
-ESP:UnwrapObject(CrateId)
-```
-
-`Name`, `Tool`, `Team`, `Flags`, and `Predicate` may be functions. This keeps game-specific logic outside the renderer:
-
-```luau
-local NPCWatcher = ESP:WatchNPCs(workspace.NPCs, {
-    Category = "NPC",
-    Name = function(Model)
-        return Model:GetAttribute("DisplayName") or Model.Name
-    end,
-    Flags = function(Model)
-        local Level = Model:GetAttribute("Level")
-        return Level and { "LVL " .. tostring(Level) } or {}
-    end,
-    Predicate = function(Model)
-        return Model:GetAttribute("Hidden") ~= true
-    end,
-    AllowedVisuals = {
-        Tracer = false,
-    },
-})
-
-Library:OnUnload(function()
-    NPCWatcher:Destroy()
-end)
-```
-
-The renderer supports player characters, R6, R15, custom Motor6D rigs, humanoid NPCs, and manually wrapped BaseParts. `AllowedVisuals` can disable `Box`, `HealthBar`, `Tracer`, `Skeleton`, `HeadDot`, or `Highlight` for one entry. Per-entry `MaxDistance`, `TextDistance`, `Color`, and `GradientColor` override global values.
-
-Important setting paths:
-
-| Area | Paths |
-|---|---|
-| General | `Enabled`, `Players`, `NPCs`, `Parts`, `AliveCheck`, `TeamCheck`, `TeamColors`, `VisibilityCheck`, `MaxDistance`, `TextDistance`, `UpdateRate`, `TextUpdateRate` |
-| Box | `Box.Enabled`, `Box.Style`, `Box.Dynamic`, `Box.Scale`, `Box.Thickness`, `Box.Transparency`, `Box.Outline`, `Box.Fill`, `Box.FillTransparency`, `Box.Gradient`, `Box.Rainbow` |
-| Text | `Text.Name`, `Text.DisplayName`, `Text.Team`, `Text.Distance`, `Text.Tool`, `Text.Health`, `Text.Category`, `Text.Flags`, `Text.Size`, `Text.RelativeSize`, `Text.Font` |
-| Health | `HealthBar.Enabled`, `HealthBar.Position`, `HealthBar.Width`, `HealthBar.Offset`, `HealthBar.Outline`, `HealthBar.Text` |
-| Tracer | `Tracer.Enabled`, `Tracer.Origin`, `Tracer.Target`, `Tracer.Thickness`, `Tracer.Transparency`, `Tracer.Outline` |
-| Models | `Skeleton.Enabled`, `HeadDot.Enabled`, `OffscreenArrow.Enabled`, `Highlight.Enabled`, `Highlight.DepthMode`, `Highlight.HealthColor` |
-| Colors | `Colors.Enemy`, `Colors.Gradient`, `Colors.Team`, `Colors.NPC`, `Colors.Part`, `Colors.Tracer`, `Colors.Skeleton`, `Colors.HeadDot`, `Colors.Arrow`, `Colors.Visible`, `Colors.Occluded`, `Colors.Outline`, `Colors.Text`, health and Highlight colors |
-
-Use the same production drawing path in the fixed R6 preview:
-
-```luau
-local LivePreviewRenderer = ESP:CreatePreviewAdapter()
-local Preview = VisualPreview.CreateEmbedded(Library, PreviewGroup, {
-    Id = "ProductionESPPreview",
-    Name = "ESP preview",
-    Target = game:GetService("Players").LocalPlayer,
-    Height = 320,
-    Renderer = LivePreviewRenderer,
-})
-```
-
-The default adapter ignores decorative preview-only switches and follows the real controller settings. Pass `{ UseContext = true }` only for a standalone component showcase whose switches should temporarily control preview visibility.
-
-Performance guidance:
-
-- Start with `Balanced`, use `Performance` for large NPC populations, and use `Quality` only when the executor has enough frame budget.
-- Keep `VisibilityCheck` disabled unless line-of-sight colors are necessary; raycasts are interval-cached per entry.
-- Disable `Box.Dynamic` when two-point character bounds are sufficient.
-- Keep `TextDistance` below `MaxDistance` so unreadable distant labels do not generate text work.
-- Skeleton joints and labels use separate caches, and no NPC scanner runs unless the project explicitly enables one.
-- Highlight is a native instance-based visual. Keep it disabled when a game monitors unexpected client instances.
-- Always call `ESP:Destroy()` during unload.
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
@@ -2199,30 +2049,12 @@ This order localizes errors and makes each stage easy to roll back.
 - [ ] `CharacterTrail:Destroy()` is called during project unload when the addon is used.
 - [ ] `Dashboard:Destroy()` is called automatically by library unload or explicitly by project cleanup.
 - [ ] A fixed R6 preview receives the live renderer adapter when it must match production ESP exactly.
-- [ ] `ESP:Destroy()` runs during unload when the universal ESP addon is enabled.
 - [ ] `assets/Inter-Bold.ttf` is published with the same release when the custom font is enabled.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 
 For the complete showcase, see [Example.lua](Example.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau). The project is distributed under the terms in [LICENSE](LICENSE).
 
 ## Changelog
-
-### 29.08.2026
-
-```diff
-[features]
-+ Added the standalone addons/esp/ESP.lua universal renderer for Players, NPCs, Models, and BaseParts
-+ Added full, corner, and projected 3D boxes, gradients, fill, text layers, health bars, tracers, Motor6D skeletons, head dots, off-screen arrows, visibility colors, and native Highlights
-+ Added per-entry metadata, visual masks, filters, manual wrapping, player lifecycle tracking, NPC scanning, and destroyable NPC watchers
-+ Added one production preview adapter so VisualPreview can use the same renderer state as live ESP
-+ Added Performance, Balanced, and Quality presets with one throttled scheduler and separate text, visibility, and joint caches
-+ Added addons/esp/MonHubUI.lua with a complete SaveManager-compatible settings page
-+ Added addons/esp/ESP.d.luau with the public settings, entry, watcher, preview, controller, and module contracts
-
-[integration]
-+ Added the opt-in ESP tab and live preview renderer to Example.lua
-+ Added the complete loader, API, settings, NPC, preview, performance, and cleanup guide to GUIDE.md
-```
 
 ### 26.08.2026
 

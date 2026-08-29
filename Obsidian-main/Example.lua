@@ -15,7 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-6"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-esp-2"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-esp-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -213,21 +213,6 @@ if UniversalESP and UniversalESPUI then
 		local Controller = UniversalESP.new({
 			AutoStart = true,
 			WrapPlayers = true,
-			Settings = {
-				MaxRendered = 64,
-				SortMode = "Distance",
-			},
-			CategoryStyles = {
-				Loot = {
-					Color = Color3.fromRGB(185, 151, 229),
-					GradientColor = Color3.fromRGB(225, 211, 244),
-					MaxDistance = 1400,
-					AllowedVisuals = {
-						Skeleton = false,
-						HeadDot = false,
-					},
-				},
-			},
 		})
 		local Panel = UniversalESPUI.Mount(Library, Tabs.ESP, Controller, {
 			Prefix = "ExampleESP_",

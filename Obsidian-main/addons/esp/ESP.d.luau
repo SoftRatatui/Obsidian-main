@@ -1,21 +1,8 @@
-export type ColorMode = "Custom" | "Primary" | "Gradient" | "Health" | "Visibility" | "Rainbow"
-
-export type FadeSettings = {
-    Enabled: boolean,
-    Start: number,
-    Minimum: number,
-    OccludedMultiplier: number,
-}
-
 export type BoxSettings = {
     Enabled: boolean,
     Style: "Corner" | "Full" | "3D",
     Dynamic: boolean,
     Scale: number,
-    ScaleX: number,
-    ScaleY: number,
-    PaddingX: number,
-    PaddingY: number,
     Thickness: number,
     Transparency: number,
     Outline: boolean,
@@ -25,10 +12,6 @@ export type BoxSettings = {
     Gradient: boolean,
     Rainbow: boolean,
     RainbowSpeed: number,
-    CornerWidth: number,
-    CornerHeight: number,
-    MinimumSize: number,
-    MaximumSize: number,
 }
 
 export type TextSettings = {
@@ -41,19 +24,10 @@ export type TextSettings = {
     Category: boolean,
     Flags: boolean,
     Size: number,
-    MinimumSize: number,
-    MaximumSize: number,
     RelativeSize: boolean,
     Outline: boolean,
     Font: "Plex" | "UI" | "System" | "Monospace",
-    NameCase: "Normal" | "Upper" | "Lower",
-    MaxNameLength: number,
-    DistanceDecimals: number,
-    TopOffset: number,
-    BottomOffset: number,
-    Spacing: number,
-    TeamBrackets: boolean,
-    ToolBrackets: boolean,
+    Separator: string,
 }
 
 export type HealthBarSettings = {
@@ -63,25 +37,15 @@ export type HealthBarSettings = {
     Offset: number,
     Outline: boolean,
     Text: boolean,
-    Transparency: number,
-    BackgroundTransparency: number,
-    ColorMode: ColorMode,
 }
 
 export type TracerSettings = {
     Enabled: boolean,
-    Origin: "Bottom" | "Center" | "Mouse" | "Top" | "Custom",
+    Origin: "Bottom" | "Center" | "Mouse" | "Top",
     Target: "Bottom" | "Center" | "Top",
     Thickness: number,
     Transparency: number,
     Outline: boolean,
-    ColorMode: ColorMode,
-    OriginX: number,
-    OriginY: number,
-    TargetOffsetX: number,
-    TargetOffsetY: number,
-    StartPadding: number,
-    EndPadding: number,
 }
 
 export type SkeletonSettings = {
@@ -90,7 +54,6 @@ export type SkeletonSettings = {
     Transparency: number,
     Outline: boolean,
     MaxJoints: number,
-    ColorMode: ColorMode,
 }
 
 export type HeadDotSettings = {
@@ -101,10 +64,6 @@ export type HeadDotSettings = {
     Thickness: number,
     Transparency: number,
     Outline: boolean,
-    ScaleWithDistance: boolean,
-    MinimumRadius: number,
-    MaximumRadius: number,
-    ColorMode: ColorMode,
 }
 
 export type OffscreenArrowSettings = {
@@ -114,12 +73,6 @@ export type OffscreenArrowSettings = {
     Filled: boolean,
     Transparency: number,
     Outline: boolean,
-    Pulse: boolean,
-    PulseSpeed: number,
-    ShowName: boolean,
-    ShowDistance: boolean,
-    TextSize: number,
-    ColorMode: ColorMode,
 }
 
 export type HighlightSettings = {
@@ -128,31 +81,9 @@ export type HighlightSettings = {
     OutlineTransparency: number,
     DepthMode: "AlwaysOnTop" | "Occluded",
     HealthColor: boolean,
-    ColorMode: ColorMode,
-}
-
-export type CrosshairSettings = {
-    Enabled: boolean,
-    Position: "Center" | "Mouse",
-    Size: number,
-    Gap: number,
-    Thickness: number,
-    Transparency: number,
-    Outline: boolean,
-    TStyle: boolean,
-    Rotate: boolean,
-    RotationSpeed: number,
-    Pulse: boolean,
-    PulseSpeed: number,
-    PulseMinimum: number,
-    PulseMaximum: number,
-    CenterDot: boolean,
-    CenterDotRadius: number,
-    CenterDotFilled: boolean,
 }
 
 export type ColorSettings = {
-    Mode: "Entity" | "Static" | "Team" | "Health" | "Visibility" | "Rainbow",
     Enemy: Color3,
     Gradient: Color3,
     Tracer: Color3,
@@ -170,7 +101,6 @@ export type ColorSettings = {
     HealthHigh: Color3,
     HighlightFill: Color3,
     HighlightOutline: Color3,
-    Crosshair: Color3,
 }
 
 export type Settings = {
@@ -184,19 +114,10 @@ export type Settings = {
     TeamColors: boolean,
     VisibilityCheck: boolean,
     VisibilityInterval: number,
-    OcclusionMode: "Fade" | "Color" | "Hide" | "Ignore",
     MaxDistance: number,
     TextDistance: number,
-    MaxRendered: number,
-    SortMode: "Distance" | "Priority" | "Name",
-    FilterMode: "All" | "Whitelist" | "Blacklist",
-    FilterMatch: "Exact" | "Contains" | "Prefix",
-    FilterList: { [string]: boolean },
-    DistanceUnit: "Studs" | "Meters" | "Feet",
-    DistanceScale: number,
     UpdateRate: number,
     TextUpdateRate: number,
-    Fade: FadeSettings,
     Box: BoxSettings,
     Text: TextSettings,
     HealthBar: HealthBarSettings,
@@ -205,15 +126,7 @@ export type Settings = {
     HeadDot: HeadDotSettings,
     OffscreenArrow: OffscreenArrowSettings,
     Highlight: HighlightSettings,
-    Crosshair: CrosshairSettings,
     Colors: ColorSettings,
-}
-
-export type CategoryStyle = {
-    Color: Color3?,
-    GradientColor: Color3?,
-    MaxDistance: number?,
-    AllowedVisuals: { [string]: boolean }?,
 }
 
 export type EntryInfo = {
@@ -229,7 +142,6 @@ export type EntryInfo = {
     GradientColor: Color3?,
     MaxDistance: number?,
     TextDistance: number?,
-    Priority: number?,
     AllowedVisuals: { [string]: boolean }?,
 }
 
@@ -266,16 +178,11 @@ export type Controller = {
     Available: boolean,
     Settings: Settings,
     Entries: { [string]: any },
-    CategoryStyles: { [string]: CategoryStyle },
     Running: boolean,
     Destroyed: boolean,
     LastError: string?,
     Get: (self: Controller, Path: string) -> any,
     Set: (self: Controller, Path: string, Value: any) -> any,
-    SetFilterList: (self: Controller, Values: string | { any }) -> { [string]: boolean },
-    SetCategoryStyle: (self: Controller, Category: string, Style: CategoryStyle?) -> CategoryStyle?,
-    GetCategoryStyle: (self: Controller, Category: string) -> CategoryStyle?,
-    SetIgnored: (self: Controller, Object: Instance, Ignored: boolean) -> (),
     ApplySettings: (self: Controller, Settings: { [string]: any }) -> Settings,
     ApplyPreset: (self: Controller, Name: "Performance" | "Balanced" | "Quality") -> Settings,
     SetEnabled: (self: Controller, Enabled: boolean) -> (),
@@ -304,7 +211,7 @@ export type Module = {
     Version: string,
     Available: boolean,
     Defaults: Settings,
-    new: (Info: { AutoStart: boolean?, WrapPlayers: boolean?, CategoryStyles: { [string]: CategoryStyle }?, Settings: { [string]: any }? }?) -> Controller,
+    new: (Info: { AutoStart: boolean?, WrapPlayers: boolean?, Settings: { [string]: any }? }?) -> Controller,
 }
 
 return nil :: Module?

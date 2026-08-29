@@ -15,7 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-6"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-image-ui-3"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-esp-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -132,6 +132,8 @@ local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveReposito
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
 local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
 local DashboardWindow = LoadModule("addons/DashboardWindow.lua", false, ActiveRepository)
+local UniversalESP = LoadModule("addons/esp/ESP.lua", false, ActiveRepository)
+local UniversalESPUI = LoadModule("addons/esp/MonHubUI.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -196,11 +198,43 @@ local Tabs = {
 	Controls = Window:AddTab("Controls", "sliders-horizontal"),
 	Media = Window:AddTab("Media", "gallery-horizontal-end"),
 	Visuals = Window:AddTab("Visuals", "eye"),
+	ESP = Window:AddTab("ESP", "scan-eye"),
 	Addons = Window:AddTab("Addons", "package-plus"),
 	Advanced = Window:AddTab("Advanced", "wand-sparkles"),
 	KeySystem = Window:AddKeyTab("Key System"),
 	Settings = Window:AddTab("UI Settings", "settings-2"),
 }
+
+local UniversalESPController
+local UniversalESPPanel
+local UniversalESPPreviewRenderer
+if UniversalESP and UniversalESPUI then
+	local Created, Result = pcall(function()
+		local Controller = UniversalESP.new({
+			AutoStart = true,
+			WrapPlayers = true,
+		})
+		local Panel = UniversalESPUI.Mount(Library, Tabs.ESP, Controller, {
+			Prefix = "ExampleESP_",
+			AutoNPCs = false,
+		})
+		return {
+			Controller = Controller,
+			Panel = Panel,
+			PreviewRenderer = Controller:CreatePreviewAdapter({ UseContext = true }),
+		}
+	end)
+	if Created then
+		UniversalESPController = Result.Controller
+		UniversalESPPanel = Result.Panel
+		UniversalESPPreviewRenderer = Result.PreviewRenderer
+		Library:OnUnload(function()
+			UniversalESPController:Destroy()
+		end)
+	else
+		warn("[MonHub Example] Universal ESP disabled: " .. tostring(Result))
+	end
+end
 
 
 local BasicGroup = Tabs.Controls:AddLeftGroupbox("Basic controls", "component")
@@ -1397,7 +1431,7 @@ local VisualPreviewBox = Tabs.Visuals:AddRightGroupbox("Live previews", "scan-ey
 VisualControls:AddLabel("The preview uses the same renderer contract that can draw live player ESP.", true)
 
 local ESPPreview
-local SharedESPRenderer = DrawingESPPreview and DrawingESPPreview.Create({
+local SharedESPRenderer = UniversalESPPreviewRenderer or DrawingESPPreview and DrawingESPPreview.Create({
     Color = Color3.fromRGB(119, 166, 209),
     GradientColor = Color3.fromRGB(202, 220, 239),
 }) or nil
@@ -2089,6 +2123,8 @@ return {
 		DashboardWindow = DashboardWindow,
 		VisualPreview = VisualPreview,
 		DrawingESPPreview = DrawingESPPreview,
+		UniversalESP = UniversalESP,
+		UniversalESPUI = UniversalESPUI,
 		SaveManager = SaveManager,
 		ThemeManager = ThemeManager,
 	},
@@ -2097,6 +2133,8 @@ return {
 		ImagePreview = AddonImagePreview,
 		CharacterTrail = TrailController,
 		DashboardWindow = Dashboard,
+		UniversalESP = UniversalESPController,
+		UniversalESPPanel = UniversalESPPanel,
 	},
 	Repository = ActiveRepository,
 }

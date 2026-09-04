@@ -158,7 +158,7 @@ local Window = Library:CreateWindow({
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
 	Font = Library.Scheme.Font,
-	CornerRadius = 8,
+	CornerRadius = 6,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
 	CompactLauncherSize = 36,
@@ -169,7 +169,7 @@ local Window = Library:CreateWindow({
 	TabTransitionTime = 0.07,
 	TabSwipeOffset = 2,
 	TabSwipeFrom = "bottom",
-	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
+	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(880, 664),
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
@@ -201,6 +201,7 @@ local Tabs = {
 	Visuals = Window:AddTab("Visuals", "eye"),
 	ESP = Window:AddTab("ESP", "scan-eye"),
 	Addons = Window:AddTab("Addons", "package-plus"),
+	Gallery = Window:AddTab("Gallery", "layout-grid"),
 	Advanced = Window:AddTab("Advanced", "wand-sparkles"),
 	KeySystem = Window:AddKeyTab("Key System"),
 	Settings = Window:AddTab("UI Settings", "settings-2"),
@@ -693,6 +694,92 @@ if AssetCatalog then
 			CatalogModule:SetPreviewRatio(Value / 100)
 		end,
 	})
+end
+
+local GalleryCatalog
+if AssetCatalog then
+	local GalleryGroup = Tabs.Gallery:AddFullGroupbox("Skin gallery", "layout-grid")
+
+	local Created, Result = pcall(function()
+		return AssetCatalog.CreateEmbedded(Library, GalleryGroup, "GalleryCatalog", {
+			Items = GalleryItems,
+			Height = 430,
+			MinCellWidth = 116,
+			Layout = "Split",
+			PreviewSide = "Right",
+			PreviewRatio = 0.42,
+			ActionText = "Apply",
+			SecondaryActionText = "Inspect",
+			OnAction = function(Item)
+				if Item then
+					Notify("Gallery", tostring(Item.Name) .. " applied")
+				end
+			end,
+		})
+	end)
+
+	if Created then
+		GalleryCatalog = Result
+	else
+		GalleryGroup:AddLabel("Gallery unavailable: " .. tostring(Result), true)
+	end
+
+	local GalleryOptions = Tabs.Gallery:AddFullGroupbox("Gallery layout", "sliders-horizontal")
+	GalleryOptions:AddLabel(
+		"A full width groupbox gives the grid the room a half width column cannot. Columns are fitted to the available space in whole pixels.",
+		true
+	)
+	GalleryOptions:AddDropdown("GalleryLayoutMode", {
+		Text = "Layout",
+		Values = { "Split", "Stack" },
+		Default = "Split",
+		Callback = function(Value)
+			if GalleryCatalog then
+				GalleryCatalog:SetLayout(Value)
+			end
+		end,
+	})
+	GalleryOptions:AddSlider("GalleryCellWidth", {
+		Text = "Minimum card width",
+		Default = 124,
+		Min = 90,
+		Max = 220,
+		Rounding = 0,
+		Suffix = "px",
+		Callback = function(Value)
+			if GalleryCatalog then
+				GalleryCatalog:SetMinCellWidth(Value)
+			end
+		end,
+	})
+	GalleryOptions:AddSlider("GalleryCellHeight", {
+		Text = "Card height",
+		Default = 104,
+		Min = 78,
+		Max = 180,
+		Rounding = 0,
+		Suffix = "px",
+		Callback = function(Value)
+			if GalleryCatalog then
+				GalleryCatalog:SetCellHeight(Value)
+			end
+		end,
+	})
+	GalleryOptions:AddButton("Open the same gallery as a window", function()
+		local Ok, Err = pcall(function()
+			AssetCatalog.CreateStandalone(Library, {
+				Items = GalleryItems,
+				WindowTitle = "Skin gallery",
+				WindowSubtitle = "Standalone module",
+				WindowWidth = 820,
+				WindowHeight = 560,
+				MinCellWidth = 124,
+			})
+		end)
+		if not Ok then
+			Notify("Gallery", "Standalone failed: " .. tostring(Err))
+		end
+	end)
 end
 
 local AddonImagePreview

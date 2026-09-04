@@ -632,8 +632,17 @@ function AssetCatalog.Create(Library, Info)
         return Accent:Lerp(White, 0.08)
     end)
 
+    local SplitMinWidth = math.max(360, math.floor(tonumber(Info.SplitMinWidth) or 560))
+
     local function SetPanelLayout()
         local Split = Catalog.Layout == "split"
+        if Split then
+            local Available = math.floor(Body.AbsoluteSize.X)
+            if Available > 0 and Available < SplitMinWidth then
+                Split = false
+            end
+        end
+        Catalog.EffectiveLayout = Split and "split" or "stack"
         if Split then
             PreviewName.Position = UDim2.new(0, PreviewPadding, 1, -(PreviewPadding + 104))
             PreviewName.Size = UDim2.new(1, -PreviewPadding * 2, 0, 22)
@@ -1082,6 +1091,14 @@ function AssetCatalog.Create(Library, Info)
             Columns = math.clamp(math.floor(tonumber(Value) or Columns), 1, 8)
             Catalog.Columns = Columns
         end
+        ResolveGridMetrics()
+        return Catalog
+    end
+
+    function Catalog:SetMinCellWidth(Value)
+        MinCellWidth = math.clamp(math.floor(tonumber(Value) or MinCellWidth), 64, 400)
+        Catalog.MinCellWidth = MinCellWidth
+        AutoColumns = true
         ResolveGridMetrics()
         return Catalog
     end

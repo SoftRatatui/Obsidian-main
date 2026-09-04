@@ -4078,15 +4078,25 @@ function Library:AddDraggableLabel(...)
         Padding.PaddingRight = UDim.new(0, (IsNotEmpty and IconPosition == "right") and 34 or 12)
 
         if IconImage then
-            if IconPosition == "left" then
-                IconImage.AnchorPoint = Vector2.new(0, 0.5)
-                IconImage.Position = UDim2.new(0, -22, 0.5, 0)
-            else
-                IconImage.AnchorPoint = Vector2.new(1, 0.5)
-                IconImage.Position = UDim2.new(1, 22, 0.5, 0)
-            end
+            IconImage.AnchorPoint = Vector2.new(IconPosition == "left" and 0 or 1, 0)
+            DraggableLabel:AlignIcon()
         end
     end
+
+    function DraggableLabel:AlignIcon()
+        if not IconImage then
+            return
+        end
+
+        local Inner = Label.AbsoluteSize.Y - Padding.PaddingTop.Offset - Padding.PaddingBottom.Offset
+        local Offset = Library:CenterOffset(Inner, IconImage.AbsoluteSize.Y)
+        IconImage.Position = IconPosition == "left" and UDim2.new(0, -22, 0, Offset)
+            or UDim2.new(1, 22, 0, Offset)
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        DraggableLabel:AlignIcon()
+    end)
 
     function DraggableLabel:SetVisible(Visible: boolean)
         Label.Visible = Visible
@@ -7632,12 +7642,46 @@ do
             Parent = Container,
         })
 
+        local ButtonGap = Library:GetDesignToken("Spacing.Medium", 8)
+
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalFlex = Enum.UIFlexAlignment.Fill,
-            Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+            Padding = UDim.new(0, ButtonGap),
             Parent = Holder,
         })
+
+        local ButtonBases = {}
+
+        local function ResizeButtons()
+            local Visible = {}
+            for _, Base in ButtonBases do
+                if Base.Visible then
+                    table.insert(Visible, Base)
+                end
+            end
+
+            local Count = #Visible
+            if Count == 0 then
+                return
+            end
+
+            local Total = math.floor(Holder.AbsoluteSize.X)
+            if Total <= 0 then
+                for _, Base in Visible do
+                    Base.Size = UDim2.new(1 / Count, 0, 1, 0)
+                end
+                return
+            end
+
+            local Available = Total - ButtonGap * (Count - 1)
+            local Share = math.max(1, math.floor(Available / Count))
+            for Index, Base in Visible do
+                local Width = Index == Count and (Available - Share * (Count - 1)) or Share
+                Base.Size = UDim2.new(0, Width, 1, 0)
+            end
+        end
+
+        Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeButtons)
 
         local function CreateButton(Button)
             local Base = New("TextButton", {
@@ -7649,6 +7693,9 @@ do
                 Visible = Button.Visible,
                 Parent = Holder,
             })
+            table.insert(ButtonBases, Base)
+            Base:GetPropertyChangedSignal("Visible"):Connect(ResizeButtons)
+            task.defer(ResizeButtons)
 
             local Stroke = New("UIStroke", {
                 Color = "OutlineColor",
@@ -7665,13 +7712,25 @@ do
             )
 
             local Content = New("Frame", {
-                AnchorPoint = Vector2.new(0.5, 0.5),
+                AnchorPoint = Vector2.new(0, 0.5),
                 AutomaticSize = Enum.AutomaticSize.XY,
                 BackgroundTransparency = 1,
-                Position = UDim2.fromScale(0.5, 0.5),
+                Position = UDim2.new(0, 0, 0.5, 0),
                 Size = UDim2.fromOffset(0, 14),
                 Parent = Base,
             })
+
+            local function CenterButtonContent()
+                Content.Position = UDim2.new(
+                    0,
+                    Library:CenterOffset(Base.AbsoluteSize.X, Content.AbsoluteSize.X),
+                    0.5,
+                    0
+                )
+            end
+
+            Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(CenterButtonContent)
+            Base:GetPropertyChangedSignal("AbsoluteSize"):Connect(CenterButtonContent)
             New("UIListLayout", {
                 FillDirection = Enum.FillDirection.Horizontal,
                 HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -8207,7 +8266,7 @@ do
             Parent = Checkbox,
         })
         local CheckmarkScale = New("UIScale", {
-            Scale = Toggle.Value and 1 or 0.82,
+            Scale = Toggle.Value and 1 or 0.75,
             Parent = Checkmark,
         })
 
@@ -8278,7 +8337,7 @@ do
             })
             TweenCheckmarkTransparency(Toggle.Value and 0 or 1)
             Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
-                Scale = Toggle.Value and 1 or 0.82,
+                Scale = Toggle.Value and 1 or 0.75,
             })
         end
 
@@ -14367,9 +14426,47 @@ function Library:CreateWindow(WindowInfo)
                 })
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalFlex = Enum.UIFlexAlignment.Fill,
                     Parent = TabboxButtons,
                 })
+            end
+
+            local function ResizeTabboxButtons()
+                if not TabboxButtons then
+                    return
+                end
+
+                local Buttons = {}
+                for _, Child in TabboxButtons:GetChildren() do
+                    if Child:IsA("GuiObject") and Child.Visible then
+                        table.insert(Buttons, Child)
+                    end
+                end
+
+                local Count = #Buttons
+                if Count == 0 then
+                    return
+                end
+
+                local Total = math.floor(TabboxButtons.AbsoluteSize.X)
+                if Total <= 0 then
+                    for _, Child in Buttons do
+                        Child.Size = UDim2.new(1 / Count, 0, 1, 0)
+                    end
+                    return
+                end
+
+                local Share = math.max(1, math.floor(Total / Count))
+                for Index, Child in Buttons do
+                    local Width = Index == Count and (Total - Share * (Count - 1)) or Share
+                    Child.Size = UDim2.new(0, Width, 1, 0)
+                end
+            end
+
+            if TabboxButtons then
+                TabboxButtons:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeTabboxButtons)
+                TabboxButtons.ChildAdded:Connect(function()
+                    task.defer(ResizeTabboxButtons)
+                end)
             end
 
             local TotalTabs = 0

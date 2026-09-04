@@ -2618,7 +2618,7 @@ end
 
 local function GetToggleStrokeColor(Toggle): Color3
     if Toggle.Value then
-        return Library.Scheme.OutlineColor:Lerp(GetToggleAccentColor(Toggle.StyleVariant), 0.64)
+        return GetToggleSurfaceColor(Toggle)
     end
 
     return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.08)
@@ -2634,7 +2634,7 @@ end
 
 local function GetKeybindToggleStrokeColor(Active: boolean): Color3
     if Active then
-        return Library.Scheme.OutlineColor:Lerp(Library.Scheme.AccentColor, 0.64)
+        return GetKeybindToggleSurfaceColor(true)
     end
 
     return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.08)
@@ -6368,13 +6368,15 @@ do
 
         local Holder = New("TextButton", {
             BackgroundColor3 = ColorPicker.Value,
+            ClipsDescendants = true,
             Size = UDim2.fromOffset(18, 18),
             Text = "",
             Parent = ToggleLabel,
         })
 
         local HolderStroke = New("UIStroke", {
-            Color = Library:GetDarkerColor(ColorPicker.Value),
+            Color = "OutlineColor",
+            Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
             Parent = Holder,
         })
 
@@ -6390,8 +6392,8 @@ do
             Image = CustomImageManager.GetAsset("TransparencyTexture"),
             ImageTransparency = (1 - ColorPicker.Transparency),
             ScaleType = Enum.ScaleType.Tile,
-            Position = UDim2.new(0, -1, 0, -1),
-            Size = UDim2.new(1, 2, 1, 2),
+            Position = UDim2.fromOffset(0, 0),
+            Size = UDim2.fromScale(1, 1),
             TileSize = UDim2.fromOffset(9, 9),
             Parent = Holder,
         })
@@ -6958,7 +6960,6 @@ do
             ColorPicker.Value = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib)
 
             Holder.BackgroundColor3 = ColorPicker.Value
-            HolderStroke.Color = Library:GetDarkerColor(ColorPicker.Value)
             HolderTransparency.ImageTransparency = (1 - ColorPicker.Transparency)
 
             SatVipMap.BackgroundColor3 = Color3.fromHSV(ColorPicker.Hue, 1, 1)

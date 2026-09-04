@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-8",
+    ReleaseVersion = "0.0.1-release-9",
 }
 
 local function NormalizeAsset(Value)
@@ -135,9 +135,11 @@ function AssetCatalog.Create(Library, Info)
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 430), 260, 900)
     local LayoutMode = string.lower(tostring(Info.Layout or "Split"))
     local PreviewSide = string.lower(tostring(Info.PreviewSide or "Right"))
+    local AutoColumns = Info.Columns == nil
     local Columns = math.clamp(math.floor(tonumber(Info.Columns) or 3), 1, 8)
     local Rows = math.clamp(math.floor(tonumber(Info.Rows) or 3), 1, 8)
-    local PageSize = math.clamp(math.floor(tonumber(Info.PageSize) or Columns * Rows), Columns, 64)
+    local DefaultPageSize = AutoColumns and math.max(Columns * Rows, 24) or Columns * Rows
+    local PageSize = math.clamp(math.floor(tonumber(Info.PageSize) or DefaultPageSize), Columns, 64)
     local CellHeight = math.clamp(math.floor(tonumber(Info.CellHeight) or 104), 64, 220)
     local Gap = math.clamp(math.floor(tonumber(Info.Gap) or Style.Gap), 2, 20)
     local Padding = math.clamp(math.floor(tonumber(Info.Padding) or Style.Padding), 0, 24)
@@ -274,12 +276,33 @@ function AssetCatalog.Create(Library, Info)
     GridScroll.Parent = GridPanel
     AddRegistry(Library, GridScroll, { ScrollBarImageColor3 = "AccentColor" })
 
+    local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 132), 64, 400)
+
     local Grid = Instance.new("UIGridLayout")
     Grid.CellPadding = UDim2.fromOffset(Gap, Gap)
-    Grid.CellSize = UDim2.new(1 / Columns, -math.ceil(Gap * (Columns - 1) / Columns), 0, CellHeight)
+    Grid.CellSize = UDim2.fromOffset(MinCellWidth, CellHeight)
     Grid.FillDirectionMaxCells = Columns
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
     Grid.Parent = GridScroll
+
+    local function ResolveGridMetrics()
+        local Width = GridScroll.AbsoluteSize.X - GridScroll.ScrollBarThickness
+        if Width <= 0 then
+            return
+        end
+
+        local Count = Columns
+        if AutoColumns then
+            Count = math.clamp(math.floor((Width + Gap) / (MinCellWidth + Gap)), 1, 8)
+        end
+
+        local CellWidth = math.max(48, math.floor((Width - Gap * (Count - 1)) / Count))
+        Grid.FillDirectionMaxCells = Count
+        Grid.CellSize = UDim2.fromOffset(CellWidth, CellHeight)
+    end
+
+    ResolveGridMetrics()
+    GridScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
 
     local Footer = Instance.new("Frame")
     Footer.AnchorPoint = Vector2.new(0, 1)
@@ -461,6 +484,23 @@ function AssetCatalog.Create(Library, Info)
         TextColor3 = "BackgroundColor",
     })
 
+    local function ResolveActionMetrics()
+        local Width = math.floor(Actions.AbsoluteSize.X)
+        if Width <= 0 then
+            return
+        end
+        if not SecondaryAction.Visible then
+            PrimaryAction.Size = UDim2.new(0, Width, 1, 0)
+            return
+        end
+        local Primary = math.max(48, math.floor((Width - Gap) / 2))
+        SecondaryAction.Size = UDim2.new(0, Width - Gap - Primary, 1, 0)
+        PrimaryAction.Size = UDim2.new(0, Primary, 1, 0)
+    end
+
+    ResolveActionMetrics()
+    Actions:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveActionMetrics)
+
     local PrimaryCorner = Instance.new("UICorner")
     PrimaryCorner.CornerRadius = UDim.new(0, Style.ControlRadius)
     PrimaryCorner.Parent = PrimaryAction
@@ -603,21 +643,28 @@ function AssetCatalog.Create(Library, Info)
             Badges.Size = UDim2.new(1, -PreviewPadding * 2, 0, 20)
             Actions.Position = UDim2.new(0, PreviewPadding, 1, -PreviewPadding)
             Actions.Size = UDim2.new(1, -PreviewPadding * 2, 0, Style.ControlHeight)
-            local GridRatio = 1 - Catalog.PreviewRatio
-            local GridSize = UDim2.new(GridRatio, -Gap * 0.5, 1, 0)
-            local PreviewSize = UDim2.new(Catalog.PreviewRatio, -Gap * 0.5, 1, 0)
-            if Catalog.PreviewSide == "left" then
-                PreviewPanel.Position = UDim2.fromScale(0, 0)
-                PreviewPanel.Size = PreviewSize
-                GridPanel.AnchorPoint = Vector2.new(1, 0)
-                GridPanel.Position = UDim2.fromScale(1, 0)
-                GridPanel.Size = GridSize
-            else
-                GridPanel.AnchorPoint = Vector2.zero
+            local Total = math.floor(Body.AbsoluteSize.X)
+            GridPanel.AnchorPoint = Vector2.zero
+            if Total <= 0 then
+                local GridRatio = 1 - Catalog.PreviewRatio
                 GridPanel.Position = UDim2.fromScale(0, 0)
-                GridPanel.Size = GridSize
+                GridPanel.Size = UDim2.new(GridRatio, -Gap * 0.5, 1, 0)
                 PreviewPanel.Position = UDim2.new(GridRatio, Gap * 0.5, 0, 0)
-                PreviewPanel.Size = PreviewSize
+                PreviewPanel.Size = UDim2.new(Catalog.PreviewRatio, -Gap * 0.5, 1, 0)
+            else
+                local PreviewWidth = math.clamp(math.floor((Total - Gap) * Catalog.PreviewRatio), 120, Total - Gap - 120)
+                local GridWidth = Total - Gap - PreviewWidth
+                if Catalog.PreviewSide == "left" then
+                    PreviewPanel.Position = UDim2.fromOffset(0, 0)
+                    PreviewPanel.Size = UDim2.new(0, PreviewWidth, 1, 0)
+                    GridPanel.Position = UDim2.fromOffset(PreviewWidth + Gap, 0)
+                    GridPanel.Size = UDim2.new(0, GridWidth, 1, 0)
+                else
+                    GridPanel.Position = UDim2.fromOffset(0, 0)
+                    GridPanel.Size = UDim2.new(0, GridWidth, 1, 0)
+                    PreviewPanel.Position = UDim2.fromOffset(GridWidth + Gap, 0)
+                    PreviewPanel.Size = UDim2.new(0, PreviewWidth, 1, 0)
+                end
             end
             PreviewCanvas.Size = UDim2.new(1, -PreviewPadding * 2, 1, -(PreviewPadding * 2 + 112))
         else
@@ -1028,9 +1075,14 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:SetColumns(Value)
-        Catalog.Columns = math.clamp(math.floor(tonumber(Value) or Catalog.Columns), 1, 8)
-        Grid.FillDirectionMaxCells = Catalog.Columns
-        Grid.CellSize = UDim2.new(1 / Catalog.Columns, -math.ceil(Gap * (Catalog.Columns - 1) / Catalog.Columns), 0, Catalog.CellHeight)
+        if Value == nil then
+            AutoColumns = true
+        else
+            AutoColumns = false
+            Columns = math.clamp(math.floor(tonumber(Value) or Columns), 1, 8)
+            Catalog.Columns = Columns
+        end
+        ResolveGridMetrics()
         return Catalog
     end
 
@@ -1041,7 +1093,8 @@ function AssetCatalog.Create(Library, Info)
             math.max(0, math.min(30, math.floor((Catalog.CellHeight - LabelHeight - 8) * 0.5)))
         )
         Catalog.ImagePadding = ImagePadding
-        Grid.CellSize = UDim2.new(1 / Catalog.Columns, -math.ceil(Gap * (Catalog.Columns - 1) / Catalog.Columns), 0, Catalog.CellHeight)
+        CellHeight = Catalog.CellHeight
+        ResolveGridMetrics()
         for _, Slot in Catalog.Slots do
             Slot.Canvas.Position = UDim2.fromOffset(ImagePadding, ImagePadding)
             Slot.Canvas.Size = UDim2.new(1, -ImagePadding * 2, 1, -(LabelHeight + ImagePadding))
@@ -1243,6 +1296,7 @@ function AssetCatalog.Create(Library, Info)
         Root.Parent = Info.Parent
     end
     SetPanelLayout()
+    Body:GetPropertyChangedSignal("AbsoluteSize"):Connect(SetPanelLayout)
     Catalog:SetItems(Info.Items or {})
     if Info.Category then
         Catalog:SetCategory(Info.Category)

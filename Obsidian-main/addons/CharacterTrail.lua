@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 
 local CharacterTrail = {
-    ReleaseVersion = "0.0.1-release-8",
+    ReleaseVersion = "0.0.1-release-9",
 }
 
 CharacterTrail.TexturePresets = {

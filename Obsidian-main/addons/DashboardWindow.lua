@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local DashboardWindow = {
-    ReleaseVersion = "0.0.1-release-8",
+    ReleaseVersion = "0.0.1-release-9",
 }
 
 local function ApplyCorner(Object, Radius)
@@ -1071,6 +1071,35 @@ function DashboardWindow.CreateEmbedded(Library, Groupbox, Idx, Info)
         Visible = Dashboard.Visible,
     })
     return Dashboard
+end
+
+function DashboardWindow.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "DashboardWindow standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = math.clamp(math.floor(tonumber(Info.WindowHeight) or 460), 220, 900)
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or Info.Title or "Dashboard",
+        Subtitle = Info.WindowSubtitle or Info.Subtitle,
+        Icon = Info.WindowIcon or Info.Icon or "layout-dashboard",
+        Width = Info.WindowWidth or 380,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+
+    Info.Title = nil
+    Info.Subtitle = nil
+    Info.Height = Info.Height or math.max(180, WindowHeight - 74)
+    Info.ShowHeader = false
+
+    local Dashboard = Host:AddAddon("Dashboard", DashboardWindow, Info)
+    Dashboard.Host = Host
+    return Dashboard, Host
 end
 
 DashboardWindow.Mount = DashboardWindow.CreateEmbedded

@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-8",
+    ReleaseVersion = "0.0.1-release-9",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -353,7 +353,7 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 8,
+    CornerRadius = 6,
     DesignRevision = 0,
     Design = {
         Spacing = {
@@ -364,11 +364,11 @@ local Library = {
             Section = 12,
         },
         Radius = {
-            Window = 8,
-            Card = 7,
-            Control = 4,
-            Popup = 7,
-            Indicator = 3,
+            Window = 6,
+            Card = 4,
+            Control = 3,
+            Popup = 4,
+            Indicator = 2,
         },
         Size = {
             TopBar = 52,
@@ -379,6 +379,19 @@ local Library = {
             Icon = 16,
             Text = 14,
             Caption = 12,
+        },
+        Grid = {
+            Row = 24,
+            RowGap = 9,
+            Indicator = 16,
+            IndicatorGap = 9,
+            Swatch = 16,
+            LabelRow = 18,
+            TrackRow = 14,
+            Track = 4,
+            Thumb = 10,
+            ThumbHover = 12,
+            ControlGap = 4,
         },
         Stroke = {
             Thickness = 1,
@@ -431,13 +444,13 @@ local Library = {
             HeaderHeight = 38,
             Padding = 10,
             Gap = 8,
-            Radius = 7,
+            Radius = 4,
             OutlineTransparency = 0.5,
             BackgroundTransparency = 0,
             ControlHeight = 28,
             WindowWidth = 420,
             WindowHeight = 480,
-            CellRadius = 6,
+            CellRadius = 4,
             CellPadding = 6,
             SelectionThickness = 1,
             PreviewRatio = 0.58,
@@ -455,8 +468,8 @@ local Library = {
         RaisedColor = Color3.fromRGB(29, 32, 37),
         ElementColor = Color3.fromRGB(31, 34, 39),
         HoverColor = Color3.fromRGB(38, 42, 49),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        AccentSoftColor = Color3.fromRGB(39, 43, 51),
+        AccentColor = Color3.fromRGB(162, 154, 232),
+        AccentSoftColor = Color3.fromRGB(41, 42, 58),
         OutlineColor = Color3.fromRGB(52, 57, 66),
         FontColor = Color3.fromRGB(238, 240, 244),
         MutedFontColor = Color3.fromRGB(146, 151, 160),
@@ -618,7 +631,7 @@ function Library:SetThemeFont(FontFace): any
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-8-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-9-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -634,8 +647,8 @@ Library.Themes = {
         RaisedColor = Color3.fromRGB(29, 32, 37),
         ElementColor = Color3.fromRGB(31, 34, 39),
         HoverColor = Color3.fromRGB(38, 42, 49),
-        AccentColor = Color3.fromRGB(133, 141, 160),
-        AccentSoftColor = Color3.fromRGB(39, 43, 51),
+        AccentColor = Color3.fromRGB(162, 154, 232),
+        AccentSoftColor = Color3.fromRGB(41, 42, 58),
         OutlineColor = Color3.fromRGB(52, 57, 66),
         FontColor = Color3.fromRGB(238, 240, 244),
         MutedFontColor = Color3.fromRGB(146, 151, 160),
@@ -647,7 +660,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
     Metal = {
@@ -671,7 +684,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 248, 250),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
     Midnight = {
@@ -695,7 +708,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
     Steel = {
@@ -719,7 +732,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(246, 249, 251),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
     Sage = {
@@ -743,7 +756,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(247, 250, 248),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
     Ash = {
@@ -767,7 +780,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(249, 247, 243),
         BackgroundImage = "",
-        CornerRadius = 8,
+        CornerRadius = 6,
         IsLight = false,
     },
 }
@@ -861,7 +874,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 8,
+        CornerRadius = 6,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -1170,6 +1183,27 @@ function Library:GetDesignToken(Path: string, Fallback: any): any
         end
     end
     return Value
+end
+
+function Library:Metric(Name: string, Fallback: number): number
+    local Value = tonumber(Library:GetDesignToken("Grid." .. Name, Fallback)) or Fallback
+    return math.max(0, math.round(Value))
+end
+
+function Library:Snap(Value: number): number
+    return math.round(tonumber(Value) or 0)
+end
+
+function Library:CenterOffset(Outer: number, Inner: number): number
+    return math.round((Outer - Inner) * 0.5)
+end
+
+function Library:MatchParity(Outer: number, Inner: number): number
+    local Size = math.max(0, math.round(Inner))
+    if (math.round(Outer) - Size) % 2 ~= 0 then
+        Size += 1
+    end
+    return Size
 end
 
 function Library:GetMotion(Name: string): TweenInfo
@@ -3232,13 +3266,16 @@ function Library:CreateAddonWindow(Info)
         Size = UDim2.new(1, -Style.Padding * 2, 0, 1),
     })
 
+    local IconBadge = Library:MatchParity(HeaderHeight, 26)
+    local IconGap = 10
+    local HeaderControl = Library:MatchParity(HeaderHeight, 28)
+
     local IconHolder = New("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
         BackgroundColor3 = function()
             return Library:GetAccentSurfaceColor(0.18)
         end,
-        Position = UDim2.fromOffset(Style.Padding, HeaderHeight * 0.5),
-        Size = UDim2.fromOffset(26, 26),
+        Position = UDim2.fromOffset(Style.Padding, Library:CenterOffset(HeaderHeight, IconBadge)),
+        Size = UDim2.fromOffset(IconBadge, IconBadge),
         Parent = Header,
     })
     New("UICorner", {
@@ -3257,16 +3294,22 @@ function Library:CreateAddonWindow(Info)
         Parent = IconHolder,
     })
 
+    local HeaderTextInset = Style.Padding + IconBadge + IconGap
     local HeaderText = New("Frame", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(Style.Padding + 36, 0),
-        Size = UDim2.new(1, -(Style.Padding * 2 + 72), 1, 0),
+        Position = UDim2.fromOffset(HeaderTextInset, 0),
+        Size = UDim2.new(1, -(HeaderTextInset + Style.Padding + HeaderControl + IconGap), 1, 0),
         Parent = Header,
     })
+    local HasSubtitle = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= ""
+    local TitleRow = 20
+    local SubtitleRow = 16
+    local TitleTop = Library:CenterOffset(HeaderHeight, TitleRow + SubtitleRow)
+
     local Title = New("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, Info.Subtitle and 8 or 0),
-        Size = UDim2.new(1, 0, 0, Info.Subtitle and 20 or HeaderHeight),
+        Position = UDim2.fromOffset(0, HasSubtitle and TitleTop or 0),
+        Size = UDim2.new(1, 0, 0, HasSubtitle and TitleRow or HeaderHeight),
         Text = tostring(Info.Title or "Module"),
         TextSize = Style.TextSize,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -3275,14 +3318,14 @@ function Library:CreateAddonWindow(Info)
     })
     local Subtitle = New("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 28),
-        Size = UDim2.new(1, 0, 0, 16),
+        Position = UDim2.fromOffset(0, TitleTop + TitleRow),
+        Size = UDim2.new(1, 0, 0, SubtitleRow),
         Text = tostring(Info.Subtitle or ""),
         TextColor3 = "MutedFontColor",
         TextSize = Style.CaptionSize,
         TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Visible = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= "",
+        Visible = HasSubtitle,
         Parent = HeaderText,
     })
 
@@ -3290,10 +3333,11 @@ function Library:CreateAddonWindow(Info)
     if Info.Closable ~= false then
         CloseButton = New("TextButton", {
             AnchorPoint = Vector2.new(1, 0.5),
+            AnchorPoint = Vector2.new(1, 0),
             BackgroundColor3 = "ElementColor",
             BackgroundTransparency = 1,
-            Position = UDim2.new(1, -Style.Padding, 0.5, 0),
-            Size = UDim2.fromOffset(28, 28),
+            Position = UDim2.new(1, -Style.Padding, 0, Library:CenterOffset(HeaderHeight, HeaderControl)),
+            Size = UDim2.fromOffset(HeaderControl, HeaderControl),
             Text = "",
             Parent = Header,
         })
@@ -3302,14 +3346,17 @@ function Library:CreateAddonWindow(Info)
             Parent = CloseButton,
         })
         local CloseData = Library:GetIcon("x")
+        local CloseIconSize = Library:MatchParity(HeaderControl, 16)
         local CloseIcon = New("ImageLabel", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
             Image = CloseData and CloseData.Url or "",
             ImageColor3 = "MutedFontColor",
             ImageRectOffset = CloseData and CloseData.ImageRectOffset or Vector2.zero,
             ImageRectSize = CloseData and CloseData.ImageRectSize or Vector2.zero,
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(15, 15),
+            Position = UDim2.fromOffset(
+                Library:CenterOffset(HeaderControl, CloseIconSize),
+                Library:CenterOffset(HeaderControl, CloseIconSize)
+            ),
+            Size = UDim2.fromOffset(CloseIconSize, CloseIconSize),
             Parent = CloseButton,
         })
         table.insert(Connections, CloseButton.MouseEnter:Connect(function()
@@ -3420,10 +3467,12 @@ function Library:CreateAddonWindow(Info)
         Header.Size = UDim2.new(1, 0, 0, HeaderHeight)
         Content.Position = UDim2.fromOffset(0, HeaderHeight)
         Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
-        IconHolder.Position = UDim2.fromOffset(Style.Padding, HeaderHeight * 0.5)
+        IconHolder.Position = UDim2.fromOffset(Style.Padding, Library:CenterOffset(HeaderHeight, IconBadge))
         if Subtitle.Visible then
-            Title.Position = UDim2.fromOffset(0, 8)
-            Title.Size = UDim2.new(1, 0, 0, 20)
+            local TitleTop = Library:CenterOffset(HeaderHeight, TitleRow + SubtitleRow)
+            Title.Position = UDim2.fromOffset(0, TitleTop)
+            Title.Size = UDim2.new(1, 0, 0, TitleRow)
+            Subtitle.Position = UDim2.fromOffset(0, TitleTop + TitleRow)
         else
             Title.Position = UDim2.fromOffset(0, 0)
             Title.Size = UDim2.new(1, 0, 0, HeaderHeight)
@@ -3626,6 +3675,29 @@ function Library:MakeCover(Holder: GuiObject, Place: string)
     })
 
     return Cover
+end
+
+function Library:GlyphSize(Box: number, Preferred: number?): number
+    local Outer = math.max(1, math.round(Box))
+    local Target = math.max(1, math.round(Preferred or (Outer - 4)))
+
+    if Target > Outer then
+        Target = Outer
+    end
+
+    local Source = 24
+    for _, Divisor in { 1, 2, 3, 4 } do
+        local Clean = Source / Divisor
+        if Clean <= Target and Clean >= Target - 2 and (Outer - Clean) % 2 == 0 then
+            return Clean
+        end
+    end
+
+    if (Outer - Target) % 2 ~= 0 then
+        Target -= 1
+    end
+
+    return math.max(1, Target)
 end
 
 function Library:MakeLine(Frame: GuiObject, Info)
@@ -3832,7 +3904,7 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
         Library:CancelTween(Icon, "TabHover")
     end
     Library:PlayTween(Button, "TabSelection", Library.TweenInfo, {
-        BackgroundTransparency = Selected and 0 or 1,
+        BackgroundTransparency = Selected and 0.14 or 1,
     })
     Library:PlayTween(Label, "TabSelection", Library.TweenInfo, {
         TextTransparency = Selected and 0 or 0.5,
@@ -3840,6 +3912,19 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
     if Icon then
         Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, {
             ImageTransparency = Selected and 0 or 0.5,
+        })
+    end
+
+    local Indicator = Button:FindFirstChild("Indicator")
+    if Indicator then
+        local Row = Button.AbsoluteSize.Y
+        if Row <= 0 then
+            Row = Library:GetDesignToken("Shell.NavigationHeight", 38)
+        end
+        local Height = Library:MatchParity(Row, math.round(Row * 0.44))
+        Library:PlayTween(Indicator, "TabIndicator", Library.TweenInfo, {
+            BackgroundTransparency = Selected and 0 or 1,
+            Size = UDim2.fromOffset(2, Selected and Height or 0),
         })
     end
 end
@@ -7344,7 +7429,7 @@ do
 
         local TextLabel = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 18),
+            Size = UDim2.new(1, 0, 0, Library:Metric("Row", 24)),
             Text = Label.Text,
             TextSize = Data.Size,
             TextWrapped = Label.DoesWrap,
@@ -7361,7 +7446,7 @@ do
             if Width <= 0 then return end
 
             local _, Y = Library:GetTextBounds(Label.Text, TextLabel.FontFace, TextLabel.TextSize, Width)
-            TextLabel.Size = UDim2.new(1, 0, 0, Y + 4)
+            TextLabel.Size = UDim2.new(1, 0, 0, Library:Snap(Y) + 4)
         end
 
         function Label:SetVisible(Visible: boolean)
@@ -8055,10 +8140,14 @@ do
             Type = "Toggle",
         }
 
+        local RowHeight = Library:Metric("Row", 24)
+        local IndicatorSize = Library:MatchParity(RowHeight, Library:Metric("Indicator", 16))
+        local LabelInset = IndicatorSize + Library:Metric("IndicatorGap", 9)
+
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Row", 22)),
+            Size = UDim2.new(1, 0, 0, RowHeight),
             Text = "",
             Visible = Toggle.Visible,
             Parent = Container,
@@ -8066,8 +8155,8 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(23, 0),
-            Size = UDim2.new(1, -23, 1, 0),
+            Position = UDim2.fromOffset(LabelInset, 0),
+            Size = UDim2.new(1, -LabelInset, 1, 0),
             Text = Toggle.Text,
             TextSize = Library:GetDesignToken("Size.Text", 14),
             TextTransparency = Library:GetDesignToken("Opacity.MutedText", 0.42),
@@ -8083,10 +8172,9 @@ do
         })
 
         local Checkbox = New("Frame", {
-            AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "MainColor",
-            Position = UDim2.fromScale(0, 0.5),
-            Size = UDim2.fromOffset(16, 16),
+            Position = UDim2.fromOffset(0, Library:CenterOffset(RowHeight, IndicatorSize)),
+            Size = UDim2.fromOffset(IndicatorSize, IndicatorSize),
             Parent = Button,
         })
         New("UICorner", {
@@ -8100,23 +8188,41 @@ do
         })
 
         local CheckIcon = Library:GetCustomIcon("check")
+        local CheckSize = Library:GlyphSize(IndicatorSize, 12)
         local Checkmark = New("ImageLabel", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
             Image = CheckIcon and CheckIcon.Url or "",
             ImageColor3 = "WhiteColor",
             ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
             ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
             ImageTransparency = Toggle.Value and 0 or 1,
-            Position = UDim2.fromScale(0.5, 0.5),
+            Position = UDim2.fromOffset(
+                Library:CenterOffset(IndicatorSize, CheckSize),
+                Library:CenterOffset(IndicatorSize, CheckSize)
+            ),
             ResampleMode = Enum.ResamplerMode.Default,
             ScaleType = Enum.ScaleType.Fit,
-            Size = UDim2.fromOffset(10, 10),
+            Size = UDim2.fromOffset(CheckSize, CheckSize),
             Parent = Checkbox,
         })
         local CheckmarkScale = New("UIScale", {
             Scale = Toggle.Value and 1 or 0.82,
             Parent = Checkmark,
         })
+
+        local function SetCheckmarkTransparency(Value)
+            Checkmark.ImageTransparency = Value
+        end
+
+        local function TweenCheckmarkTransparency(Value)
+            Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
+                ImageTransparency = Value,
+            })
+        end
+
+        local function CancelCheckmarkTweens()
+            Library:CancelTween(Checkmark, "CheckboxCheckmark")
+        end
 
         RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
         Library:AddToRegistry(Checkmark, {
@@ -8141,7 +8247,7 @@ do
                 Library:CancelTween(CheckboxStroke, "CheckboxStroke")
                 Library:CancelTween(Label, "CheckboxLabelColor")
                 Library:CancelTween(Label, "CheckboxLabelTransparency")
-                Library:CancelTween(Checkmark, "CheckboxCheckmark")
+                CancelCheckmarkTweens()
                 Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
@@ -8149,7 +8255,7 @@ do
                 Checkbox.BackgroundTransparency = 0.35
                 CheckboxStroke.Color = StrokeColor
                 CheckboxStroke.Transparency = 0.65
-                Checkmark.ImageTransparency = Toggle.Value and 0.58 or 1
+                SetCheckmarkTransparency(Toggle.Value and 0.58 or 1)
 
                 return
             end
@@ -8169,9 +8275,7 @@ do
             Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
                 TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
             })
-            Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
-                ImageTransparency = Toggle.Value and 0 or 1,
-            })
+            TweenCheckmarkTransparency(Toggle.Value and 0 or 1)
             Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
                 Scale = Toggle.Value and 1 or 0.82,
             })
@@ -8309,7 +8413,7 @@ do
             Library:CancelTween(CheckboxStroke, "CheckboxStroke")
             Library:CancelTween(Label, "CheckboxLabelColor")
             Library:CancelTween(Label, "CheckboxLabelTransparency")
-            Library:CancelTween(Checkmark, "CheckboxCheckmark")
+            CancelCheckmarkTweens()
             Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
 
             if Toggle.Connections then
@@ -8727,16 +8831,19 @@ do
             Type = "Input",
         }
 
+        local InputControlHeight = Library:Snap(Library:GetDesignToken("Size.Control", 28))
+        local InputLabelRow = Library:Metric("LabelRow", 18)
+
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25) + 18),
+            Size = UDim2.new(1, 0, 0, InputControlHeight + InputLabelRow),
             Visible = Input.Visible,
             Parent = Container,
         })
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 14),
+            Size = UDim2.new(1, 0, 0, InputLabelRow),
             Text = Input.Text,
             TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -8744,12 +8851,11 @@ do
         })
 
         local Box = New("TextBox", {
-            AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
             ClearTextOnFocus = not Input.Disabled and Input.ClearTextOnFocus,
             PlaceholderText = Input.Placeholder,
-            Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
+            Position = UDim2.fromOffset(0, InputLabelRow),
+            Size = UDim2.new(1, 0, 0, InputControlHeight),
             Text = Input.Value,
             TextEditable = not Input.Disabled,
             TextSize = Library:GetDesignToken("Size.Text", 14),
@@ -8980,9 +9086,17 @@ do
             Type = "Slider",
         }
 
+        local LabelRow = Library:Metric("LabelRow", 18)
+        local TrackRow = Library:Metric("TrackRow", 14)
+        local TrackHeight = Library:MatchParity(TrackRow, Library:Metric("Track", 4))
+        local ThumbSize = Library:MatchParity(TrackRow, Library:Metric("Thumb", 10))
+        local ThumbHover = Library:MatchParity(TrackRow, Library:Metric("ThumbHover", 12))
+        local TrackInset = math.round(ThumbHover * 0.5)
+        local ValueWidth = 96
+
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Info.Compact and 27 or 34),
+            Size = UDim2.new(1, 0, 0, LabelRow + TrackRow),
             Visible = Slider.Visible,
             Parent = Container,
         })
@@ -8991,7 +9105,7 @@ do
         if not Info.Compact then
             SliderLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -96, 0, 14),
+                Size = UDim2.new(1, -ValueWidth, 0, LabelRow),
                 Text = Slider.Text,
                 TextSize = Library:GetDesignToken("Size.Text", 14),
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -9001,19 +9115,17 @@ do
 
         local Bar = New("TextButton", {
             Active = not Slider.Disabled,
-            AnchorPoint = Vector2.new(0, 1),
             BackgroundTransparency = 1,
-            Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 14),
+            Position = UDim2.fromOffset(0, LabelRow),
+            Size = UDim2.new(1, 0, 0, TrackRow),
             Text = "",
             Parent = Holder,
         })
 
         local Track = New("Frame", {
-            AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "MainColor",
-            Position = UDim2.new(0, 5, 0.5, 0),
-            Size = UDim2.new(1, -10, 0, 4),
+            Position = UDim2.fromOffset(TrackInset, Library:CenterOffset(TrackRow, TrackHeight)),
+            Size = UDim2.new(1, -TrackInset * 2, 0, TrackHeight),
             Parent = Bar,
         })
         New("UICorner", {
@@ -9030,9 +9142,10 @@ do
             AnchorPoint = Info.Compact and Vector2.zero or Vector2.new(1, 0),
             BackgroundTransparency = 1,
             Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
-            Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
+            Size = Info.Compact and UDim2.new(1, 0, 0, LabelRow) or UDim2.fromOffset(ValueWidth - 6, LabelRow),
             Text = "",
-            TextSize = Library:GetDesignToken("Size.Caption", 12),
+            TextColor3 = "MutedFontColor",
+            TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
             ZIndex = Bar.ZIndex + 2,
             Parent = Holder,
@@ -9044,9 +9157,9 @@ do
                 AnchorPoint = Info.Compact and Vector2.zero or Vector2.new(1, 0),
                 BackgroundTransparency = 1,
                 Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
-                Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
+                Size = Info.Compact and UDim2.new(1, 0, 0, LabelRow) or UDim2.fromOffset(ValueWidth - 6, LabelRow),
                 Text = "",
-                TextSize = Library:GetDesignToken("Size.Caption", 12),
+                TextSize = Library:GetDesignToken("Size.Text", 14),
                 TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
                 ZIndex = Bar.ZIndex + 3,
                 Visible = false,
@@ -9057,7 +9170,7 @@ do
 
         local Fill = New("Frame", {
             BackgroundColor3 = "AccentColor",
-            Size = UDim2.fromScale(0.5, 1),
+            Size = UDim2.new(0, 0, 1, 0),
             ZIndex = Bar.ZIndex + 1,
             Parent = Track,
         })
@@ -9079,8 +9192,8 @@ do
         local Thumb = New("Frame", {
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundColor3 = "FontColor",
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(9, 9),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            Size = UDim2.fromOffset(ThumbSize, ThumbSize),
             ZIndex = Bar.ZIndex + 2,
             Parent = Track,
         })
@@ -9099,12 +9212,12 @@ do
                 return
             end
             Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
-                Size = UDim2.fromOffset(11, 11),
+                Size = UDim2.fromOffset(ThumbHover, ThumbHover),
             })
         end))
         table.insert(Slider.Connections, Bar.MouseLeave:Connect(function()
             Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
-                Size = UDim2.fromOffset(9, 9),
+                Size = UDim2.fromOffset(ThumbSize, ThumbSize),
             })
         end))
 
@@ -9160,10 +9273,22 @@ do
                 end
             end
 
-            local X = (Slider.Value - Slider.Min) / (Slider.Max - Slider.Min)
-            Fill.Size = UDim2.fromScale(X, 1)
-            Thumb.Position = UDim2.fromScale(X, 0.5)
+            local Span = Slider.Max - Slider.Min
+            local X = Span ~= 0 and (Slider.Value - Slider.Min) / Span or 0
+            local TrackWidth = Track.AbsoluteSize.X
+            if TrackWidth > 0 then
+                local Offset = math.round(X * TrackWidth)
+                Fill.Size = UDim2.new(0, Offset, 1, 0)
+                Thumb.Position = UDim2.new(0, Offset, 0.5, 0)
+            else
+                Fill.Size = UDim2.new(X, 0, 1, 0)
+                Thumb.Position = UDim2.new(X, 0, 0.5, 0)
+            end
         end
+
+        table.insert(Slider.Connections, Track:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            Slider:Display()
+        end))
 
         function Slider:OnChanged(Func)
             Slider.Changed = Func
@@ -9462,29 +9587,32 @@ do
             Type = "Dropdown",
         }
 
+        local ControlHeight = Library:Snap(Library:GetDesignToken("Size.Control", 28))
+        local DropdownLabelRow = Library:Metric("LabelRow", 18)
+        local HasLabel = not not Info.Text
+
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Dropdown.Text and Library:GetDesignToken("Size.Control", 25) + 18 or Library:GetDesignToken("Size.Control", 25)),
+            Size = UDim2.new(1, 0, 0, HasLabel and ControlHeight + DropdownLabelRow or ControlHeight),
             Visible = Dropdown.Visible,
             Parent = Container,
         })
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 14),
+            Size = UDim2.new(1, 0, 0, DropdownLabelRow),
             Text = Dropdown.Text,
             TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
-            Visible = not not Info.Text,
+            Visible = HasLabel,
             ZIndex = 3,
             Parent = Holder,
         })
 
         local DisplayContainer = New("TextButton", {
-            AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
-            Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
+            Position = UDim2.fromOffset(0, HasLabel and DropdownLabelRow or 0),
+            Size = UDim2.new(1, 0, 0, ControlHeight),
             Text = "",
             TextTransparency = 1,
             ZIndex = 2,
@@ -13741,7 +13869,16 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 7)),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 4)),
+                Parent = TabButton,
+            })
+            New("Frame", {
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundColor3 = "AccentColor",
+                BackgroundTransparency = 1,
+                Name = "Indicator",
+                Position = UDim2.new(0, 0, 0.5, 0),
+                Size = UDim2.fromOffset(2, 0),
                 Parent = TabButton,
             })
             TabLabel = New("TextLabel", {
@@ -14071,6 +14208,26 @@ function Library:CreateWindow(WindowInfo)
             end
 
             local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
+            if Tab.FullWidth then
+                local FullPosition = UDim2.fromOffset(0, Offset)
+                local FullSize = UDim2.new(1, 0, 1, -Offset)
+                if TabLeft.AnchorPoint ~= Vector2.zero then
+                    TabLeft.AnchorPoint = Vector2.zero
+                end
+                if TabLeft.Position ~= FullPosition then
+                    TabLeft.Position = FullPosition
+                end
+                if TabLeft.Size ~= FullSize then
+                    TabLeft.Size = FullSize
+                end
+                if TabRight.Visible then
+                    TabRight.Visible = false
+                end
+                return
+            end
+            if not TabRight.Visible then
+                TabRight.Visible = true
+            end
             if IsNarrowLayout then
                 local HalfOffset = math.floor(Offset / 2)
                 local Gap = 6
@@ -14078,6 +14235,9 @@ function Library:CreateWindow(WindowInfo)
                 local LeftSize = UDim2.new(1, 0, 0.5, -(HalfOffset + Gap))
                 local RightPosition = UDim2.new(0, 0, 0.5, HalfOffset + Gap)
                 local RightSize = UDim2.new(1, 0, 0.5, -(HalfOffset + Gap))
+                if TabLeft.AnchorPoint ~= Vector2.zero then
+                    TabLeft.AnchorPoint = Vector2.zero
+                end
 
                 if TabLeft.Position ~= LeftPosition then
                     TabLeft.Position = LeftPosition
@@ -14095,11 +14255,22 @@ function Library:CreateWindow(WindowInfo)
                     TabRight.Size = RightSize
                 end
             else
+                local Total = math.floor(TabContainer.AbsoluteSize.X)
                 local LeftPosition = UDim2.fromOffset(0, Offset)
-                local LeftSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
                 local RightPosition = UDim2.new(1, 0, 0, Offset)
-                local RightSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+                local LeftSize, RightSize
+                if Total > ColumnGap then
+                    local LeftWidth = math.floor((Total - ColumnGap) / 2)
+                    LeftSize = UDim2.new(0, LeftWidth, 1, -Offset)
+                    RightSize = UDim2.new(0, Total - ColumnGap - LeftWidth, 1, -Offset)
+                else
+                    LeftSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+                    RightSize = UDim2.new(0.5, -ColumnOffset, 1, -Offset)
+                end
 
+                if TabLeft.AnchorPoint ~= Vector2.zero then
+                    TabLeft.AnchorPoint = Vector2.zero
+                end
                 if TabLeft.Position ~= LeftPosition then
                     TabLeft.Position = LeftPosition
                 end
@@ -14117,6 +14288,10 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
         end
+
+        table.insert(Tab.Connections, TabContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            Tab:RefreshSides()
+        end))
 
         function Tab:Resize(ResizeWarningBox: boolean?)
             if Tab.Destroyed or not TabContainer.Parent then
@@ -14825,6 +15000,20 @@ function Library:CreateWindow(WindowInfo)
 
         function Tab:AddRightGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
             return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
+        end
+
+        function Tab:SetFullWidth(Enabled)
+            Tab.FullWidth = Enabled ~= false
+            Tab:RefreshSides()
+            Tab:Resize()
+            return Tab
+        end
+
+        function Tab:AddFullGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
+            Tab.FullWidth = true
+            local Groupbox = Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
+            Tab:RefreshSides()
+            return Groupbox
         end
 
         function Tab:Hover(Hovering)

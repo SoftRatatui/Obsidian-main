@@ -1,8 +1,8 @@
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-8"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-9"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-release-8" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-8", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-9" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-9", tostring(Library.ReleaseVersion)))
 end
 
 local App

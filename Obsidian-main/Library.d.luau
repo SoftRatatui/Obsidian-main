@@ -993,6 +993,15 @@ export type Tab = {
         Collapsed: boolean?,
         DisableCollapsing: boolean?
     ) -> Groupbox,
+    AddFullGroupbox: (
+        self: Tab,
+        Name: string,
+        IconName: string?,
+        Visible: boolean?,
+        Collapsed: boolean?,
+        DisableCollapsing: boolean?
+    ) -> Groupbox,
+    SetFullWidth: (self: Tab, Enabled: boolean?) -> Tab,
     AddTabbox: (self: Tab, Info: { Side: number, Name: string? }) -> Tabbox,
     AddLeftTabbox: (self: Tab, Name: string?) -> Tabbox,
     AddRightTabbox: (self: Tab, Name: string?) -> Tabbox,
@@ -1180,7 +1189,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-8",
+    ReleaseVersion: "0.0.1-release-9",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1289,6 +1298,11 @@ export type Library = {
     PlayTween: (self: Library, Instance: Instance, Slot: string, TweenInfoValue: TweenInfo, Properties: { [string]: any }) -> Tween?,
     CancelTween: (self: Library, Instance: Instance, Slot: string) -> (),
     GetDesignToken: (self: Library, Path: string, Fallback: any?) -> any,
+    Metric: (self: Library, Name: string, Fallback: number) -> number,
+    Snap: (self: Library, Value: number) -> number,
+    CenterOffset: (self: Library, Outer: number, Inner: number) -> number,
+    MatchParity: (self: Library, Outer: number, Inner: number) -> number,
+    GlyphSize: (self: Library, Box: number, Preferred: number?) -> number,
     GetMotion: (self: Library, Name: string) -> TweenInfo,
     RefreshMotion: (self: Library) -> (),
     SetDesign: (self: Library, Overrides: { [string]: any }) -> Library,

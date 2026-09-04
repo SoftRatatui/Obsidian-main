@@ -1,13 +1,13 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-8`
+Current release: `0.0.1-release-9`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-8"
+local RELEASE = "0.0.1-release-9"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -128,7 +128,18 @@ local Custom = Combat:AddGroupbox({
 })
 ```
 
-Groupboxes use the same header height, padding, card radius, divider opacity, and animation curve as visual addons. Avoid placing a large catalog in a narrow half-width groupbox. Use its standalone split layout or embedded stack layout instead.
+Groupboxes use the same header height, padding, card radius, divider opacity, and animation curve as visual addons.
+
+A tab can also host a single full-width column. This is the right place for a catalog, a gallery, or any wide module, because a half-width groupbox is too narrow for a grid.
+
+```luau
+local Skins = Window:AddTab({ Name = "Skins", Icon = "sparkles" })
+local Gallery = Skins:AddFullGroupbox("Weapon finishes", "layout-grid")
+```
+
+`AddFullGroupbox` switches the tab to a single column and returns a normal groupbox, so every control still works inside it. `Tab:SetFullWidth(false)` restores the two-column layout.
+
+The two columns are measured in whole pixels: the tab splits its own width and gives any leftover pixel to the right column, so both sides land on exact pixel boundaries at any window size.
 
 ## Controls
 
@@ -283,10 +294,18 @@ Library:SetDesign({
         Section = 12,
     },
     Radius = {
-        Window = 8,
-        Card = 7,
-        Control = 4,
-        Popup = 7,
+        Window = 6,
+        Card = 4,
+        Control = 3,
+        Popup = 4,
+    },
+    Grid = {
+        Row = 24,
+        LabelRow = 18,
+        Indicator = 16,
+        IndicatorGap = 9,
+        TrackRow = 14,
+        Thumb = 10,
     },
     Motion = {
         Scale = 1,
@@ -294,11 +313,25 @@ Library:SetDesign({
     Addon = {
         Padding = 10,
         Gap = 8,
-        CellRadius = 6,
+        CellRadius = 4,
         PreviewRatio = 0.58,
     },
 })
 ```
+
+`Design.Grid` is the geometry every control is measured from. Toggles, color picker rows, and plain labels all occupy `Row`; sliders, dropdowns, and inputs put their caption in `LabelRow` and their control below it. Because the values come from one table, a control never carries its own hardcoded offset and the two columns stay aligned row for row.
+
+Four helpers keep that geometry on whole pixels. Use them instead of raw arithmetic when extending the library:
+
+```luau
+Library:Metric("Row", 24)
+Library:Snap(Value)
+Library:CenterOffset(Outer, Inner)
+Library:MatchParity(Outer, Inner)
+Library:GlyphSize(Box, Preferred)
+```
+
+`CenterOffset` centers on an integer. `MatchParity` grows a size by one pixel when needed so that centering it inside its container cannot land on a half pixel. `GlyphSize` picks an icon size on a clean divisor of the 24px Lucide sprite, which is what keeps small icons such as the checkbox tick from losing strokes.
 
 ```luau
 local Card, Stroke, Corner = Library:CreateSurface(Parent, {
@@ -438,6 +471,18 @@ local Catalog, Host = AssetCatalog.CreateStandalone(Library, {
 })
 ```
 
+Omit `Columns` and the grid picks the column count from the space it actually has, keeping every cell an exact whole number of pixels wide. `MinCellWidth` sets the narrowest a cell may become before a column is dropped:
+
+```luau
+local Catalog = AssetCatalog.CreateEmbedded(Library, Gallery, "SkinCatalog", {
+    Items = Items,
+    Height = 420,
+    MinCellWidth = 116,
+})
+```
+
+This is the layout to use for a skin changer. Put it in a full-width groupbox (`Tab:AddFullGroupbox`) so the grid has room to breathe, or open it as its own window with `CreateStandalone`. Passing an explicit `Columns` pins the count instead and turns the automatic fitting off.
+
 For a narrow groupbox, embedded mode defaults to the stacked layout:
 
 ```luau
@@ -540,6 +585,19 @@ local Dashboard = Group:AddAddon("Dashboard", DashboardWindow, {
     Title = "Session",
 })
 ```
+
+Standalone dashboard. This routes the module through the shared window host, so its title bar, icon badge, divider, and close button are the same ones the other standalone addons use rather than a second set drawn by the module:
+
+```luau
+local Dashboard, Host = DashboardWindow.CreateStandalone(Library, {
+    WindowTitle = "Session dashboard",
+    WindowSubtitle = "Live values",
+    WindowWidth = 380,
+    WindowHeight = 460,
+})
+```
+
+Every visual addon now exposes both `CreateEmbedded` and `CreateStandalone`, so any module can be placed inside the menu or opened as its own window without changing how it looks.
 
 ## Character preview
 
@@ -655,7 +713,7 @@ Library:Unload()
 
 ## Release checklist
 
-- `Library.ReleaseVersion` reports `0.0.1-release-8`.
+- `Library.ReleaseVersion` reports `0.0.1-release-9`.
 - Version mismatch is a warning and never blocks startup.
 - The default theme updates the top bar, sidebar, content, controls, and addons.
 - Menu open and close motion remains short.
@@ -669,7 +727,7 @@ Library:Unload()
 
 ## Changelog
 
-### 0.0.1-release-8
+### 0.0.1-release-9
 
 - Rebuilt the default shell with a wider content area, softer card hierarchy, full-width navigation rows, consistent header controls, and unified theme surfaces.
 - Expanded the design contract with shell, typography, addon window, gallery cell, and preview tokens.

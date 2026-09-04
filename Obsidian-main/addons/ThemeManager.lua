@@ -22,7 +22,7 @@ local DefaultTheme = {
     DarkColor = "000000",
     WhiteColor = "f8f9fc",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local MetalTheme = {
@@ -45,7 +45,7 @@ local MetalTheme = {
     DarkColor = "09090b",
     WhiteColor = "f8f8fa",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local MidnightTheme = {
@@ -68,7 +68,7 @@ local MidnightTheme = {
     DarkColor = "050608",
     WhiteColor = "f8f9fc",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local SteelTheme = {
@@ -91,7 +91,7 @@ local SteelTheme = {
     DarkColor = "06090c",
     WhiteColor = "f6f9fb",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local SageTheme = {
@@ -114,7 +114,7 @@ local SageTheme = {
     DarkColor = "070a08",
     WhiteColor = "f7faf8",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local AshTheme = {
@@ -137,11 +137,11 @@ local AshTheme = {
     DarkColor = "090807",
     WhiteColor = "f9f7f3",
     BackgroundImage = "",
-    FontFace = "Gotham",
+    FontFace = "GothamMedium",
 }
 
 local ThemeManager = {
-    ReleaseVersion = "0.0.1-release-6",
+    ReleaseVersion = "0.0.1-release-7",
     Library = nil,
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",

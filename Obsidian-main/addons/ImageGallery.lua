@@ -104,21 +104,36 @@ end
 
 function ImageGallery.Create(Library, Info)
     Info = Info or {}
+    local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        HeaderHeight = 36,
+        Padding = 8,
+        Gap = 7,
+        Radius = 5,
+        ControlRadius = 4,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        TextSize = 14,
+        CaptionSize = 12,
+        Motion = true,
+    }
+    local HeaderHeight = math.clamp(math.floor(tonumber(Style.HeaderHeight) or 36), 32, 46)
+    local ControlHeight = math.clamp(math.floor(tonumber(Style.ControlHeight) or 25), 22, 32)
+    local FooterHeight = 28
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 344), 180, 780)
     local Columns = math.clamp(math.floor(tonumber(Info.Columns) or 5), 1, 10)
     local PageSize = math.clamp(math.floor(tonumber(Info.PageSize) or 15), Columns, 60)
     local CellHeight = math.clamp(math.floor(tonumber(Info.CellHeight) or 78), 52, 150)
-    local Gap = math.clamp(math.floor(tonumber(Info.Gap) or 6), 2, 14)
+    local Gap = math.clamp(math.floor(tonumber(Info.Gap) or Style.Gap), 2, 14)
     local ScaleType = ResolveScaleType(Info.ScaleType)
-    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1)
-    local ContainerOutlineTransparency = math.clamp(tonumber(Info.ContainerOutlineTransparency) or 0.42, 0, 1)
+    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or Style.BackgroundTransparency or 0, 0, 1)
+    local ContainerOutlineTransparency = math.clamp(tonumber(Info.ContainerOutlineTransparency) or Style.OutlineTransparency, 0, 1)
     local CellTransparency = math.clamp(tonumber(Info.CellTransparency) or 0, 0, 1)
-    local CellOutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency or Info.CellOutlineTransparency) or 0.42, 0, 1)
+    local CellOutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency or Info.CellOutlineTransparency) or Style.OutlineTransparency, 0, 1)
     local ImageTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0, 0, 1)
     local ImageBackgroundTransparency = math.clamp(tonumber(Info.ImageBackgroundTransparency) or 0.08, 0, 1)
     local LabelHeight = math.clamp(math.floor(tonumber(Info.LabelHeight) or 22), 0, 40)
-    local ImagePadding = math.clamp(math.floor(tonumber(Info.ImagePadding) or 5), 0, math.max(0, CellHeight - LabelHeight - 1))
-    local CornerRadius = math.clamp(math.floor(tonumber(Info.CornerRadius) or 4), 0, 12)
+    local ImagePadding = math.clamp(math.floor(tonumber(Info.ImagePadding) or math.max(4, Style.Padding - 3)), 0, math.max(0, CellHeight - LabelHeight - 1))
+    local CornerRadius = math.clamp(math.floor(tonumber(Info.CornerRadius) or Style.Radius), 0, 12)
     local ImageSize = typeof(Info.ImageSize) == "UDim2" and Info.ImageSize or UDim2.fromScale(1, 1)
     local ImagePosition = typeof(Info.ImagePosition) == "UDim2" and Info.ImagePosition or UDim2.fromScale(0.5, 0.5)
     local ImageAnchorPoint = typeof(Info.ImageAnchorPoint) == "Vector2" and Info.ImageAnchorPoint or Vector2.new(0.5, 0.5)
@@ -140,9 +155,14 @@ function ImageGallery.Create(Library, Info)
         end,
     })
 
+    local RootCorner = Instance.new("UICorner")
+    RootCorner.CornerRadius = UDim.new(0, CornerRadius)
+    RootCorner.Parent = Root
+
     local Stroke = Instance.new("UIStroke")
     Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Stroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
+    Stroke.Thickness = Style.StrokeThickness
     Stroke.Transparency = ContainerOutlineTransparency
     Stroke.Parent = Root
     AddRegistry(Library, Stroke, { Color = "OutlineColor" })
@@ -150,7 +170,7 @@ function ImageGallery.Create(Library, Info)
     local Header = Instance.new("Frame")
     Header.BackgroundColor3 = Library and (Library.Scheme.RaisedColor or Library.Scheme.SurfaceColor) or Color3.fromRGB(22, 24, 29)
     Header.BorderSizePixel = 0
-    Header.Size = UDim2.new(1, 0, 0, 36)
+    Header.Size = UDim2.new(1, 0, 0, HeaderHeight)
     Header.Parent = Root
     AddRegistry(Library, Header, {
         BackgroundColor3 = function()
@@ -164,6 +184,7 @@ function ImageGallery.Create(Library, Info)
     HeaderLine.BorderSizePixel = 0
     HeaderLine.Position = UDim2.fromScale(0, 1)
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    HeaderLine.BackgroundTransparency = Library and type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
     HeaderLine.Parent = Header
     AddRegistry(Library, HeaderLine, { BackgroundColor3 = "OutlineColor" })
 
@@ -171,12 +192,12 @@ function ImageGallery.Create(Library, Info)
     CategoryButton.AutoButtonColor = false
     CategoryButton.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(29, 32, 38)
     CategoryButton.BorderSizePixel = 0
-    CategoryButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
-    CategoryButton.Position = UDim2.fromOffset(7, 6)
-    CategoryButton.Size = UDim2.fromOffset(104, 24)
+    CategoryButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
+    CategoryButton.Position = UDim2.fromOffset(Style.Padding, math.floor((HeaderHeight - ControlHeight) * 0.5))
+    CategoryButton.Size = UDim2.fromOffset(104, ControlHeight)
     CategoryButton.Text = "All"
     CategoryButton.TextColor3 = Library and Library.Scheme.FontColor or Color3.fromRGB(232, 235, 240)
-    CategoryButton.TextSize = 11
+    CategoryButton.TextSize = Style.CaptionSize
     CategoryButton.TextTruncate = Enum.TextTruncate.AtEnd
     CategoryButton.Parent = Header
     AddRegistry(Library, CategoryButton, {
@@ -186,21 +207,21 @@ function ImageGallery.Create(Library, Info)
     })
 
     local CategoryCorner = Instance.new("UICorner")
-    CategoryCorner.CornerRadius = UDim.new(0, 4)
+    CategoryCorner.CornerRadius = UDim.new(0, Style.ControlRadius)
     CategoryCorner.Parent = CategoryButton
 
     local Search = Instance.new("TextBox")
     Search.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(29, 32, 38)
     Search.BorderSizePixel = 0
     Search.ClearTextOnFocus = false
-    Search.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    Search.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Search.PlaceholderColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
     Search.PlaceholderText = tostring(Info.SearchPlaceholder or "Search assets")
-    Search.Position = UDim2.fromOffset(117, 6)
-    Search.Size = UDim2.new(1, -124, 0, 24)
+    Search.Position = UDim2.fromOffset(Style.Padding + 110, math.floor((HeaderHeight - ControlHeight) * 0.5))
+    Search.Size = UDim2.new(1, -(Style.Padding * 2 + 110), 0, ControlHeight)
     Search.Text = ""
     Search.TextColor3 = Library and Library.Scheme.FontColor or Color3.fromRGB(232, 235, 240)
-    Search.TextSize = 11
+    Search.TextSize = Style.CaptionSize
     Search.TextXAlignment = Enum.TextXAlignment.Left
     Search.Parent = Header
     AddRegistry(Library, Search, {
@@ -211,7 +232,7 @@ function ImageGallery.Create(Library, Info)
     })
 
     local SearchCorner = Instance.new("UICorner")
-    SearchCorner.CornerRadius = UDim.new(0, 4)
+    SearchCorner.CornerRadius = UDim.new(0, Style.ControlRadius)
     SearchCorner.Parent = Search
 
     local SearchPadding = Instance.new("UIPadding")
@@ -222,8 +243,8 @@ function ImageGallery.Create(Library, Info)
     local GridHolder = Instance.new("Frame")
     GridHolder.BackgroundTransparency = 1
     GridHolder.ClipsDescendants = true
-    GridHolder.Position = UDim2.fromOffset(7, 43)
-    GridHolder.Size = UDim2.new(1, -14, 1, -76)
+    GridHolder.Position = UDim2.fromOffset(Style.Padding, HeaderHeight + Style.Gap)
+    GridHolder.Size = UDim2.new(1, -Style.Padding * 2, 1, -(HeaderHeight + FooterHeight + Style.Gap * 2))
     GridHolder.Parent = Root
 
     local Grid = Instance.new("UIGridLayout")
@@ -238,7 +259,7 @@ function ImageGallery.Create(Library, Info)
     Footer.BackgroundColor3 = Library and (Library.Scheme.RaisedColor or Library.Scheme.SurfaceColor) or Color3.fromRGB(22, 24, 29)
     Footer.BorderSizePixel = 0
     Footer.Position = UDim2.fromScale(0, 1)
-    Footer.Size = UDim2.new(1, 0, 0, 27)
+    Footer.Size = UDim2.new(1, 0, 0, FooterHeight)
     Footer.Parent = Root
     AddRegistry(Library, Footer, {
         BackgroundColor3 = function()
@@ -250,13 +271,14 @@ function ImageGallery.Create(Library, Info)
     FooterLine.BackgroundColor3 = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
     FooterLine.BorderSizePixel = 0
     FooterLine.Size = UDim2.new(1, 0, 0, 1)
+    FooterLine.BackgroundTransparency = Library and type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
     FooterLine.Parent = Footer
     AddRegistry(Library, FooterLine, { BackgroundColor3 = "OutlineColor" })
 
     local PreviousButton = Instance.new("TextButton")
     PreviousButton.AutoButtonColor = false
     PreviousButton.BackgroundTransparency = 1
-    PreviousButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    PreviousButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     PreviousButton.Size = UDim2.fromOffset(44, 26)
     PreviousButton.Text = "Prev"
     PreviousButton.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
@@ -269,7 +291,7 @@ function ImageGallery.Create(Library, Info)
 
     local PageLabel = Instance.new("TextLabel")
     PageLabel.BackgroundTransparency = 1
-    PageLabel.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    PageLabel.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     PageLabel.Position = UDim2.new(0, 44, 0, 0)
     PageLabel.Size = UDim2.new(1, -88, 1, 0)
     PageLabel.Text = "1 / 1"
@@ -285,7 +307,7 @@ function ImageGallery.Create(Library, Info)
     NextButton.AnchorPoint = Vector2.new(1, 0)
     NextButton.AutoButtonColor = false
     NextButton.BackgroundTransparency = 1
-    NextButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    NextButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     NextButton.Position = UDim2.fromScale(1, 0)
     NextButton.Size = UDim2.fromOffset(44, 26)
     NextButton.Text = "Next"
@@ -299,12 +321,12 @@ function ImageGallery.Create(Library, Info)
 
     local Empty = Instance.new("TextLabel")
     Empty.BackgroundTransparency = 1
-    Empty.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
-    Empty.Position = UDim2.fromOffset(12, 43)
-    Empty.Size = UDim2.new(1, -24, 1, -76)
+    Empty.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
+    Empty.Position = UDim2.fromOffset(Style.Padding + 4, HeaderHeight + Style.Gap)
+    Empty.Size = UDim2.new(1, -(Style.Padding + 4) * 2, 1, -(HeaderHeight + FooterHeight + Style.Gap * 2))
     Empty.Text = tostring(Info.EmptyText or "No matching assets")
     Empty.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    Empty.TextSize = 12
+    Empty.TextSize = Style.CaptionSize
     Empty.Visible = false
     Empty.Parent = Root
     AddRegistry(Library, Empty, {
@@ -352,18 +374,26 @@ function ImageGallery.Create(Library, Info)
         ImageScale = ImageScale,
         TileSize = TileSize,
         Rotation = Rotation,
+        Style = Style,
         Visible = Info.Visible ~= false,
         Destroyed = false,
         OnSelected = Info.OnSelected or Info.Callback,
     }
 
     local function Play(Object, Key, Properties)
+        if Style.Motion == false then
+            for Property, Value in Properties do
+                Object[Property] = Value
+            end
+            return
+        end
+        local MotionInfo = Library and type(Library.GetMotion) == "function" and Library:GetMotion("Hover") or TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         if Library and type(Library.PlayTween) == "function" then
-            Library:PlayTween(Object, "ImageGallery" .. tostring(Key), TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), Properties)
+            Library:PlayTween(Object, "ImageGallery" .. tostring(Key), MotionInfo, Properties)
             return
         end
         local Success, Tween = pcall(function()
-            return TweenService:Create(Object, TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), Properties)
+            return TweenService:Create(Object, MotionInfo, Properties)
         end)
         if Success and Tween then
             Tween.Completed:Once(function()
@@ -525,6 +555,7 @@ function ImageGallery.Create(Library, Info)
         local CellStroke = Instance.new("UIStroke")
         CellStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         CellStroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
+        CellStroke.Thickness = Style.StrokeThickness
         CellStroke.Transparency = Gallery.CellOutlineTransparency
         CellStroke.Parent = Button
 
@@ -562,7 +593,7 @@ function ImageGallery.Create(Library, Info)
         local Name = Instance.new("TextLabel")
         Name.AnchorPoint = Vector2.new(0, 1)
         Name.BackgroundTransparency = 1
-        Name.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+        Name.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
         Name.Position = UDim2.fromScale(0, 1)
         Name.Size = UDim2.new(1, 0, 0, Gallery.LabelHeight)
         Name.Text = ""
@@ -962,6 +993,7 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.CornerRadius = math.clamp(math.floor(tonumber(Value) or Gallery.CornerRadius), 0, 12)
+        RootCorner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
         for _, Slot in Gallery.Slots do
             Slot.Corner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
             Slot.ImageCorner.CornerRadius = UDim.new(0, math.max(0, Gallery.CornerRadius - 1))
@@ -1130,5 +1162,7 @@ function ImageGallery.CreateEmbedded(Library, Groupbox, Idx, Info)
     })
     return Gallery
 end
+
+ImageGallery.Mount = ImageGallery.CreateEmbedded
 
 return ImageGallery

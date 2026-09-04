@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-6",
+    ReleaseVersion = "0.0.1-release-7",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -278,8 +278,8 @@ local Library = {
     
     Notifications = {},
     NotifySide = "Right",
-    NotifyTweenInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    NotifyCloseTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    NotifyTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    NotifyCloseTweenInfo = TweenInfo.new(0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
     
     Dialogues = {},
@@ -293,21 +293,21 @@ local Library = {
     SpecificCorners = {},
 
     
-    TweenInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    HoverTweenInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    HoverTweenInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
-    TabTransitionInfo = TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    TabExitTransitionInfo = TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TabTransitionInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    TabExitTransitionInfo = TweenInfo.new(0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     TabSwipeOffset = 2,
     TabSwipeFrom = "bottom",
 
-    WindowAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowOpenAnimationInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    WindowCloseAnimationInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogOverlayOpenAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogOpenAnimationInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    DialogOverlayCloseAnimationInfo = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    DialogCloseAnimationInfo = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    WindowAnimationInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowOpenAnimationInfo = TweenInfo.new(0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    WindowCloseAnimationInfo = TweenInfo.new(0.055, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogOverlayOpenAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DialogOpenAnimationInfo = TweenInfo.new(0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    DialogOverlayCloseAnimationInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    DialogCloseAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     DropdownTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     KeyPickerTransitionInfo = TweenInfo.new(0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 
@@ -354,6 +354,71 @@ local Library = {
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
     CornerRadius = 6,
+    DesignRevision = 0,
+    Design = {
+        Spacing = {
+            Tiny = 3,
+            Small = 6,
+            Medium = 8,
+            Large = 12,
+            Section = 10,
+        },
+        Radius = {
+            Window = 6,
+            Card = 5,
+            Control = 4,
+            Popup = 6,
+            Indicator = 3,
+        },
+        Size = {
+            TopBar = 48,
+            Footer = 20,
+            GroupHeader = 35,
+            Control = 25,
+            Row = 22,
+            Icon = 16,
+            Text = 14,
+            Caption = 12,
+        },
+        Stroke = {
+            Thickness = 1,
+            SoftTransparency = 0.46,
+            ControlTransparency = 0.38,
+            StrongTransparency = 0.18,
+        },
+        Opacity = {
+            MutedText = 0.42,
+            DisabledText = 0.78,
+            Divider = 0.56,
+            Shadow = 0.48,
+            Hover = 0.08,
+        },
+        Motion = {
+            Scale = 1,
+            Reduced = false,
+            Hover = { 0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Control = { 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Fast = { 0.06, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Popup = { 0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Dialog = { 0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowOpen = { 0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowClose = { 0.055, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            TabEnter = { 0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            TabExit = { 0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Notify = { 0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            NotifyClose = { 0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+        },
+        Addon = {
+            HeaderHeight = 36,
+            Padding = 8,
+            Gap = 7,
+            Radius = 5,
+            OutlineTransparency = 0.46,
+            BackgroundTransparency = 0,
+            ControlHeight = 25,
+            Motion = true,
+        },
+    },
 
     
     IsLightTheme = false,
@@ -371,7 +436,7 @@ local Library = {
         FontColor = Color3.fromRGB(238, 240, 244),
         MutedFontColor = Color3.fromRGB(146, 151, 160),
         ShadowColor = Color3.fromRGB(5, 6, 8),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
 
         RedColor = Color3.fromRGB(232, 83, 103),
         WarningColor = Color3.fromRGB(208, 157, 80),
@@ -527,9 +592,9 @@ function Library:SetThemeFont(FontFace): any
     return Library
 end
 
-Library.DefaultFontName = "MonHubInterBold"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Bold.ttf?monhub=0.0.1-release-6-font-default"
-Library.DefaultFontWeight = 700
+Library.DefaultFontName = "MonHubInterMedium"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-7-font-default"
+Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
 
@@ -554,7 +619,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(196, 58, 76),
         RedColor = Color3.fromRGB(232, 83, 103),
         DarkColor = Color3.new(0, 0, 0),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -578,7 +643,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(204, 65, 86),
         RedColor = Color3.fromRGB(235, 91, 115),
         DarkColor = Color3.fromRGB(9, 9, 11),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 248, 250),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -602,7 +667,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(191, 63, 81),
         RedColor = Color3.fromRGB(226, 82, 102),
         DarkColor = Color3.fromRGB(5, 6, 8),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -626,7 +691,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(192, 67, 82),
         RedColor = Color3.fromRGB(225, 86, 105),
         DarkColor = Color3.fromRGB(6, 9, 12),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(246, 249, 251),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -650,7 +715,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(192, 69, 80),
         RedColor = Color3.fromRGB(225, 88, 104),
         DarkColor = Color3.fromRGB(7, 10, 8),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(247, 250, 248),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -674,7 +739,7 @@ Library.Themes = {
         DestructiveColor = Color3.fromRGB(194, 67, 79),
         RedColor = Color3.fromRGB(227, 87, 103),
         DarkColor = Color3.fromRGB(9, 8, 7),
-        Font = Font.fromEnum(Enum.Font.Gotham),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(249, 247, 243),
         BackgroundImage = "",
         CornerRadius = 6,
@@ -775,7 +840,7 @@ local Templates = {
         NotifySide = "Right",
         ShowCustomCursor = true,
 
-        Font = Enum.Font.Gotham,
+        Font = Enum.Font.GothamMedium,
         ToggleKeybind = Enum.KeyCode.RightControl,
 
         ShowCompactLauncher = true,
@@ -821,7 +886,7 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.075,
+        TabTransitionTime = 0.07,
         TabSwipeOffset = 2,
         TabSwipeFrom = "bottom"
     },
@@ -930,7 +995,7 @@ local Templates = {
         Image = "",
         Transparency = 0,
         BackgroundTransparency = 0,
-        OutlineTransparency = 0.42,
+        OutlineTransparency = 0.46,
         OutlineThickness = 1,
         CornerRadius = 4,
         Padding = 6,
@@ -1036,6 +1101,144 @@ local function GetSchemeValue(Index)
 
     return Library.Scheme[Index]
 end
+
+local function CloneDesignValue(Value)
+    if type(Value) ~= "table" then
+        return Value
+    end
+
+    local Result = {}
+    for Key, Child in Value do
+        Result[Key] = CloneDesignValue(Child)
+    end
+    return Result
+end
+
+local function MergeDesign(Target, Source)
+    if type(Source) ~= "table" then
+        return Target
+    end
+
+    for Key, Value in Source do
+        if type(Value) == "table" and type(Target[Key]) == "table" then
+            MergeDesign(Target[Key], Value)
+        else
+            Target[Key] = CloneDesignValue(Value)
+        end
+    end
+    return Target
+end
+
+function Library:GetDesignToken(Path: string, Fallback: any): any
+    if type(Path) ~= "string" or Path == "" then
+        return Fallback
+    end
+
+    local Value = Library.Design
+    for Segment in string.gmatch(Path, "[^%.]+") do
+        if type(Value) ~= "table" then
+            return Fallback
+        end
+        Value = Value[Segment]
+        if Value == nil then
+            return Fallback
+        end
+    end
+    return Value
+end
+
+function Library:GetMotion(Name: string): TweenInfo
+    local Motion = Library.Design.Motion
+    local Spec = type(Motion[Name]) == "table" and Motion[Name] or Motion.Control
+    if type(Spec) ~= "table" then
+        Spec = { 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out }
+    end
+    local Duration = tonumber(Spec[1]) or 0.1
+    local Scale = math.max(tonumber(Motion.Scale) or 1, 0)
+    if Motion.Reduced == true then
+        Duration = 0
+    else
+        Duration *= Scale
+    end
+    return TweenInfo.new(Duration, Spec[2] or Enum.EasingStyle.Quint, Spec[3] or Enum.EasingDirection.Out)
+end
+
+function Library:RefreshMotion()
+    Library.HoverTweenInfo = Library:GetMotion("Hover")
+    Library.TweenInfo = Library:GetMotion("Control")
+    Library.KeybindMenuTweenInfo = Library:GetMotion("Fast")
+    Library.KeybindRowTweenInfo = Library:GetMotion("Hover")
+    Library.NotifyTweenInfo = Library:GetMotion("Notify")
+    Library.NotifyCloseTweenInfo = Library:GetMotion("NotifyClose")
+    Library.TabTransitionInfo = Library:GetMotion("TabEnter")
+    Library.TabExitTransitionInfo = Library:GetMotion("TabExit")
+    Library.WindowAnimationInfo = Library:GetMotion("Fast")
+    Library.WindowOpenAnimationInfo = Library:GetMotion("WindowOpen")
+    Library.WindowCloseAnimationInfo = Library:GetMotion("WindowClose")
+    Library.DialogOverlayOpenAnimationInfo = Library:GetMotion("Control")
+    Library.DialogOpenAnimationInfo = Library:GetMotion("Dialog")
+    Library.DialogOverlayCloseAnimationInfo = Library:GetMotion("Hover")
+    Library.DialogCloseAnimationInfo = Library:GetMotion("Control")
+    Library.DropdownTransitionInfo = Library:GetMotion("Popup")
+    Library.KeyPickerTransitionInfo = Library:GetMotion("Popup")
+    Library.GroupboxTweenInfo = Library:GetMotion("Popup")
+    Library.RotatingChevronTweenInfo = Library:GetMotion("Control")
+end
+
+function Library:SetDesign(Overrides)
+    assert(type(Overrides) == "table", "Design overrides must be a table")
+    MergeDesign(Library.Design, Overrides)
+    Library.DesignRevision += 1
+    Library:RefreshMotion()
+
+    local Radius = tonumber(Library:GetDesignToken("Radius.Window", Library.CornerRadius))
+    if Radius then
+        Radius = math.clamp(Radius, 0, 20)
+        Library.CornerRadius = Radius
+        Templates.Window.CornerRadius = Radius
+        if Library.Window and type(Library.Window.SetCornerRadius) == "function" then
+            Library.Window:SetCornerRadius(Radius)
+        end
+    end
+
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
+    return Library
+end
+
+function Library:SetReducedMotion(Enabled: boolean)
+    Library.Design.Motion.Reduced = Enabled == true
+    Library:RefreshMotion()
+    return Library
+end
+
+function Library:GetAddonStyle(Overrides)
+    local Style = CloneDesignValue(Library.Design.Addon)
+    Style.Spacing = CloneDesignValue(Library.Design.Spacing)
+    Style.Radius = tonumber(Style.Radius) or Library:GetDesignToken("Radius.Card", 5)
+    Style.ControlRadius = Library:GetDesignToken("Radius.Control", 4)
+    Style.PopupRadius = Library:GetDesignToken("Radius.Popup", 6)
+    Style.TextSize = Library:GetDesignToken("Size.Text", 14)
+    Style.CaptionSize = Library:GetDesignToken("Size.Caption", 12)
+    Style.StrokeThickness = Library:GetDesignToken("Stroke.Thickness", 1)
+    MergeDesign(Style, Overrides)
+    Style.HeaderHeight = math.clamp(tonumber(Style.HeaderHeight) or 36, 28, 56)
+    Style.Padding = math.clamp(tonumber(Style.Padding) or 8, 0, 24)
+    Style.Gap = math.clamp(tonumber(Style.Gap) or 7, 0, 20)
+    Style.Radius = math.clamp(tonumber(Style.Radius) or 5, 0, 16)
+    Style.ControlRadius = math.clamp(tonumber(Style.ControlRadius) or 4, 0, 12)
+    Style.PopupRadius = math.clamp(tonumber(Style.PopupRadius) or 6, 0, 16)
+    Style.OutlineTransparency = math.clamp(tonumber(Style.OutlineTransparency) or 0.46, 0, 1)
+    Style.BackgroundTransparency = math.clamp(tonumber(Style.BackgroundTransparency) or 0, 0, 1)
+    Style.ControlHeight = math.clamp(tonumber(Style.ControlHeight) or 25, 20, 40)
+    Style.TextSize = math.clamp(tonumber(Style.TextSize) or 14, 10, 24)
+    Style.CaptionSize = math.clamp(tonumber(Style.CaptionSize) or 12, 9, 20)
+    Style.StrokeThickness = math.clamp(tonumber(Style.StrokeThickness) or 1, 0, 4)
+    Style.Motion = Style.Motion ~= false
+    return Style
+end
+
+Library:RefreshMotion()
 
 
 local function WaitForEvent(Event, Timeout, Condition)
@@ -1955,6 +2158,65 @@ local function New(ClassName: string, Properties: { [string]: any }): any
     return Instance
 end
 
+function Library:CreateSurface(Parent: Instance, Info)
+    Info = Info or {}
+    local Role = tostring(Info.Role or "Surface")
+    local ColorIndex = Info.Color or (Role == "Control" and "ElementColor" or Role == "Raised" and "RaisedColor" or "SurfaceColor")
+    local RadiusRole = tostring(Info.RadiusRole or (Role == "Control" and "Control" or Role == "Popup" and "Popup" or "Card"))
+    local Radius = math.max(0, tonumber(Info.Radius) or tonumber(Library:GetDesignToken("Radius." .. RadiusRole, 5)) or 5)
+    local StrokeTransparency = math.clamp(
+        tonumber(Info.OutlineTransparency) or tonumber(Library:GetDesignToken("Stroke.SoftTransparency", 0.46)) or 0.46,
+        0,
+        1
+    )
+    local Object = New(Info.ClassName or "Frame", {
+        BackgroundColor3 = ColorIndex,
+        BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1),
+        ClipsDescendants = Info.ClipsDescendants ~= false,
+        Name = Info.Name,
+        Position = Info.Position,
+        Size = Info.Size or UDim2.fromScale(1, 1),
+        Visible = Info.Visible ~= false,
+        ZIndex = Info.ZIndex,
+        Parent = Parent,
+    })
+    local Corner = New("UICorner", {
+        CornerRadius = UDim.new(0, Radius),
+        Parent = Object,
+    })
+    local Stroke
+    if Info.Outline ~= false then
+        Stroke = New("UIStroke", {
+            Color = Info.OutlineColor or "OutlineColor",
+            Thickness = tonumber(Info.OutlineThickness) or Library:GetDesignToken("Stroke.Thickness", 1),
+            Transparency = StrokeTransparency,
+            Parent = Object,
+        })
+    end
+    local Shadow
+    if Info.Shadow == true then
+        Shadow = Library:AddSoftShadow(
+            Object,
+            Info.ShadowBlur,
+            Info.ShadowTransparency or Library:GetDesignToken("Opacity.Shadow", 0.48),
+            Info.ShadowOffset
+        )
+    end
+    return Object, Stroke, Corner, Shadow
+end
+
+function Library:CreateDivider(Parent: Instance, Info)
+    Info = Info or {}
+    return Library:MakeLine(Parent, {
+        AnchorPoint = Info.AnchorPoint,
+        Color = Info.Color or "OutlineColor",
+        Position = Info.Position or UDim2.new(0, 0, 1, -1),
+        Size = Info.Size or UDim2.new(1, 0, 0, 1),
+        Transparency = Info.Transparency or Library:GetDesignToken("Opacity.Divider", 0.56),
+        ZIndex = Info.ZIndex,
+    })
+end
+
 
 local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instance)
     local success, _error = pcall(function()
@@ -2188,13 +2450,13 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         BackgroundColor = Library:GetSurfaceColor("Element"),
         BackgroundTransparency = 0,
         OutlineColor = Scheme.OutlineColor,
-        OutlineTransparency = 0.1,
+        OutlineTransparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
         TextColor = Scheme.FontColor,
         TextTransparency = 0.16,
         HoverBackgroundColor = Library:GetSurfaceColor("Hover"),
         HoverBackgroundTransparency = 0,
         HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.28),
-        HoverOutlineTransparency = 0,
+        HoverOutlineTransparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18),
         HoverTextColor = Scheme.FontColor,
         HoverTextTransparency = 0,
     }
@@ -2212,7 +2474,7 @@ function Library:GetButtonStyle(Variant: string?, Disabled: boolean?)
         Style.HoverBackgroundColor = Library:GetSurfaceColor("Element")
         Style.HoverBackgroundTransparency = 0
         Style.HoverOutlineColor = Scheme.OutlineColor:Lerp(Scheme.AccentColor, 0.2)
-        Style.HoverOutlineTransparency = 0.16
+        Style.HoverOutlineTransparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38)
     end
 
     if Disabled then
@@ -2917,8 +3179,8 @@ end
 function Library:AddOutline(Frame: GuiObject)
     local OutlineStroke = New("UIStroke", {
         Color = "OutlineColor",
-        Thickness = 1,
-        Transparency = 0.42,
+        Thickness = Library:GetDesignToken("Stroke.Thickness", 1),
+        Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
         ZIndex = 2,
         Parent = Frame,
     })
@@ -2933,7 +3195,7 @@ function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparen
         Shadow.Color = Library.Scheme.ShadowColor or Library.Scheme.DarkColor
         Shadow.Offset = Offset or UDim2.fromOffset(0, 3)
         Shadow.Spread = UDim2.fromOffset(1, 1)
-        Shadow.Transparency = math.clamp(tonumber(Transparency) or 0.46, 0, 1)
+        Shadow.Transparency = math.clamp(tonumber(Transparency) or Library:GetDesignToken("Opacity.Shadow", 0.48), 0, 1)
         Shadow.ZIndex = 0
         Shadow.Parent = Frame
     end)
@@ -2992,7 +3254,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
     end
 
     if Showing then
-        local TweenInfo = Library.TabTransitionInfo or TweenInfo.new(0.075, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local TweenInfo = Library.TabTransitionInfo or Library:GetMotion("TabEnter")
         local Offset = Library.TabSwipeOffset or 2
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
         local StartPosition
@@ -3049,7 +3311,7 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
             return
         end
 
-        local TweenInfo = Library.TabExitTransitionInfo or TweenInfo.new(0.045, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local TweenInfo = Library.TabExitTransitionInfo or Library:GetMotion("TabExit")
         local Tween = TweenService:Create(TabCanvas, TweenInfo, {
             GroupTransparency = 1,
             Position = UDim2.fromOffset(0, -2),
@@ -3476,19 +3738,19 @@ function Library:AddDraggableMenu(Name: string)
         Parent = Holder,
     })
     Library:AddOutline(Holder)
-    Library:AddSoftShadow(Holder, 14, 0.48, UDim2.fromOffset(0, 3))
+    Library:AddSoftShadow(Holder, 14, Library:GetDesignToken("Opacity.Shadow", 0.48), UDim2.fromOffset(0, 3))
 
     Library:MakeLine(Holder, {
         Position = UDim2.fromOffset(0, 34),
         Size = UDim2.new(1, 0, 0, 1),
-        Transparency = 0.42,
+        Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
     })
 
     local Label = New("TextLabel", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 34),
         Text = Name,
-        TextSize = 15,
+        TextSize = Library:GetDesignToken("Size.Text", 14),
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = Holder,
     })
@@ -3505,14 +3767,14 @@ function Library:AddDraggableMenu(Name: string)
         Parent = Holder,
     })
     New("UIListLayout", {
-        Padding = UDim.new(0, 7),
+        Padding = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
         Parent = Container,
     })
     New("UIPadding", {
-        PaddingBottom = UDim.new(0, 7),
-        PaddingLeft = UDim.new(0, 7),
-        PaddingRight = UDim.new(0, 7),
-        PaddingTop = UDim.new(0, 7),
+        PaddingBottom = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
+        PaddingLeft = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
+        PaddingRight = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
+        PaddingTop = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
         Parent = Container,
     })
 
@@ -3889,7 +4151,8 @@ function Library:AddContextMenu(
 
     New("UIStroke", {
         Color = "OutlineColor",
-        Transparency = 0.25,
+        Thickness = Library:GetDesignToken("Stroke.Thickness", 1),
+        Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
         Parent = Menu,
     })
 
@@ -3958,7 +4221,7 @@ function Library:AddContextMenu(
                 return false
             end
             
-        return true, Library[string.format("%sTransitionInfo", AnimationType)] or TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        return true, Library[string.format("%sTransitionInfo", AnimationType)] or Library:GetMotion("Popup")
         end
     }
 
@@ -6813,14 +7076,14 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 25),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
             Parent = Container,
         })
 
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
             HorizontalFlex = Enum.UIFlexAlignment.Fill,
-            Padding = UDim.new(0, 9),
+            Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
             Parent = Holder,
         })
 
@@ -6837,14 +7100,14 @@ do
 
             local Stroke = New("UIStroke", {
                 Color = "OutlineColor",
-                Transparency = Button.Disabled and 0.5 or 0,
+                Transparency = Button.Disabled and 0.68 or Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
                 Parent = Base,
             })
 
             table.insert(
                 Library.Corners,
                 New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+                    CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
                     Parent = Base,
                 })
             )
@@ -6877,7 +7140,7 @@ do
                 LayoutOrder = 2,
                 Size = UDim2.fromOffset(0, 14),
                 Text = Button.Text,
-                TextSize = 14,
+                TextSize = Library:GetDesignToken("Size.Text", 14),
                 TextTransparency = 0.12,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = Content,
@@ -7329,7 +7592,7 @@ do
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 22),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Row", 22)),
             Text = "",
             Visible = Toggle.Visible,
             Parent = Container,
@@ -7337,11 +7600,11 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(24, 0),
-            Size = UDim2.new(1, -24, 1, 0),
+            Position = UDim2.fromOffset(23, 0),
+            Size = UDim2.new(1, -23, 1, 0),
             Text = Toggle.Text,
-            TextSize = 14,
-            TextTransparency = 0.4,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
+            TextTransparency = Library:GetDesignToken("Opacity.MutedText", 0.42),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Button,
         })
@@ -7359,9 +7622,13 @@ do
             Size = UDim2.fromOffset(16, 16),
             Parent = Button,
         })
+        New("UICorner", {
+            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
+            Parent = Checkbox,
+        })
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.18,
+            Transparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18),
             Parent = Checkbox,
         })
 
@@ -7378,6 +7645,10 @@ do
             ScaleType = Enum.ScaleType.Fit,
             Size = UDim2.fromOffset(10, 10),
             Parent = Checkbox,
+        })
+        local CheckmarkScale = New("UIScale", {
+            Scale = Toggle.Value and 1 or 0.82,
+            Parent = Checkmark,
         })
 
         RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
@@ -7404,6 +7675,7 @@ do
                 Library:CancelTween(Label, "CheckboxLabelColor")
                 Library:CancelTween(Label, "CheckboxLabelTransparency")
                 Library:CancelTween(Checkmark, "CheckboxCheckmark")
+                Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
                 Label.TextColor3 = LabelColor
                 Label.TextTransparency = 0.8
                 Checkbox.BackgroundColor3 = BackgroundColor
@@ -7432,6 +7704,9 @@ do
             })
             Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
                 ImageTransparency = Toggle.Value and 0 or 1,
+            })
+            Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
+                Scale = Toggle.Value and 1 or 0.82,
             })
         end
 
@@ -7568,6 +7843,7 @@ do
             Library:CancelTween(Label, "CheckboxLabelColor")
             Library:CancelTween(Label, "CheckboxLabelTransparency")
             Library:CancelTween(Checkmark, "CheckboxCheckmark")
+            Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -7986,7 +8262,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 43),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25) + 18),
             Visible = Input.Visible,
             Parent = Container,
         })
@@ -7995,7 +8271,7 @@ do
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 0, 14),
             Text = Input.Text,
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Holder,
         })
@@ -8006,10 +8282,10 @@ do
             ClearTextOnFocus = not Input.Disabled and Input.ClearTextOnFocus,
             PlaceholderText = Input.Placeholder,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 25),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
             Text = Input.Value,
             TextEditable = not Input.Disabled,
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Holder,
         })
@@ -8024,14 +8300,14 @@ do
 
         local BoxStroke = New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.25,
+            Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
             Parent = Box,
         })
 
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
                 Parent = Box,
             })
         )
@@ -8239,7 +8515,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Info.Compact and 28 or 35),
+            Size = UDim2.new(1, 0, 0, Info.Compact and 27 or 34),
             Visible = Slider.Visible,
             Parent = Container,
         })
@@ -8250,7 +8526,7 @@ do
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, -96, 0, 14),
                 Text = Slider.Text,
-                TextSize = 14,
+                TextSize = Library:GetDesignToken("Size.Text", 14),
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = Holder,
             })
@@ -8270,16 +8546,16 @@ do
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "MainColor",
             Position = UDim2.new(0, 5, 0.5, 0),
-            Size = UDim2.new(1, -10, 0, 5),
+            Size = UDim2.new(1, -10, 0, 4),
             Parent = Bar,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
+            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
             Parent = Track,
         })
         New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.55,
+            Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
             Parent = Track,
         })
 
@@ -8289,7 +8565,7 @@ do
             Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
             Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
             Text = "",
-            TextSize = 13,
+            TextSize = Library:GetDesignToken("Size.Caption", 12),
             TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
             ZIndex = Bar.ZIndex + 2,
             Parent = Holder,
@@ -8303,7 +8579,7 @@ do
                 Position = Info.Compact and UDim2.zero or UDim2.fromScale(1, 0),
                 Size = Info.Compact and UDim2.new(1, 0, 0, 14) or UDim2.fromOffset(90, 14),
                 Text = "",
-                TextSize = 13,
+                TextSize = Library:GetDesignToken("Size.Caption", 12),
                 TextXAlignment = Info.Compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Right,
                 ZIndex = Bar.ZIndex + 3,
                 Visible = false,
@@ -8329,7 +8605,7 @@ do
             Parent = Fill,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 3),
+            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
             Parent = Fill,
         })
 
@@ -8337,7 +8613,7 @@ do
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundColor3 = "FontColor",
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(10, 10),
+            Size = UDim2.fromOffset(9, 9),
             ZIndex = Bar.ZIndex + 2,
             Parent = Track,
         })
@@ -8356,12 +8632,12 @@ do
                 return
             end
             Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
-                Size = UDim2.fromOffset(12, 12),
+                Size = UDim2.fromOffset(11, 11),
             })
         end))
         table.insert(Slider.Connections, Bar.MouseLeave:Connect(function()
             Library:PlayTween(Thumb, "SliderHover", Library.TweenInfo, {
-                Size = UDim2.fromOffset(10, 10),
+                Size = UDim2.fromOffset(9, 9),
             })
         end))
 
@@ -8721,7 +8997,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Dropdown.Text and 43 or 25),
+            Size = UDim2.new(1, 0, 0, Dropdown.Text and Library:GetDesignToken("Size.Control", 25) + 18 or Library:GetDesignToken("Size.Control", 25)),
             Visible = Dropdown.Visible,
             Parent = Container,
         })
@@ -8730,7 +9006,7 @@ do
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 0, 14),
             Text = Dropdown.Text,
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
             Visible = not not Info.Text,
             ZIndex = 3,
@@ -8741,7 +9017,7 @@ do
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 25),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
             Text = "",
             TextTransparency = 1,
             ZIndex = 2,
@@ -8756,15 +9032,15 @@ do
 
         New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.25,
+            Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
             Parent = DisplayContainer,
         })
 
         local DropdownCorner = New("UICorner", {
-            TopLeftRadius = UDim.new(0, Library.CornerRadius / 2),
-            TopRightRadius = UDim.new(0, Library.CornerRadius / 2),
-            BottomRightRadius = UDim.new(0, Library.CornerRadius / 2),
-            BottomLeftRadius = UDim.new(0, Library.CornerRadius / 2),
+            TopLeftRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
+            TopRightRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
+            BottomRightRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
+            BottomLeftRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
             Parent = DisplayContainer,
         }); table.insert(Library.SpecificCorners, DropdownCorner)
 
@@ -8781,9 +9057,9 @@ do
         local DisplayButton = New("TextButton", {
             Active = not Dropdown.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 25),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Control", 25)),
             Text = "None",
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 2,
             Parent = DisplayContainer,
@@ -8797,7 +9073,7 @@ do
             ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
             ImageTransparency = 0.5,
             Position = UDim2.fromScale(1, 0.5),
-            Size = UDim2.fromOffset(16, 16),
+            Size = UDim2.fromOffset(14, 14),
             Parent = DisplayContainer,
         })
 
@@ -8808,7 +9084,7 @@ do
                 PlaceholderText = "Search...",
                 Position = UDim2.fromOffset(-8, 0),
                 Size = UDim2.new(1, -12, 1, 0),
-                TextSize = 14,
+                TextSize = Library:GetDesignToken("Size.Text", 14),
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Visible = false,
                 Parent = DisplayButton,
@@ -8870,8 +9146,9 @@ do
                     SearchBox.Visible = Active
                 end
 
-                DropdownCorner.BottomRightRadius = Active and UDim.new(0, 0) or UDim.new(0, Library.CornerRadius / 2)
-                DropdownCorner.BottomLeftRadius = Active and UDim.new(0, 0) or UDim.new(0, Library.CornerRadius / 2)
+                local Radius = Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))
+                DropdownCorner.BottomRightRadius = Active and UDim.new(0, 0) or UDim.new(0, Radius)
+                DropdownCorner.BottomLeftRadius = Active and UDim.new(0, 0) or UDim.new(0, Radius)
             end,
             false,
             "bottom",
@@ -8879,7 +9156,7 @@ do
         )
         Dropdown.Menu = MenuTable
 
-        local ItemHeight = 21
+        local ItemHeight = 23
         local PoolSize = math.max(1, Info.MaxVisibleDropdownItems + 2)
         local Pool = {}
         local FilteredEntries = {}
@@ -10733,6 +11010,24 @@ do
         return Passthrough
     end
 
+    function Funcs:AddAddon(Idx, Addon, Info)
+        if self.Destroyed then return nil end
+        assert(type(Addon) == "table", "Addon module must be a table")
+
+        local Mount = Addon.Mount
+        if type(Mount) ~= "function" then
+            Mount = Addon.CreateEmbedded
+        end
+        assert(type(Mount) == "function", "Addon module must expose Mount")
+
+        local Success, Result = pcall(Mount, Library, self, Idx, Info or {})
+        if not Success then
+            error("Unable to mount addon: " .. tostring(Result), 2)
+        end
+        assert(type(Result) == "table", "Addon mount must return a controller table")
+        return Result
+    end
+
     function Funcs:AddDependencyBox()
         if self.Destroyed then return nil end
 
@@ -11127,6 +11422,13 @@ function Library:SetTheme(Theme)
 
     local Radius = ThemeData.CornerRadius
     Library.CornerRadius = Radius
+    Library.Design.Radius.Window = Radius
+    Library.Design.Radius.Card = math.max(0, Radius - 1)
+    Library.Design.Radius.Popup = Radius
+    Library.Design.Radius.Control = math.max(0, Radius - 2)
+    Library.Design.Radius.Indicator = math.max(0, math.min(3, Radius - 2))
+    Library.Design.Addon.Radius = Library.Design.Radius.Card
+    Library.DesignRevision += 1
     Templates.Window.CornerRadius = Radius
     if Library.Window then
         Library.Window:SetCornerRadius(Radius)
@@ -11648,7 +11950,7 @@ function Library:CreateWindow(WindowInfo)
     
     Library.Animations = WindowInfo.Animations
     Library.TabTransitionInfo = TweenInfo.new(
-        math.max(0, WindowInfo.TabTransitionTime or 0.075),
+        math.max(0, WindowInfo.TabTransitionTime or Library.Design.Motion.TabEnter[1]),
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.Out
     )
@@ -11680,7 +11982,8 @@ function Library:CreateWindow(WindowInfo)
     local CompactLauncherTitleLabel
     local CompactLauncherStroke
     local CompactLauncherMotionScale
-    local BottomBarHeight = 20
+    local TopBarHeight = Library:GetDesignToken("Size.TopBar", 48)
+    local BottomBarHeight = Library:GetDesignToken("Size.Footer", 20)
 
     local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
     local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
@@ -11728,19 +12031,19 @@ function Library:CreateWindow(WindowInfo)
         })
         table.insert(Library.Scales, WindowScale)
         Library:AddOutline(MainFrame)
-        Library:AddSoftShadow(MainFrame, 18, 0.42, UDim2.fromOffset(0, 4))
+        Library:AddSoftShadow(MainFrame, 18, Library:GetDesignToken("Opacity.Shadow", 0.48), UDim2.fromOffset(0, 4))
         Library:MakeLine(MainFrame, {
             Color = function()
                 return Library:GetAccentSurfaceColor(0.2)
             end,
-            Position = UDim2.fromOffset(0, 48),
+            Position = UDim2.fromOffset(0, TopBarHeight),
             Size = UDim2.new(1, 0, 0, 1),
-            Transparency = 0.35,
+            Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
         })
 
         DividerLine = New("Frame", {
             BackgroundColor3 = "OutlineColor",
-            BackgroundTransparency = 0.35,
+            BackgroundTransparency = Library:GetDesignToken("Opacity.Divider", 0.56),
             Position = UDim2.fromOffset(InitialLeftWidth, 0),
             Size = UDim2.new(0, 1, 1, -(BottomBarHeight + 1)),
             Parent = MainFrame,
@@ -11778,7 +12081,7 @@ function Library:CreateWindow(WindowInfo)
         TopBar = New("Frame", {
             BackgroundColor3 = "TopBarColor",
             BackgroundTransparency = 0,
-            Size = UDim2.new(1, 0, 0, 48),
+            Size = UDim2.new(1, 0, 0, TopBarHeight),
             Parent = MainFrame,
         })
 
@@ -11921,7 +12224,7 @@ function Library:CreateWindow(WindowInfo)
         })
         local SearchStroke = New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = 0.25,
+            Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
             Parent = SearchBox,
         })
         SearchBox.Focused:Connect(function()
@@ -11935,7 +12238,7 @@ function Library:CreateWindow(WindowInfo)
             Library.Registry[SearchStroke].Color = "OutlineColor"
             Library:PlayTween(SearchStroke, "SearchFocus", Library.TweenInfo, {
                 Color = Library.Scheme.OutlineColor,
-                Transparency = 0.25,
+                Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
             })
         end)
 
@@ -11992,12 +12295,12 @@ function Library:CreateWindow(WindowInfo)
             Parent = MoveButton,
         })
         MoveButton.MouseEnter:Connect(function()
-            Library:PlayTween(MoveButton, "MoveButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Library:PlayTween(MoveButton, "MoveButtonHover", Library.HoverTweenInfo, {
                 BackgroundTransparency = 0.78,
             })
         end)
         MoveButton.MouseLeave:Connect(function()
-            Library:PlayTween(MoveButton, "MoveButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Library:PlayTween(MoveButton, "MoveButtonHover", Library.HoverTweenInfo, {
                 BackgroundTransparency = 1,
             })
         end)
@@ -12044,18 +12347,18 @@ function Library:CreateWindow(WindowInfo)
                 Parent = MinimizeButton,
             })
             MinimizeButton.MouseEnter:Connect(function()
-                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", Library.HoverTweenInfo, {
                     BackgroundTransparency = 0.78,
                 })
-                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", Library.HoverTweenInfo, {
                     Transparency = 0.48,
                 })
             end)
             MinimizeButton.MouseLeave:Connect(function()
-                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Library:PlayTween(MinimizeButton, "MinimizeButtonHover", Library.HoverTweenInfo, {
                     BackgroundTransparency = 1,
                 })
-                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Library:PlayTween(MinimizeStroke, "MinimizeButtonHover", Library.HoverTweenInfo, {
                     Transparency = 0.74,
                 })
             end)
@@ -12148,13 +12451,13 @@ function Library:CreateWindow(WindowInfo)
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             BackgroundColor3 = "BackgroundColor",
             CanvasSize = UDim2.fromScale(0, 0),
-            Position = UDim2.fromOffset(0, 49),
+            Position = UDim2.fromOffset(0, TopBarHeight + 1),
             ScrollBarImageColor3 = "AccentColor",
             ScrollBarImageTransparency = 1,
             ScrollBarThickness = 2,
             VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
             ScrollingDirection = Enum.ScrollingDirection.Y,
-            Size = UDim2.new(0, InitialLeftWidth, 1, -(50 + BottomBarHeight)),
+            Size = UDim2.new(0, InitialLeftWidth, 1, -(TopBarHeight + 2 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIListLayout", {
@@ -12177,8 +12480,8 @@ function Library:CreateWindow(WindowInfo)
             BackgroundColor3 = "BackgroundColor",
             ClipsDescendants = true,
             Name = "Container",
-            Position = UDim2.new(1, 0, 0, 49),
-            Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -(50 + BottomBarHeight)),
+            Position = UDim2.new(1, 0, 0, TopBarHeight + 1),
+            Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -(TopBarHeight + 2 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIPadding", {
@@ -12701,7 +13004,7 @@ function Library:CreateWindow(WindowInfo)
             local UICorner = Library.Corners[Index]
             if not UICorner or not UICorner.Parent then
                 table.remove(Library.Corners, Index)
-            elseif UICorner.CornerRadius.Offset == HalfCurrent then
+            elseif math.abs(UICorner.CornerRadius.Offset - HalfCurrent) <= 1 then
                 UICorner.CornerRadius = RadiusHalf
             else
                 UICorner.CornerRadius = RadiusUDim
@@ -12747,7 +13050,7 @@ function Library:CreateWindow(WindowInfo)
 
         if typeof(TabTransitionTime) == "number" then
             local TweenInfo = TweenInfo.new(
-                math.max(0, TabTransitionTime or 0.075),
+                math.max(0, TabTransitionTime or Library.Design.Motion.TabEnter[1]),
                 Enum.EasingStyle.Quint,
                 Enum.EasingDirection.Out
             )
@@ -12825,8 +13128,8 @@ function Library:CreateWindow(WindowInfo)
 
         TitleHolder.Size = UDim2.new(0, Width, 1, 0)
         RightWrapper.Size = UDim2.new(1, -Width - HeaderControlWidth - 8, 1, -16)
-        Tabs.Size = UDim2.new(0, Width, 1, -(50 + BottomBarHeight))
-        Container.Size = UDim2.new(1, -Width - 1, 1, -(50 + BottomBarHeight))
+        Tabs.Size = UDim2.new(0, Width, 1, -(TopBarHeight + 2 + BottomBarHeight))
+        Container.Size = UDim2.new(1, -Width - 1, 1, -(TopBarHeight + 2 + BottomBarHeight))
 
         if WindowInfo.EnableCompacting then
             ApplyCompact()
@@ -12951,7 +13254,7 @@ function Library:CreateWindow(WindowInfo)
         local TabCanvas
         local TabLeft
         local TabRight
-        local ColumnGap = 10
+        local ColumnGap = Library:GetDesignToken("Spacing.Section", 10)
         local ColumnOffset = ColumnGap / 2
 
         Icon = Library:GetCustomIcon(Icon)
@@ -13036,14 +13339,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 8),
+                Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
                 Parent = TabLeft,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 14),
-                PaddingLeft = UDim.new(0, 8),
-                PaddingRight = UDim.new(0, 8),
-                PaddingTop = UDim.new(0, 8),
+                PaddingBottom = UDim.new(0, Library:GetDesignToken("Spacing.Large", 12)),
+                PaddingLeft = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+                PaddingRight = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+                PaddingTop = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
                 Parent = TabLeft,
             })
             do
@@ -13074,14 +13377,14 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 8),
+                Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
                 Parent = TabRight,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 14),
-                PaddingLeft = UDim.new(0, 8),
-                PaddingRight = UDim.new(0, 8),
-                PaddingTop = UDim.new(0, 8),
+                PaddingBottom = UDim.new(0, Library:GetDesignToken("Spacing.Large", 12)),
+                PaddingLeft = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+                PaddingRight = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+                PaddingTop = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
                 Parent = TabRight,
             })
             do
@@ -13746,9 +14049,10 @@ function Library:CreateWindow(WindowInfo)
 
             local GroupboxCollapseArrow
             local GroupboxLine
-            local GroupboxHeaderHeight = 35
-            local GroupboxTopPadding = 7
-            local GroupboxBottomPadding = 12
+            local GroupboxHeaderHeight = Library:GetDesignToken("Size.GroupHeader", 35)
+            local GroupboxTopPadding = Library:GetDesignToken("Spacing.Medium", 8)
+            local GroupboxBottomPadding = Library:GetDesignToken("Spacing.Large", 12)
+            local GroupboxHorizontalPadding = Library:GetDesignToken("Spacing.Medium", 8)
 
             do
                 GroupboxHolder = New("Frame", {
@@ -13760,7 +14064,7 @@ function Library:CreateWindow(WindowInfo)
                 table.insert(
                     Library.Corners,
                     New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                        CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", math.max(WindowInfo.CornerRadius - 1, 2))),
                         Parent = GroupboxHolder,
                     })
                 )
@@ -13770,9 +14074,9 @@ function Library:CreateWindow(WindowInfo)
                     Color = function()
                         return Library:GetAccentSurfaceColor(0.1)
                     end,
-                    Position = UDim2.fromOffset(0, 34),
+                    Position = UDim2.fromOffset(0, GroupboxHeaderHeight - 1),
                     Size = UDim2.new(1, 0, 0, 1),
-                    Transparency = 0.42,
+                    Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
                 })
 
                 local BoxIcon = Library:GetCustomIcon(Info.IconName)
@@ -13782,8 +14086,8 @@ function Library:CreateWindow(WindowInfo)
                         ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
                         ImageRectOffset = BoxIcon.ImageRectOffset,
                         ImageRectSize = BoxIcon.ImageRectSize,
-                        Position = UDim2.fromOffset(6, 6),
-                        Size = UDim2.fromOffset(22, 22),
+                        Position = UDim2.fromOffset(8, math.floor((GroupboxHeaderHeight - 18) * 0.5)),
+                        Size = UDim2.fromOffset(18, 18),
                         Parent = GroupboxHolder,
                     })
                 end
@@ -13791,16 +14095,16 @@ function Library:CreateWindow(WindowInfo)
                 GroupboxLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
                     Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
-                    Size = UDim2.new(1, -(BoxIcon and 24 or 0), 0, 34),
+                    Size = UDim2.new(1, -(BoxIcon and 24 or 0), 0, GroupboxHeaderHeight - 1),
                     Text = Info.Name,
-                    TextSize = 15,
+                    TextSize = Library:GetDesignToken("Size.Text", 14),
                     TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = GroupboxHolder,
                 })
                 New("UIPadding", {
-                    PaddingLeft = UDim.new(0, 12),
-                    PaddingRight = UDim.new(0, Info.DisableCollapsing == true and 12 or 38),
+                        PaddingLeft = UDim.new(0, Library:GetDesignToken("Spacing.Large", 12)),
+                        PaddingRight = UDim.new(0, Info.DisableCollapsing == true and 12 or 36),
                     Parent = GroupboxLabel,
                 })
 
@@ -13812,27 +14116,27 @@ function Library:CreateWindow(WindowInfo)
                         ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
                         BackgroundTransparency = 1,
                         Rotation = 180,
-                        Position = UDim2.new(1, -(22 + 6), 0, 6),
-                        Size = UDim2.fromOffset(22, 22),
+                        Position = UDim2.new(1, -30, 0, math.floor((GroupboxHeaderHeight - 18) * 0.5)),
+                        Size = UDim2.fromOffset(18, 18),
                         Parent = GroupboxHolder,
                     })
                 end
 
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 1, -35),
+                    Position = UDim2.fromOffset(0, GroupboxHeaderHeight),
+                    Size = UDim2.new(1, 0, 1, -GroupboxHeaderHeight),
                     Parent = GroupboxHolder,
                 })
 
                 GroupboxList = New("UIListLayout", {
-                    Padding = UDim.new(0, 8),
+                    Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
                     Parent = GroupboxContainer,
                 })
                 New("UIPadding", {
                     PaddingBottom = UDim.new(0, GroupboxBottomPadding),
-                    PaddingLeft = UDim.new(0, 8),
-                    PaddingRight = UDim.new(0, 8),
+                    PaddingLeft = UDim.new(0, GroupboxHorizontalPadding),
+                    PaddingRight = UDim.new(0, GroupboxHorizontalPadding),
                     PaddingTop = UDim.new(0, GroupboxTopPadding),
                     Parent = GroupboxContainer,
                 })
@@ -13875,7 +14179,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 local ExpandedHeight = GroupboxHeaderHeight + ContentBottom + GroupboxBottomPadding
-                local TargetSize = UDim2.new(1, 0, 0, Groupbox.Collapsed and 34 or math.ceil(ExpandedHeight))
+                local TargetSize = UDim2.new(1, 0, 0, Groupbox.Collapsed and GroupboxHeaderHeight or math.ceil(ExpandedHeight))
 
                 GroupboxLine.Visible = not Groupbox.Collapsed
                 local AnimateResize = Library.Animations
@@ -13885,7 +14189,7 @@ function Library:CreateWindow(WindowInfo)
                     and GroupboxHolder.AbsoluteSize.Y > 0
 
                 if AnimateResize then
-                    local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+                    local TweenInfo = Library.GroupboxTweenInfo or Library:GetMotion("Popup")
                     Library:PlayTween(GroupboxHolder, "GroupboxSize", TweenInfo, { Size = TargetSize })
                 else
                     Library:CancelTween(GroupboxHolder, "GroupboxSize")
@@ -13926,7 +14230,7 @@ function Library:CreateWindow(WindowInfo)
 
                 GroupboxContainer.Visible = not Collapsed
                 if Library.Animations and Library.Animations.Groupbox then
-                    local TweenInfo = Library.RotatingChevronTweenInfo or TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+                    local TweenInfo = Library.RotatingChevronTweenInfo or Library:GetMotion("Control")
                     Library:PlayTween(GroupboxCollapseArrow, "GroupboxChevron", TweenInfo, { Rotation = TargetRotation })
                 else
                     Library:CancelTween(GroupboxCollapseArrow, "GroupboxChevron")
@@ -16497,7 +16801,7 @@ local DefaultFont, DefaultFontError = Library:LoadCustomFont(
     Library.DefaultFontURL,
     Library.DefaultFontWeight
 )
-Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.Gotham)
+Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.GothamMedium)
 Library.DefaultFontError = DefaultFontError
 Library:SetThemeFont(Library.DefaultFont)
 

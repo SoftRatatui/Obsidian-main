@@ -35,10 +35,10 @@ Use the raw GitHub URL only after the changes are published:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-7-esp-1"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-release-6" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-7" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-7", tostring(Library.ReleaseVersion)))
 end
 ```
 
@@ -52,10 +52,10 @@ Create a small legacy-style interface first:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-7-esp-1"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-release-6" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-7" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-7", tostring(Library.ReleaseVersion)))
 end
 
 local Window = Library:CreateWindow({
@@ -125,13 +125,13 @@ local Window = Library:CreateWindow({
         Dropdown = true,
         KeyPicker = true,
     },
-    TabTransitionTime = 0.075,
+    TabTransitionTime = 0.07,
     TabSwipeOffset = 2,
     TabSwipeFrom = "bottom",
 })
 ```
 
-`Default`, Gotham Regular, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette separates the window background, cards, raised overlays, controls, hover states, muted text, and soft accent surfaces instead of deriving every component from one color. `Metal` is the violet reference preset and `Midnight` is the near-black neutral preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
+`Default`, Gotham Medium, a restrained 6px outer radius, compact square checkmarks, and a footer are the normal MonHub profile. Its neutral-gray palette separates the window background, cards, raised overlays, controls, hover states, muted text, and soft accent surfaces instead of deriving every component from one color. `Metal` is the violet reference preset and `Midnight` is the near-black neutral preset. The window is clamped to the viewport. The top-right move icon repositions the main window.
 
 Runtime window setters are available when a value needs to change after construction:
 
@@ -451,7 +451,7 @@ Loading:Continue()
 
 ### Built-in themes
 
-The release ships six restrained palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a desaturated violet accent. `Midnight` uses near-black surfaces and a low-saturation steel accent. `Steel` is a cool blue-gray preset, `Sage` is a quiet green-gray preset, and `Ash` is a warm neutral preset. Every palette uses Gotham Regular, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
+The release ships six restrained palettes. `Default` starts automatically with layered neutral-gray surfaces and a muted slate accent. `Metal` uses dark neutral surfaces with a desaturated violet accent. `Midnight` uses near-black surfaces and a low-saturation steel accent. `Steel` is a cool blue-gray preset, `Sage` is a quiet green-gray preset, and `Ash` is a warm neutral preset. Every palette uses Gotham Medium, restrained 6px outer geometry, subtle single-pixel outlines, and semantic warning/danger colors. The interface feels soft through text contrast, spacing, surface hierarchy, and short motion—not blanket rounding.
 
 Every preset supplies `BackgroundColor`, `SurfaceColor`, `RaisedColor`, `ElementColor`, `HoverColor`, `TopBarColor`, `AccentColor`, `AccentSoftColor`, `OutlineColor`, `FontColor`, `MutedFontColor`, and `ShadowColor`. `SetTheme` copies the complete preset, updates the instance registry, then refreshes stateful controls such as active toggles, disabled sliders, buttons, and the compact launcher. This order is deliberate: a theme switch cannot leave an old hover color, top bar, footer, popup, or active control behind. Supported clients receive one subtle `UIShadow` on elevated windows, dialogs, notifications, and the launcher; unsupported clients fall back silently to the normal outline, and ordinary controls never receive individual blurred shadows.
 
@@ -468,7 +468,7 @@ Library:SetTheme("Ash")
 
 ### Font policy
 
-Inter Bold is loaded automatically by `Library.lua` before the first window is created. The same `Library.Scheme.Font` is used by windows, controls, overlays, notifications, keybind rows, previews, galleries, and dashboard addons. The downloaded TTF and its generated metadata are cached in `MonHub/assets`, so the network is used only when the cached font is missing or invalid.
+Inter Medium is loaded automatically by `Library.lua` before the first window is created. The same `Library.Scheme.Font` is used by windows, controls, overlays, notifications, keybind rows, previews, galleries, and dashboard addons. The downloaded TTF and its generated metadata are cached in `MonHub/assets`, so the network is used only when the cached font is missing or invalid.
 
 ```luau
 local ActiveFont = Library.DefaultFont
@@ -485,7 +485,7 @@ Theme updates are transactional. Every registered property is isolated during re
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-7"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -500,7 +500,7 @@ Build every control before loading configurations:
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-7"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -579,10 +579,10 @@ Complete setup:
 
 ```luau
 local UniversalESP = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/ESP.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/ESP.lua?monhub=0.0.1-release-7-esp-1"
 ))()
 local UniversalESPUI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/MonHubUI.lua?monhub=0.0.1-release-6-esp-1"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/esp/MonHubUI.lua?monhub=0.0.1-release-7-esp-1"
 ))()
 
 local ESP = UniversalESP.new({
@@ -715,10 +715,10 @@ Performance guidance:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-7"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-7"
 ))()
 local Players = game:GetService("Players")
 
@@ -790,16 +790,16 @@ For a custom live ESP backend, pass an adapter table with `AttachPreview(Preview
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-7"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-7"
 ))()
 local FixedR6Preview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-7"
 ))()
 
 local Window = Library:CreateWindow({ Title = "Visual test" })
@@ -826,10 +826,10 @@ The gallery uses a fixed cell pool for one page. With `PageSize = 15`, only fift
 
 ```luau
 local ImageGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 local ImagePreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 
 local SkinGrid = Tabs.Visuals:AddLeftGroupbox("Skins", "layout-grid")
@@ -914,7 +914,7 @@ Keep the item list as plain data and load thumbnails rather than full-resolution
 
 ```luau
 local CharacterTrail = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-7"
 ))()
 
 local TrailController = CharacterTrail.Create({
@@ -948,7 +948,7 @@ Controller methods are `SetEnabled`, `SetTarget`, `SetColors`, `SetTransparency`
 
 ```luau
 local TextureGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 local TextureGroup = Tabs.Effects:AddLeftGroupbox("Trail textures", "gallery-horizontal")
 local Gallery = TextureGallery.CreateEmbedded(Library, TextureGroup, "TrailTextures", {
@@ -978,7 +978,7 @@ The intentionally small API is `SetItems`, `Select`, `GetSelected`, `SetColumns`
 
 ```luau
 local DashboardWindow = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-7-dashboard-ui-2"
 ))()
 
 local Dashboard = DashboardWindow.Create(Library, {
@@ -1095,9 +1095,55 @@ Library:AddToRegistry(CustomFrame, {
 
 `AddDraggableLabel`, `AddDraggableButton`, `AddDraggableImageButton`, and `AddDraggableMenu` create clamped reusable overlays. `AddContextMenu` and `AddTooltip` are available for custom controls. Keep custom overlays small and viewport-clamped so they do not block gameplay input.
 
+### Design system
+
+Release 7 uses one design contract for the core UI and visual addons. Colors still come from `Library.Scheme`; geometry, spacing, density, outlines, typography sizes, and motion come from `Library.Design`. Set project-wide overrides before creating the window so every new component receives the same values.
+
+```luau
+Library:SetDesign({
+    Spacing = {
+        Medium = 8,
+        Section = 10,
+    },
+    Radius = {
+        Window = 6,
+        Card = 5,
+        Control = 4,
+    },
+    Motion = {
+        Scale = 0.9,
+    },
+    Addon = {
+        Padding = 8,
+        Gap = 7,
+        Radius = 5,
+        OutlineTransparency = 0.46,
+    },
+})
+```
+
+`GetDesignToken("Radius.Card", 5)` reads one value safely. `GetMotion("Hover")`, `GetMotion("Popup")`, and the other named motion presets return the current `TweenInfo`. `SetReducedMotion(true)` keeps all behavior but resolves managed motion to zero duration. `CreateSurface` and `CreateDivider` are the preferred primitives for custom addon panels because they register theme colors, use the shared outline treatment, and avoid one-off visual constants.
+
+Every UI addon accepts an optional `Style` table. It is merged over `Library.Design.Addon`, so a single addon may change padding, gap, radius, outline transparency, header height, control height, text sizes, or motion without forking its source.
+
+```luau
+local Gallery = GalleryGroup:AddAddon("Skins", ImageGallery, {
+    Height = 330,
+    Columns = 3,
+    Items = SkinItems,
+    Style = {
+        Gap = 8,
+        Radius = 5,
+        Motion = true,
+    },
+})
+```
+
+`Groupbox:AddAddon` is the standard lazy mount path. It requires an addon table with `Mount`, creates only the requested addon, returns its controller, and preserves the normal `AddUIPassthrough` lifecycle. `ImageGallery`, `ImagePreview`, `TextureGallery`, `TracerPreview`, and `VisualPreview` expose this contract. Direct `Create` and `CreateEmbedded` calls remain supported for existing scripts.
+
 ## Motion, performance, and lifecycle
 
-The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window opening and closing use 90ms and 60ms opacity-only transitions, with no scale or font resizing. Tabs use a 75ms entry and a 45ms exit fade with a 2px maximum offset. Keybind overlays use a 70ms fade, keybind rows use 75ms, and standard controls use 110ms state transitions. Gotham Regular remains the zero-download fallback; the complete showcase installs the packaged Inter Bold font. The real character Trail uses native Roblox rendering and character events rather than `RenderStepped`. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
+The library coalesces viewport fitting, search, dependency updates, and motion. It uses keyed short tweens for hover, keybind menus, notifications, dialogs, tab content, and the compact launcher; it adds no perpetual glow or render-loop effect. Window opening and closing use 85ms and 55ms opacity-only transitions, with no scale or font resizing. Tabs use a 70ms entry and a 40ms exit fade with a 2px maximum offset. Keybind overlays use a 60ms fade, hover and keybind rows use 70ms, and standard controls use 100ms state transitions. Gotham Medium remains the zero-download fallback; the complete showcase installs the packaged Inter Medium font. The real character Trail uses native Roblox rendering and character events rather than `RenderStepped`. Avoid `RenderStepped` or `while task.wait()` loops for UI-only changes when an `OnChanged` callback, a dependency box, or a setter is enough.
 
 ```luau
 Window:SetAnimations({
@@ -1106,7 +1152,7 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.075, 2, "bottom")
+}, 0.07, 2, "bottom")
 
 Library:Notify({
     Title = "Saved",
@@ -1128,11 +1174,11 @@ Window hide and restore animations are intentionally short and opacity-led so te
 
 ### Changes do not appear after restarting
 
-First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-release-6` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
+First confirm that GitHub Desktop pushed the repository and branch used by the raw URL. Then check the loader URL itself. Some executors and intermediary caches retain a previous response for an unchanged raw URL even when `main` points at a newer commit. Every current loader therefore appends `?monhub=0.0.1-release-7` to `Library.lua` and every addon. Increase this release value whenever publishing a new build, and use the same value for Library, ThemeManager, SaveManager, VisualPreview, and the project script. For a local test, use `loadstring(readfile("Library.lua"))()` so no HTTP cache is involved.
 
 Do not mix an updated ThemeManager with an older Library. If a selector shows a new preset but most surfaces keep an earlier palette, the two modules came from different cached revisions. A versioned URL prevents that mixed state.
 
-The current build reports `Library.ReleaseVersion == "0.0.1-release-6"`. Project loaders compare this value before creating the window and emit a non-blocking warning when an executor returns an older cached build. A patch-level mismatch never prevents the interface from starting.
+The current build reports `Library.ReleaseVersion == "0.0.1-release-7"`. Project loaders compare this value before creating the window and emit a non-blocking warning when an executor returns an older cached build. A patch-level mismatch never prevents the interface from starting.
 
 The current Library also unloads an older MonHub instance before creating its ScreenGui. This prevents a previous window from remaining underneath or above the new release during repeated executor runs. A full rejoin is no longer required for normal UI updates, although game-specific script state may still require its own cleanup.
 
@@ -1166,7 +1212,7 @@ This section focuses on moving an existing Obsidian project to MonHub without re
 
 MonHub keeps the legacy API: `CreateWindow`, `AddTab`, groupboxes, controls, `SaveManager`, `Library.Options`, and `Library.Toggles` continue to work. `ThemeManager` now provides a minimal built-in preset selector.
 
-The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Regular fallback typography, packaged Inter Bold support, responsive sidebar behavior, compact checkmark toggles, short motion, a draggable clamped watermark, R6 ESP preview support, a native character Trail addon, optimized search, and a declarative API.
+The release baseline is a neutral-gray `Default` theme with violet `Metal` and near-black `Midnight` presets, Gotham Medium fallback typography, packaged Inter Medium support, responsive sidebar behavior, compact checkmark toggles, short motion, a draggable clamped watermark, R6 ESP preview support, a native character Trail addon, optimized search, and a declarative API.
 
 ### Useful links
 
@@ -1187,7 +1233,7 @@ The release baseline is a neutral-gray `Default` theme with violet `Metal` and n
 - [TextureGallery.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TextureGallery.lua)
 - [FixedR6Preview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/FixedR6Preview.lua)
 - [DashboardWindow.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/DashboardWindow.lua)
-- [Inter-Bold.ttf](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/assets/Inter-Bold.ttf)
+- [Inter-Medium.ttf](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/assets/Inter-Medium.ttf)
 - [Legacy TracerPreview.lua](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/addons/TracerPreview.lua)
 - [Current type declarations](https://github.com/SoftRatatui/Obsidian-main/blob/main/Obsidian-main/Library.d.luau)
 - [Changelog](#changelog)
@@ -1220,10 +1266,10 @@ Replace it with MonHub:
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-release-6" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-7" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-7", tostring(Library.ReleaseVersion)))
 end
 ```
 
@@ -1235,10 +1281,10 @@ Do not move to the declarative API during the first migration. Existing code can
 
 ```luau
 local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/Library.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
-if Library.ReleaseVersion ~= "0.0.1-release-6" then
-    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-6", tostring(Library.ReleaseVersion)))
+if Library.ReleaseVersion ~= "0.0.1-release-7" then
+    warn(string.format("MonHub version notice: expected %s, received %s", "0.0.1-release-7", tostring(Library.ReleaseVersion)))
 end
 
 local Window = Library:CreateWindow({
@@ -1251,7 +1297,7 @@ local Window = Library:CreateWindow({
     EnableSidebarResize = true,
     Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.075,
+    TabTransitionTime = 0.07,
     TabSwipeOffset = 2,
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
 })
@@ -1315,7 +1361,7 @@ local Window = Library:CreateWindow({
     ShowCustomCursor = true,
     Font = Enum.Font.Gotham,
     CornerRadius = 6,
-    TabTransitionTime = 0.075,
+    TabTransitionTime = 0.07,
     TabSwipeOffset = 2,
     TabSwipeFrom = "bottom",
     Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(720, 680),
@@ -1545,7 +1591,7 @@ Options.Quality:SetValue("High")
 
 ### Theme presets and font policy
 
-`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the desaturated violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. `Steel`, `Sage`, and `Ash` add cool blue-gray, quiet green-gray, and warm-neutral alternatives. Every preset uses Gotham Regular, restrained outer geometry, and subtle single-pixel outlines. Background, card, raised overlay, control, hover, muted text, and soft accent surfaces are separate semantic tokens. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
+`Default` applies automatically with neutral-gray surfaces and a muted slate accent. `Metal` is the desaturated violet preset based on the release reference. `Midnight` is a near-black neutral preset with a muted steel accent. `Steel`, `Sage`, and `Ash` add cool blue-gray, quiet green-gray, and warm-neutral alternatives. Every preset uses Gotham Medium, restrained outer geometry, and subtle single-pixel outlines. Background, card, raised overlay, control, hover, muted text, and soft accent surfaces are separate semantic tokens. Softness comes from readable type, balanced contrast, regular spacing, and short movement—not blanket corner rounding.
 
 ```luau
 Library:SetTheme("Default")
@@ -1560,7 +1606,7 @@ The release contains exactly these six built-ins. Legacy preset names resolve sa
 
 Old theme files and marker files are not automatically deleted, but they are not applied. This leaves future recovery possible without allowing stale data to damage the release interface.
 
-Inter Bold is now loaded automatically before the first window is created and becomes the shared font for the core UI and every theme-aware addon:
+Inter Medium is now loaded automatically before the first window is created and becomes the shared font for the core UI and every theme-aware addon:
 
 ```luau
 local ActiveFont = Library.DefaultFont
@@ -1615,10 +1661,10 @@ Load the addon from the same commit as `Library.lua`:
 
 ```luau
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-7"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-7"
 ))()
 local Players = game:GetService("Players")
 
@@ -1677,7 +1723,7 @@ Replace decorative `TracerPreview` usage with `addons/CharacterTrail.lua` when t
 
 ```luau
 local CharacterTrail = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/CharacterTrail.lua?monhub=0.0.1-release-7"
 ))()
 
 local TrailController = CharacterTrail.Create({
@@ -1712,19 +1758,19 @@ These modules remain standalone and are loaded only by projects that need them:
 
 ```luau
 local TextureGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/TextureGallery.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 local DashboardWindow = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-6-dashboard-ui-2"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DashboardWindow.lua?monhub=0.0.1-release-7-dashboard-ui-2"
 ))()
 local VisualPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/VisualPreview.lua?monhub=0.0.1-release-7"
 ))()
 local DrawingESPPreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/DrawingESPPreview.lua?monhub=0.0.1-release-7"
 ))()
 local FixedR6Preview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/FixedR6Preview.lua?monhub=0.0.1-release-7"
 ))()
 ```
 
@@ -1791,10 +1837,10 @@ Image-heavy selectors are separate opt-in addons and are never loaded by the cor
 
 ```luau
 local ImageGallery = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImageGallery.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 local ImagePreview = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-6-image-ui-3"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ImagePreview.lua?monhub=0.0.1-release-7-image-ui-3"
 ))()
 
 local Look = ImagePreview.CreateEmbedded(Library, PreviewGroup, "SkinLook", {
@@ -1863,7 +1909,7 @@ Load `ThemeManager.lua` when the UI Settings page should expose the six built-in
 
 ```luau
 local ThemeManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/ThemeManager.lua?monhub=0.0.1-release-7"
 ))()
 
 ThemeManager:SetLibrary(Library)
@@ -1876,7 +1922,7 @@ The addon creates a minimal `Default` / `Metal` / `Midnight` / `Steel` / `Sage` 
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-6"
+    "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/addons/SaveManager.lua?monhub=0.0.1-release-7"
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -1962,10 +2008,10 @@ Window:SetAnimations({
     Groupbox = true,
     Dropdown = true,
     KeyPicker = true,
-}, 0.075, 2, "bottom")
+}, 0.07, 2, "bottom")
 ```
 
-Window opening uses a 90ms opacity-only transition and closing uses 60ms, without scale or font resizing. Tabs crossfade in 75ms and leave in 45ms with only 2px of travel. The keybind overlay fades in 70ms, its rows settle in 75ms, and standard controls use 110ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
+Window opening uses an 85ms opacity-only transition and closing uses 55ms, without scale or font resizing. Tabs crossfade in 70ms and leave in 40ms with only 2px of travel. The keybind overlay fades in 60ms, its rows settle in 70ms, and standard controls use 100ms state transitions. For an immediate UI, disable one animation category instead of all transitions. Repeated hover or a repeated state assignment does not create a new tween because the library reuses the current target.
 
 For custom controls that change multiple values in one callback, call `Library:QueueDependencyUpdate()`. The library then performs one dependency pass at the end of the current task cycle.
 
@@ -2112,7 +2158,7 @@ Fix: verify the URL and restart the session.
 
 #### Font Face becomes Code
 
-Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Regular until a project explicitly installs the packaged Inter Bold font. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
+Use the current `Library.lua` and remove any old ThemeManager UI that creates a font selector. The release themes use Gotham Medium until a project explicitly installs the packaged Inter Medium font. Legacy raw appearance fields must be included in `SaveManager:IgnoreThemeSettings()` during config migration.
 
 #### A configuration does not load
 
@@ -2145,11 +2191,11 @@ Check `Object`, `Clone`, `PrimaryPart`, bounding box, and `AutoFocus`. For a `Mo
 
 - [ ] The raw URL points to MonHub.
 - [ ] Library and addons come from one version.
-- [ ] `Library.ReleaseVersion` reports `0.0.1-release-6`; a mismatch is informational and never blocks startup.
+- [ ] `Library.ReleaseVersion` reports `0.0.1-release-7`; a mismatch is informational and never blocks startup.
 - [ ] Existing control IDs are preserved.
 - [ ] Default applies as the neutral-gray startup theme.
 - [ ] Metal applies as the violet alternate theme.
-- [ ] Gotham Regular is not replaced by Code, or packaged Inter Bold loads successfully before window creation.
+- [ ] Gotham Medium is not replaced by Code, or packaged Inter Medium loads successfully before window creation.
 - [ ] The window fits the desktop viewport.
 - [ ] Sidebar compact works on mobile.
 - [ ] Toggle and checkbox callbacks work.
@@ -2186,7 +2232,7 @@ This order localizes errors and makes each stage easy to roll back.
 ## Release checklist
 
 - [ ] `Library.lua`, `ThemeManager.lua`, `SaveManager.lua`, and optional addons come from one commit.
-- [ ] `Library.ReleaseVersion` reports `0.0.1-release-6`; a cache mismatch warns but never blocks startup.
+- [ ] `Library.ReleaseVersion` reports `0.0.1-release-7`; a cache mismatch warns but never blocks startup.
 - [ ] Local changes are tested with a local loader before publishing.
 - [ ] All user-facing labels and notifications are English.
 - [ ] The window is readable at desktop and narrow/mobile widths.
@@ -2200,12 +2246,35 @@ This order localizes errors and makes each stage easy to roll back.
 - [ ] `Dashboard:Destroy()` is called automatically by library unload or explicitly by project cleanup.
 - [ ] A fixed R6 preview receives the live renderer adapter when it must match production ESP exactly.
 - [ ] `ESP:Destroy()` runs during unload when the universal ESP addon is enabled.
-- [ ] `assets/Inter-Bold.ttf` is published with the same release when the custom font is enabled.
+- [ ] `assets/Inter-Medium.ttf` is published with the same release when the custom font is enabled.
 - [ ] This `GUIDE.md` is updated for every public API or behavior change.
 
 For the complete showcase, see [Example.lua](Example.lua). For exact production type signatures, see [Library.d.luau](Library.d.luau). The project is distributed under the terms in [LICENSE](LICENSE).
 
 ## Changelog
+
+### 04.09.2026
+
+```diff
+[design system]
++ Added one public design-token contract for spacing, radii, sizes, strokes, opacity, addon density, and motion
++ Rebalanced the neutral interface around layered surfaces, quieter outlines, compact controls, and restrained radii
++ Added shared surface and divider primitives for theme-complete custom modules
+
+[addons]
++ Added the lazy Groupbox:AddAddon mount contract while preserving direct Create and CreateEmbedded compatibility
++ Unified DashboardWindow, ImageGallery, ImagePreview, TextureGallery, TracerPreview, and VisualPreview under the same addon style contract
++ Added per-addon Style overrides for spacing, density, outline strength, typography, and motion
+
+[motion and performance]
++ Replaced local addon transition constants with short shared motion presets
++ Added a global motion scale and reduced-motion switch
++ Kept addons opt-in and preserved pooled galleries, keyed tween cancellation, and event-driven updates
+
+[stability]
++ Preserved the existing MonHub component API instead of replacing it with either incompatible reference library
++ Updated the declaration file, complete example, release identifiers, and canonical guide for the new contract
+```
 
 ### 29.08.2026
 
@@ -2262,7 +2331,7 @@ For the complete showcase, see [Example.lua](Example.lua). For exact production 
 + Reclamped window size and position after the first absolute-layout update and every viewport resize to prevent first-frame edge overflow
 
 [typography]
-+ Installed assets/Inter-Bold.ttf automatically from Library.lua as the global core and addon font with a cached Gotham fallback
++ Installed assets/Inter-Medium.ttf automatically from Library.lua as the global core and addon font with a cached Gotham fallback
 + Resolved custom font weights from 100 through 900 instead of always requesting Regular from the generated family
 
 [visual addons]
@@ -2279,7 +2348,7 @@ For the complete showcase, see [Example.lua](Example.lua). For exact production 
 + Removed the temporary alternate loader, duplicate library build, and alternate showcase so Library.lua is the only maintained core
 + Standardized repository documentation in English and repaired the Wally/Studio section link
 + Verified that executable source and documented code examples contain no comments or authoring metadata
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and release URLs for 0.0.1-release-6
++ Updated GUIDE.md, Example.lua, and release URLs for the current build
 ```
 
 ### 23.08.2026
@@ -2305,7 +2374,7 @@ For the complete showcase, see [Example.lua](Example.lua). For exact production 
 + Removed two decorative instances from every sidebar tab
 
 [documentation]
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, and README.md with the shared live renderer contract, optional gallery, and animated 2D preview
++ Updated GUIDE.md with the shared live renderer contract, optional gallery, and animated 2D preview
 ```
 
 ### 22.08.2026
@@ -2334,8 +2403,8 @@ For the complete showcase, see [Example.lua](Example.lua). For exact production 
 + Removed warning and danger button styling and automatic semantic button icons; legacy values now resolve to the neutral default style
 + Added a minimal ThemeManager preset dropdown whose ThemeManager_ThemeList value persists with SaveManager configurations
 + Kept raw legacy palette fields and custom theme files isolated so they cannot leave the interface in a mixed visual state
-+ Standardized the release typography on readable Gotham Regular
-+ Updated GUIDE.md, MIGRATION_GUIDE.md, README.md, Example.lua, and type declarations for the six-theme release contract
++ Standardized the release typography on readable Gotham Medium
++ Updated GUIDE.md, Example.lua, and type declarations for the six-theme release contract
 
 [design]
 + Reduced visual noise with one subtle outline per surface instead of paired outline and shadow strokes

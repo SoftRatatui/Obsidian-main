@@ -26,6 +26,33 @@ export type Scheme = {
     BackgroundImage: string | number,
 }
 
+export type Design = {
+    Spacing: { [string]: number },
+    Radius: { [string]: number },
+    Size: { [string]: number },
+    Stroke: { [string]: number },
+    Opacity: { [string]: number },
+    Motion: { [string]: any },
+    Addon: { [string]: any },
+}
+
+export type AddonStyle = {
+    HeaderHeight: number,
+    Padding: number,
+    Gap: number,
+    Radius: number,
+    ControlRadius: number,
+    PopupRadius: number,
+    OutlineTransparency: number,
+    BackgroundTransparency: number,
+    ControlHeight: number,
+    StrokeThickness: number,
+    TextSize: number,
+    CaptionSize: number,
+    Motion: boolean,
+    Spacing: { [string]: number },
+}
+
 export type Icon = {
     Url: string,
     ImageRectOffset: Vector2,
@@ -824,6 +851,7 @@ export type BaseGroupbox = {
     AddImage: (self: Groupbox, Idx: string, Info: ImageInfo) -> Image,
     AddVideo: (self: Groupbox, Idx: string, Info: VideoInfo) -> Video,
     AddUIPassthrough: (self: Groupbox, Idx: string, Info: UIPassthroughInfo) -> UIPassthrough,
+    AddAddon: (self: Groupbox, Idx: string, Addon: { Mount: (Library, Groupbox, string, any) -> any }, Info: any?) -> any,
     AddDependencyBox: (self: Groupbox) -> DependencyBox,
     AddDependencyGroupbox: (self: Groupbox) -> DependencyGroupbox,
     AddTabbox: (self: Groupbox, Info: { Name: string?, IconName: string? } | string) -> Tabbox,
@@ -1122,7 +1150,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-6",
+    ReleaseVersion: "0.0.1-release-7",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1191,6 +1219,8 @@ export type Library = {
     MinSize: Vector2,
     DPIScale: number,
     CornerRadius: number,
+    DesignRevision: number,
+    Design: Design,
     IsLightTheme: boolean,
     Scheme: Scheme,
     DefaultTheme: "Default",
@@ -1228,6 +1258,12 @@ export type Library = {
     SetDPIScale: (self: Library, DPIScale: number) -> (),
     PlayTween: (self: Library, Instance: Instance, Slot: string, TweenInfoValue: TweenInfo, Properties: { [string]: any }) -> Tween?,
     CancelTween: (self: Library, Instance: Instance, Slot: string) -> (),
+    GetDesignToken: (self: Library, Path: string, Fallback: any?) -> any,
+    GetMotion: (self: Library, Name: string) -> TweenInfo,
+    RefreshMotion: (self: Library) -> (),
+    SetDesign: (self: Library, Overrides: { [string]: any }) -> Library,
+    SetReducedMotion: (self: Library, Enabled: boolean) -> Library,
+    GetAddonStyle: (self: Library, Overrides: { [string]: any }?) -> AddonStyle,
     GiveSignal: (self: Library, Connection: RBXScriptConnection) -> RBXScriptConnection,
     GetIcon: (self: Library, IconName: string) -> Icon?,
     GetCustomIcon: (self: Library, IconName: string) -> Icon?,
@@ -1264,6 +1300,8 @@ export type Library = {
     ) -> Frame,
     AddOutline: (self: Library, Frame: GuiObject) -> Frame,
     AddSoftShadow: (self: Library, Frame: GuiObject, BlurRadius: number?, Transparency: number?, Offset: UDim2?) -> UIShadow?,
+    CreateSurface: (self: Library, Parent: Instance, Info: { [string]: any }?) -> (GuiObject, UIStroke?, UICorner, UIShadow?),
+    CreateDivider: (self: Library, Parent: Instance, Info: { [string]: any }?) -> Frame,
     AddBlank: (self: Library, Frame: GuiObject, Size: UDim2) -> (),
     MakeOutline: (self: Library, Frame: GuiObject, Corner: number?, ZIndex: number?) -> Frame,
     AddDraggableLabel: (

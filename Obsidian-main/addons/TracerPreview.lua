@@ -42,6 +42,15 @@ end
 
 function TracerPreview.Create(Library, Info)
     Info = Info or {}
+    local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        Padding = 8,
+        Radius = 5,
+        ControlRadius = 4,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        CaptionSize = 12,
+        Motion = true,
+    }
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 92), 56, 260)
     local ColorA = typeof(Info.ColorA) == "Color3" and Info.ColorA or Color3.fromRGB(255, 218, 64)
     local ColorB = typeof(Info.ColorB) == "Color3" and Info.ColorB or Color3.fromRGB(255, 246, 168)
@@ -49,6 +58,7 @@ function TracerPreview.Create(Library, Info)
     local Root = Instance.new("Frame")
     Root.Name = "MonHubTracerPreview"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(14, 16, 19)
+    Root.BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or Style.BackgroundTransparency or 0, 0, 1)
     Root.BorderSizePixel = 0
     Root.ClipsDescendants = true
     Root.Size = UDim2.new(1, 0, 0, Height)
@@ -59,10 +69,15 @@ function TracerPreview.Create(Library, Info)
         end,
     })
 
+    local RootCorner = Instance.new("UICorner")
+    RootCorner.CornerRadius = UDim.new(0, Style.Radius)
+    RootCorner.Parent = Root
+
     local Stroke = Instance.new("UIStroke")
     Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Stroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(48, 53, 62)
-    Stroke.Transparency = 0.28
+    Stroke.Thickness = Style.StrokeThickness
+    Stroke.Transparency = math.clamp(tonumber(Info.OutlineTransparency) or Style.OutlineTransparency, 0, 1)
     Stroke.Parent = Root
     AddRegistry(Library, Stroke, { Color = "OutlineColor" })
 
@@ -70,10 +85,14 @@ function TracerPreview.Create(Library, Info)
     Canvas.BackgroundColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(9, 11, 14)
     Canvas.BorderSizePixel = 0
     Canvas.ClipsDescendants = true
-    Canvas.Position = UDim2.fromOffset(8, 8)
-    Canvas.Size = UDim2.new(1, -16, 1, -28)
+    Canvas.Position = UDim2.fromOffset(Style.Padding, Style.Padding)
+    Canvas.Size = UDim2.new(1, -Style.Padding * 2, 1, -(Style.Padding + 20))
     Canvas.Parent = Root
     AddRegistry(Library, Canvas, { BackgroundColor3 = "BackgroundColor" })
+
+    local CanvasCorner = Instance.new("UICorner")
+    CanvasCorner.CornerRadius = UDim.new(0, math.max(0, Style.Radius - 1))
+    CanvasCorner.Parent = Canvas
 
     local Grid = Instance.new("Frame")
     Grid.BackgroundTransparency = 1
@@ -143,12 +162,12 @@ function TracerPreview.Create(Library, Info)
 
     local Label = Instance.new("TextLabel")
     Label.BackgroundTransparency = 1
-    Label.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    Label.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Label.Position = UDim2.new(0, 10, 1, -20)
     Label.Size = UDim2.new(1, -20, 0, 18)
     Label.Text = tostring(Info.Name or "tracer")
     Label.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(145, 151, 161)
-    Label.TextSize = 11
+    Label.TextSize = Style.CaptionSize
     Label.TextTruncate = Enum.TextTruncate.AtEnd
     Label.TextXAlignment = Enum.TextXAlignment.Center
     Label.Parent = Root
@@ -171,6 +190,7 @@ function TracerPreview.Create(Library, Info)
         Enabled = Info.Enabled ~= false,
         Visible = Info.Visible ~= false,
         Height = Height,
+        Style = Style,
         Destroyed = false,
     }
 
@@ -188,7 +208,7 @@ function TracerPreview.Create(Library, Info)
 
     local function StartTweens()
         StopTweens()
-        if not Preview.Enabled or not Preview.Visible or Preview.Speed <= 0 then
+        if Style.Motion == false or not Preview.Enabled or not Preview.Visible or Preview.Speed <= 0 then
             return
         end
         for _, Layer in Preview.Layers do
@@ -337,5 +357,7 @@ function TracerPreview.CreateEmbedded(Library, Groupbox, Idx, Info)
     })
     return Preview
 end
+
+TracerPreview.Mount = TracerPreview.CreateEmbedded
 
 return TracerPreview

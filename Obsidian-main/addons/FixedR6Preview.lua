@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 
 local FixedR6Preview = {
-    ReleaseVersion = "0.0.1-release-6",
+    ReleaseVersion = "0.0.1-release-7",
 }
 
 local function ResolvePlayer(Target)
@@ -142,6 +142,7 @@ function FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, I
         GradientColor = typeof(Info.GradientColor) == "Color3" and Info.GradientColor or Color3.fromRGB(198, 170, 224),
         Highlight = Info.Highlight == true,
         ShowHeader = Info.ShowHeader ~= false,
+        Style = Info.Style,
     })
 
     function Controller:SetEnabled(Value)

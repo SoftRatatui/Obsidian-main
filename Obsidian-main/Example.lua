@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-6"
+local RELEASE_VERSION = "0.0.1-release-7"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-esp-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -165,7 +165,7 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.075,
+	TabTransitionTime = 0.07,
 	TabSwipeOffset = 2,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(760, 660),
@@ -643,19 +643,25 @@ local GalleryItems = {
 
 local AddonImagePreview
 if ImagePreview then
-	local Created, Result = pcall(ImagePreview.CreateEmbedded, Library, AddonImageGroup, "AddonImagePreview", {
-		Height = 220,
-		ScaleType = "Fit",
-		ImagePadding = 12,
-		BackgroundTransparency = 0.04,
-		CanvasTransparency = 0.18,
-		CaptionTransparency = 0.08,
-		OutlineTransparency = 0.48,
-		ShadeTransparency = 0.62,
-		Title = "Select an asset",
-		Subtitle = "Gallery selection appears here",
-		Motion = true,
-	})
+	local Created, Result = pcall(function()
+		return AddonImageGroup:AddAddon("AddonImagePreview", ImagePreview, {
+			Height = 220,
+			ScaleType = "Fit",
+			ImagePadding = 12,
+			BackgroundTransparency = 0.04,
+			CanvasTransparency = 0.18,
+			CaptionTransparency = 0.08,
+			OutlineTransparency = 0.48,
+			ShadeTransparency = 0.62,
+			Title = "Select an asset",
+			Subtitle = "Gallery selection appears here",
+			Motion = true,
+			Style = {
+				Radius = 5,
+				OutlineTransparency = 0.48,
+			},
+		})
+	end)
 	if Created then
 		AddonImagePreview = Result
 	else
@@ -665,24 +671,30 @@ end
 
 local AddonGallery
 if ImageGallery then
-	local Created, Result = pcall(ImageGallery.CreateEmbedded, Library, AddonGalleryGroup, "AddonImageGallery", {
-		Height = 330,
-		Columns = 3,
-		PageSize = 9,
-		CellHeight = 78,
-		ScaleType = "Fit",
-		CellTransparency = 0.06,
-		OutlineTransparency = 0.48,
-		ImageBackgroundTransparency = 0.22,
-		ImagePadding = 5,
-		Preview = AddonImagePreview,
-		Items = GalleryItems,
-		OnSelected = function(Item)
-			if Item then
-				Notify("Gallery selection", Item.Name)
-			end
-		end,
-	})
+	local Created, Result = pcall(function()
+		return AddonGalleryGroup:AddAddon("AddonImageGallery", ImageGallery, {
+			Height = 330,
+			Columns = 3,
+			PageSize = 9,
+			CellHeight = 78,
+			ScaleType = "Fit",
+			CellTransparency = 0.06,
+			OutlineTransparency = 0.48,
+			ImageBackgroundTransparency = 0.22,
+			ImagePadding = 5,
+			Preview = AddonImagePreview,
+			Items = GalleryItems,
+			Style = {
+				Gap = 7,
+				Radius = 5,
+			},
+			OnSelected = function(Item)
+				if Item then
+					Notify("Gallery selection", Item.Name)
+				end
+			end,
+		})
+	end)
 	if Created then
 		AddonGallery = Result
 		AddonGallery:Select("neptune", true)
@@ -1441,16 +1453,22 @@ if SharedESPRenderer then
 	end)
 end
 if VisualPreview then
-    local Created, PreviewOrError = pcall(VisualPreview.CreateEmbedded, Library, VisualPreviewBox, {
-        Id = "EmbeddedESPPreview",
-        Name = "ESP preview",
-        Height = 320,
-        Color = Color3.fromRGB(119, 166, 209),
-        GradientColor = Color3.fromRGB(202, 220, 239),
-        Gradient = true,
-        DynamicBoxes = true,
-        Renderer = SharedESPRenderer,
-    })
+    local Created, PreviewOrError = pcall(function()
+        return VisualPreviewBox:AddAddon("EmbeddedESPPreview", VisualPreview, {
+            Id = "EmbeddedESPPreview",
+            Name = "ESP preview",
+            Height = 320,
+            Color = Color3.fromRGB(119, 166, 209),
+            GradientColor = Color3.fromRGB(202, 220, 239),
+            Gradient = true,
+            DynamicBoxes = true,
+            Renderer = SharedESPRenderer,
+            Style = {
+                Motion = true,
+                OutlineTransparency = 0.48,
+            },
+        })
+    end)
 
     if Created then
         ESPPreview = PreviewOrError

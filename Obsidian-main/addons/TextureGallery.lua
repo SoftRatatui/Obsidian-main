@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-6",
+    ReleaseVersion = "0.0.1-release-7",
 }
 
 TextureGallery.DefaultItems = {
@@ -72,6 +72,15 @@ end
 function TextureGallery.Create(Library, Info)
     assert(Library and type(Library.AddToRegistry) == "function", "TextureGallery requires MonHub Library")
     Info = Info or {}
+    local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        Padding = 8,
+        Gap = 7,
+        Radius = 5,
+        ControlRadius = 4,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        CaptionSize = 12,
+    }
 
     local Gallery = {
         Height = math.clamp(tonumber(Info.Height) or 292, 210, 520),
@@ -87,8 +96,9 @@ function TextureGallery.Create(Library, Info)
         ImageTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0.04, 0, 1),
         PreviewImageTransparency = math.clamp(tonumber(Info.PreviewImageTransparency or Info.ImageTransparency) or 0.05, 0, 1),
         ImageScale = math.clamp(tonumber(Info.ImageScale or Info.Zoom) or 1, 0.1, 4),
-        OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or 0.24, 0, 1),
+        OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or Style.OutlineTransparency, 0, 1),
         ScaleType = ResolveScaleType(Info.ScaleType),
+        Style = Style,
     }
 
     local Root = Instance.new("Frame")
@@ -105,12 +115,13 @@ function TextureGallery.Create(Library, Info)
     Preview.ClipsDescendants = true
     Preview.Size = UDim2.new(1, 0, 0, 76)
     Preview.Parent = Root
-    ApplyCorner(Preview, math.min((Library.CornerRadius or 6) + 1, 8))
+    ApplyCorner(Preview, Style.Radius)
     Library:AddToRegistry(Preview, { BackgroundColor3 = "ElementColor" })
 
     local PreviewStroke = Instance.new("UIStroke")
     PreviewStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     PreviewStroke.Color = Library.Scheme.OutlineColor
+    PreviewStroke.Thickness = Style.StrokeThickness
     PreviewStroke.Transparency = Gallery.OutlineTransparency
     PreviewStroke.Parent = Preview
     Library:AddToRegistry(PreviewStroke, { Color = "OutlineColor" })
@@ -155,7 +166,7 @@ function TextureGallery.Create(Library, Info)
     PreviewName.Size = UDim2.new(1, -20, 0, 18)
     PreviewName.Text = "Select texture"
     PreviewName.TextColor3 = Library.Scheme.MutedFontColor
-    PreviewName.TextSize = 12
+    PreviewName.TextSize = Style.CaptionSize
     PreviewName.Parent = Preview
     Library:AddToRegistry(PreviewName, { FontFace = "Font", TextColor3 = "MutedFontColor" })
 
@@ -175,7 +186,7 @@ function TextureGallery.Create(Library, Info)
     Library:AddToRegistry(Grid, { ScrollBarImageColor3 = "AccentColor" })
 
     local GridLayout = Instance.new("UIGridLayout")
-    GridLayout.CellPadding = UDim2.fromOffset(8, 8)
+    GridLayout.CellPadding = UDim2.fromOffset(Style.Gap, Style.Gap)
     GridLayout.CellSize = UDim2.new(1 / Gallery.Columns, -6, 0, 64)
     GridLayout.FillDirectionMaxCells = Gallery.Columns
     GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -245,12 +256,13 @@ function TextureGallery.Create(Library, Info)
         Button.Size = UDim2.fromScale(1, 1)
         Button.Text = ""
         Button.Parent = Grid
-        ApplyCorner(Button, math.min(Library.CornerRadius or 6, 6))
+        ApplyCorner(Button, Style.Radius)
         Library:AddToRegistry(Button, { BackgroundColor3 = "ElementColor" })
 
         local Stroke = Instance.new("UIStroke")
         Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         Stroke.Color = Library.Scheme.OutlineColor
+        Stroke.Thickness = Style.StrokeThickness
         Stroke.Transparency = Gallery.OutlineTransparency
         Stroke.Parent = Button
         Library:AddToRegistry(Stroke, {
@@ -304,7 +316,7 @@ function TextureGallery.Create(Library, Info)
         Name.Size = UDim2.new(1, -16, 0, 17)
         Name.Text = tostring(Item.Name or Item.Id or "Texture")
         Name.TextColor3 = Library.Scheme.MutedFontColor
-        Name.TextSize = 12
+        Name.TextSize = Style.CaptionSize
         Name.TextTruncate = Enum.TextTruncate.AtEnd
         Name.TextXAlignment = Enum.TextXAlignment.Left
         Name.Parent = Button
@@ -513,5 +525,7 @@ function TextureGallery.CreateEmbedded(Library, Groupbox, Idx, Info)
     })
     return Gallery
 end
+
+TextureGallery.Mount = TextureGallery.CreateEmbedded
 
 return TextureGallery

@@ -57,20 +57,29 @@ end
 
 function ImagePreview.Create(Library, Info)
     Info = Info or {}
+    local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        Padding = 8,
+        Radius = 5,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        TextSize = 14,
+        CaptionSize = 12,
+        Motion = true,
+    }
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 260), 96, 720)
     local CaptionHeight = math.clamp(math.floor(tonumber(Info.CaptionHeight) or 48), 32, 80)
     local CaptionVisible = Info.Caption ~= false
     local CaptionOffset = CaptionVisible and CaptionHeight or 0
-    local Radius = math.clamp(math.floor(tonumber(Info.CornerRadius) or 5), 0, 12)
-    local Motion = Info.Motion ~= false
+    local Radius = math.clamp(math.floor(tonumber(Info.CornerRadius) or Style.Radius), 0, 12)
+    local Motion = Info.Motion ~= false and Style.Motion ~= false
     local TargetTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0, 0, 1)
-    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or 0, 0, 1)
+    local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or Style.BackgroundTransparency or 0, 0, 1)
     local CanvasTransparency = math.clamp(tonumber(Info.CanvasTransparency) or 0, 0, 1)
     local CaptionTransparency = math.clamp(tonumber(Info.CaptionTransparency) or 0, 0, 1)
-    local OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or 0.42, 0, 1)
-    local OutlineThickness = math.clamp(tonumber(Info.OutlineThickness) or 1, 0, 4)
+    local OutlineTransparency = math.clamp(tonumber(Info.OutlineTransparency) or Style.OutlineTransparency, 0, 1)
+    local OutlineThickness = math.clamp(tonumber(Info.OutlineThickness) or Style.StrokeThickness, 0, 4)
     local SizeFromPadding = typeof(Info.ImageSize) ~= "UDim2"
-    local ImagePadding = math.clamp(tonumber(Info.ImagePadding) or 8, 0, math.max(0, math.floor((Height - CaptionOffset) * 0.5) - 1))
+    local ImagePadding = math.clamp(tonumber(Info.ImagePadding) or Style.Padding, 0, math.max(0, math.floor((Height - CaptionOffset) * 0.5) - 1))
     local ImageSize = not SizeFromPadding and Info.ImageSize or UDim2.new(1, -ImagePadding * 2, 1, -ImagePadding * 2)
     local ImagePosition = typeof(Info.ImagePosition) == "UDim2" and Info.ImagePosition or UDim2.fromScale(0.5, 0.5)
     local ImageAnchorPoint = typeof(Info.ImageAnchorPoint) == "Vector2" and Info.ImageAnchorPoint or Vector2.new(0.5, 0.5)
@@ -165,12 +174,12 @@ function ImagePreview.Create(Library, Info)
 
     local Empty = Instance.new("TextLabel")
     Empty.BackgroundTransparency = 1
-    Empty.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    Empty.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Empty.Position = UDim2.fromOffset(12, 0)
     Empty.Size = UDim2.new(1, -24, 1, 0)
     Empty.Text = tostring(Info.EmptyText or "Select an item")
     Empty.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    Empty.TextSize = 13
+    Empty.TextSize = Style.CaptionSize
     Empty.TextWrapped = true
     Empty.ZIndex = 2
     Empty.Parent = Canvas
@@ -203,12 +212,12 @@ function ImagePreview.Create(Library, Info)
 
     local Title = Instance.new("TextLabel")
     Title.BackgroundTransparency = 1
-    Title.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    Title.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Title.Position = UDim2.fromOffset(12, 5)
     Title.Size = UDim2.new(1, -24, 0, 19)
     Title.Text = tostring(Info.Title or "Preview")
     Title.TextColor3 = Library and Library.Scheme.FontColor or Color3.fromRGB(232, 235, 240)
-    Title.TextSize = 13
+    Title.TextSize = Style.TextSize
     Title.TextTruncate = Enum.TextTruncate.AtEnd
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = Caption
@@ -219,12 +228,12 @@ function ImagePreview.Create(Library, Info)
 
     local Subtitle = Instance.new("TextLabel")
     Subtitle.BackgroundTransparency = 1
-    Subtitle.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.Gotham)
+    Subtitle.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Subtitle.Position = UDim2.fromOffset(12, 23)
     Subtitle.Size = UDim2.new(1, -24, 0, 18)
     Subtitle.Text = tostring(Info.Subtitle or "")
     Subtitle.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    Subtitle.TextSize = 11
+    Subtitle.TextSize = Style.CaptionSize
     Subtitle.TextTruncate = Enum.TextTruncate.AtEnd
     Subtitle.TextXAlignment = Enum.TextXAlignment.Left
     Subtitle.Parent = Caption
@@ -272,6 +281,7 @@ function ImagePreview.Create(Library, Info)
         Height = Height,
         Visible = Info.Visible ~= false,
         Motion = Motion,
+        Style = Style,
         TransitionSequence = 0,
         Destroyed = false,
     }
@@ -287,10 +297,17 @@ function ImagePreview.Create(Library, Info)
         end
     end
 
-    local function Play(Object, Key, Duration, Properties)
+    local function Play(Object, Key, MotionName, Properties)
         StopTween(Key)
+        if not Preview.Motion then
+            for Property, Value in Properties do
+                Object[Property] = Value
+            end
+            return nil
+        end
+        local MotionInfo = Library and type(Library.GetMotion) == "function" and Library:GetMotion(MotionName) or TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         local Success, Tween = pcall(function()
-            return TweenService:Create(Object, TweenInfo.new(Duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), Properties)
+            return TweenService:Create(Object, MotionInfo, Properties)
         end)
         if not Success or not Tween then
             for Property, Value in Properties do
@@ -337,9 +354,9 @@ function ImagePreview.Create(Library, Info)
 
         local Animated = Preview.Motion and Transition ~= false and Asset ~= ""
         if Animated then
-            Play(Previous.Image, "PreviousImage", 0.1, { ImageTransparency = 1 })
-            Play(Next.Image, "NextImage", 0.14, { ImageTransparency = Preview.ImageTransparency })
-            Play(Next.Scale, "NextScale", 0.2, { Scale = Preview.ImageScale })
+            Play(Previous.Image, "PreviousImage", "Fast", { ImageTransparency = 1 })
+            Play(Next.Image, "NextImage", "Control", { ImageTransparency = Preview.ImageTransparency })
+            Play(Next.Scale, "NextScale", "Popup", { Scale = Preview.ImageScale })
             task.delay(0.11, function()
                 if not Preview.Destroyed and Sequence == Preview.TransitionSequence and Preview.CurrentLayer ~= PreviousIndex then
                     Previous.Image.Visible = false
@@ -615,13 +632,13 @@ function ImagePreview.Create(Library, Info)
             if Preview.Destroyed or not Preview.Motion then
                 return
             end
-            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = Preview.ImageScale * 1.012 })
+            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", "Hover", { Scale = Preview.ImageScale * 1.012 })
         end))
         table.insert(Preview.Connections, Canvas.MouseLeave:Connect(function()
             if Preview.Destroyed then
                 return
             end
-            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", 0.12, { Scale = Preview.ImageScale })
+            Play(Preview.Layers[Preview.CurrentLayer].Scale, "Hover", "Hover", { Scale = Preview.ImageScale })
         end))
     end
 
@@ -650,5 +667,7 @@ function ImagePreview.CreateEmbedded(Library, Groupbox, Idx, Info)
     })
     return Preview
 end
+
+ImagePreview.Mount = ImagePreview.CreateEmbedded
 
 return ImagePreview

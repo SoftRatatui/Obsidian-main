@@ -261,6 +261,14 @@ function VisualPreview.Create(Library, Tab, Info)
     assert(Library and Library.AddToRegistry and Library.ScreenGui, "VisualPreview requires an active MonHub library")
 
     Info = Info or {}
+    local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        HeaderHeight = 36,
+        Radius = 5,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        TextSize = 14,
+        Motion = true,
+    }
     Tab = Tab or (type(Info.Groupbox) == "table" and Info.Groupbox.Tab or nil)
     assert(Tab, "VisualPreview requires a regular tab")
     local MainWindow = Info.Window or Library.Window
@@ -275,7 +283,7 @@ function VisualPreview.Create(Library, Tab, Info)
     if ShowHeader == nil then
         ShowHeader = not EmbeddedRequested
     end
-    local HeaderHeight = ShowHeader and 35 or 0
+    local HeaderHeight = ShowHeader and Style.HeaderHeight or 0
 
     local Holder = Instance.new("Frame")
     Holder.Name = "MonHubVisualPreview"
@@ -295,30 +303,31 @@ function VisualPreview.Create(Library, Tab, Info)
     })
 
     local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, Library.CornerRadius)
+    Corner.CornerRadius = UDim.new(0, Style.Radius)
     Corner.Parent = Holder
 
     local Outline = Instance.new("UIStroke")
     Outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     Outline.Color = Library.Scheme.OutlineColor
-    Outline.Thickness = 1
+    Outline.Thickness = Style.StrokeThickness
+    Outline.Transparency = math.clamp(tonumber(Info.OutlineTransparency) or Style.OutlineTransparency, 0, 1)
     Outline.Parent = Holder
     Library:AddToRegistry(Outline, {
         Color = "OutlineColor",
     })
 
     local AnimationScale = Instance.new("UIScale")
-    AnimationScale.Scale = 0.98
+    AnimationScale.Scale = 0.985
     AnimationScale.Parent = Holder
 
     local Header = Instance.new("TextLabel")
     Header.BackgroundTransparency = 1
     Header.FontFace = Library.Scheme.Font
     Header.Position = UDim2.fromOffset(12, 0)
-    Header.Size = UDim2.new(1, -24, 0, 34)
+    Header.Size = UDim2.new(1, -24, 0, math.max(0, HeaderHeight - 1))
     Header.Text = tostring(Info.Name or "ESP preview")
     Header.TextColor3 = Library.Scheme.FontColor
-    Header.TextSize = 14
+    Header.TextSize = Style.TextSize
     Header.TextXAlignment = Enum.TextXAlignment.Left
     Header.Visible = ShowHeader
     Header.ZIndex = 12
@@ -331,8 +340,9 @@ function VisualPreview.Create(Library, Tab, Info)
     local HeaderLine = Instance.new("Frame")
     HeaderLine.BackgroundColor3 = Library.Scheme.OutlineColor
     HeaderLine.BorderSizePixel = 0
-    HeaderLine.Position = UDim2.fromOffset(0, 34)
+    HeaderLine.Position = UDim2.fromOffset(0, math.max(0, HeaderHeight - 1))
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    HeaderLine.BackgroundTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
     HeaderLine.Visible = ShowHeader
     HeaderLine.ZIndex = 12
     HeaderLine.Parent = Holder
@@ -395,9 +405,10 @@ function VisualPreview.Create(Library, Tab, Info)
         Overlay = Overlay,
         Renderer = RendererAdapter,
         Chams = Chams,
+        Style = Style,
         Side = Info.Side or "Auto",
         Alignment = Info.Alignment or "Center",
-        Gap = math.clamp(tonumber(Info.Gap) or 12, 6, 32),
+        Gap = math.clamp(tonumber(Info.Gap) or math.max(8, Style.Gap or 7), 6, 32),
         Color = AccentColor,
         GradientColor = typeof(Info.GradientColor) == "Color3" and Info.GradientColor or AccentColor,
         GradientEnabled = Info.Gradient == true,
@@ -992,12 +1003,18 @@ function VisualPreview.Create(Library, Tab, Info)
             PositionPanel()
             UpdateCamera()
             if not Holder.Visible then
-                AnimationScale.Scale = 0.98
+                AnimationScale.Scale = Style.Motion == false and 1 or 0.985
                 Holder.Visible = true
             end
-            Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                Scale = 1,
-            })
+            if Style.Motion == false then
+                Library:CancelTween(AnimationScale, "VisualPreviewVisibility")
+                AnimationScale.Scale = 1
+            else
+                local MotionInfo = type(Library.GetMotion) == "function" and Library:GetMotion("WindowOpen") or Library.WindowOpenAnimationInfo or Library.TweenInfo
+                Library:PlayTween(AnimationScale, "VisualPreviewVisibility", MotionInfo, {
+                    Scale = 1,
+                })
+            end
             return
         end
 
@@ -1008,8 +1025,19 @@ function VisualPreview.Create(Library, Tab, Info)
         Rotating = false
         LastPointerPosition = nil
 
-        local Tween = Library:PlayTween(AnimationScale, "VisualPreviewVisibility", TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Scale = 0.98,
+        if Style.Motion == false then
+            Library:CancelTween(AnimationScale, "VisualPreviewVisibility")
+            AnimationScale.Scale = 0.985
+            Holder.Visible = false
+            if Preview.EmbeddedElement and Preview.EmbeddedElement.Visible ~= false then
+                Preview.EmbeddedElement:SetVisible(false)
+            end
+            return
+        end
+
+        local MotionInfo = type(Library.GetMotion) == "function" and Library:GetMotion("WindowClose") or Library.WindowCloseAnimationInfo or Library.TweenInfo
+        local Tween = Library:PlayTween(AnimationScale, "VisualPreviewVisibility", MotionInfo, {
+            Scale = 0.985,
         })
 
         if not Tween then
@@ -1545,6 +1573,12 @@ function VisualPreview.CreateEmbedded(Library, Groupbox, Info)
     local Options = table.clone(Info or {})
     Options.Groupbox = Groupbox
     return VisualPreview.Create(Library, Groupbox and Groupbox.Tab, Options)
+end
+
+function VisualPreview.Mount(Library, Groupbox, Idx, Info)
+    local Options = table.clone(Info or {})
+    Options.Id = Options.Id or Options.Idx or Idx
+    return VisualPreview.CreateEmbedded(Library, Groupbox, Options)
 end
 
 return VisualPreview

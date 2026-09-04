@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local DashboardWindow = {
-    ReleaseVersion = "0.0.1-release-6",
+    ReleaseVersion = "0.0.1-release-7",
 }
 
 local function ApplyCorner(Object, Radius)
@@ -47,6 +47,19 @@ end
 function DashboardWindow.Create(Library, Info)
     assert(Library and Library.ScreenGui and Library.AddToRegistry, "DashboardWindow requires an active MonHub window")
     Info = Info or {}
+    local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
+        HeaderHeight = 36,
+        Padding = 8,
+        Gap = 7,
+        Radius = 5,
+        ControlRadius = 4,
+        ControlHeight = 25,
+        OutlineTransparency = 0.46,
+        StrokeThickness = 1,
+        TextSize = 14,
+        CaptionSize = 12,
+        Motion = true,
+    }
 
     local Dashboard = {
         Destroyed = false,
@@ -62,6 +75,7 @@ function DashboardWindow.Create(Library, Info)
         VisibilityRevision = 0,
         SectionOrder = 0,
         DefaultSection = nil,
+        Style = Style,
     }
 
     local Holder = Instance.new("CanvasGroup")
@@ -76,16 +90,18 @@ function DashboardWindow.Create(Library, Info)
     Holder.ZIndex = 40
     Holder.Parent = Library.ScreenGui
     Dashboard.Root = Holder
-    ApplyCorner(Holder, math.min((Library.CornerRadius or 6) + 1, 8))
+    ApplyCorner(Holder, Style.Radius)
     Library:AddToRegistry(Holder, { BackgroundColor3 = "BackgroundColor" })
     if type(Library.AddSoftShadow) == "function" then
-        Library:AddSoftShadow(Holder, 16, 0.5, UDim2.fromOffset(0, 4))
+        local ShadowTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Shadow", 0.48) or 0.48
+        Library:AddSoftShadow(Holder, 16, ShadowTransparency, UDim2.fromOffset(0, 4))
     end
 
     local HolderStroke = Instance.new("UIStroke")
     HolderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     HolderStroke.Color = Library.Scheme.OutlineColor
-    HolderStroke.Transparency = 0.08
+    HolderStroke.Thickness = Style.StrokeThickness
+    HolderStroke.Transparency = Style.OutlineTransparency
     HolderStroke.Parent = Holder
     Library:AddToRegistry(HolderStroke, { Color = "OutlineColor" })
 
@@ -94,7 +110,7 @@ function DashboardWindow.Create(Library, Info)
     Header.Active = true
     Header.BackgroundColor3 = Library.Scheme.TopBarColor
     Header.BorderSizePixel = 0
-    Header.Size = UDim2.new(1, 0, 0, 38)
+    Header.Size = UDim2.new(1, 0, 0, Style.HeaderHeight)
     Header.ZIndex = 41
     Header.Parent = Holder
     Dashboard.Header = Header
@@ -103,7 +119,7 @@ function DashboardWindow.Create(Library, Info)
     local HeaderLine = Instance.new("Frame")
     HeaderLine.AnchorPoint = Vector2.new(0, 1)
     HeaderLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
-    HeaderLine.BackgroundTransparency = 0.42
+    HeaderLine.BackgroundTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
     HeaderLine.BorderSizePixel = 0
     HeaderLine.Position = UDim2.fromScale(0, 1)
     HeaderLine.Size = UDim2.new(1, 0, 0, 1)
@@ -124,7 +140,7 @@ function DashboardWindow.Create(Library, Info)
         HeaderIcon.ImageColor3 = Library.Scheme.AccentColor
         HeaderIcon.ImageRectOffset = HeaderIconData.ImageRectOffset
         HeaderIcon.ImageRectSize = HeaderIconData.ImageRectSize
-        HeaderIcon.Position = UDim2.fromOffset(11, 10)
+        HeaderIcon.Position = UDim2.fromOffset(11, math.floor((Style.HeaderHeight - 18) * 0.5))
         HeaderIcon.Size = UDim2.fromOffset(18, 18)
         HeaderIcon.ZIndex = 42
         HeaderIcon.Parent = Header
@@ -138,7 +154,7 @@ function DashboardWindow.Create(Library, Info)
     Title.Size = UDim2.new(1, HeaderIcon and -78 or -52, 1, 0)
     Title.Text = NormalizeText(Info.Title, "Dashboard")
     Title.TextColor3 = Library.Scheme.FontColor
-    Title.TextSize = 14
+    Title.TextSize = Style.TextSize
     Title.TextTruncate = Enum.TextTruncate.AtEnd
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.ZIndex = 42
@@ -155,11 +171,11 @@ function DashboardWindow.Create(Library, Info)
     CloseButton.ImageColor3 = Library.Scheme.MutedFontColor
     CloseButton.ImageRectOffset = CloseIconData and CloseIconData.ImageRectOffset or Vector2.zero
     CloseButton.ImageRectSize = CloseIconData and CloseIconData.ImageRectSize or Vector2.zero
-    CloseButton.Position = UDim2.new(1, -32, 0, 6)
-    CloseButton.Size = UDim2.fromOffset(26, 26)
+    CloseButton.Position = UDim2.new(1, -31, 0, math.floor((Style.HeaderHeight - 24) * 0.5))
+    CloseButton.Size = UDim2.fromOffset(24, 24)
     CloseButton.ZIndex = 43
     CloseButton.Parent = Header
-    ApplyCorner(CloseButton, math.min(Library.CornerRadius or 6, 6))
+    ApplyCorner(CloseButton, Style.ControlRadius)
     Library:AddToRegistry(CloseButton, {
         BackgroundColor3 = "ElementColor",
         ImageColor3 = "MutedFontColor",
@@ -172,26 +188,26 @@ function DashboardWindow.Create(Library, Info)
     Content.BackgroundTransparency = 1
     Content.BorderSizePixel = 0
     Content.CanvasSize = UDim2.fromScale(0, 0)
-    Content.Position = UDim2.fromOffset(0, 38)
+    Content.Position = UDim2.fromOffset(0, Style.HeaderHeight)
     Content.ScrollBarImageColor3 = Library.Scheme.AccentColor
     Content.ScrollBarImageTransparency = 0.38
     Content.ScrollBarThickness = 2
     Content.ScrollingDirection = Enum.ScrollingDirection.Y
-    Content.Size = UDim2.new(1, 0, 1, -38)
+    Content.Size = UDim2.new(1, 0, 1, -Style.HeaderHeight)
     Content.ZIndex = 41
     Content.Parent = Holder
     Dashboard.Content = Content
     Library:AddToRegistry(Content, { ScrollBarImageColor3 = "AccentColor" })
 
     local ContentPadding = Instance.new("UIPadding")
-    ContentPadding.PaddingBottom = UDim.new(0, 8)
-    ContentPadding.PaddingLeft = UDim.new(0, 8)
-    ContentPadding.PaddingRight = UDim.new(0, 10)
-    ContentPadding.PaddingTop = UDim.new(0, 8)
+    ContentPadding.PaddingBottom = UDim.new(0, Style.Padding)
+    ContentPadding.PaddingLeft = UDim.new(0, Style.Padding)
+    ContentPadding.PaddingRight = UDim.new(0, Style.Padding + 2)
+    ContentPadding.PaddingTop = UDim.new(0, Style.Padding)
     ContentPadding.Parent = Content
 
     local ContentLayout = Instance.new("UIListLayout")
-    ContentLayout.Padding = UDim.new(0, 6)
+    ContentLayout.Padding = UDim.new(0, Style.Gap)
     ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ContentLayout.Parent = Content
 
@@ -377,13 +393,14 @@ function DashboardWindow.Create(Library, Info)
         Root.ZIndex = 42
         Root.Parent = Content
         Section.Root = Root
-        ApplyCorner(Root, math.min(Library.CornerRadius or 6, 6))
+        ApplyCorner(Root, Style.Radius)
         Library:AddToRegistry(Root, { BackgroundColor3 = "SurfaceColor" })
 
         local Stroke = Instance.new("UIStroke")
         Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         Stroke.Color = Library.Scheme.OutlineColor
-        Stroke.Transparency = 0.42
+        Stroke.Thickness = Style.StrokeThickness
+        Stroke.Transparency = Style.OutlineTransparency
         Stroke.Parent = Root
         Library:AddToRegistry(Stroke, { Color = "OutlineColor" })
 
@@ -422,7 +439,7 @@ function DashboardWindow.Create(Library, Info)
         SectionTitle.Size = UDim2.new(1, SectionIconData and -42 or -20, 1, -1)
         SectionTitle.Text = Section.Title
         SectionTitle.TextColor3 = Library.Scheme.FontColor
-        SectionTitle.TextSize = 13
+        SectionTitle.TextSize = Style.TextSize
         SectionTitle.TextTruncate = Enum.TextTruncate.AtEnd
         SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
         SectionTitle.ZIndex = 44
@@ -433,7 +450,7 @@ function DashboardWindow.Create(Library, Info)
         local SectionLine = Instance.new("Frame")
         SectionLine.AnchorPoint = Vector2.new(0, 1)
         SectionLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
-        SectionLine.BackgroundTransparency = 0.5
+        SectionLine.BackgroundTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
         SectionLine.BorderSizePixel = 0
         SectionLine.Position = UDim2.fromScale(0, 1)
         SectionLine.Size = UDim2.new(1, 0, 0, 1)
@@ -454,14 +471,14 @@ function DashboardWindow.Create(Library, Info)
         Body.Parent = Root
 
         local BodyPadding = Instance.new("UIPadding")
-        BodyPadding.PaddingBottom = UDim.new(0, 8)
-        BodyPadding.PaddingLeft = UDim.new(0, 9)
-        BodyPadding.PaddingRight = UDim.new(0, 9)
-        BodyPadding.PaddingTop = UDim.new(0, 7)
+        BodyPadding.PaddingBottom = UDim.new(0, Style.Padding)
+        BodyPadding.PaddingLeft = UDim.new(0, Style.Padding + 1)
+        BodyPadding.PaddingRight = UDim.new(0, Style.Padding + 1)
+        BodyPadding.PaddingTop = UDim.new(0, Style.Padding)
         BodyPadding.Parent = Body
 
         local BodyLayout = Instance.new("UIListLayout")
-        BodyLayout.Padding = UDim.new(0, 4)
+        BodyLayout.Padding = UDim.new(0, math.max(4, Style.Gap - 2))
         BodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         BodyLayout.Parent = Body
 
@@ -622,14 +639,14 @@ function DashboardWindow.Create(Library, Info)
             Button.BorderSizePixel = 0
             Button.FontFace = Library.Scheme.Font
             Button.LayoutOrder = tonumber(ButtonInfo.Order) or Section:NextOrder()
-            Button.Size = UDim2.new(1, 0, 0, 28)
+            Button.Size = UDim2.new(1, 0, 0, Style.ControlHeight)
             Button.Text = NormalizeText(ButtonInfo.Text, "Action")
             Button.TextColor3 = Library.Scheme.FontColor
-            Button.TextSize = 12
+            Button.TextSize = Style.CaptionSize
             Button.TextTruncate = Enum.TextTruncate.AtEnd
             Button.ZIndex = 44
             Button.Parent = Body
-            ApplyCorner(Button, math.min(Library.CornerRadius or 6, 5))
+            ApplyCorner(Button, Style.ControlRadius)
             Library:AddToRegistry(Button, {
                 BackgroundColor3 = "ElementColor",
                 FontFace = "Font",
@@ -639,7 +656,8 @@ function DashboardWindow.Create(Library, Info)
             local ButtonStroke = Instance.new("UIStroke")
             ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             ButtonStroke.Color = Library.Scheme.OutlineColor
-            ButtonStroke.Transparency = 0.28
+            ButtonStroke.Thickness = Style.StrokeThickness
+            ButtonStroke.Transparency = Style.OutlineTransparency
             ButtonStroke.Parent = Button
             Library:AddToRegistry(ButtonStroke, { Color = "OutlineColor" })
 
@@ -823,7 +841,7 @@ function DashboardWindow.Create(Library, Info)
         Dashboard.Visible = NewVisible
         Dashboard.VisibilityRevision += 1
         local Revision = Dashboard.VisibilityRevision
-        local Animate = Library.Animations and Library.Animations.ToggleWindow
+        local Animate = Style.Motion ~= false and Library.Animations and Library.Animations.ToggleWindow
         if NewVisible then
             Holder.Visible = true
             if Animate then

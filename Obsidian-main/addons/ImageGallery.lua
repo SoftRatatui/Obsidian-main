@@ -105,19 +105,20 @@ end
 function ImageGallery.Create(Library, Info)
     Info = Info or {}
     local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        HeaderHeight = 36,
-        Padding = 8,
-        Gap = 7,
-        Radius = 5,
+        HeaderHeight = 38,
+        Padding = 10,
+        Gap = 8,
+        Radius = 7,
         ControlRadius = 4,
-        OutlineTransparency = 0.46,
+        ControlHeight = 28,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         TextSize = 14,
         CaptionSize = 12,
         Motion = true,
     }
-    local HeaderHeight = math.clamp(math.floor(tonumber(Style.HeaderHeight) or 36), 32, 46)
-    local ControlHeight = math.clamp(math.floor(tonumber(Style.ControlHeight) or 25), 22, 32)
+    local HeaderHeight = math.clamp(math.floor(tonumber(Style.HeaderHeight) or 38), 32, 46)
+    local ControlHeight = math.clamp(math.floor(tonumber(Style.ControlHeight) or 28), 22, 32)
     local FooterHeight = 28
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 344), 180, 780)
     local Columns = math.clamp(math.floor(tonumber(Info.Columns) or 5), 1, 10)
@@ -1161,6 +1162,30 @@ function ImageGallery.CreateEmbedded(Library, Groupbox, Idx, Info)
         Visible = Gallery.Visible,
     })
     return Gallery
+end
+
+function ImageGallery.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "ImageGallery standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = tonumber(Info.WindowHeight) or 500
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or "Gallery",
+        Subtitle = Info.WindowSubtitle,
+        Icon = Info.WindowIcon or "layout-grid",
+        Width = Info.WindowWidth or 480,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+    Info.Height = Info.Height or math.max(180, WindowHeight - 72)
+    local Gallery = Host:AddAddon("Gallery", ImageGallery, Info)
+    Gallery.Host = Host
+    return Gallery, Host
 end
 
 ImageGallery.Mount = ImageGallery.CreateEmbedded

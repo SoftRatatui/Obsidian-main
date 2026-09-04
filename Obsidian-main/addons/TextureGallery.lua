@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-7",
+    ReleaseVersion = "0.0.1-release-8",
 }
 
 TextureGallery.DefaultItems = {
@@ -73,11 +73,11 @@ function TextureGallery.Create(Library, Info)
     assert(Library and type(Library.AddToRegistry) == "function", "TextureGallery requires MonHub Library")
     Info = Info or {}
     local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        Padding = 8,
-        Gap = 7,
-        Radius = 5,
+        Padding = 10,
+        Gap = 8,
+        Radius = 7,
         ControlRadius = 4,
-        OutlineTransparency = 0.46,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         CaptionSize = 12,
     }
@@ -524,6 +524,30 @@ function TextureGallery.CreateEmbedded(Library, Groupbox, Idx, Info)
         Visible = Gallery.Visible,
     })
     return Gallery
+end
+
+function TextureGallery.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "TextureGallery standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = tonumber(Info.WindowHeight) or 500
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or "Textures",
+        Subtitle = Info.WindowSubtitle,
+        Icon = Info.WindowIcon or "images",
+        Width = Info.WindowWidth or 460,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+    Info.Height = Info.Height or math.max(180, WindowHeight - 72)
+    local Gallery = Host:AddAddon("Textures", TextureGallery, Info)
+    Gallery.Host = Host
+    return Gallery, Host
 end
 
 TextureGallery.Mount = TextureGallery.CreateEmbedded

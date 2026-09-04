@@ -43,10 +43,10 @@ end
 function TracerPreview.Create(Library, Info)
     Info = Info or {}
     local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        Padding = 8,
-        Radius = 5,
+        Padding = 10,
+        Radius = 7,
         ControlRadius = 4,
-        OutlineTransparency = 0.46,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         CaptionSize = 12,
         Motion = true,
@@ -356,6 +356,30 @@ function TracerPreview.CreateEmbedded(Library, Groupbox, Idx, Info)
         Visible = Preview.Visible,
     })
     return Preview
+end
+
+function TracerPreview.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "TracerPreview standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = tonumber(Info.WindowHeight) or 360
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or "Tracer preview",
+        Subtitle = Info.WindowSubtitle,
+        Icon = Info.WindowIcon or "sparkles",
+        Width = Info.WindowWidth or 420,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+    Info.Height = Info.Height or math.max(160, WindowHeight - 72)
+    local Preview = Host:AddAddon("Preview", TracerPreview, Info)
+    Preview.Host = Host
+    return Preview, Host
 end
 
 TracerPreview.Mount = TracerPreview.CreateEmbedded

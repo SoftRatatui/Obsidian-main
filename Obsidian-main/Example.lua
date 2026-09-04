@@ -14,8 +14,8 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-7"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-esp-1"
+local RELEASE_VERSION = "0.0.1-release-8"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -130,6 +130,7 @@ local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveReposi
 local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
 local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
+local AssetCatalog = LoadModule("addons/AssetCatalog.lua", false, ActiveRepository)
 local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
 local DashboardWindow = LoadModule("addons/DashboardWindow.lua", false, ActiveRepository)
 local UniversalESP = LoadModule("addons/esp/ESP.lua", false, ActiveRepository)
@@ -157,7 +158,7 @@ local Window = Library:CreateWindow({
 	HideSearchAtWidth = 210,
 	ShowCustomCursor = true,
 	Font = Library.Scheme.Font,
-	CornerRadius = 6,
+	CornerRadius = 8,
 	ShowCompactLauncher = true,
 	CompactLauncherIcon = "maximize-2",
 	CompactLauncherSize = 36,
@@ -641,6 +642,59 @@ local GalleryItems = {
 	},
 }
 
+local CatalogModule
+local CatalogHost
+if AssetCatalog then
+	local CatalogGroup = Tabs.Addons:AddRightGroupbox("Asset catalog", "panels-top-left")
+	CatalogModule, CatalogHost = AssetCatalog.CreateStandalone(Library, {
+		WindowTitle = "Skin collection",
+		WindowSubtitle = "Search, inspect, and apply",
+		WindowIcon = "layout-grid",
+		WindowWidth = 760,
+		WindowHeight = 560,
+		Height = 482,
+		Layout = "Split",
+		PreviewSide = "Right",
+		Columns = 3,
+		Rows = 3,
+		Items = GalleryItems,
+		Selected = "neptune",
+		Visible = true,
+		HideWithMenu = true,
+		ActionText = "Apply",
+		OnAction = function(Item)
+			if Item then
+				Notify("Catalog action", tostring(Item.Name) .. " selected")
+			end
+		end,
+	})
+	CatalogHost:SetVisible(false, true)
+
+	CatalogGroup:AddLabel("A complete skin changer surface with compact and standalone layouts.", true)
+	CatalogGroup:AddButton("Toggle catalog window", function()
+		CatalogHost:Toggle()
+	end)
+	CatalogGroup:AddDropdown("CatalogLayout", {
+		Text = "Catalog layout",
+		Values = { "Split", "Stack" },
+		Default = "Split",
+		Callback = function(Value)
+			CatalogModule:SetLayout(Value)
+		end,
+	})
+	CatalogGroup:AddSlider("CatalogPreviewRatio", {
+		Text = "Preview width",
+		Default = 58,
+		Min = 35,
+		Max = 72,
+		Rounding = 0,
+		Suffix = "%",
+		Callback = function(Value)
+			CatalogModule:SetPreviewRatio(Value / 100)
+		end,
+	})
+end
+
 local AddonImagePreview
 if ImagePreview then
 	local Created, Result = pcall(function()
@@ -656,10 +710,6 @@ if ImagePreview then
 			Title = "Select an asset",
 			Subtitle = "Gallery selection appears here",
 			Motion = true,
-			Style = {
-				Radius = 5,
-				OutlineTransparency = 0.48,
-			},
 		})
 	end)
 	if Created then
@@ -684,10 +734,6 @@ if ImageGallery then
 			ImagePadding = 5,
 			Preview = AddonImagePreview,
 			Items = GalleryItems,
-			Style = {
-				Gap = 7,
-				Radius = 5,
-			},
 			OnSelected = function(Item)
 				if Item then
 					Notify("Gallery selection", Item.Name)
@@ -2137,6 +2183,7 @@ return {
 	AddonModules = {
 		ImageGallery = ImageGallery,
 		ImagePreview = ImagePreview,
+		AssetCatalog = AssetCatalog,
 		CharacterTrail = CharacterTrail,
 		DashboardWindow = DashboardWindow,
 		VisualPreview = VisualPreview,
@@ -2149,6 +2196,8 @@ return {
 	AddonExamples = {
 		ImageGallery = AddonGallery,
 		ImagePreview = AddonImagePreview,
+		AssetCatalog = CatalogModule,
+		AssetCatalogWindow = CatalogHost,
 		CharacterTrail = TrailController,
 		DashboardWindow = Dashboard,
 		UniversalESP = UniversalESPController,

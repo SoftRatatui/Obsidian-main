@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local DashboardWindow = {
-    ReleaseVersion = "0.0.1-release-7",
+    ReleaseVersion = "0.0.1-release-8",
 }
 
 local function ApplyCorner(Object, Radius)
@@ -48,18 +48,19 @@ function DashboardWindow.Create(Library, Info)
     assert(Library and Library.ScreenGui and Library.AddToRegistry, "DashboardWindow requires an active MonHub window")
     Info = Info or {}
     local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        HeaderHeight = 36,
-        Padding = 8,
-        Gap = 7,
-        Radius = 5,
+        HeaderHeight = 38,
+        Padding = 10,
+        Gap = 8,
+        Radius = 7,
         ControlRadius = 4,
-        ControlHeight = 25,
-        OutlineTransparency = 0.46,
+        ControlHeight = 28,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         TextSize = 14,
         CaptionSize = 12,
         Motion = true,
     }
+    local Embedded = typeof(Info.Parent) == "Instance" and Info.Parent:IsA("GuiObject")
 
     local Dashboard = {
         Destroyed = false,
@@ -76,6 +77,8 @@ function DashboardWindow.Create(Library, Info)
         SectionOrder = 0,
         DefaultSection = nil,
         Style = Style,
+        Embedded = Embedded,
+        Element = nil,
     }
 
     local Holder = Instance.new("CanvasGroup")
@@ -85,16 +88,16 @@ function DashboardWindow.Create(Library, Info)
     Holder.BorderSizePixel = 0
     Holder.ClipsDescendants = true
     Holder.GroupTransparency = Dashboard.Visible and 0 or 1
-    Holder.Size = UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
+    Holder.Size = Embedded and UDim2.new(1, 0, 0, Dashboard.Height) or UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
     Holder.Visible = Dashboard.Visible
-    Holder.ZIndex = 40
-    Holder.Parent = Library.ScreenGui
+    Holder.ZIndex = Embedded and Info.Parent.ZIndex or 40
+    Holder.Parent = Embedded and Info.Parent or Library.ScreenGui
     Dashboard.Root = Holder
     ApplyCorner(Holder, Style.Radius)
     Library:AddToRegistry(Holder, { BackgroundColor3 = "BackgroundColor" })
-    if type(Library.AddSoftShadow) == "function" then
-        local ShadowTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Shadow", 0.48) or 0.48
-        Library:AddSoftShadow(Holder, 16, ShadowTransparency, UDim2.fromOffset(0, 4))
+    if not Embedded and type(Library.AddSoftShadow) == "function" then
+        local ShadowTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Shadow", 0.44) or 0.44
+        Library:AddSoftShadow(Holder, 22, ShadowTransparency, UDim2.fromOffset(0, 5))
     end
 
     local HolderStroke = Instance.new("UIStroke")
@@ -118,40 +121,49 @@ function DashboardWindow.Create(Library, Info)
 
     local HeaderLine = Instance.new("Frame")
     HeaderLine.AnchorPoint = Vector2.new(0, 1)
-    HeaderLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
+    HeaderLine.BackgroundColor3 = Library.Scheme.OutlineColor
     HeaderLine.BackgroundTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
     HeaderLine.BorderSizePixel = 0
-    HeaderLine.Position = UDim2.fromScale(0, 1)
-    HeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    HeaderLine.Position = UDim2.new(0, Style.Padding, 1, 0)
+    HeaderLine.Size = UDim2.new(1, -Style.Padding * 2, 0, 1)
     HeaderLine.ZIndex = 42
     HeaderLine.Parent = Header
-    Library:AddToRegistry(HeaderLine, {
+    Library:AddToRegistry(HeaderLine, { BackgroundColor3 = "OutlineColor" })
+
+    local HeaderIconData = Library:GetCustomIcon(Info.Icon or "layout-dashboard")
+    local HeaderIconHolder = Instance.new("Frame")
+    HeaderIconHolder.AnchorPoint = Vector2.new(0, 0.5)
+    HeaderIconHolder.BackgroundColor3 = Library:GetAccentSurfaceColor(0.18)
+    HeaderIconHolder.BorderSizePixel = 0
+    HeaderIconHolder.Position = UDim2.fromOffset(Style.Padding, Style.HeaderHeight * 0.5)
+    HeaderIconHolder.Size = UDim2.fromOffset(26, 26)
+    HeaderIconHolder.ZIndex = 42
+    HeaderIconHolder.Parent = Header
+    ApplyCorner(HeaderIconHolder, Style.ControlRadius)
+    Library:AddToRegistry(HeaderIconHolder, {
         BackgroundColor3 = function()
-            return Library:GetAccentSurfaceColor(0.1)
+            return Library:GetAccentSurfaceColor(0.18)
         end,
     })
 
-    local HeaderIconData = Library:GetCustomIcon(Info.Icon or "layout-dashboard")
-    local HeaderIcon
-    if HeaderIconData then
-        HeaderIcon = Instance.new("ImageLabel")
-        HeaderIcon.BackgroundTransparency = 1
-        HeaderIcon.Image = HeaderIconData.Url
-        HeaderIcon.ImageColor3 = Library.Scheme.AccentColor
-        HeaderIcon.ImageRectOffset = HeaderIconData.ImageRectOffset
-        HeaderIcon.ImageRectSize = HeaderIconData.ImageRectSize
-        HeaderIcon.Position = UDim2.fromOffset(11, math.floor((Style.HeaderHeight - 18) * 0.5))
-        HeaderIcon.Size = UDim2.fromOffset(18, 18)
-        HeaderIcon.ZIndex = 42
-        HeaderIcon.Parent = Header
-        Library:AddToRegistry(HeaderIcon, { ImageColor3 = "AccentColor" })
-    end
+    local HeaderIcon = Instance.new("ImageLabel")
+    HeaderIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    HeaderIcon.BackgroundTransparency = 1
+    HeaderIcon.Image = HeaderIconData and HeaderIconData.Url or ""
+    HeaderIcon.ImageColor3 = Library.Scheme.AccentColor
+    HeaderIcon.ImageRectOffset = HeaderIconData and HeaderIconData.ImageRectOffset or Vector2.zero
+    HeaderIcon.ImageRectSize = HeaderIconData and HeaderIconData.ImageRectSize or Vector2.zero
+    HeaderIcon.Position = UDim2.fromScale(0.5, 0.5)
+    HeaderIcon.Size = UDim2.fromOffset(16, 16)
+    HeaderIcon.ZIndex = 43
+    HeaderIcon.Parent = HeaderIconHolder
+    Library:AddToRegistry(HeaderIcon, { ImageColor3 = "AccentColor" })
 
     local Title = Instance.new("TextLabel")
     Title.BackgroundTransparency = 1
     Title.FontFace = Library.Scheme.Font
-    Title.Position = UDim2.fromOffset(HeaderIcon and 38 or 12, 0)
-    Title.Size = UDim2.new(1, HeaderIcon and -78 or -52, 1, 0)
+    Title.Position = UDim2.fromOffset(Style.Padding + 36, 0)
+    Title.Size = UDim2.new(1, -(Style.Padding * 2 + 72), 1, 0)
     Title.Text = NormalizeText(Info.Title, "Dashboard")
     Title.TextColor3 = Library.Scheme.FontColor
     Title.TextSize = Style.TextSize
@@ -164,22 +176,34 @@ function DashboardWindow.Create(Library, Info)
 
     local CloseIconData = Library:GetCustomIcon("x")
     local CloseButton = Instance.new("ImageButton")
+    CloseButton.AnchorPoint = Vector2.new(1, 0.5)
     CloseButton.AutoButtonColor = false
     CloseButton.BackgroundColor3 = Library.Scheme.ElementColor
+    CloseButton.BackgroundTransparency = 1
     CloseButton.BorderSizePixel = 0
-    CloseButton.Image = CloseIconData and CloseIconData.Url or ""
-    CloseButton.ImageColor3 = Library.Scheme.MutedFontColor
-    CloseButton.ImageRectOffset = CloseIconData and CloseIconData.ImageRectOffset or Vector2.zero
-    CloseButton.ImageRectSize = CloseIconData and CloseIconData.ImageRectSize or Vector2.zero
-    CloseButton.Position = UDim2.new(1, -31, 0, math.floor((Style.HeaderHeight - 24) * 0.5))
-    CloseButton.Size = UDim2.fromOffset(24, 24)
+    CloseButton.Image = ""
+    CloseButton.Position = UDim2.new(1, -Style.Padding, 0.5, 0)
+    CloseButton.Size = UDim2.fromOffset(28, 28)
+    CloseButton.Visible = not Embedded and Info.Closable ~= false
     CloseButton.ZIndex = 43
     CloseButton.Parent = Header
     ApplyCorner(CloseButton, Style.ControlRadius)
     Library:AddToRegistry(CloseButton, {
         BackgroundColor3 = "ElementColor",
-        ImageColor3 = "MutedFontColor",
     })
+
+    local CloseIcon = Instance.new("ImageLabel")
+    CloseIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    CloseIcon.BackgroundTransparency = 1
+    CloseIcon.Image = CloseIconData and CloseIconData.Url or ""
+    CloseIcon.ImageColor3 = Library.Scheme.MutedFontColor
+    CloseIcon.ImageRectOffset = CloseIconData and CloseIconData.ImageRectOffset or Vector2.zero
+    CloseIcon.ImageRectSize = CloseIconData and CloseIconData.ImageRectSize or Vector2.zero
+    CloseIcon.Position = UDim2.fromScale(0.5, 0.5)
+    CloseIcon.Size = UDim2.fromOffset(15, 15)
+    CloseIcon.ZIndex = 44
+    CloseIcon.Parent = CloseButton
+    Library:AddToRegistry(CloseIcon, { ImageColor3 = "MutedFontColor" })
 
     local Content = Instance.new("ScrollingFrame")
     Content.Name = "Content"
@@ -198,6 +222,11 @@ function DashboardWindow.Create(Library, Info)
     Content.Parent = Holder
     Dashboard.Content = Content
     Library:AddToRegistry(Content, { ScrollBarImageColor3 = "AccentColor" })
+    if Info.ShowHeader == false or Embedded and Info.ShowHeader ~= true then
+        Header.Visible = false
+        Content.Position = UDim2.fromScale(0, 0)
+        Content.Size = UDim2.fromScale(1, 1)
+    end
 
     local ContentPadding = Instance.new("UIPadding")
     ContentPadding.PaddingBottom = UDim.new(0, Style.Padding)
@@ -410,12 +439,14 @@ function DashboardWindow.Create(Library, Info)
         RootLayout.Parent = Root
 
         local SectionHeader = Instance.new("Frame")
-        SectionHeader.BackgroundTransparency = 1
+        SectionHeader.BackgroundColor3 = Library.Scheme.RaisedColor
+        SectionHeader.BackgroundTransparency = 0.46
         SectionHeader.LayoutOrder = 0
         SectionHeader.Size = UDim2.new(1, 0, 0, SectionInfo.ShowTitle == false and 0 or 32)
         SectionHeader.Visible = SectionInfo.ShowTitle ~= false
         SectionHeader.ZIndex = 43
         SectionHeader.Parent = Root
+        Library:AddToRegistry(SectionHeader, { BackgroundColor3 = "RaisedColor" })
 
         local SectionIconData = Library:GetCustomIcon(SectionInfo.Icon or SectionInfo.IconName)
         if SectionIconData then
@@ -425,8 +456,8 @@ function DashboardWindow.Create(Library, Info)
             SectionIcon.ImageColor3 = Library.Scheme.AccentColor
             SectionIcon.ImageRectOffset = SectionIconData.ImageRectOffset
             SectionIcon.ImageRectSize = SectionIconData.ImageRectSize
-            SectionIcon.Position = UDim2.fromOffset(8, 7)
-            SectionIcon.Size = UDim2.fromOffset(18, 18)
+            SectionIcon.Position = UDim2.fromOffset(Style.Padding, 8)
+            SectionIcon.Size = UDim2.fromOffset(16, 16)
             SectionIcon.ZIndex = 44
             SectionIcon.Parent = SectionHeader
             Library:AddToRegistry(SectionIcon, { ImageColor3 = "AccentColor" })
@@ -435,8 +466,8 @@ function DashboardWindow.Create(Library, Info)
         local SectionTitle = Instance.new("TextLabel")
         SectionTitle.BackgroundTransparency = 1
         SectionTitle.FontFace = Library.Scheme.Font
-        SectionTitle.Position = UDim2.fromOffset(SectionIconData and 32 or 10, 0)
-        SectionTitle.Size = UDim2.new(1, SectionIconData and -42 or -20, 1, -1)
+        SectionTitle.Position = UDim2.fromOffset(SectionIconData and Style.Padding + 24 or Style.Padding, 0)
+        SectionTitle.Size = UDim2.new(1, SectionIconData and -(Style.Padding * 2 + 24) or -Style.Padding * 2, 1, -1)
         SectionTitle.Text = Section.Title
         SectionTitle.TextColor3 = Library.Scheme.FontColor
         SectionTitle.TextSize = Style.TextSize
@@ -449,18 +480,14 @@ function DashboardWindow.Create(Library, Info)
 
         local SectionLine = Instance.new("Frame")
         SectionLine.AnchorPoint = Vector2.new(0, 1)
-        SectionLine.BackgroundColor3 = Library:GetAccentSurfaceColor(0.1)
+        SectionLine.BackgroundColor3 = Library.Scheme.OutlineColor
         SectionLine.BackgroundTransparency = type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
         SectionLine.BorderSizePixel = 0
-        SectionLine.Position = UDim2.fromScale(0, 1)
-        SectionLine.Size = UDim2.new(1, 0, 0, 1)
+        SectionLine.Position = UDim2.new(0, Style.Padding, 1, 0)
+        SectionLine.Size = UDim2.new(1, -Style.Padding * 2, 0, 1)
         SectionLine.ZIndex = 44
         SectionLine.Parent = SectionHeader
-        Library:AddToRegistry(SectionLine, {
-            BackgroundColor3 = function()
-                return Library:GetAccentSurfaceColor(0.1)
-            end,
-        })
+        Library:AddToRegistry(SectionLine, { BackgroundColor3 = "OutlineColor" })
 
         local Body = Instance.new("Frame")
         Body.AutomaticSize = Enum.AutomaticSize.Y
@@ -591,7 +618,7 @@ function DashboardWindow.Create(Library, Info)
                         MetricValue = Formatted
                     end
                 end
-                ValueLabel.Text = NormalizeText(MetricValue, MetricInfo.Fallback or "—")
+                ValueLabel.Text = NormalizeText(MetricValue, MetricInfo.Fallback or "-")
             end
 
             function Widget:SetLabel(ValueText)
@@ -833,12 +860,15 @@ function DashboardWindow.Create(Library, Info)
         end
         local NewVisible = Value == true
         if Dashboard.Visible == NewVisible then
-            if NewVisible then
+            if NewVisible and not Dashboard.Embedded then
                 task.defer(ClampToViewport)
             end
             return Dashboard
         end
         Dashboard.Visible = NewVisible
+        if Dashboard.Element and NewVisible then
+            Dashboard.Element:SetVisible(true)
+        end
         Dashboard.VisibilityRevision += 1
         local Revision = Dashboard.VisibilityRevision
         local Animate = Style.Motion ~= false and Library.Animations and Library.Animations.ToggleWindow
@@ -853,7 +883,9 @@ function DashboardWindow.Create(Library, Info)
                 Library:CancelTween(Holder, "DashboardVisibility")
                 Holder.GroupTransparency = 0
             end
-            task.defer(ClampToViewport)
+            if not Dashboard.Embedded then
+                task.defer(ClampToViewport)
+            end
             Dashboard:Refresh()
             EnsureScheduler()
         elseif Animate then
@@ -864,15 +896,24 @@ function DashboardWindow.Create(Library, Info)
                 Tween.Completed:Once(function()
                     if not Dashboard.Destroyed and not Dashboard.Visible and Dashboard.VisibilityRevision == Revision then
                         Holder.Visible = false
+                        if Dashboard.Element then
+                            Dashboard.Element:SetVisible(false)
+                        end
                     end
                 end)
             else
                 Holder.Visible = false
+                if Dashboard.Element then
+                    Dashboard.Element:SetVisible(false)
+                end
             end
         else
             Library:CancelTween(Holder, "DashboardVisibility")
             Holder.GroupTransparency = 1
             Holder.Visible = false
+            if Dashboard.Element then
+                Dashboard.Element:SetVisible(false)
+            end
         end
         return Dashboard
     end
@@ -889,7 +930,7 @@ function DashboardWindow.Create(Library, Info)
     end
 
     function Dashboard:SetPosition(Value)
-        if not Dashboard.Destroyed then
+        if not Dashboard.Destroyed and not Dashboard.Embedded then
             Place(Value)
         end
         return Dashboard
@@ -901,8 +942,12 @@ function DashboardWindow.Create(Library, Info)
         end
         Dashboard.Width = math.clamp(math.floor(tonumber(Width) or Dashboard.Width), 240, 620)
         Dashboard.Height = math.clamp(math.floor(tonumber(Height) or Dashboard.Height), 180, 760)
-        Holder.Size = UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
-        task.defer(ClampToViewport)
+        Holder.Size = Dashboard.Embedded and UDim2.new(1, 0, 0, Dashboard.Height) or UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
+        if Dashboard.Element then
+            Dashboard.Element:SetHeight(Dashboard.Height)
+        elseif not Dashboard.Embedded then
+            task.defer(ClampToViewport)
+        end
         return Dashboard
     end
 
@@ -933,13 +978,22 @@ function DashboardWindow.Create(Library, Info)
         table.clear(Dashboard.Connections)
         table.clear(Dashboard.Dynamic)
         RemoveRegistryTree(Library, Holder)
-        Holder:Destroy()
+        if Dashboard.Element then
+            local Element = Dashboard.Element
+            Dashboard.Element = nil
+            Element:Destroy()
+        elseif Holder then
+            Holder:Destroy()
+        end
     end
 
     AddConnection(CloseButton.MouseEnter:Connect(function()
         if not Dashboard.Destroyed then
             Library:PlayTween(CloseButton, "DashboardCloseHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.HoverColor,
+                BackgroundTransparency = 0,
+            })
+            Library:PlayTween(CloseIcon, "DashboardCloseIconHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 ImageColor3 = Library.Scheme.FontColor,
             })
         end
@@ -948,6 +1002,9 @@ function DashboardWindow.Create(Library, Info)
         if not Dashboard.Destroyed then
             Library:PlayTween(CloseButton, "DashboardCloseHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.ElementColor,
+                BackgroundTransparency = 1,
+            })
+            Library:PlayTween(CloseIcon, "DashboardCloseIconHover", Library.HoverTweenInfo or Library.TweenInfo, {
                 ImageColor3 = Library.Scheme.MutedFontColor,
             })
         end
@@ -956,26 +1013,28 @@ function DashboardWindow.Create(Library, Info)
         Dashboard:SetVisible(false)
     end))
 
-    if type(Library.MakeDraggable) == "function" then
+    if not Embedded and type(Library.MakeDraggable) == "function" then
         Library:MakeDraggable(Holder, Header, true, false, function()
             return Dashboard.Draggable and Dashboard.Visible
         end)
     end
 
-    local CameraConnection
-    local function BindCamera()
-        RemoveConnection(CameraConnection)
-        local Camera = Workspace.CurrentCamera
-        if Camera then
-            CameraConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToViewport)
-            AddConnection(CameraConnection)
+    if not Embedded then
+        local CameraConnection
+        local function BindCamera()
+            RemoveConnection(CameraConnection)
+            local Camera = Workspace.CurrentCamera
+            if Camera then
+                CameraConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(ClampToViewport)
+                AddConnection(CameraConnection)
+            end
+            task.defer(ClampToViewport)
         end
-        task.defer(ClampToViewport)
-    end
 
-    AddConnection(Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(BindCamera))
-    BindCamera()
-    Place(Info.Position or Info.Side or "Right")
+        AddConnection(Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(BindCamera))
+        BindCamera()
+        Place(Info.Position or Info.Side or "Right")
+    end
 
     if type(Info.Sections) == "table" then
         for _, SectionInfo in Info.Sections do
@@ -994,5 +1053,26 @@ function DashboardWindow.Create(Library, Info)
 
     return Dashboard
 end
+
+function DashboardWindow.CreateEmbedded(Library, Groupbox, Idx, Info)
+    assert(type(Groupbox) == "table" and type(Groupbox.AddUIPassthrough) == "function", "DashboardWindow requires a groupbox")
+    Info = table.clone(Info or {})
+    local Holder = Instance.new("Frame")
+    Holder.BackgroundTransparency = 1
+    Holder.Size = UDim2.new(1, 0, 0, tonumber(Info.Height) or 360)
+    Info.Parent = Holder
+    local Dashboard = DashboardWindow.Create(Library, Info)
+    Dashboard.Root.Position = UDim2.fromScale(0, 0)
+    Dashboard.Root.Size = UDim2.fromScale(1, 1)
+    Dashboard.Embedded = true
+    Dashboard.Element = Groupbox:AddUIPassthrough(Idx or "Dashboard", {
+        Instance = Holder,
+        Height = Dashboard.Height,
+        Visible = Dashboard.Visible,
+    })
+    return Dashboard
+end
+
+DashboardWindow.Mount = DashboardWindow.CreateEmbedded
 
 return DashboardWindow

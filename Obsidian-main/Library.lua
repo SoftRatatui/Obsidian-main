@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-7",
+    ReleaseVersion = "0.0.1-release-8",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -353,29 +353,29 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 6,
+    CornerRadius = 8,
     DesignRevision = 0,
     Design = {
         Spacing = {
             Tiny = 3,
             Small = 6,
-            Medium = 8,
-            Large = 12,
-            Section = 10,
+            Medium = 9,
+            Large = 13,
+            Section = 12,
         },
         Radius = {
-            Window = 6,
-            Card = 5,
+            Window = 8,
+            Card = 7,
             Control = 4,
-            Popup = 6,
+            Popup = 7,
             Indicator = 3,
         },
         Size = {
-            TopBar = 48,
-            Footer = 20,
-            GroupHeader = 35,
-            Control = 25,
-            Row = 22,
+            TopBar = 52,
+            Footer = 22,
+            GroupHeader = 38,
+            Control = 28,
+            Row = 24,
             Icon = 16,
             Text = 14,
             Caption = 12,
@@ -387,11 +387,30 @@ local Library = {
             StrongTransparency = 0.18,
         },
         Opacity = {
-            MutedText = 0.42,
+            MutedText = 0.38,
             DisabledText = 0.78,
-            Divider = 0.56,
-            Shadow = 0.48,
+            Divider = 0.62,
+            Shadow = 0.44,
             Hover = 0.08,
+        },
+        Shell = {
+            SidebarMin = 184,
+            SidebarMax = 214,
+            SidebarRatio = 0.255,
+            NavigationHeight = 38,
+            NavigationGap = 5,
+            NavigationPadding = 7,
+            ContentPadding = 12,
+            SearchHeight = 32,
+            HeaderControl = 32,
+            HeaderGap = 8,
+        },
+        Typography = {
+            WindowTitle = 16,
+            Navigation = 14,
+            SectionTitle = 14,
+            Body = 14,
+            Caption = 12,
         },
         Motion = {
             Scale = 1,
@@ -409,13 +428,19 @@ local Library = {
             NotifyClose = { 0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
         },
         Addon = {
-            HeaderHeight = 36,
-            Padding = 8,
-            Gap = 7,
-            Radius = 5,
-            OutlineTransparency = 0.46,
+            HeaderHeight = 38,
+            Padding = 10,
+            Gap = 8,
+            Radius = 7,
+            OutlineTransparency = 0.5,
             BackgroundTransparency = 0,
-            ControlHeight = 25,
+            ControlHeight = 28,
+            WindowWidth = 420,
+            WindowHeight = 480,
+            CellRadius = 6,
+            CellPadding = 6,
+            SelectionThickness = 1,
+            PreviewRatio = 0.58,
             Motion = true,
         },
     },
@@ -593,7 +618,7 @@ function Library:SetThemeFont(FontFace): any
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-7-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-8-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -622,7 +647,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Metal = {
@@ -646,7 +671,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 248, 250),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Midnight = {
@@ -670,7 +695,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Steel = {
@@ -694,7 +719,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(246, 249, 251),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Sage = {
@@ -718,7 +743,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(247, 250, 248),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Ash = {
@@ -742,7 +767,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(249, 247, 243),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
 }
@@ -825,7 +850,7 @@ local Templates = {
         Footer = "No Footer",
 
         Position = UDim2.fromOffset(6, 6),
-        Size = UDim2.fromOffset(720, 680),
+        Size = UDim2.fromOffset(780, 640),
         IconSize = UDim2.fromOffset(30, 30),
 
         AutoShow = true,
@@ -836,7 +861,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 6,
+        CornerRadius = 8,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -886,8 +911,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.07,
-        TabSwipeOffset = 2,
+        TabTransitionTime = 0.075,
+        TabSwipeOffset = 4,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -1215,25 +1240,31 @@ end
 function Library:GetAddonStyle(Overrides)
     local Style = CloneDesignValue(Library.Design.Addon)
     Style.Spacing = CloneDesignValue(Library.Design.Spacing)
-    Style.Radius = tonumber(Style.Radius) or Library:GetDesignToken("Radius.Card", 5)
+    Style.Radius = tonumber(Style.Radius) or Library:GetDesignToken("Radius.Card", 7)
     Style.ControlRadius = Library:GetDesignToken("Radius.Control", 4)
     Style.PopupRadius = Library:GetDesignToken("Radius.Popup", 6)
     Style.TextSize = Library:GetDesignToken("Size.Text", 14)
     Style.CaptionSize = Library:GetDesignToken("Size.Caption", 12)
     Style.StrokeThickness = Library:GetDesignToken("Stroke.Thickness", 1)
     MergeDesign(Style, Overrides)
-    Style.HeaderHeight = math.clamp(tonumber(Style.HeaderHeight) or 36, 28, 56)
-    Style.Padding = math.clamp(tonumber(Style.Padding) or 8, 0, 24)
-    Style.Gap = math.clamp(tonumber(Style.Gap) or 7, 0, 20)
-    Style.Radius = math.clamp(tonumber(Style.Radius) or 5, 0, 16)
+    Style.HeaderHeight = math.clamp(tonumber(Style.HeaderHeight) or 38, 28, 56)
+    Style.Padding = math.clamp(tonumber(Style.Padding) or 10, 0, 24)
+    Style.Gap = math.clamp(tonumber(Style.Gap) or 8, 0, 20)
+    Style.Radius = math.clamp(tonumber(Style.Radius) or 7, 0, 16)
     Style.ControlRadius = math.clamp(tonumber(Style.ControlRadius) or 4, 0, 12)
-    Style.PopupRadius = math.clamp(tonumber(Style.PopupRadius) or 6, 0, 16)
-    Style.OutlineTransparency = math.clamp(tonumber(Style.OutlineTransparency) or 0.46, 0, 1)
+    Style.PopupRadius = math.clamp(tonumber(Style.PopupRadius) or 7, 0, 16)
+    Style.OutlineTransparency = math.clamp(tonumber(Style.OutlineTransparency) or 0.5, 0, 1)
     Style.BackgroundTransparency = math.clamp(tonumber(Style.BackgroundTransparency) or 0, 0, 1)
-    Style.ControlHeight = math.clamp(tonumber(Style.ControlHeight) or 25, 20, 40)
+    Style.ControlHeight = math.clamp(tonumber(Style.ControlHeight) or 28, 20, 40)
     Style.TextSize = math.clamp(tonumber(Style.TextSize) or 14, 10, 24)
     Style.CaptionSize = math.clamp(tonumber(Style.CaptionSize) or 12, 9, 20)
     Style.StrokeThickness = math.clamp(tonumber(Style.StrokeThickness) or 1, 0, 4)
+    Style.WindowWidth = math.clamp(tonumber(Style.WindowWidth) or 420, 240, 1100)
+    Style.WindowHeight = math.clamp(tonumber(Style.WindowHeight) or 480, 180, 900)
+    Style.CellRadius = math.clamp(tonumber(Style.CellRadius) or Style.Radius, 0, 16)
+    Style.CellPadding = math.clamp(tonumber(Style.CellPadding) or 6, 0, 20)
+    Style.SelectionThickness = math.clamp(tonumber(Style.SelectionThickness) or 1, 0, 4)
+    Style.PreviewRatio = math.clamp(tonumber(Style.PreviewRatio) or 0.58, 0.3, 0.8)
     Style.Motion = Style.Motion ~= false
     return Style
 end
@@ -2147,7 +2178,7 @@ local function New(ClassName: string, Properties: { [string]: any }): any
     if Templates[ClassName] then
         FillInstance(Templates[ClassName], Instance)
     end
-        FillInstance(Properties, Instance)
+    FillInstance(Properties, Instance)
 
     if Properties["Parent"] and not Properties["ZIndex"] then
         pcall(function()
@@ -2163,7 +2194,7 @@ function Library:CreateSurface(Parent: Instance, Info)
     local Role = tostring(Info.Role or "Surface")
     local ColorIndex = Info.Color or (Role == "Control" and "ElementColor" or Role == "Raised" and "RaisedColor" or "SurfaceColor")
     local RadiusRole = tostring(Info.RadiusRole or (Role == "Control" and "Control" or Role == "Popup" and "Popup" or "Card"))
-    local Radius = math.max(0, tonumber(Info.Radius) or tonumber(Library:GetDesignToken("Radius." .. RadiusRole, 5)) or 5)
+    local Radius = math.max(0, tonumber(Info.Radius) or tonumber(Library:GetDesignToken("Radius." .. RadiusRole, 7)) or 7)
     local StrokeTransparency = math.clamp(
         tonumber(Info.OutlineTransparency) or tonumber(Library:GetDesignToken("Stroke.SoftTransparency", 0.46)) or 0.46,
         0,
@@ -3145,6 +3176,441 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
             table.remove(Library.Signals, IdxBegan)
         end
     end)
+end
+
+function Library:CreateAddonWindow(Info)
+    Info = Info or {}
+    local Style = Library:GetAddonStyle(Info.Style)
+    local Width = math.clamp(tonumber(Info.Width) or Style.WindowWidth, 240, 1100)
+    local Height = math.clamp(tonumber(Info.Height) or Style.WindowHeight, 180, 900)
+    local HeaderHeight = math.clamp(tonumber(Info.HeaderHeight) or (Info.Subtitle and 54 or 44), 38, 68)
+    local Position = typeof(Info.Position) == "UDim2" and Info.Position or UDim2.fromScale(0.5, 0.5)
+    local AnchorPoint = typeof(Info.AnchorPoint) == "Vector2" and Info.AnchorPoint or Vector2.new(0.5, 0.5)
+    local Connections = {}
+    local Modules = {}
+    local RequestedVisible = Info.Visible ~= false
+    local HideWithMenu = Info.HideWithMenu ~= false and Library.Window ~= nil
+    local MenuSuppressed = HideWithMenu and not Library.Toggled
+    local VisibilityToken = 0
+    local Root = New("CanvasGroup", {
+        Active = true,
+        AnchorPoint = AnchorPoint,
+        BackgroundColor3 = "BackgroundColor",
+        ClipsDescendants = true,
+        GroupTransparency = RequestedVisible and not MenuSuppressed and 0 or 1,
+        Name = tostring(Info.Name or "AddonWindow"),
+        Position = Position,
+        Size = UDim2.fromOffset(Width, Height),
+        Visible = RequestedVisible and not MenuSuppressed,
+        ZIndex = tonumber(Info.ZIndex) or 24,
+        Parent = Info.Parent or Library.ScreenGui,
+    })
+    local RootCorner = New("UICorner", {
+        CornerRadius = UDim.new(0, Style.Radius),
+        Parent = Root,
+    })
+    local RootStroke = New("UIStroke", {
+        Color = "OutlineColor",
+        Thickness = Style.StrokeThickness,
+        Transparency = Style.OutlineTransparency,
+        Parent = Root,
+    })
+    Library:AddSoftShadow(Root, 22, Library:GetDesignToken("Opacity.Shadow", 0.44), UDim2.fromOffset(0, 5))
+
+    local Scale = New("UIScale", {
+        Scale = 1,
+        Parent = Root,
+    })
+
+    local Header = New("Frame", {
+        BackgroundColor3 = "TopBarColor",
+        Size = UDim2.new(1, 0, 0, HeaderHeight),
+        Parent = Root,
+    })
+    Library:CreateDivider(Header, {
+        Position = UDim2.new(0, Style.Padding, 1, -1),
+        Size = UDim2.new(1, -Style.Padding * 2, 0, 1),
+    })
+
+    local IconHolder = New("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = function()
+            return Library:GetAccentSurfaceColor(0.18)
+        end,
+        Position = UDim2.fromOffset(Style.Padding, HeaderHeight * 0.5),
+        Size = UDim2.fromOffset(26, 26),
+        Parent = Header,
+    })
+    New("UICorner", {
+        CornerRadius = UDim.new(0, Style.ControlRadius),
+        Parent = IconHolder,
+    })
+    local IconData = Library:GetCustomIcon(Info.Icon or "layout-dashboard") or Library:GetIcon("layout-dashboard")
+    local HeaderIcon = New("ImageLabel", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Image = IconData and IconData.Url or "",
+        ImageColor3 = "AccentColor",
+        ImageRectOffset = IconData and IconData.ImageRectOffset or Vector2.zero,
+        ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero,
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(16, 16),
+        Parent = IconHolder,
+    })
+
+    local HeaderText = New("Frame", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(Style.Padding + 36, 0),
+        Size = UDim2.new(1, -(Style.Padding * 2 + 72), 1, 0),
+        Parent = Header,
+    })
+    local Title = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(0, Info.Subtitle and 8 or 0),
+        Size = UDim2.new(1, 0, 0, Info.Subtitle and 20 or HeaderHeight),
+        Text = tostring(Info.Title or "Module"),
+        TextSize = Style.TextSize,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = HeaderText,
+    })
+    local Subtitle = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(0, 28),
+        Size = UDim2.new(1, 0, 0, 16),
+        Text = tostring(Info.Subtitle or ""),
+        TextColor3 = "MutedFontColor",
+        TextSize = Style.CaptionSize,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Visible = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= "",
+        Parent = HeaderText,
+    })
+
+    local CloseButton
+    if Info.Closable ~= false then
+        CloseButton = New("TextButton", {
+            AnchorPoint = Vector2.new(1, 0.5),
+            BackgroundColor3 = "ElementColor",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -Style.Padding, 0.5, 0),
+            Size = UDim2.fromOffset(28, 28),
+            Text = "",
+            Parent = Header,
+        })
+        New("UICorner", {
+            CornerRadius = UDim.new(0, Style.ControlRadius),
+            Parent = CloseButton,
+        })
+        local CloseData = Library:GetIcon("x")
+        local CloseIcon = New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Image = CloseData and CloseData.Url or "",
+            ImageColor3 = "MutedFontColor",
+            ImageRectOffset = CloseData and CloseData.ImageRectOffset or Vector2.zero,
+            ImageRectSize = CloseData and CloseData.ImageRectSize or Vector2.zero,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(15, 15),
+            Parent = CloseButton,
+        })
+        table.insert(Connections, CloseButton.MouseEnter:Connect(function()
+            Library:PlayTween(CloseButton, "AddonWindowHover", Library:GetMotion("Hover"), { BackgroundTransparency = 0 })
+            Library:PlayTween(CloseIcon, "AddonWindowHover", Library:GetMotion("Hover"), { ImageColor3 = Library.Scheme.FontColor })
+        end))
+        table.insert(Connections, CloseButton.MouseLeave:Connect(function()
+            Library:PlayTween(CloseButton, "AddonWindowHover", Library:GetMotion("Hover"), { BackgroundTransparency = 1 })
+            Library:PlayTween(CloseIcon, "AddonWindowHover", Library:GetMotion("Hover"), { ImageColor3 = Library.Scheme.MutedFontColor })
+        end))
+    end
+
+    local Content = New("ScrollingFrame", {
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        CanvasSize = UDim2.fromScale(0, 0),
+        Position = UDim2.fromOffset(0, HeaderHeight),
+        ScrollBarImageColor3 = "AccentColor",
+        ScrollBarImageTransparency = 0.42,
+        ScrollBarThickness = 2,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Size = UDim2.new(1, 0, 1, -HeaderHeight),
+        Parent = Root,
+    })
+    local ContentLayout = New("UIListLayout", {
+        Padding = UDim.new(0, Style.Gap),
+        Parent = Content,
+    })
+    New("UIPadding", {
+        PaddingBottom = UDim.new(0, Style.Padding),
+        PaddingLeft = UDim.new(0, Style.Padding),
+        PaddingRight = UDim.new(0, Style.Padding),
+        PaddingTop = UDim.new(0, Style.Padding),
+        Parent = Content,
+    })
+
+    local Host = {
+        Root = Root,
+        Header = Header,
+        Content = Content,
+        ContentLayout = ContentLayout,
+        Icon = HeaderIcon,
+        TitleLabel = Title,
+        SubtitleLabel = Subtitle,
+        Stroke = RootStroke,
+        Corner = RootCorner,
+        Scale = Scale,
+        Style = Style,
+        Modules = Modules,
+        Connections = Connections,
+        Visible = RequestedVisible,
+        Destroyed = false,
+    }
+
+    function Host:SetVisible(Visible, Instant)
+        if Host.Destroyed then
+            return Host
+        end
+        RequestedVisible = Visible == true
+        Host.Visible = RequestedVisible
+        VisibilityToken += 1
+        local Token = VisibilityToken
+        if RequestedVisible and not MenuSuppressed then
+            Root.Visible = true
+            if Instant or not Style.Motion then
+                Root.GroupTransparency = 0
+                Scale.Scale = 1
+                return Host
+            end
+            Root.GroupTransparency = 1
+            Scale.Scale = 0.985
+            Library:PlayTween(Root, "AddonWindowVisibility", Library:GetMotion("WindowOpen"), { GroupTransparency = 0 })
+            Library:PlayTween(Scale, "AddonWindowVisibility", Library:GetMotion("WindowOpen"), { Scale = 1 })
+            return Host
+        end
+        if Instant or not Style.Motion then
+            Root.GroupTransparency = 1
+            Root.Visible = false
+            return Host
+        end
+        local Tween = Library:PlayTween(Root, "AddonWindowVisibility", Library:GetMotion("WindowClose"), { GroupTransparency = 1 })
+        Library:PlayTween(Scale, "AddonWindowVisibility", Library:GetMotion("WindowClose"), { Scale = 0.99 })
+        if Tween then
+            Tween.Completed:Once(function()
+                if not Host.Destroyed and VisibilityToken == Token and not RequestedVisible then
+                    Root.Visible = false
+                end
+            end)
+        else
+            Root.Visible = false
+        end
+        return Host
+    end
+
+    function Host:Toggle()
+        return Host:SetVisible(not RequestedVisible)
+    end
+
+    function Host:SetTitle(Value)
+        Title.Text = tostring(Value or "")
+        return Host
+    end
+
+    function Host:SetSubtitle(Value)
+        Subtitle.Text = tostring(Value or "")
+        Subtitle.Visible = Subtitle.Text ~= ""
+        HeaderHeight = math.clamp(tonumber(Info.HeaderHeight) or (Subtitle.Visible and 54 or 44), 38, 68)
+        Header.Size = UDim2.new(1, 0, 0, HeaderHeight)
+        Content.Position = UDim2.fromOffset(0, HeaderHeight)
+        Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
+        IconHolder.Position = UDim2.fromOffset(Style.Padding, HeaderHeight * 0.5)
+        if Subtitle.Visible then
+            Title.Position = UDim2.fromOffset(0, 8)
+            Title.Size = UDim2.new(1, 0, 0, 20)
+        else
+            Title.Position = UDim2.fromOffset(0, 0)
+            Title.Size = UDim2.new(1, 0, 0, HeaderHeight)
+        end
+        return Host
+    end
+
+    function Host:SetIcon(Value)
+        local Data = Library:GetCustomIcon(Value)
+        HeaderIcon.Image = Data and Data.Url or ""
+        HeaderIcon.ImageRectOffset = Data and Data.ImageRectOffset or Vector2.zero
+        HeaderIcon.ImageRectSize = Data and Data.ImageRectSize or Vector2.zero
+        return Host
+    end
+
+    function Host:SetSize(NewWidth, NewHeight)
+        Width = math.clamp(tonumber(NewWidth) or Width, 240, 1100)
+        Height = math.clamp(tonumber(NewHeight) or Height, 180, 900)
+        Root.Size = UDim2.fromOffset(Width, Height)
+        ClampGuiToViewport(Root, 8)
+        return Host
+    end
+
+    function Host:SetPosition(NewPosition)
+        if typeof(NewPosition) == "UDim2" then
+            Root.Position = NewPosition
+            ClampGuiToViewport(Root, 8)
+        end
+        return Host
+    end
+
+    function Host:AddCustom(Idx, Object, ModuleHeight, Controller)
+        assert(typeof(Object) == "Instance" and Object:IsA("GuiObject"), "Custom module must be a GuiObject")
+        local Key = Idx or #Modules + 1
+        if Modules[Key] then
+            Host:Remove(Key)
+        end
+        local Holder = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, math.max(1, tonumber(ModuleHeight) or Object.Size.Y.Offset)),
+            Parent = Content,
+        })
+        Object.Parent = Holder
+        Object.Position = UDim2.fromScale(0, 0)
+        Object.Size = UDim2.fromScale(1, 1)
+        Modules[Key] = {
+            Holder = Holder,
+            Root = Object,
+            Controller = Controller,
+        }
+        return Modules[Key]
+    end
+
+    function Host:AddAddon(Idx, Addon, AddonInfo)
+        assert(type(Addon) == "table" and type(Addon.Create) == "function", "Window addons must expose Create")
+        AddonInfo = table.clone(AddonInfo or {})
+        local Key = Idx or #Modules + 1
+        if Modules[Key] then
+            Host:Remove(Key)
+        end
+        local ModuleHeight = math.max(1, tonumber(AddonInfo.Height) or tonumber(AddonInfo.ModuleHeight) or 280)
+        local Holder = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, ModuleHeight),
+            Parent = Content,
+        })
+        AddonInfo.Parent = Holder
+        AddonInfo.Height = ModuleHeight
+        AddonInfo.Style = AddonInfo.Style or Style
+        local Success, Controller = pcall(Addon.Create, Library, AddonInfo)
+        if not Success then
+            Holder:Destroy()
+            error("Unable to create window addon: " .. tostring(Controller), 2)
+        end
+        Modules[Key] = {
+            Holder = Holder,
+            Controller = Controller,
+        }
+        return Controller
+    end
+
+    function Host:Remove(Idx)
+        local Module = Modules[Idx]
+        if not Module then
+            return false
+        end
+        if Module.Controller and type(Module.Controller.Destroy) == "function" then
+            Module.Controller:Destroy()
+        elseif Module.Root then
+            Module.Root:Destroy()
+        end
+        if Module.Holder and Module.Holder.Parent then
+            Module.Holder:Destroy()
+        end
+        Modules[Idx] = nil
+        return true
+    end
+
+    function Host:SetModuleHeight(Idx, ModuleHeight)
+        local Module = Modules[Idx]
+        if not Module then
+            return false
+        end
+        local NewHeight = math.max(1, tonumber(ModuleHeight) or Module.Holder.Size.Y.Offset)
+        Module.Holder.Size = UDim2.new(1, 0, 0, NewHeight)
+        if Module.Controller and type(Module.Controller.SetHeight) == "function" then
+            Module.Controller:SetHeight(NewHeight)
+        elseif Module.Root then
+            Module.Root.Size = UDim2.fromScale(1, 1)
+        end
+        return true
+    end
+
+    function Host:Destroy()
+        if Host.Destroyed then
+            return
+        end
+        Host.Destroyed = true
+        for Idx in table.clone(Modules) do
+            Host:Remove(Idx)
+        end
+        for _, Connection in Connections do
+            pcall(function()
+                Connection:Disconnect()
+            end)
+        end
+        table.clear(Connections)
+        Library:CancelTween(Root, "AddonWindowVisibility")
+        Library:CancelTween(Scale, "AddonWindowVisibility")
+        if Root then
+            Root:Destroy()
+        end
+    end
+
+    if CloseButton then
+        table.insert(Connections, CloseButton.Activated:Connect(function()
+            Host:SetVisible(false)
+        end))
+    end
+    if Info.Draggable ~= false then
+        Library:MakeDraggable(Root, Header, true, false)
+    end
+    local CameraConnection
+    local function BindViewport()
+        if CameraConnection and CameraConnection.Connected then
+            CameraConnection:Disconnect()
+        end
+        local OldConnectionIndex = table.find(Connections, CameraConnection)
+        if OldConnectionIndex then
+            table.remove(Connections, OldConnectionIndex)
+        end
+        local Camera = workspace.CurrentCamera
+        if Camera then
+            CameraConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                if not Host.Destroyed then
+                    ClampGuiToViewport(Root, 8)
+                end
+            end)
+            table.insert(Connections, CameraConnection)
+        end
+        task.defer(function()
+            if not Host.Destroyed then
+                ClampGuiToViewport(Root, 8)
+            end
+        end)
+    end
+    table.insert(Connections, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(BindViewport))
+    BindViewport()
+    if HideWithMenu and Library.Window.VisibilityChanged then
+        table.insert(Connections, Library.Window.VisibilityChanged.Event:Connect(function(Visible)
+            MenuSuppressed = not Visible
+            if Visible then
+                Host:SetVisible(RequestedVisible, true)
+            else
+                VisibilityToken += 1
+                Library:CancelTween(Root, "AddonWindowVisibility")
+                Library:CancelTween(Scale, "AddonWindowVisibility")
+                Root.GroupTransparency = 1
+                Scale.Scale = 1
+                Root.Visible = false
+            end
+        end))
+    end
+    Library:OnUnload(function()
+        Host:Destroy()
+    end)
+    return Host
 end
 
 function Library:MakeCover(Holder: GuiObject, Place: string)
@@ -7617,8 +8083,9 @@ do
         })
 
         local Checkbox = New("Frame", {
+            AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "MainColor",
-            Position = UDim2.fromOffset(0, 3),
+            Position = UDim2.fromScale(0, 0.5),
             Size = UDim2.fromOffset(16, 16),
             Parent = Button,
         })
@@ -7700,7 +8167,7 @@ do
                 TextColor3 = LabelColor,
             })
             Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or 0.4,
+                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
             })
             Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
                 ImageTransparency = Toggle.Value and 0 or 1,
@@ -7927,7 +8394,7 @@ do
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 20),
+            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Row", 24)),
             Text = "",
             Visible = Toggle.Visible,
             Parent = Container,
@@ -7937,8 +8404,8 @@ do
             BackgroundTransparency = 1,
             Size = UDim2.new(1, -32, 1, 0),
             Text = Toggle.Text,
-            TextSize = 14,
-            TextTransparency = 0.4,
+            TextSize = Library:GetDesignToken("Size.Text", 14),
+            TextTransparency = Library:GetDesignToken("Opacity.MutedText", 0.38),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Button,
         })
@@ -7947,7 +8414,7 @@ do
             FillDirection = Enum.FillDirection.Horizontal,
             HorizontalAlignment = Enum.HorizontalAlignment.Right,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 6),
+            Padding = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
             Parent = Label,
         })
 
@@ -8040,7 +8507,7 @@ do
                 TextColor3 = LabelColor,
             })
             Library:PlayTween(Label, "SwitchLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or 0.4,
+                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
             })
             Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
                 Position = BallPosition,
@@ -11985,13 +12452,16 @@ function Library:CreateWindow(WindowInfo)
     local TopBarHeight = Library:GetDesignToken("Size.TopBar", 48)
     local BottomBarHeight = Library:GetDesignToken("Size.Footer", 20)
 
-    local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * 0.26), 176, 210)
+    local SidebarRatio = Library:GetDesignToken("Shell.SidebarRatio", 0.255)
+    local SidebarMin = Library:GetDesignToken("Shell.SidebarMin", 184)
+    local SidebarMax = Library:GetDesignToken("Shell.SidebarMax", 214)
+    local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * SidebarRatio), SidebarMin, SidebarMax)
     local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
     local LastExpandedWidth = InitialLeftWidth
     local LastCompactState = nil
-    local NavigationIconSize = 17
-    local NavigationIconX = 10
-    local NavigationLabelX = 36
+    local NavigationIconSize = Library:GetDesignToken("Size.Icon", 16)
+    local NavigationIconX = 12
+    local NavigationLabelX = 40
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
     local HeaderControlWidth = WindowInfo.ShowCompactLauncher and 84 or 50
 
@@ -12030,8 +12500,9 @@ function Library:CreateWindow(WindowInfo)
             Parent = MainFrame,
         })
         table.insert(Library.Scales, WindowScale)
-        Library:AddOutline(MainFrame)
-        Library:AddSoftShadow(MainFrame, 18, Library:GetDesignToken("Opacity.Shadow", 0.48), UDim2.fromOffset(0, 4))
+        local MainOutline = Library:AddOutline(MainFrame)
+        MainOutline.Transparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18)
+        Library:AddSoftShadow(MainFrame, 22, Library:GetDesignToken("Opacity.Shadow", 0.44), UDim2.fromOffset(0, 5))
         Library:MakeLine(MainFrame, {
             Color = function()
                 return Library:GetAccentSurfaceColor(0.2)
@@ -12122,7 +12593,7 @@ function Library:CreateWindow(WindowInfo)
             Position = UDim2.fromOffset(TitleX, 0),
             Size = UDim2.new(1, -(TitleX + 12), 1, 0),
             Text = WindowInfo.Title,
-            TextSize = 17,
+            TextSize = Library:GetDesignToken("Typography.WindowTitle", 16),
             TextTruncate = Enum.TextTruncate.AtEnd,
             TextXAlignment = Enum.TextXAlignment.Left,
             Visible = not IsCompact,
@@ -12142,7 +12613,7 @@ function Library:CreateWindow(WindowInfo)
             FillDirection = Enum.FillDirection.Horizontal,
             HorizontalAlignment = Enum.HorizontalAlignment.Left,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 8),
+            Padding = UDim.new(0, Library:GetDesignToken("Shell.HeaderGap", 8)),
             Parent = RightWrapper,
         })
 
@@ -12178,7 +12649,7 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.fromScale(1, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             Text = "",
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Typography.SectionTitle", 14),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = CurrentTabInfo,
         })
@@ -12190,7 +12661,7 @@ function Library:CreateWindow(WindowInfo)
             Text = "",
             TextColor3 = "MutedFontColor",
             TextWrapped = true,
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Typography.Caption", 12),
             TextXAlignment = Enum.TextXAlignment.Left,
             TextTransparency = 0.12,
             Parent = CurrentTabInfo,
@@ -12200,7 +12671,7 @@ function Library:CreateWindow(WindowInfo)
             BackgroundColor3 = "ElementColor",
             PlaceholderText = "Search",
             Size = WindowInfo.SearchbarSize,
-            TextSize = 14,
+            TextSize = Library:GetDesignToken("Typography.Body", 14),
             Visible = not (WindowInfo.DisableSearch or false),
             Parent = RightWrapper,
         })
@@ -12211,7 +12682,7 @@ function Library:CreateWindow(WindowInfo)
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", 4)),
                 Parent = SearchBox,
             })
         )
@@ -12265,7 +12736,7 @@ function Library:CreateWindow(WindowInfo)
             end,
             BackgroundTransparency = 1,
             Position = UDim2.new(1, WindowInfo.ShowCompactLauncher and -58 or -24, 0.5, 0),
-            Size = UDim2.fromOffset(30, 30),
+            Size = UDim2.fromOffset(Library:GetDesignToken("Shell.HeaderControl", 32), Library:GetDesignToken("Shell.HeaderControl", 32)),
             Text = "",
             ZIndex = 4,
             Parent = TopBar,
@@ -12315,7 +12786,7 @@ function Library:CreateWindow(WindowInfo)
                 end,
                 BackgroundTransparency = 1,
                 Position = UDim2.new(1, -24, 0.5, 0),
-                Size = UDim2.fromOffset(30, 30),
+                Size = UDim2.fromOffset(Library:GetDesignToken("Shell.HeaderControl", 32), Library:GetDesignToken("Shell.HeaderControl", 32)),
                 Text = "",
                 ZIndex = 4,
                 Parent = TopBar,
@@ -12449,7 +12920,7 @@ function Library:CreateWindow(WindowInfo)
         
         Tabs = New("ScrollingFrame", {
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            BackgroundColor3 = "BackgroundColor",
+            BackgroundColor3 = "SurfaceColor",
             CanvasSize = UDim2.fromScale(0, 0),
             Position = UDim2.fromOffset(0, TopBarHeight + 1),
             ScrollBarImageColor3 = "AccentColor",
@@ -12462,14 +12933,14 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIListLayout", {
             HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            Padding = UDim.new(0, 4),
+            Padding = UDim.new(0, Library:GetDesignToken("Shell.NavigationGap", 5)),
             Parent = Tabs,
         })
         New("UIPadding", {
-            PaddingBottom = UDim.new(0, 6),
-            PaddingLeft = UDim.new(0, 4),
-            PaddingRight = UDim.new(0, 4),
-            PaddingTop = UDim.new(0, 6),
+            PaddingBottom = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
+            PaddingLeft = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
+            PaddingRight = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
+            PaddingTop = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
             Parent = Tabs,
         })
         ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
@@ -12486,8 +12957,8 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIPadding", {
             PaddingBottom = UDim.new(0, 0),
-            PaddingLeft = UDim.new(0, 8),
-            PaddingRight = UDim.new(0, 8),
+            PaddingLeft = UDim.new(0, Library:GetDesignToken("Shell.ContentPadding", 12)),
+            PaddingRight = UDim.new(0, Library:GetDesignToken("Shell.ContentPadding", 12)),
             PaddingTop = UDim.new(0, 0),
             Parent = Container,
         })
@@ -12605,7 +13076,7 @@ function Library:CreateWindow(WindowInfo)
         BindCoreSurface(MainFrame, "BackgroundColor3", "BackgroundColor")
         BindCoreSurface(TopBar, "BackgroundColor3", "TopBarColor")
         BindCoreSurface(TitleHolder, "BackgroundColor3", "TopBarColor")
-        BindCoreSurface(Tabs, "BackgroundColor3", "BackgroundColor")
+        BindCoreSurface(Tabs, "BackgroundColor3", "SurfaceColor")
         BindCoreSurface(Container, "BackgroundColor3", "BackgroundColor")
         BindCoreSurface(BottomBackground, "BackgroundColor3", "SurfaceColor")
         ApplyCompactLauncherStyle(false)
@@ -13264,13 +13735,13 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -8, 0, 34),
+                Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Shell.NavigationHeight", 38)),
                 Text = "",
                 LayoutOrder = Order,
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, math.max(WindowInfo.CornerRadius - 2, 2)),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 7)),
                 Parent = TabButton,
             })
             TabLabel = New("TextLabel", {
@@ -13278,7 +13749,7 @@ function Library:CreateWindow(WindowInfo)
                 Position = UDim2.fromOffset(NavigationLabelX, 0),
                 Size = UDim2.new(1, -(NavigationLabelX + 8), 1, 0),
                 Text = Name,
-                TextSize = 15,
+                TextSize = Library:GetDesignToken("Typography.Navigation", 14),
                 TextTruncate = Enum.TextTruncate.AtEnd,
                 TextTransparency = 0.5,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -14049,6 +14520,7 @@ function Library:CreateWindow(WindowInfo)
 
             local GroupboxCollapseArrow
             local GroupboxLine
+            local GroupboxHeader
             local GroupboxHeaderHeight = Library:GetDesignToken("Size.GroupHeader", 35)
             local GroupboxTopPadding = Library:GetDesignToken("Spacing.Medium", 8)
             local GroupboxBottomPadding = Library:GetDesignToken("Spacing.Large", 12)
@@ -14068,15 +14540,22 @@ function Library:CreateWindow(WindowInfo)
                         Parent = GroupboxHolder,
                     })
                 )
-                Library:AddOutline(GroupboxHolder)
+                local GroupboxOutline = Library:AddOutline(GroupboxHolder)
+                GroupboxOutline.Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46)
+
+                GroupboxHeader = New("Frame", {
+                    BackgroundColor3 = "RaisedColor",
+                    BackgroundTransparency = 0.46,
+                    Size = UDim2.new(1, 0, 0, GroupboxHeaderHeight),
+                    Parent = GroupboxHolder,
+                })
 
                 GroupboxLine = Library:MakeLine(GroupboxHolder, {
-                    Color = function()
-                        return Library:GetAccentSurfaceColor(0.1)
-                    end,
+                    Color = "OutlineColor",
                     Position = UDim2.fromOffset(0, GroupboxHeaderHeight - 1),
                     Size = UDim2.new(1, 0, 0, 1),
                     Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
+                    ZIndex = 2,
                 })
 
                 local BoxIcon = Library:GetCustomIcon(Info.IconName)
@@ -14088,6 +14567,7 @@ function Library:CreateWindow(WindowInfo)
                         ImageRectSize = BoxIcon.ImageRectSize,
                         Position = UDim2.fromOffset(8, math.floor((GroupboxHeaderHeight - 18) * 0.5)),
                         Size = UDim2.fromOffset(18, 18),
+                        ZIndex = 3,
                         Parent = GroupboxHolder,
                     })
                 end
@@ -14100,6 +14580,7 @@ function Library:CreateWindow(WindowInfo)
                     TextSize = Library:GetDesignToken("Size.Text", 14),
                     TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 3,
                     Parent = GroupboxHolder,
                 })
                 New("UIPadding", {
@@ -14118,6 +14599,8 @@ function Library:CreateWindow(WindowInfo)
                         Rotation = 180,
                         Position = UDim2.new(1, -30, 0, math.floor((GroupboxHeaderHeight - 18) * 0.5)),
                         Size = UDim2.fromOffset(18, 18),
+                        ImageTransparency = 0.22,
+                        ZIndex = 3,
                         Parent = GroupboxHolder,
                     })
                 end

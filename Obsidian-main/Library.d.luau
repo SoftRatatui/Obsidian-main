@@ -32,6 +32,8 @@ export type Design = {
     Size: { [string]: number },
     Stroke: { [string]: number },
     Opacity: { [string]: number },
+    Shell: { [string]: number },
+    Typography: { [string]: number },
     Motion: { [string]: any },
     Addon: { [string]: any },
 }
@@ -49,8 +51,36 @@ export type AddonStyle = {
     StrokeThickness: number,
     TextSize: number,
     CaptionSize: number,
+    WindowWidth: number,
+    WindowHeight: number,
+    CellRadius: number,
+    CellPadding: number,
+    SelectionThickness: number,
+    PreviewRatio: number,
     Motion: boolean,
     Spacing: { [string]: number },
+}
+
+export type AddonWindow = {
+    Root: CanvasGroup,
+    Header: Frame,
+    Content: ScrollingFrame,
+    Style: AddonStyle,
+    Modules: { [any]: any },
+    Visible: boolean,
+    Destroyed: boolean,
+    SetVisible: (self: AddonWindow, Visible: boolean, Instant: boolean?) -> AddonWindow,
+    Toggle: (self: AddonWindow) -> AddonWindow,
+    SetTitle: (self: AddonWindow, Value: any) -> AddonWindow,
+    SetSubtitle: (self: AddonWindow, Value: any) -> AddonWindow,
+    SetIcon: (self: AddonWindow, Value: string | number) -> AddonWindow,
+    SetSize: (self: AddonWindow, Width: number, Height: number) -> AddonWindow,
+    SetPosition: (self: AddonWindow, Position: UDim2) -> AddonWindow,
+    AddCustom: (self: AddonWindow, Idx: any, Object: GuiObject, Height: number?, Controller: any?) -> any,
+    AddAddon: (self: AddonWindow, Idx: any, Addon: any, Info: any?) -> any,
+    SetModuleHeight: (self: AddonWindow, Idx: any, Height: number) -> boolean,
+    Remove: (self: AddonWindow, Idx: any) -> boolean,
+    Destroy: (self: AddonWindow) -> (),
 }
 
 export type Icon = {
@@ -1150,7 +1180,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-7",
+    ReleaseVersion: "0.0.1-release-8",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1302,6 +1332,7 @@ export type Library = {
     AddSoftShadow: (self: Library, Frame: GuiObject, BlurRadius: number?, Transparency: number?, Offset: UDim2?) -> UIShadow?,
     CreateSurface: (self: Library, Parent: Instance, Info: { [string]: any }?) -> (GuiObject, UIStroke?, UICorner, UIShadow?),
     CreateDivider: (self: Library, Parent: Instance, Info: { [string]: any }?) -> Frame,
+    CreateAddonWindow: (self: Library, Info: { [string]: any }?) -> AddonWindow,
     AddBlank: (self: Library, Frame: GuiObject, Size: UDim2) -> (),
     MakeOutline: (self: Library, Frame: GuiObject, Corner: number?, ZIndex: number?) -> Frame,
     AddDraggableLabel: (

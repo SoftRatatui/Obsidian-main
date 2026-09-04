@@ -141,13 +141,13 @@ local AshTheme = {
 }
 
 local ThemeManager = {
-    ReleaseVersion = "0.0.1-release-7",
+    ReleaseVersion = "0.0.1-release-8",
     Library = nil,
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",
     AppliedToTab = false,
     DefaultThemeName = "Default",
-    DefaultThemeFileName = "default-v7.txt",
+    DefaultThemeFileName = "default-v8.txt",
     FallbackThemeName = "Default",
     FallbackThemeLabel = "Default",
     CurrentTheme = "Default",

@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 
 local FixedR6Preview = {
-    ReleaseVersion = "0.0.1-release-7",
+    ReleaseVersion = "0.0.1-release-8",
 }
 
 local function ResolvePlayer(Target)

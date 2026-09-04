@@ -262,20 +262,22 @@ function VisualPreview.Create(Library, Tab, Info)
 
     Info = Info or {}
     local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        HeaderHeight = 36,
-        Radius = 5,
-        OutlineTransparency = 0.46,
+        HeaderHeight = 38,
+        Radius = 7,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         TextSize = 14,
         Motion = true,
     }
     Tab = Tab or (type(Info.Groupbox) == "table" and Info.Groupbox.Tab or nil)
-    assert(Tab, "VisualPreview requires a regular tab")
+    local BindToTab = Info.BindToTab ~= false
+    local BindToMenu = Info.HideWithMenu ~= false
+    assert(Tab or not BindToTab, "VisualPreview requires a regular tab when BindToTab is enabled")
     local MainWindow = Info.Window or Library.Window
     assert(MainWindow and MainWindow.Frame, "VisualPreview requires a window with a frame")
     local MainFrame = MainWindow.Frame
     assert(IsClass(MainFrame, "GuiObject"), "VisualPreview requires a GuiObject window frame")
-    local TabCanvas = Tab.Canvas
+    local TabCanvas = BindToTab and Tab and Tab.Canvas or nil
     local PanelWidth = math.clamp(tonumber(Info.Width) or 300, 180, 720)
     local PanelHeight = math.clamp(tonumber(Info.Height) or 420, 220, 900)
     local EmbeddedRequested = type(Info.Groupbox) == "table" or IsClass(Info.Parent, "GuiObject")
@@ -917,7 +919,9 @@ function VisualPreview.Create(Library, Tab, Info)
     end
 
     local function IsDisplayable()
-        return Preview.Enabled and Library.Toggled and Library.ActiveTab == Tab and IsTabVisible() and IsMainVisible()
+        local TabMatches = not BindToTab or Library.ActiveTab == Tab
+        local MenuMatches = not BindToMenu or Library.Toggled and IsMainVisible()
+        return Preview.Enabled and TabMatches and MenuMatches and IsTabVisible()
     end
 
     local function BuildRendererContext()
@@ -1579,6 +1583,34 @@ function VisualPreview.Mount(Library, Groupbox, Idx, Info)
     local Options = table.clone(Info or {})
     Options.Id = Options.Id or Options.Idx or Idx
     return VisualPreview.CreateEmbedded(Library, Groupbox, Options)
+end
+
+function VisualPreview.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "VisualPreview standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = tonumber(Info.WindowHeight) or 540
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or "Character preview",
+        Subtitle = Info.WindowSubtitle,
+        Icon = Info.WindowIcon or "scan-eye",
+        Width = Info.WindowWidth or 380,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+    Info.Parent = Host.Content
+    Info.Height = Info.Height or math.max(220, WindowHeight - 72)
+    Info.Mode = "Embedded"
+    Info.BindToTab = false
+    local Preview = VisualPreview.Create(Library, Info.Tab, Info)
+    Host:AddCustom("Preview", Preview.Holder, Info.Height, Preview)
+    Preview.Host = Host
+    return Preview, Host
 end
 
 return VisualPreview

@@ -58,9 +58,9 @@ end
 function ImagePreview.Create(Library, Info)
     Info = Info or {}
     local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
-        Padding = 8,
-        Radius = 5,
-        OutlineTransparency = 0.46,
+        Padding = 10,
+        Radius = 7,
+        OutlineTransparency = 0.5,
         StrokeThickness = 1,
         TextSize = 14,
         CaptionSize = 12,
@@ -666,6 +666,30 @@ function ImagePreview.CreateEmbedded(Library, Groupbox, Idx, Info)
         Visible = Preview.Visible,
     })
     return Preview
+end
+
+function ImagePreview.CreateStandalone(Library, Info)
+    assert(Library and type(Library.CreateAddonWindow) == "function", "ImagePreview standalone mode requires Library:CreateAddonWindow")
+    Info = table.clone(Info or {})
+    local WindowHeight = tonumber(Info.WindowHeight) or 460
+    local Host = Library:CreateAddonWindow({
+        Title = Info.WindowTitle or "Image preview",
+        Subtitle = Info.WindowSubtitle,
+        Icon = Info.WindowIcon or "image",
+        Width = Info.WindowWidth or 420,
+        Height = WindowHeight,
+        Position = Info.Position,
+        AnchorPoint = Info.AnchorPoint,
+        Draggable = Info.Draggable,
+        Closable = Info.Closable,
+        HideWithMenu = Info.HideWithMenu,
+        Visible = Info.Visible,
+        Style = Info.Style,
+    })
+    Info.Height = Info.Height or math.max(180, WindowHeight - 72)
+    local Preview = Host:AddAddon("Preview", ImagePreview, Info)
+    Preview.Host = Host
+    return Preview, Host
 end
 
 ImagePreview.Mount = ImagePreview.CreateEmbedded

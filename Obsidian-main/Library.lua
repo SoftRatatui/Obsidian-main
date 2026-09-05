@@ -436,17 +436,17 @@ local Library = {
         Motion = {
             Scale = 1,
             Reduced = false,
-            Hover = { 0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            Control = { 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Fast = { 0.06, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Popup = { 0.11, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Dialog = { 0.13, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            WindowOpen = { 0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            WindowClose = { 0.055, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            TabEnter = { 0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            TabExit = { 0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            Notify = { 0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            NotifyClose = { 0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Hover = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Control = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Fast = { 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Popup = { 0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Dialog = { 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowOpen = { 0.21, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowClose = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            TabEnter = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            TabExit = { 0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Notify = { 0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            NotifyClose = { 0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
         },
         Addon = {
             HeaderHeight = 38,
@@ -493,7 +493,8 @@ local Library = {
         BackgroundImage = ""
     },
 
-	Registry = setmetatable({}, { __mode = "k" }),
+	Registry = {},
+	ThemeListeners = {},
 	ColorRevision = 0,
 	Scales = {},
 	ScalesOffset = {},
@@ -636,6 +637,65 @@ function Library:SetThemeFont(FontFace): any
     Library.ThemeFontOverride = FontFace
     Library:SetFont(FontFace)
     return Library
+end
+
+Library.CurrentFontName = "Inter"
+Library.FontPresets = {
+    { Name = "Inter", Bundled = true },
+    { Name = "Builder Sans", Family = "rbxasset://fonts/families/BuilderSans.json", Weight = Enum.FontWeight.Medium },
+    { Name = "Gotham", Family = "rbxasset://fonts/families/GothamSSm.json", Weight = Enum.FontWeight.Medium },
+    { Name = "Montserrat", Family = "rbxasset://fonts/families/Montserrat.json", Weight = Enum.FontWeight.Medium },
+    { Name = "Roboto", Family = "rbxasset://fonts/families/Roboto.json", Weight = Enum.FontWeight.Medium },
+    { Name = "Source Sans", Family = "rbxasset://fonts/families/SourceSansPro.json", Weight = Enum.FontWeight.SemiBold },
+    { Name = "Ubuntu", Family = "rbxasset://fonts/families/Ubuntu.json", Weight = Enum.FontWeight.Regular },
+    { Name = "Roboto Mono", Family = "rbxasset://fonts/families/RobotoMono.json", Weight = Enum.FontWeight.Medium },
+}
+
+function Library:GetFontNames(): { string }
+    local Names = {}
+    for _, Preset in Library.FontPresets do
+        if Preset.Bundled then
+            if Library.DefaultFont and not Library.DefaultFontError then
+                table.insert(Names, Preset.Name)
+            end
+        else
+            local Success = pcall(Font.new, Preset.Family, Preset.Weight or Enum.FontWeight.Medium)
+            if Success then
+                table.insert(Names, Preset.Name)
+            end
+        end
+    end
+    return Names
+end
+
+function Library:GetFontPreset(Name: string): Font?
+    for _, Preset in Library.FontPresets do
+        if Preset.Name == Name then
+            if Preset.Bundled then
+                if Library.DefaultFontError then
+                    return nil
+                end
+                return Library.DefaultFont
+            end
+            local Success, Value = pcall(Font.new, Preset.Family, Preset.Weight or Enum.FontWeight.Medium)
+            if Success then
+                return Value
+            end
+            return nil
+        end
+    end
+    return nil
+end
+
+function Library:SetFontByName(Name: string): boolean
+    local FontFace = Library:GetFontPreset(Name)
+    if not FontFace then
+        return false
+    end
+
+    Library.CurrentFontName = Name
+    Library:SetThemeFont(FontFace)
+    return true
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
@@ -935,8 +995,8 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.075,
-        TabSwipeOffset = 4,
+        TabTransitionTime = 0.16,
+        TabSwipeOffset = 6,
         TabSwipeFrom = "bottom"
     },
     Dialog = {
@@ -1313,6 +1373,25 @@ function Library:GetAddonStyle(Overrides)
     Style.SelectionThickness = math.clamp(tonumber(Style.SelectionThickness) or 1, 0, 4)
     Style.PreviewRatio = math.clamp(tonumber(Style.PreviewRatio) or 0.58, 0.3, 0.8)
     Style.Motion = Style.Motion ~= false
+
+    for _, Key in {
+        "HeaderHeight",
+        "Padding",
+        "Gap",
+        "Radius",
+        "ControlRadius",
+        "PopupRadius",
+        "ControlHeight",
+        "TextSize",
+        "CaptionSize",
+        "WindowWidth",
+        "WindowHeight",
+        "CellRadius",
+        "CellPadding",
+    } do
+        Style[Key] = math.round(Style[Key])
+    end
+
     return Style
 end
 
@@ -1957,6 +2036,17 @@ function Library:RemoveFromRegistry(Instance)
     Library.Registry[Instance] = nil
 end
 
+function Library:ReleaseRegistryTree(Object)
+    if typeof(Object) ~= "Instance" then
+        return
+    end
+
+    for _, Child in Object:GetDescendants() do
+        Library.Registry[Child] = nil
+    end
+    Library.Registry[Object] = nil
+end
+
 function Library:BindTheme(Object, Properties)
     local Bindings = table.clone(Library.Registry[Object] or {})
     for Property, Value in Properties do
@@ -2023,6 +2113,7 @@ end
 function Library:UpdateColorsUsingRegistry()
     Library.ColorRevision += 1
     Library.ThemeErrors = {}
+
     for Instance, Properties in Library.Registry do
         pcall(function()
             CancelThemeTweens(Instance, Properties)
@@ -2050,6 +2141,17 @@ function Library:UpdateColorsUsingRegistry()
     end
 end
 
+function Library:OnThemeChanged(Callback)
+    assert(type(Callback) == "function", "OnThemeChanged expects a function")
+
+    local Token = {}
+    Library.ThemeListeners[Token] = Callback
+
+    return function()
+        Library.ThemeListeners[Token] = nil
+    end
+end
+
 function Library:RefreshThemeState()
     local Refreshed = {}
     for _, Collection in { Library.Buttons, Library.Toggles, Library.Options } do
@@ -2071,6 +2173,15 @@ function Library:RefreshThemeState()
     if Window and typeof(Window.RefreshTheme) == "function" then
         pcall(Window.RefreshTheme, Window)
     end
+
+    for _, Callback in Library.ThemeListeners do
+        pcall(Callback)
+    end
+end
+
+function Library:ApplyTheme()
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
 end
 
 function Library:SetDPIScale(DPIScale: number)
@@ -3861,19 +3972,39 @@ function Library:GlyphSize(Box: number, Preferred: number?): number
         Target = Outer
     end
 
-    local Source = 24
-    for _, Divisor in { 1, 2, 3, 4 } do
-        local Clean = Source / Divisor
-        if Clean <= Target and Clean >= Target - 2 and (Outer - Clean) % 2 == 0 then
-            return Clean
-        end
-    end
-
     if (Outer - Target) % 2 ~= 0 then
         Target -= 1
     end
 
     return math.max(1, Target)
+end
+
+function Library:GetLuminance(Color: Color3): number
+    local function Channel(Value: number): number
+        if Value <= 0.03928 then
+            return Value / 12.92
+        end
+        return ((Value + 0.055) / 1.055) ^ 2.4
+    end
+
+    return 0.2126 * Channel(Color.R) + 0.7152 * Channel(Color.G) + 0.0722 * Channel(Color.B)
+end
+
+function Library:GetContrastColor(Background: Color3): Color3
+    local Light = Library.Scheme.WhiteColor or Color3.new(1, 1, 1)
+    local Dark = Library.Scheme.BackgroundColor or Color3.new(0, 0, 0)
+    local Base = Library:GetLuminance(Background)
+
+    local function Ratio(First: number, Second: number): number
+        local High = math.max(First, Second)
+        local Low = math.min(First, Second)
+        return (High + 0.05) / (Low + 0.05)
+    end
+
+    if Ratio(Base, Library:GetLuminance(Light)) >= Ratio(Base, Library:GetLuminance(Dark)) then
+        return Light
+    end
+    return Dark
 end
 
 function Library:MakeLine(Frame: GuiObject, Info)
@@ -8432,11 +8563,13 @@ do
         })
 
         local CheckIcon = Library:GetCustomIcon("check")
-        local CheckSize = Library:GlyphSize(IndicatorSize, 12)
+        local CheckSize = Library:GlyphSize(IndicatorSize, 14)
         local Checkmark = New("ImageLabel", {
             BackgroundTransparency = 1,
             Image = CheckIcon and CheckIcon.Url or "",
-            ImageColor3 = "WhiteColor",
+            ImageColor3 = function()
+                return Library:GetContrastColor(GetToggleSurfaceColor(Toggle))
+            end,
             ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
             ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
             ImageTransparency = Toggle.Value and 0 or 1,
@@ -8470,7 +8603,9 @@ do
 
         RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
         Library:AddToRegistry(Checkmark, {
-            ImageColor3 = "WhiteColor",
+            ImageColor3 = function()
+                return Library:GetContrastColor(GetToggleSurfaceColor(Toggle))
+            end,
         })
 
         function Toggle:UpdateColors()
@@ -8485,6 +8620,8 @@ do
             local BackgroundColor = GetToggleSurfaceColor(Toggle)
             local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
+
+            Checkmark.ImageColor3 = Library:GetContrastColor(BackgroundColor)
 
             if Toggle.Disabled then
                 Library:CancelTween(Checkbox, "CheckboxColor")
@@ -8777,7 +8914,7 @@ do
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 7),
+            CornerRadius = UDim.new(1, 0),
             Parent = Switch,
         })
         local SwitchStroke = New("UIStroke", {
@@ -8796,7 +8933,7 @@ do
             Parent = Switch,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, 5),
+            CornerRadius = UDim.new(1, 0),
             Parent = Ball,
         })
 
@@ -9885,7 +10022,7 @@ do
 
         local DisplayImage = New("ImageLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(-4, 3),
+            Position = UDim2.fromOffset(-4, Library:CenterOffset(ControlHeight, 16)),
             Size = UDim2.fromOffset(16, 16),
             Image = "",
             ImageTransparency = 1,
@@ -12681,6 +12818,7 @@ function Library:Notify(...)
 
         task.delay(Library.NotifyCloseTweenInfo.Time, function()
             Library.Notifications[FakeBackground] = nil
+            Library:ReleaseRegistryTree(FakeBackground)
             FakeBackground:Destroy()
         end)
     end
@@ -13160,7 +13298,7 @@ function Library:CreateWindow(WindowInfo)
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, math.max(3, math.floor(WindowInfo.CornerRadius * 0.5))),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", 3)),
                 Parent = MoveButton,
             })
         )
@@ -13210,7 +13348,7 @@ function Library:CreateWindow(WindowInfo)
             table.insert(
                 Library.Corners,
                 New("UICorner", {
-                    CornerRadius = UDim.new(0, math.max(3, math.floor(WindowInfo.CornerRadius * 0.5))),
+                    CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", 3)),
                     Parent = MinimizeButton,
                 })
             )
@@ -13517,7 +13655,7 @@ function Library:CreateWindow(WindowInfo)
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, math.max(4, math.floor(WindowInfo.CornerRadius * 0.75))),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 4)),
                 Parent = CompactLauncher,
             })
         )
@@ -15525,7 +15663,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, math.max(WindowInfo.CornerRadius - 2, 2)),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 4)),
                 Parent = TabButton,
             })
             TabLabel = New("TextLabel", {
@@ -17708,8 +17846,10 @@ function Library:Unload()
         end
     end
     table.clear(Library.ActiveTweens)
+    table.clear(Library.Registry)
+    table.clear(Library.ThemeListeners)
 
-    
+
     for Index = #Library.Signals, 1, -1 do
         local Connection = table.remove(Library.Signals, Index)
 
@@ -17803,6 +17943,7 @@ local DefaultFont, DefaultFontError = Library:LoadCustomFont(
 )
 Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.GothamMedium)
 Library.DefaultFontError = DefaultFontError
+Library.CurrentFontName = DefaultFontError and "Gotham" or "Inter"
 Library:SetThemeFont(Library.DefaultFont)
 
 getgenv().Library = Library

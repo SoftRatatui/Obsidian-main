@@ -167,7 +167,7 @@ local Window = Library:CreateWindow({
 	CompactLauncherPosition = UDim2.fromScale(0.5, 0.5),
 	CompactLauncherAnchorPoint = Vector2.new(0.5, 0.5),
 	CompactLauncherDraggable = true,
-	TabTransitionTime = 0.07,
+	TabTransitionTime = 0.16,
 	TabSwipeOffset = 2,
 	TabSwipeFrom = "bottom",
 	Size = Library.IsMobile and UDim2.fromOffset(520, 480) or UDim2.fromOffset(880, 664),
@@ -2231,6 +2231,21 @@ end)
 
 local MenuGroup = Tabs.Settings:AddLeftGroupbox("Interface", "panel-left")
 SetGroupOrder(MenuGroup, -100)
+
+local FontNames = Library:GetFontNames()
+if #FontNames > 0 then
+	MenuGroup:AddDropdown("InterfaceFont", {
+		Text = "Font",
+		Values = FontNames,
+		Default = table.find(FontNames, Library.CurrentFontName) and Library.CurrentFontName or FontNames[1],
+		Tooltip = "Typeface used by every label, control, and addon",
+		Callback = function(Value)
+			if not Library:SetFontByName(Value) then
+				Notify("Font", tostring(Value) .. " is unavailable on this client")
+			end
+		end,
+	})
+end
 
 local WatermarkEnabled = true
 local WatermarkShowFPS = true

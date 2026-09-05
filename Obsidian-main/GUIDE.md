@@ -310,6 +310,95 @@ Library:SetDesign({
 
 GUI objects created by the core start with `BorderSizePixel = 0`, including `CanvasGroup`. Borders use an inner `UIStroke` so they stay within the clipping boundary. This uses Roblox's documented [border position support](https://create.roblox.com/docs/reference/engine/enums/BorderStrokePosition). Image addon roots use `CanvasGroup` to clip their children to rounded corners.
 
+### Typography and font selection
+
+Every label, control, and addon draws with `Library.Scheme.Font`. Text instances register that property, so changing the font updates the whole interface in place with no rebuild.
+
+MonHub ships **Inter Medium** and loads it from `assets/Inter-Medium.ttf` on first run. Inter is the default because it was drawn for user interfaces: it keeps counters open and stems even at the 12 to 14 pixel sizes this library uses, where a display face turns muddy. If the download fails the library falls back to a built-in Roblox face and records the reason in `Library.DefaultFontError`.
+
+`Library.FontPresets` lists the curated faces. Ask for the ones this client can actually build, then switch by name:
+
+```luau
+local Names = Library:GetFontNames()
+
+Settings:AddDropdown("InterfaceFont", {
+    Text = "Font",
+    Values = Names,
+    Default = Library.CurrentFontName,
+    Callback = function(Value)
+        Library:SetFontByName(Value)
+    end,
+})
+```
+
+| Name | Notes |
+| --- | --- |
+| `Inter` | Bundled default. Best small-size legibility. |
+| `Builder Sans` | Roblox's own interface face. Slightly wider than Inter. |
+| `Gotham` | The previous default. Geometric, a little softer. |
+| `Montserrat` | Wide and round. Suits large titles more than dense rows. |
+| `Roboto` | Neutral and compact. |
+| `Source Sans` | Humanist, taller x-height. |
+| `Ubuntu` | Distinctive, rounder terminals. |
+| `Roboto Mono` | Monospaced. Useful for value-heavy readouts. |
+
+`GetFontNames` builds each face behind `pcall` and omits any the client cannot construct, so the dropdown never offers a font that would fail. `SetFontByName` returns `false` for an unknown or unavailable name and leaves the current font untouched.
+
+To supply your own face, load it once and set it directly:
+
+```luau
+local Face, Reason = Library:LoadCustomFont("MyFont", "https://example.com/MyFont.ttf", 500)
+if Face then
+    Library:SetThemeFont(Face)
+else
+    warn("font unavailable:", Reason)
+end
+```
+
+`SetThemeFont` also stores the face as a theme override, so switching palettes will not replace it.
+
+### Reacting to theme changes
+
+`Library.Registry` binds instance properties to scheme tokens and is the mechanism behind every palette and font swap. A property bound to a string resolves that token; a property bound to a function is re-evaluated on each pass, which is how state-dependent colors stay correct:
+
+```luau
+Library:AddToRegistry(Indicator, {
+    BackgroundColor3 = function()
+        return Library:GetContrastColor(Library.Scheme.AccentColor)
+    end,
+})
+```
+
+Anything that computes a color outside the registry needs a hook so it can recompute:
+
+```luau
+local Disconnect = Library:OnThemeChanged(function()
+    Panel.BackgroundColor3 = Library.Scheme.SurfaceColor
+end)
+```
+
+`OnThemeChanged` returns a disposer. Call `Library:ApplyTheme()` to run a full pass yourself: it refreshes the registry, calls every control's `UpdateColors`, and then fires the hooks.
+
+Two helpers exist for choosing readable foregrounds. `Library:GetLuminance(Color)` returns relative luminance, and `Library:GetContrastColor(Background)` returns whichever of the scheme's light or dark color has the higher contrast ratio against that background. The checkbox tick uses this, which is why it stays legible on both a pastel accent and a saturated one.
+
+### Motion
+
+`Library.Design.Motion` holds one entry per interaction, each `{ duration, EasingStyle, EasingDirection }`. Durations are short enough to feel immediate and long enough to read as movement rather than a jump:
+
+```luau
+Library:SetDesign({
+    Motion = {
+        Scale = 1,
+        Hover = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+        Control = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+        Popup = { 0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+        WindowOpen = { 0.21, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+    },
+})
+```
+
+`Scale` multiplies every duration, so `0.5` halves the whole system and `0` removes motion. Tweens are pooled per instance and per slot, so a longer duration does not add work: restarting a tween cancels the previous one on that slot instead of stacking. `Library:SetReducedMotion(true)` disables motion without changing any component's behavior.
+
 ### Live palette and appearance controls
 
 The full example includes a collapsed Appearance group. Add it to another project with:
@@ -801,6 +890,119 @@ Library:Notify({
 
 Notifications use the same short motion profile and active theme as the main interface.
 
+## Addon recipes
+
+The reference below lists every option. This section covers the decisions that actually matter when you place an addon.
+
+### Choosing a mounting mode
+
+Every visual addon exposes `CreateEmbedded` and `CreateStandalone`. They build the same module; only the container differs.
+
+| Situation | Use |
+| --- | --- |
+| The module is one setting among many | `CreateEmbedded` into a groupbox |
+| The module is the point of the tab | `CreateEmbedded` into `Tab:AddFullGroupbox` |
+| The user needs it while reading another tab | `CreateStandalone` |
+| The user should be able to move it aside | `CreateStandalone` |
+
+Standalone mode routes the module through `Library:CreateAddonWindow`, so its title bar, icon badge, divider, and close button are the shared ones rather than a second set drawn by the module. That is why a standalone dashboard looks like part of the same product instead of a bolted-on panel.
+
+Both modes accept the same configuration table, so you can move a module between them by changing one call.
+
+### A skin changer that does not feel cramped
+
+This is the most common mistake: a grid dropped into a half-width groupbox has room for one or two columns and reads as a list.
+
+```luau
+local Skins = Window:AddTab({ Name = "Skins", Icon = "sparkles" })
+local Gallery = Skins:AddFullGroupbox("Weapon finishes", "layout-grid")
+
+local Catalog = AssetCatalog.CreateEmbedded(Library, Gallery, "SkinCatalog", {
+    Items = Items,
+    Height = 430,
+    MinCellWidth = 116,
+    PreviewRatio = 0.42,
+    ActionText = "Equip",
+    SecondaryActionText = "Inspect",
+    OnAction = function(Item)
+        Equip(Item.Id)
+    end,
+})
+```
+
+Three choices carry this layout:
+
+- `AddFullGroupbox` gives the tab a single full-width column. A grid needs the width more than the tab needs two columns.
+- Omitting `Columns` lets the grid fit its own column count to the space available and size every cell to a whole number of pixels. `MinCellWidth` is the narrowest a card may get before a column is dropped. Passing `Columns` pins the count and turns that off.
+- `PreviewRatio` below `0.5` keeps the grid dominant. The preview panel is a detail view, not the subject.
+
+If the container can become narrow, the catalog falls back from the split layout to the stacked one on its own, so the grid never collapses to a single column. `SplitMinWidth` sets that threshold.
+
+Give items a `Category` and the toolbar filter populates itself. Give them `Tags` and the search box matches those too.
+
+### Loading a large collection
+
+`SetItems` replaces the whole collection and resets to the first page. For incremental work use the collection helpers instead of rebuilding:
+
+```luau
+Catalog:AddItem({ Id = "fade", Name = "Fade", Category = "Knife", Image = 123456 })
+Catalog:RemoveItem("fade")
+Catalog:SetCategory("Knife")
+Catalog:SetSearch("fade")
+Catalog:Select("fade")
+```
+
+Only `PageSize` cards exist as instances; paging rebinds them rather than creating more. Raising `PageSize` past what fits on screen costs instances without showing anything, so leave it alone unless you also raise `Height`.
+
+Use `rbxthumb://type=Asset&id=<id>&w=150&h=150` for catalog items. It resolves through Roblox's thumbnail service and avoids a full asset download per card.
+
+### Dashboards for live values
+
+A dashboard is for values that change while the user watches. Anything static belongs in a normal groupbox.
+
+```luau
+local Dashboard, Host = DashboardWindow.CreateStandalone(Library, {
+    WindowTitle = "Session",
+    WindowWidth = 380,
+})
+
+local Runtime = Dashboard:AddSection({ Title = "Runtime", Icon = "activity" })
+Runtime:AddMetric({
+    Label = "Framerate",
+    Value = function()
+        return string.format("%d fps", math.floor(1 / RunService.RenderStepped:Wait()))
+    end,
+    Interval = 0.5,
+})
+```
+
+Every dynamic value shares one scheduler. It pauses when the dashboard is hidden and stops after the last dynamic widget is removed, so a closed dashboard costs nothing. Set `Interval` to the slowest rate that still reads as live; `0.5` is enough for most counters and a quarter of the work of `0.125`.
+
+### Configuring an addon's appearance
+
+Addons inherit the design system. Override per instance only when that module genuinely differs:
+
+```luau
+local Catalog = AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
+    Items = Items,
+    Style = {
+        Padding = 12,
+        Gap = 10,
+        CellRadius = 4,
+        Motion = false,
+    },
+})
+```
+
+`Style` is merged over `Library.Design.Addon`, so anything you leave out keeps following the global tokens and the active theme. Prefer `Library:SetDesign({ Addon = { ... } })` when you want the change everywhere, and reserve per-instance `Style` for one-off cases. Setting `Motion = false` disables that module's animation alone.
+
+### Keeping addons cheap
+
+- Create modules when the user first asks for them, not at startup. A gallery that is never opened should not exist.
+- Call `Host:SetVisible(false)` rather than destroying and rebuilding a standalone window the user reopens.
+- Destroy modules you will not reuse; `Destroy` releases the instances, its registry entries, and its connections.
+- Leave `HideWithMenu` at its default so standalone windows follow the menu keybind instead of floating over the game after the user hides the UI.
+
 ## Complete addon API reference
 
 This section is the complete public reference for every addon shipped in `addons`. Constructor settings are passed in the final `Info` table. Methods use colon syntax, for example `Gallery:SetPage(2)`.
@@ -1068,6 +1270,16 @@ Run local checks with Luau's compiler and interpreter installed:
 - Replaced cached canvas roots in image addons with stable clipped frames and kept image/card clipping at every nested viewport.
 - Reserved scrollbar space inside menus, dashboards, catalogs, and galleries.
 - Added the complete addon API reference with constructor settings, item formats, public methods, and lifecycle calls.
+- Made the theme registry hold strong references. It was weak-keyed, so an element's Luau handle could be collected while the element was still on screen, which silently dropped it from the registry and left it on the previous palette after a theme or font change.
+- Released registry entries when a notification is destroyed, and added `Library:ReleaseRegistryTree` for the same job elsewhere.
+- Added `Library:OnThemeChanged` and `Library:ApplyTheme` so code that computes colors outside the registry can refresh with everything else.
+- Added `Library:GetLuminance` and `Library:GetContrastColor`, and drew the checkbox tick with the higher-contrast scheme color instead of always white. A white tick on a pastel accent sat near a 3:1 ratio and read as a faded, broken mark.
+- Grew the checkbox tick and centered it on whole pixels.
+- Added the curated font catalog: `Library.FontPresets`, `GetFontNames`, `GetFontPreset`, and `SetFontByName`, each face built behind `pcall` so an unavailable one is never offered.
+- Lengthened the motion profile so transitions read as movement rather than a jump, without adding per-frame work.
+- Replaced the remaining hardcoded and ad-hoc corner radii with design tokens, and expressed the switch pill and knob as fully round instead of magic numbers.
+- Rounded every integer field returned by `GetAddonStyle`, so a fractional override can no longer reach an addon's radii, padding, or control heights.
+- Centered the dropdown value icon, which sat three pixels above center.
 
 ### 0.0.1-release-11
 

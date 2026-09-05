@@ -23,21 +23,13 @@ local function AddRegistry(Library, Object, Properties)
 end
 
 local function RemoveRegistryTree(Library, Root)
-    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or typeof(Root) ~= "Instance" then
         return
     end
-    local Owned = {}
-    for Object in Library.Registry do
-        local Success, Matches = pcall(function()
-            return Object == Root or Object:IsDescendantOf(Root)
-        end)
-        if Success and Matches then
-            table.insert(Owned, Object)
-        end
-    end
-    for _, Object in Owned do
+    for _, Object in Root:GetDescendants() do
         Library:RemoveFromRegistry(Object)
     end
+    Library:RemoveFromRegistry(Root)
 end
 
 function TracerPreview.Create(Library, Info)
@@ -371,11 +363,15 @@ function TracerPreview.CreateStandalone(Library, Info)
         Position = Info.Position,
         AnchorPoint = Info.AnchorPoint,
         Draggable = Info.Draggable,
+        Resizable = Info.Resizable,
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
         Style = Info.Style,
     })
+    if Info.FitHeight == nil then
+        Info.FitHeight = Info.Height == nil
+    end
     Info.Height = Info.Height or math.max(160, WindowHeight - 72)
     local Preview = Host:AddAddon("Preview", TracerPreview, Info)
     Preview.Host = Host

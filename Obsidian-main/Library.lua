@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-9",
+    ReleaseVersion = "0.0.1-release-10",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -631,7 +631,7 @@ function Library:SetThemeFont(FontFace): any
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-9-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-10-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -3104,7 +3104,8 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
     end)
 end
 
-function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: () -> ()?)
+function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: (() -> ())?, ResizeInfo: any?)
+    ResizeInfo = ResizeInfo or {}
     local StartPos
     local FrameSize
     local Dragging = false
@@ -3167,18 +3168,25 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ()
         if Dragging and IsHoverInput(Input) then
             local Delta = Input.Position - StartPos
             local ViewportSize = GetViewportSize()
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = math.max(tonumber(ResizeInfo.Scale) or Library.DPIScale or 1, 0.01)
             local MaxWidth = math.max(0, (ViewportSize.X - UI.AbsolutePosition.X - 8) / Scale)
             local MaxHeight = math.max(0, (ViewportSize.Y - UI.AbsolutePosition.Y - 8) / Scale)
 
-            MaxWidth = math.max(Library.MinSize.X, MaxWidth)
-            MaxHeight = math.max(Library.MinSize.Y, MaxHeight)
-
-            UI.Size = UDim2.new(
+            local Minimum = ResizeInfo.MinSize or Library.MinSize
+            local Maximum = ResizeInfo.MaxSize or Vector2.new(math.huge, math.huge)
+            MaxWidth = math.min(MaxWidth, Maximum.X)
+            MaxHeight = math.min(MaxHeight, Maximum.Y)
+            local OldSize = UI.Size
+            local NewSize = UDim2.new(
                 FrameSize.X.Scale,
-                math.clamp(FrameSize.X.Offset + Delta.X / Scale, Library.MinSize.X, MaxWidth),
+                math.floor(math.clamp(FrameSize.X.Offset + Delta.X / Scale, math.min(Minimum.X, MaxWidth), MaxWidth)),
                 FrameSize.Y.Scale,
-                math.clamp(FrameSize.Y.Offset + Delta.Y / Scale, Library.MinSize.Y, MaxHeight)
+                math.floor(math.clamp(FrameSize.Y.Offset + Delta.Y / Scale, math.min(Minimum.Y, MaxHeight), MaxHeight))
+            )
+            UI.Size = NewSize
+            UI.Position += UDim2.fromOffset(
+                (NewSize.X.Offset - OldSize.X.Offset) * UI.AnchorPoint.X,
+                (NewSize.Y.Offset - OldSize.Y.Offset) * UI.AnchorPoint.Y
             )
             QueueCallback()
         end
@@ -3215,13 +3223,20 @@ end
 function Library:CreateAddonWindow(Info)
     Info = Info or {}
     local Style = Library:GetAddonStyle(Info.Style)
-    local Width = math.clamp(tonumber(Info.Width) or Style.WindowWidth, 240, 1100)
-    local Height = math.clamp(tonumber(Info.Height) or Style.WindowHeight, 180, 900)
+    local Width = math.floor(math.clamp(tonumber(Info.Width) or Style.WindowWidth, 240, 1100))
+    local Height = math.floor(math.clamp(tonumber(Info.Height) or Style.WindowHeight, 180, 900))
     local HeaderHeight = math.clamp(tonumber(Info.HeaderHeight) or (Info.Subtitle and 54 or 44), 38, 68)
     local Position = typeof(Info.Position) == "UDim2" and Info.Position or UDim2.fromScale(0.5, 0.5)
     local AnchorPoint = typeof(Info.AnchorPoint) == "Vector2" and Info.AnchorPoint or Vector2.new(0.5, 0.5)
     local Connections = {}
     local Modules = {}
+    local ModuleSequence = 0
+    local function ReleaseRegistryTree(Object)
+        for _, Child in Object:GetDescendants() do
+            Library:RemoveFromRegistry(Child)
+        end
+        Library:RemoveFromRegistry(Object)
+    end
     local RequestedVisible = Info.Visible ~= false
     local HideWithMenu = Info.HideWithMenu ~= false and Library.Window ~= nil
     local MenuSuppressed = HideWithMenu and not Library.Toggled
@@ -3284,12 +3299,12 @@ function Library:CreateAddonWindow(Info)
     })
     local IconData = Library:GetCustomIcon(Info.Icon or "layout-dashboard") or Library:GetIcon("layout-dashboard")
     local HeaderIcon = New("ImageLabel", {
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        AnchorPoint = Vector2.zero,
         Image = IconData and IconData.Url or "",
         ImageColor3 = "AccentColor",
         ImageRectOffset = IconData and IconData.ImageRectOffset or Vector2.zero,
         ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero,
-        Position = UDim2.fromScale(0.5, 0.5),
+        Position = UDim2.fromOffset(math.floor((IconBadge - 16) / 2), math.floor((IconBadge - 16) / 2)),
         Size = UDim2.fromOffset(16, 16),
         Parent = IconHolder,
     })
@@ -3298,7 +3313,7 @@ function Library:CreateAddonWindow(Info)
     local HeaderText = New("Frame", {
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(HeaderTextInset, 0),
-        Size = UDim2.new(1, -(HeaderTextInset + Style.Padding + HeaderControl + IconGap), 1, 0),
+        Size = UDim2.new(1, -(HeaderTextInset + Style.Padding + (Info.Closable ~= false and HeaderControl + IconGap or 0)), 1, 0),
         Parent = Header,
     })
     local HasSubtitle = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= ""
@@ -3332,7 +3347,6 @@ function Library:CreateAddonWindow(Info)
     local CloseButton
     if Info.Closable ~= false then
         CloseButton = New("TextButton", {
-            AnchorPoint = Vector2.new(1, 0.5),
             AnchorPoint = Vector2.new(1, 0),
             BackgroundColor3 = "ElementColor",
             BackgroundTransparency = 1,
@@ -3417,6 +3431,8 @@ function Library:CreateAddonWindow(Info)
         end
         RequestedVisible = Visible == true
         Host.Visible = RequestedVisible
+        Library:CancelTween(Root, "AddonWindowVisibility")
+        Library:CancelTween(Scale, "AddonWindowVisibility")
         VisibilityToken += 1
         local Token = VisibilityToken
         if RequestedVisible and not MenuSuppressed then
@@ -3441,7 +3457,7 @@ function Library:CreateAddonWindow(Info)
         Library:PlayTween(Scale, "AddonWindowVisibility", Library:GetMotion("WindowClose"), { Scale = 0.99 })
         if Tween then
             Tween.Completed:Once(function()
-                if not Host.Destroyed and VisibilityToken == Token and not RequestedVisible then
+                if not Host.Destroyed and VisibilityToken == Token and (not RequestedVisible or MenuSuppressed) then
                     Root.Visible = false
                 end
             end)
@@ -3468,6 +3484,9 @@ function Library:CreateAddonWindow(Info)
         Content.Position = UDim2.fromOffset(0, HeaderHeight)
         Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
         IconHolder.Position = UDim2.fromOffset(Style.Padding, Library:CenterOffset(HeaderHeight, IconBadge))
+        if CloseButton then
+            CloseButton.Position = UDim2.new(1, -Style.Padding, 0, Library:CenterOffset(HeaderHeight, HeaderControl))
+        end
         if Subtitle.Visible then
             local TitleTop = Library:CenterOffset(HeaderHeight, TitleRow + SubtitleRow)
             Title.Position = UDim2.fromOffset(0, TitleTop)
@@ -3489,9 +3508,10 @@ function Library:CreateAddonWindow(Info)
     end
 
     function Host:SetSize(NewWidth, NewHeight)
-        Width = math.clamp(tonumber(NewWidth) or Width, 240, 1100)
-        Height = math.clamp(tonumber(NewHeight) or Height, 180, 900)
-        Root.Size = UDim2.fromOffset(Width, Height)
+        Width = math.floor(math.clamp(tonumber(NewWidth) or Width, 240, 1100))
+        Height = math.floor(math.clamp(tonumber(NewHeight) or Height, 180, 900))
+        local Viewport = GetViewportSize()
+        Root.Size = UDim2.fromOffset(math.min(Width, math.max(1, Viewport.X - 16)), math.min(Height, math.max(1, Viewport.Y - 16)))
         ClampGuiToViewport(Root, 8)
         return Host
     end
@@ -3506,12 +3526,17 @@ function Library:CreateAddonWindow(Info)
 
     function Host:AddCustom(Idx, Object, ModuleHeight, Controller)
         assert(typeof(Object) == "Instance" and Object:IsA("GuiObject"), "Custom module must be a GuiObject")
-        local Key = Idx or #Modules + 1
+        ModuleSequence += 1
+        while Idx == nil and Modules[ModuleSequence] do
+            ModuleSequence += 1
+        end
+        local Key = Idx or ModuleSequence
         if Modules[Key] then
             Host:Remove(Key)
         end
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
+            LayoutOrder = ModuleSequence,
             Size = UDim2.new(1, 0, 0, math.max(1, tonumber(ModuleHeight) or Object.Size.Y.Offset)),
             Parent = Content,
         })
@@ -3529,13 +3554,18 @@ function Library:CreateAddonWindow(Info)
     function Host:AddAddon(Idx, Addon, AddonInfo)
         assert(type(Addon) == "table" and type(Addon.Create) == "function", "Window addons must expose Create")
         AddonInfo = table.clone(AddonInfo or {})
-        local Key = Idx or #Modules + 1
+        ModuleSequence += 1
+        while Idx == nil and Modules[ModuleSequence] do
+            ModuleSequence += 1
+        end
+        local Key = Idx or ModuleSequence
         if Modules[Key] then
             Host:Remove(Key)
         end
         local ModuleHeight = math.max(1, tonumber(AddonInfo.Height) or tonumber(AddonInfo.ModuleHeight) or 280)
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
+            LayoutOrder = ModuleSequence,
             Size = UDim2.new(1, 0, 0, ModuleHeight),
             Parent = Content,
         })
@@ -3544,13 +3574,21 @@ function Library:CreateAddonWindow(Info)
         AddonInfo.Style = AddonInfo.Style or Style
         local Success, Controller = pcall(Addon.Create, Library, AddonInfo)
         if not Success then
+            ReleaseRegistryTree(Holder)
             Holder:Destroy()
             error("Unable to create window addon: " .. tostring(Controller), 2)
         end
         Modules[Key] = {
             Holder = Holder,
             Controller = Controller,
+            Root = type(Controller) == "table" and Controller.Root or nil,
+            FitHeight = AddonInfo.FitHeight == true,
         }
+        if Modules[Key].FitHeight then
+            Host:SetModuleHeight(Key, math.max(1, Content.AbsoluteSize.Y - Style.Padding * 2))
+        elseif type(Controller) == "table" and tonumber(Controller.Height) then
+            Holder.Size = UDim2.new(1, 0, 0, Controller.Height)
+        end
         return Controller
     end
 
@@ -3559,6 +3597,7 @@ function Library:CreateAddonWindow(Info)
         if not Module then
             return false
         end
+        ReleaseRegistryTree(Module.Holder)
         if Module.Controller and type(Module.Controller.Destroy) == "function" then
             Module.Controller:Destroy()
         elseif Module.Root then
@@ -3580,6 +3619,9 @@ function Library:CreateAddonWindow(Info)
         Module.Holder.Size = UDim2.new(1, 0, 0, NewHeight)
         if Module.Controller and type(Module.Controller.SetHeight) == "function" then
             Module.Controller:SetHeight(NewHeight)
+            if tonumber(Module.Controller.Height) then
+                Module.Holder.Size = UDim2.new(1, 0, 0, Module.Controller.Height)
+            end
         elseif Module.Root then
             Module.Root.Size = UDim2.fromScale(1, 1)
         end
@@ -3603,6 +3645,7 @@ function Library:CreateAddonWindow(Info)
         Library:CancelTween(Root, "AddonWindowVisibility")
         Library:CancelTween(Scale, "AddonWindowVisibility")
         if Root then
+            ReleaseRegistryTree(Root)
             Root:Destroy()
         end
     end
@@ -3612,8 +3655,44 @@ function Library:CreateAddonWindow(Info)
             Host:SetVisible(false)
         end))
     end
+    table.insert(Connections, Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if Host.Destroyed then
+            return
+        end
+        for Key, Module in Modules do
+            if Module.FitHeight then
+                Host:SetModuleHeight(Key, math.max(1, math.floor(Content.AbsoluteSize.Y) - Style.Padding * 2))
+            end
+        end
+    end))
     if Info.Draggable ~= false then
         Library:MakeDraggable(Root, Header, true, false)
+    end
+    if Info.Resizable ~= false then
+        local ResizeButton = New("TextButton", {
+            AnchorPoint = Vector2.new(1, 1),
+            BackgroundTransparency = 1,
+            Position = UDim2.fromScale(1, 1),
+            Size = UDim2.fromOffset(18, 18),
+            Text = "",
+            ZIndex = Root.ZIndex + 2,
+            Parent = Root,
+        })
+        local ResizeIcon = Library:GetIcon("grip")
+        New("ImageLabel", {
+            BackgroundTransparency = 1,
+            Image = ResizeIcon and ResizeIcon.Url or "",
+            ImageRectOffset = ResizeIcon and ResizeIcon.ImageRectOffset or Vector2.zero,
+            ImageRectSize = ResizeIcon and ResizeIcon.ImageRectSize or Vector2.zero,
+            ImageColor3 = "MutedFontColor",
+            ImageTransparency = 0.4,
+            Position = UDim2.fromOffset(3, 3),
+            Size = UDim2.fromOffset(12, 12),
+            Parent = ResizeButton,
+        })
+        Library:MakeResizable(Root, ResizeButton, function()
+            Width, Height = Root.Size.X.Offset, Root.Size.Y.Offset
+        end, { MinSize = Vector2.new(240, 180), MaxSize = Vector2.new(1100, 900), Scale = 1 })
     end
     local CameraConnection
     local function BindViewport()
@@ -3628,14 +3707,14 @@ function Library:CreateAddonWindow(Info)
         if Camera then
             CameraConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
                 if not Host.Destroyed then
-                    ClampGuiToViewport(Root, 8)
+                    Host:SetSize(Width, Height)
                 end
             end)
             table.insert(Connections, CameraConnection)
         end
         task.defer(function()
             if not Host.Destroyed then
-                ClampGuiToViewport(Root, 8)
+                Host:SetSize(Width, Height)
             end
         end)
     end

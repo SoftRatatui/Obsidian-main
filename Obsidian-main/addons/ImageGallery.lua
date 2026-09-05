@@ -36,21 +36,13 @@ local function AddRegistry(Library, Object, Properties)
 end
 
 local function RemoveRegistryTree(Library, Root)
-    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or typeof(Root) ~= "Instance" then
         return
     end
-    local Owned = {}
-    for Object in Library.Registry do
-        local Success, Matches = pcall(function()
-            return Object == Root or Object:IsDescendantOf(Root)
-        end)
-        if Success and Matches then
-            table.insert(Owned, Object)
-        end
-    end
-    for _, Object in Owned do
+    for _, Object in Root:GetDescendants() do
         Library:RemoveFromRegistry(Object)
     end
+    Library:RemoveFromRegistry(Root)
 end
 
 local function NormalizeItem(Item, Index)
@@ -241,19 +233,32 @@ function ImageGallery.Create(Library, Info)
     SearchPadding.PaddingRight = UDim.new(0, 8)
     SearchPadding.Parent = Search
 
-    local GridHolder = Instance.new("Frame")
+    local GridHolder = Instance.new("ScrollingFrame")
     GridHolder.BackgroundTransparency = 1
+    GridHolder.BorderSizePixel = 0
+    GridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    GridHolder.CanvasSize = UDim2.fromOffset(0, 0)
+    GridHolder.ScrollBarThickness = 2
+    GridHolder.ScrollBarImageTransparency = 0.45
+    GridHolder.ScrollBarImageColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
+    GridHolder.ScrollingDirection = Enum.ScrollingDirection.Y
     GridHolder.ClipsDescendants = true
     GridHolder.Position = UDim2.fromOffset(Style.Padding, HeaderHeight + Style.Gap)
     GridHolder.Size = UDim2.new(1, -Style.Padding * 2, 1, -(HeaderHeight + FooterHeight + Style.Gap * 2))
     GridHolder.Parent = Root
+    AddRegistry(Library, GridHolder, { ScrollBarImageColor3 = "AccentColor" })
 
     local Grid = Instance.new("UIGridLayout")
     Grid.CellPadding = UDim2.fromOffset(Gap, Gap)
-    Grid.CellSize = UDim2.new(1 / Columns, -math.ceil(Gap * (Columns - 1) / Columns), 0, CellHeight)
+    Grid.CellSize = UDim2.fromOffset(100, CellHeight)
+    Grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
     Grid.FillDirectionMaxCells = Columns
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
     Grid.Parent = GridHolder
+    local GridPadding = Instance.new("UIPadding")
+    GridPadding.PaddingTop = UDim.new(0, 1)
+    GridPadding.PaddingBottom = UDim.new(0, 1)
+    GridPadding.Parent = GridHolder
 
     local Footer = Instance.new("Frame")
     Footer.AnchorPoint = Vector2.new(0, 1)
@@ -381,7 +386,32 @@ function ImageGallery.Create(Library, Info)
         OnSelected = Info.OnSelected or Info.Callback,
     }
 
+    local AutoColumns = Info.Columns == nil
+    local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 112), 48, 400)
+    local function ResolveGridMetrics()
+        local Width = math.floor(GridHolder.AbsoluteSize.X) - GridHolder.ScrollBarThickness - 2
+        if Width <= 0 or Gallery.Destroyed then
+            return
+        end
+        local Maximum = math.max(1, math.floor((Width + Gap) / (48 + Gap)))
+        local Count = AutoColumns and math.floor((Width + Gap) / (MinCellWidth + Gap)) or Gallery.Columns
+        Count = math.clamp(Count, 1, math.min(8, Maximum))
+        Gallery.EffectiveColumns = Count
+        Grid.FillDirectionMaxCells = Count
+        local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
+        local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
+        GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 1 + GridHolder.ScrollBarThickness + math.ceil(Remaining / 2))
+        Grid.CellSize = UDim2.fromOffset(CellWidth, Gallery.CellHeight)
+    end
+    table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics))
+
+    local LocalTweens = {}
     local function Play(Object, Key, Properties)
+        if LocalTweens[Key] then
+            LocalTweens[Key]:Cancel()
+            LocalTweens[Key] = nil
+        end
         if Style.Motion == false then
             for Property, Value in Properties do
                 Object[Property] = Value
@@ -397,7 +427,11 @@ function ImageGallery.Create(Library, Info)
             return TweenService:Create(Object, MotionInfo, Properties)
         end)
         if Success and Tween then
+            LocalTweens[Key] = Tween
             Tween.Completed:Once(function()
+                if LocalTweens[Key] == Tween then
+                    LocalTweens[Key] = nil
+                end
                 pcall(function()
                     Tween:Destroy()
                 end)
@@ -424,6 +458,13 @@ function ImageGallery.Create(Library, Info)
         if Animated then
             Play(Slot.Button, Slot.Index, { BackgroundColor3 = Color })
         else
+            if Library and type(Library.CancelTween) == "function" then
+                Library:CancelTween(Slot.Button, "ImageGallery" .. Slot.Index)
+            end
+            if LocalTweens[Slot.Index] then
+                LocalTweens[Slot.Index]:Cancel()
+                LocalTweens[Slot.Index] = nil
+            end
             Slot.Button.BackgroundColor3 = Color
         end
         Slot.Stroke.Color = Slot.Selected and (Library and Library.Scheme.AccentColor or Color3.fromRGB(123, 149, 183)) or (Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66))
@@ -747,17 +788,17 @@ function ImageGallery.Create(Library, Info)
             end
         end
         if Gallery.SelectedId ~= nil then
-            local SelectionExists = false
+            local Selected
             for _, Item in Gallery.Items do
                 if Item.Id == Gallery.SelectedId then
-                    SelectionExists = true
+                    Selected = Item
                     break
                 end
             end
-            if not SelectionExists then
+            if not Selected then
                 Gallery.SelectedId = nil
-                BindPreview(nil)
             end
+            BindPreview(Selected)
         end
         RebuildCategories()
         Gallery.Page = 1
@@ -768,9 +809,20 @@ function ImageGallery.Create(Library, Info)
         if Gallery.Destroyed then
             return nil
         end
-        local Normalized = NormalizeItem(Item, #Gallery.Items + 1)
+        local NextIndex = #Gallery.Items + 1
+        for _, Existing in Gallery.Items do
+            if type(Existing.Id) == "number" then
+                NextIndex = math.max(NextIndex, Existing.Id + 1)
+            end
+        end
+        local Normalized = NormalizeItem(Item, NextIndex)
         if not Normalized then
             return nil
+        end
+        for _, Existing in Gallery.Items do
+            if Existing.Id == Normalized.Id then
+                return nil
+            end
         end
         table.insert(Gallery.Items, Normalized)
         RebuildCategories()
@@ -842,7 +894,14 @@ function ImageGallery.Create(Library, Info)
         end
         Gallery.Columns = math.clamp(math.floor(tonumber(Value) or Gallery.Columns), 1, 10)
         Grid.FillDirectionMaxCells = Gallery.Columns
-        Grid.CellSize = UDim2.new(1 / Gallery.Columns, -math.ceil(Gap * (Gallery.Columns - 1) / Gallery.Columns), 0, Gallery.CellHeight)
+        AutoColumns = Value == nil
+        ResolveGridMetrics()
+    end
+
+    function Gallery:SetMinCellWidth(Value)
+        MinCellWidth = math.clamp(math.floor(tonumber(Value) or MinCellWidth), 48, 400)
+        AutoColumns = true
+        ResolveGridMetrics()
     end
 
     function Gallery:SetCellHeight(Value)
@@ -851,7 +910,7 @@ function ImageGallery.Create(Library, Info)
         end
         Gallery.CellHeight = math.clamp(math.floor(tonumber(Value) or Gallery.CellHeight), 52, 150)
         Gallery.ImagePadding = math.min(Gallery.ImagePadding, math.max(0, Gallery.CellHeight - Gallery.LabelHeight - 1))
-        Grid.CellSize = UDim2.new(1 / Gallery.Columns, -math.ceil(Gap * (Gallery.Columns - 1) / Gallery.Columns), 0, Gallery.CellHeight)
+        ResolveGridMetrics()
         for _, Slot in Gallery.Slots do
             Slot.Viewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
             Slot.Viewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
@@ -1078,6 +1137,10 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.Destroyed = true
+        for Key, Tween in LocalTweens do
+            Tween:Cancel()
+            LocalTweens[Key] = nil
+        end
         if Library and type(Library.CancelTween) == "function" then
             for _, Slot in Gallery.Slots do
                 Library:CancelTween(Slot.Button, "ImageGallery" .. tostring(Slot.Index))
@@ -1136,11 +1199,15 @@ function ImageGallery.Create(Library, Info)
         Root.Parent = Info.Parent
     end
     Gallery:SetItems(Info.Items or {})
+    ResolveGridMetrics()
     if Info.Category then
         Gallery:SetCategory(Info.Category)
     end
     if Info.Selected ~= nil then
         Gallery:Select(Info.Selected, true)
+    end
+    if Info.Model then
+        Gallery.ModelBinding = Info.Model:Bind(Gallery)
     end
 
     if Library and type(Library.OnUnload) == "function" then
@@ -1177,11 +1244,15 @@ function ImageGallery.CreateStandalone(Library, Info)
         Position = Info.Position,
         AnchorPoint = Info.AnchorPoint,
         Draggable = Info.Draggable,
+        Resizable = Info.Resizable,
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
         Style = Info.Style,
     })
+    if Info.FitHeight == nil then
+        Info.FitHeight = Info.Height == nil
+    end
     Info.Height = Info.Height or math.max(180, WindowHeight - 72)
     local Gallery = Host:AddAddon("Gallery", ImageGallery, Info)
     Gallery.Host = Host

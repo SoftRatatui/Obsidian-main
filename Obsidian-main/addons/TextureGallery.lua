@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-9",
+    ReleaseVersion = "0.0.1-release-10",
 }
 
 TextureGallery.DefaultItems = {
@@ -45,21 +45,13 @@ local function ResolveScaleType(Value)
 end
 
 local function RemoveRegistryTree(Library, Root)
-    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or typeof(Root) ~= "Instance" then
         return
     end
-    local Owned = {}
-    for Object in Library.Registry do
-        local Success, Matches = pcall(function()
-            return Object == Root or Object:IsDescendantOf(Root)
-        end)
-        if Success and Matches then
-            table.insert(Owned, Object)
-        end
-    end
-    for _, Object in Owned do
+    for _, Object in Root:GetDescendants() do
         Library:RemoveFromRegistry(Object)
     end
+    Library:RemoveFromRegistry(Root)
 end
 
 local function ApplyCorner(Object, Radius)
@@ -187,17 +179,34 @@ function TextureGallery.Create(Library, Info)
 
     local GridLayout = Instance.new("UIGridLayout")
     GridLayout.CellPadding = UDim2.fromOffset(Style.Gap, Style.Gap)
-    GridLayout.CellSize = UDim2.new(1 / Gallery.Columns, -6, 0, 64)
+    GridLayout.CellSize = UDim2.fromOffset(100, 64)
     GridLayout.FillDirectionMaxCells = Gallery.Columns
-    GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
     GridLayout.Parent = Grid
 
     local GridPadding = Instance.new("UIPadding")
     GridPadding.PaddingBottom = UDim.new(0, 2)
+    GridPadding.PaddingTop = UDim.new(0, 1)
     GridPadding.PaddingLeft = UDim.new(0, 1)
     GridPadding.PaddingRight = UDim.new(0, 3)
     GridPadding.Parent = Grid
+
+    local function ResolveGridMetrics()
+        local Width = math.floor(Grid.AbsoluteSize.X) - 4 - Grid.ScrollBarThickness
+        if Gallery.Destroyed or Width <= 0 then
+            return
+        end
+        local Count = math.min(Gallery.Columns, math.max(1, math.floor((Width + Style.Gap) / (64 + Style.Gap))))
+        GridLayout.FillDirectionMaxCells = Count
+        local CellWidth = math.max(1, math.floor((Width - Style.Gap * (Count - 1)) / Count))
+        local Remaining = math.max(0, Width - CellWidth * Count - Style.Gap * (Count - 1))
+        GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 3 + Grid.ScrollBarThickness + math.ceil(Remaining / 2))
+        GridLayout.CellSize = UDim2.fromOffset(CellWidth, 64)
+    end
+    local GridConnection = Grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
+    ResolveGridMetrics()
 
     local function DisconnectAll()
         for _, Connection in Gallery.Connections do
@@ -351,7 +360,7 @@ function TextureGallery.Create(Library, Info)
                 BackgroundColor3 = Library.Scheme.ElementColor,
             })
         end))
-        table.insert(Gallery.Connections, Button.MouseButton1Click:Connect(function()
+        table.insert(Gallery.Connections, Button.Activated:Connect(function()
             Gallery:Select(Item)
         end))
     end
@@ -414,7 +423,7 @@ function TextureGallery.Create(Library, Info)
     function Gallery:SetColumns(Columns)
         Gallery.Columns = math.clamp(math.floor(tonumber(Columns) or Gallery.Columns), 1, 3)
         GridLayout.FillDirectionMaxCells = Gallery.Columns
-        GridLayout.CellSize = UDim2.new(1 / Gallery.Columns, -6, 0, 64)
+        ResolveGridMetrics()
         return Gallery
     end
 
@@ -480,11 +489,24 @@ function TextureGallery.Create(Library, Info)
         return true
     end
 
+    function Gallery:SetHeight(Value)
+        if Gallery.Destroyed then
+            return Gallery
+        end
+        Gallery.Height = math.clamp(math.floor(tonumber(Value) or Gallery.Height), 210, 900)
+        Root.Size = UDim2.new(1, 0, 0, Gallery.Height)
+        if Gallery.Element then
+            Gallery.Element:SetHeight(Gallery.Height)
+        end
+        return Gallery
+    end
+
     function Gallery:Destroy()
         if Gallery.Destroyed then
             return
         end
         Gallery.Destroyed = true
+        GridConnection:Disconnect()
         ClearCards()
         RemoveRegistryTree(Library, Root)
         if Gallery.Element and Gallery.Element.Destroy then
@@ -539,11 +561,15 @@ function TextureGallery.CreateStandalone(Library, Info)
         Position = Info.Position,
         AnchorPoint = Info.AnchorPoint,
         Draggable = Info.Draggable,
+        Resizable = Info.Resizable,
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
         Style = Info.Style,
     })
+    if Info.FitHeight == nil then
+        Info.FitHeight = Info.Height == nil
+    end
     Info.Height = Info.Height or math.max(180, WindowHeight - 72)
     local Gallery = Host:AddAddon("Textures", TextureGallery, Info)
     Gallery.Host = Host

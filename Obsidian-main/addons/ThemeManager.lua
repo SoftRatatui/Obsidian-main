@@ -141,7 +141,7 @@ local AshTheme = {
 }
 
 local ThemeManager = {
-    ReleaseVersion = "0.0.1-release-9",
+    ReleaseVersion = "0.0.1-release-10",
     Library = nil,
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",

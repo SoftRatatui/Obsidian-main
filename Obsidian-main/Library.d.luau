@@ -1189,7 +1189,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-9",
+    ReleaseVersion: "0.0.1-release-10",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1335,7 +1335,7 @@ export type Library = {
         IsMainWindow: boolean?,
         CanDrag: (() -> boolean)?
     ) -> (),
-    MakeResizable: (self: Library, UI: GuiObject, DragFrame: GuiObject, Callback: (() -> ())?) -> (),
+    MakeResizable: (self: Library, UI: GuiObject, DragFrame: GuiObject, Callback: (() -> ())?, ResizeInfo: { MinSize: Vector2?, MaxSize: Vector2?, Scale: number? }?) -> (),
     MakeCover: (self: Library, Holder: GuiObject, Place: string) -> Frame,
     MakeLine: (
         self: Library,

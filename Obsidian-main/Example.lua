@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-9"
+local RELEASE_VERSION = "0.0.1-release-10"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -131,6 +131,7 @@ local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, Acti
 local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
 local AssetCatalog = LoadModule("addons/AssetCatalog.lua", false, ActiveRepository)
+local CollectionModel = LoadModule("addons/CollectionModel.lua", false, ActiveRepository)
 local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
 local DashboardWindow = LoadModule("addons/DashboardWindow.lua", false, ActiveRepository)
 local UniversalESP = LoadModule("addons/esp/ESP.lua", false, ActiveRepository)
@@ -643,11 +644,19 @@ local GalleryItems = {
 	},
 }
 
+local SkinCollection = CollectionModel and CollectionModel.Create({ Items = GalleryItems, Selected = "neptune" })
+if SkinCollection then
+	Library:OnUnload(function()
+		SkinCollection:Destroy()
+	end)
+end
+
 local CatalogModule
 local CatalogHost
 if AssetCatalog then
 	local CatalogGroup = Tabs.Addons:AddRightGroupbox("Asset catalog", "panels-top-left")
 	CatalogModule, CatalogHost = AssetCatalog.CreateStandalone(Library, {
+		Model = SkinCollection,
 		WindowTitle = "Skin collection",
 		WindowSubtitle = "Search, inspect, and apply",
 		WindowIcon = "layout-grid",
@@ -677,7 +686,7 @@ if AssetCatalog then
 	end)
 	CatalogGroup:AddDropdown("CatalogLayout", {
 		Text = "Catalog layout",
-		Values = { "Split", "Stack" },
+		Values = { "Split", "Stack", "Grid" },
 		Default = "Split",
 		Callback = function(Value)
 			CatalogModule:SetLayout(Value)
@@ -702,6 +711,7 @@ if AssetCatalog then
 
 	local Created, Result = pcall(function()
 		return AssetCatalog.CreateEmbedded(Library, GalleryGroup, "GalleryCatalog", {
+			Model = SkinCollection,
 			Items = GalleryItems,
 			Height = 430,
 			MinCellWidth = 116,
@@ -731,7 +741,7 @@ if AssetCatalog then
 	)
 	GalleryOptions:AddDropdown("GalleryLayoutMode", {
 		Text = "Layout",
-		Values = { "Split", "Stack" },
+		Values = { "Split", "Stack", "Grid" },
 		Default = "Split",
 		Callback = function(Value)
 			if GalleryCatalog then
@@ -768,6 +778,7 @@ if AssetCatalog then
 	GalleryOptions:AddButton("Open the same gallery as a window", function()
 		local Ok, Err = pcall(function()
 			AssetCatalog.CreateStandalone(Library, {
+				Model = SkinCollection,
 				Items = GalleryItems,
 				WindowTitle = "Skin gallery",
 				WindowSubtitle = "Standalone module",
@@ -778,6 +789,25 @@ if AssetCatalog then
 		end)
 		if not Ok then
 			Notify("Gallery", "Standalone failed: " .. tostring(Err))
+		end
+	end)
+	GalleryOptions:AddSlider("GalleryPanelHeight", {
+		Text = "Gallery height",
+		Default = 430,
+		Min = 340,
+		Max = 800,
+		Rounding = 0,
+		Suffix = "px",
+		Callback = function(Value)
+			if GalleryCatalog then
+				GalleryCatalog:SetHeight(Value)
+			end
+		end,
+	})
+	GalleryOptions:AddButton("Save or unsave selected skin", function()
+		local Item = SkinCollection and SkinCollection:GetSelected()
+		if Item then
+			SkinCollection:SetFavorite(Item.Id, not Item.Favorite)
 		end
 	end)
 end
@@ -2271,6 +2301,7 @@ return {
 		ImageGallery = ImageGallery,
 		ImagePreview = ImagePreview,
 		AssetCatalog = AssetCatalog,
+		CollectionModel = CollectionModel,
 		CharacterTrail = CharacterTrail,
 		DashboardWindow = DashboardWindow,
 		VisualPreview = VisualPreview,
@@ -2284,6 +2315,7 @@ return {
 		ImageGallery = AddonGallery,
 		ImagePreview = AddonImagePreview,
 		AssetCatalog = CatalogModule,
+		SkinCollection = SkinCollection,
 		AssetCatalogWindow = CatalogHost,
 		CharacterTrail = TrailController,
 		DashboardWindow = Dashboard,

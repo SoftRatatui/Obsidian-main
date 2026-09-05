@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local DashboardWindow = {
-    ReleaseVersion = "0.0.1-release-9",
+    ReleaseVersion = "0.0.1-release-10",
 }
 
 local function ApplyCorner(Object, Radius)
@@ -12,21 +12,13 @@ local function ApplyCorner(Object, Radius)
 end
 
 local function RemoveRegistryTree(Library, Root)
-    if type(Library.Registry) ~= "table" or typeof(Root) ~= "Instance" then
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or typeof(Root) ~= "Instance" then
         return
     end
-    local Owned = {}
-    for Object in Library.Registry do
-        local Success, Matches = pcall(function()
-            return Object == Root or Object:IsDescendantOf(Root)
-        end)
-        if Success and Matches then
-            table.insert(Owned, Object)
-        end
-    end
-    for _, Object in Owned do
+    for _, Object in Root:GetDescendants() do
         Library:RemoveFromRegistry(Object)
     end
+    Library:RemoveFromRegistry(Root)
 end
 
 local function GetViewportSize()
@@ -717,7 +709,7 @@ function DashboardWindow.Create(Library, Info)
                     })
                 end
             end))
-            Widget:GiveConnection(Button.MouseButton1Click:Connect(function()
+            Widget:GiveConnection(Button.Activated:Connect(function()
                 if Widget.Destroyed or not Widget.Enabled then
                     return
                 end
@@ -961,11 +953,18 @@ function DashboardWindow.Create(Library, Info)
         return Dashboard
     end
 
+    function Dashboard:SetHeight(Value)
+        return Dashboard:SetSize(Dashboard.Width, Value)
+    end
+
     function Dashboard:Destroy()
         if Dashboard.Destroyed then
             return
         end
         Dashboard.Destroyed = true
+        Library:CancelTween(Holder, "DashboardVisibility")
+        Library:CancelTween(CloseButton, "DashboardCloseHover")
+        Library:CancelTween(CloseIcon, "DashboardCloseIconHover")
         Dashboard.SchedulerRevision += 1
         for _, Section in table.clone(Dashboard.Sections) do
             Section:Destroy()
@@ -1009,7 +1008,7 @@ function DashboardWindow.Create(Library, Info)
             })
         end
     end))
-    AddConnection(CloseButton.MouseButton1Click:Connect(function()
+    AddConnection(CloseButton.Activated:Connect(function()
         Dashboard:SetVisible(false)
     end))
 
@@ -1086,6 +1085,7 @@ function DashboardWindow.CreateStandalone(Library, Info)
         Position = Info.Position,
         AnchorPoint = Info.AnchorPoint,
         Draggable = Info.Draggable,
+        Resizable = Info.Resizable,
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
@@ -1094,6 +1094,9 @@ function DashboardWindow.CreateStandalone(Library, Info)
 
     Info.Title = nil
     Info.Subtitle = nil
+    if Info.FitHeight == nil then
+        Info.FitHeight = Info.Height == nil
+    end
     Info.Height = Info.Height or math.max(180, WindowHeight - 74)
     Info.ShowHeader = false
 

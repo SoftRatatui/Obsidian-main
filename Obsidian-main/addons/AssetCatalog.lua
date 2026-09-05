@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-9",
+    ReleaseVersion = "0.0.1-release-10",
 }
 
 local function NormalizeAsset(Value)
@@ -40,21 +40,13 @@ local function AddRegistry(Library, Object, Properties)
 end
 
 local function RemoveRegistryTree(Library, Root)
-    if not Library or type(Library.RemoveFromRegistry) ~= "function" or type(Library.Registry) ~= "table" then
+    if not Library or type(Library.RemoveFromRegistry) ~= "function" or typeof(Root) ~= "Instance" then
         return
     end
-    local Objects = {}
-    for Object in Library.Registry do
-        local Success, Matches = pcall(function()
-            return Object == Root or Object:IsDescendantOf(Root)
-        end)
-        if Success and Matches then
-            table.insert(Objects, Object)
-        end
-    end
-    for _, Object in Objects do
+    for _, Object in Root:GetDescendants() do
         Library:RemoveFromRegistry(Object)
     end
+    Library:RemoveFromRegistry(Root)
 end
 
 local function NormalizeItem(Item, Index)
@@ -118,6 +110,7 @@ function AssetCatalog.Create(Library, Info)
     Info = Info or {}
     local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
         HeaderHeight = 38,
+        ControlHeight = 28,
         Padding = 10,
         Gap = 8,
         Radius = 7,
@@ -206,6 +199,7 @@ function AssetCatalog.Create(Library, Info)
     local CategoryCorner = Instance.new("UICorner")
     CategoryCorner.CornerRadius = UDim.new(0, Style.ControlRadius)
     CategoryCorner.Parent = Category
+    local PreferredCategoryWidth = Category.Size.X.Offset
 
     local Search = Instance.new("TextBox")
     Search.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(31, 34, 39)
@@ -236,6 +230,26 @@ function AssetCatalog.Create(Library, Info)
     SearchPadding.PaddingLeft = UDim.new(0, 10)
     SearchPadding.PaddingRight = UDim.new(0, 10)
     SearchPadding.Parent = Search
+
+    local function ToolbarButton(Text)
+        local Button = Instance.new("TextButton")
+        Button.AutoButtonColor = false
+        Button.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(31, 34, 39)
+        Button.BorderSizePixel = 0
+        Button.FontFace = Category.FontFace
+        Button.Text = Text
+        Button.TextColor3 = Category.TextColor3
+        Button.TextSize = Style.CaptionSize
+        Button.TextTruncate = Enum.TextTruncate.AtEnd
+        Button.Parent = Toolbar
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, Style.ControlRadius)
+        Corner.Parent = Button
+        AddRegistry(Library, Button, { BackgroundColor3 = "ElementColor", TextColor3 = "FontColor", FontFace = "Font" })
+        return Button
+    end
+    local Favorites = ToolbarButton("Saved")
+    local Sort = ToolbarButton("Original")
 
     local Body = Instance.new("Frame")
     Body.BackgroundTransparency = 1
@@ -282,11 +296,16 @@ function AssetCatalog.Create(Library, Info)
     Grid.CellPadding = UDim2.fromOffset(Gap, Gap)
     Grid.CellSize = UDim2.fromOffset(MinCellWidth, CellHeight)
     Grid.FillDirectionMaxCells = Columns
+    Grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
     Grid.Parent = GridScroll
+    local GridPadding = Instance.new("UIPadding")
+    GridPadding.PaddingTop = UDim.new(0, 1)
+    GridPadding.PaddingBottom = UDim.new(0, 1)
+    GridPadding.Parent = GridScroll
 
     local function ResolveGridMetrics()
-        local Width = GridScroll.AbsoluteSize.X - GridScroll.ScrollBarThickness
+        local Width = math.floor(GridScroll.AbsoluteSize.X) - GridScroll.ScrollBarThickness - 2
         if Width <= 0 then
             return
         end
@@ -296,13 +315,17 @@ function AssetCatalog.Create(Library, Info)
             Count = math.clamp(math.floor((Width + Gap) / (MinCellWidth + Gap)), 1, 8)
         end
 
-        local CellWidth = math.max(48, math.floor((Width - Gap * (Count - 1)) / Count))
+        Count = math.clamp(Count, 1, math.max(1, math.floor((Width + Gap) / (48 + Gap))))
+        local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
+        local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
+        GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 1 + GridScroll.ScrollBarThickness + math.ceil(Remaining / 2))
         Grid.FillDirectionMaxCells = Count
         Grid.CellSize = UDim2.fromOffset(CellWidth, CellHeight)
     end
 
     ResolveGridMetrics()
-    GridScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
+    local GridConnection = GridScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
 
     local Footer = Instance.new("Frame")
     Footer.AnchorPoint = Vector2.new(0, 1)
@@ -453,6 +476,7 @@ function AssetCatalog.Create(Library, Info)
     SecondaryAction.Text = tostring(Info.SecondaryActionText or "Preview")
     SecondaryAction.TextColor3 = Library and Library.Scheme.FontColor or Color3.fromRGB(238, 240, 244)
     SecondaryAction.TextSize = Style.CaptionSize
+    SecondaryAction.TextTruncate = Enum.TextTruncate.AtEnd
     SecondaryAction.Visible = Info.SecondaryAction ~= false
     SecondaryAction.Parent = Actions
     AddRegistry(Library, SecondaryAction, {
@@ -474,6 +498,7 @@ function AssetCatalog.Create(Library, Info)
     PrimaryAction.Text = tostring(Info.ActionText or "Apply")
     PrimaryAction.TextColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(17, 19, 22)
     PrimaryAction.TextSize = Style.CaptionSize
+    PrimaryAction.TextTruncate = Enum.TextTruncate.AtEnd
     PrimaryAction.Parent = Actions
     if Info.SecondaryAction == false then
         PrimaryAction.Size = UDim2.fromScale(1, 1)
@@ -493,13 +518,13 @@ function AssetCatalog.Create(Library, Info)
             PrimaryAction.Size = UDim2.new(0, Width, 1, 0)
             return
         end
-        local Primary = math.max(48, math.floor((Width - Gap) / 2))
+        local Primary = math.max(1, math.floor((Width - Gap) / 2))
         SecondaryAction.Size = UDim2.new(0, Width - Gap - Primary, 1, 0)
         PrimaryAction.Size = UDim2.new(0, Primary, 1, 0)
     end
 
     ResolveActionMetrics()
-    Actions:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveActionMetrics)
+    local ActionConnection = Actions:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveActionMetrics)
 
     local PrimaryCorner = Instance.new("UICorner")
     PrimaryCorner.CornerRadius = UDim.new(0, Style.ControlRadius)
@@ -563,6 +588,8 @@ function AssetCatalog.Create(Library, Info)
         OnSelected = Info.OnSelected or Info.Callback,
         OnAction = Info.OnAction,
         OnSecondaryAction = Info.OnSecondaryAction,
+        FavoritesOnly = Info.FavoritesOnly == true,
+        Sort = Info.Sort == "Name" and "Name" or "Original",
     }
 
     local function Motion(Name)
@@ -572,7 +599,14 @@ function AssetCatalog.Create(Library, Info)
         return TweenInfo.new(Name == "Hover" and 0.07 or 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     end
 
+    table.insert(Catalog.Connections, GridConnection)
+    table.insert(Catalog.Connections, ActionConnection)
+    local LocalTweens = {}
     local function Play(Object, Key, Properties)
+        if LocalTweens[Key] then
+            LocalTweens[Key]:Cancel()
+            LocalTweens[Key] = nil
+        end
         if not Style.Motion then
             for Property, Value in Properties do
                 Object[Property] = Value
@@ -584,6 +618,13 @@ function AssetCatalog.Create(Library, Info)
             return
         end
         local Tween = TweenService:Create(Object, Motion("Hover"), Properties)
+        LocalTweens[Key] = Tween
+        Tween.Completed:Once(function()
+            if LocalTweens[Key] == Tween then
+                LocalTweens[Key] = nil
+            end
+            Tween:Destroy()
+        end)
         Tween:Play()
     end
 
@@ -635,6 +676,30 @@ function AssetCatalog.Create(Library, Info)
     local SplitMinWidth = math.max(360, math.floor(tonumber(Info.SplitMinWidth) or 560))
 
     local function SetPanelLayout()
+        local Available = math.max(1, math.floor(Root.AbsoluteSize.X))
+        local Compact = Available < 460
+        local ControlsTop = math.floor((ToolbarHeight - Style.ControlHeight) * 0.5)
+        local ActualToolbarHeight = ToolbarHeight + (Compact and (Style.ControlHeight + Gap) or 0)
+        Toolbar.Size = UDim2.new(1, 0, 0, ActualToolbarHeight)
+        Body.Position = UDim2.fromOffset(0, ActualToolbarHeight + Gap)
+        Body.Size = UDim2.new(1, 0, 1, -(ActualToolbarHeight + Gap))
+        local CategoryWidth = math.min(PreferredCategoryWidth, math.max(48, math.floor(Available * 0.32)))
+        Category.Size = UDim2.fromOffset(CategoryWidth, Style.ControlHeight)
+        local ActionsWidth = 64 + 76 + Gap
+        Search.Position = UDim2.fromOffset(Padding + CategoryWidth + Gap, ControlsTop)
+        Search.Size = UDim2.new(1, -(Padding * 2 + CategoryWidth + Gap + (Compact and 0 or ActionsWidth + Gap)), 0, Style.ControlHeight)
+        Favorites.Position = Compact and UDim2.fromOffset(Padding, ToolbarHeight) or UDim2.new(1, -(Padding + ActionsWidth), 0, ControlsTop)
+        Favorites.Size = UDim2.fromOffset(64, Style.ControlHeight)
+        Sort.Position = Compact and UDim2.fromOffset(Padding + 64 + Gap, ToolbarHeight) or UDim2.new(1, -(Padding + 76), 0, ControlsTop)
+        Sort.Size = UDim2.fromOffset(76, Style.ControlHeight)
+        PreviewPanel.Visible = Catalog.Layout ~= "grid"
+        if Catalog.Layout == "grid" then
+            Catalog.EffectiveLayout = "grid"
+            GridPanel.AnchorPoint = Vector2.zero
+            GridPanel.Position = UDim2.fromOffset(0, 0)
+            GridPanel.Size = UDim2.fromScale(1, 1)
+            return
+        end
         local Split = Catalog.Layout == "split"
         if Split then
             local Available = math.floor(Body.AbsoluteSize.X)
@@ -677,21 +742,24 @@ function AssetCatalog.Create(Library, Info)
             end
             PreviewCanvas.Size = UDim2.new(1, -PreviewPadding * 2, 1, -(PreviewPadding * 2 + 112))
         else
-            local PreviewHeight = math.clamp(math.floor(Height * 0.42), 150, 320)
+            local PreviewHeight = math.clamp(math.floor((Height - ActualToolbarHeight) * 0.42), 130, 260)
             PreviewPanel.Position = UDim2.fromScale(0, 0)
             PreviewPanel.Size = UDim2.new(1, 0, 0, PreviewHeight)
             GridPanel.AnchorPoint = Vector2.zero
             GridPanel.Position = UDim2.fromOffset(0, PreviewHeight + Gap)
             GridPanel.Size = UDim2.new(1, 0, 1, -(PreviewHeight + Gap))
-            PreviewCanvas.Size = UDim2.new(0.46, -PreviewPadding * 1.5, 1, -PreviewPadding * 2)
-            PreviewName.Position = UDim2.new(0.46, PreviewPadding, 0, PreviewPadding)
-            PreviewName.Size = UDim2.new(0.54, -PreviewPadding * 2, 0, 22)
-            PreviewSubtitle.Position = UDim2.new(0.46, PreviewPadding, 0, PreviewPadding + 24)
-            PreviewSubtitle.Size = UDim2.new(0.54, -PreviewPadding * 2, 0, 34)
-            Badges.Position = UDim2.new(0.46, PreviewPadding, 0, PreviewPadding + 62)
-            Badges.Size = UDim2.new(0.54, -PreviewPadding * 2, 0, 20)
-            Actions.Position = UDim2.new(0.46, PreviewPadding, 1, -PreviewPadding)
-            Actions.Size = UDim2.new(0.54, -PreviewPadding * 2, 0, Style.ControlHeight)
+            local ImageWidth = math.max(1, math.floor(Available * 0.4) - PreviewPadding * 2)
+            local TextLeft = ImageWidth + PreviewPadding * 2
+            local TextWidth = math.max(1, Available - TextLeft - PreviewPadding)
+            PreviewCanvas.Size = UDim2.new(0, ImageWidth, 1, -PreviewPadding * 2)
+            PreviewName.Position = UDim2.fromOffset(TextLeft, PreviewPadding)
+            PreviewName.Size = UDim2.fromOffset(TextWidth, 22)
+            PreviewSubtitle.Position = UDim2.fromOffset(TextLeft, PreviewPadding + 24)
+            PreviewSubtitle.Size = UDim2.fromOffset(TextWidth, 34)
+            Badges.Position = UDim2.fromOffset(TextLeft, PreviewPadding + 62)
+            Badges.Size = UDim2.fromOffset(TextWidth, 20)
+            Actions.Position = UDim2.new(0, TextLeft, 1, -PreviewPadding)
+            Actions.Size = UDim2.fromOffset(TextWidth, Style.ControlHeight)
         end
     end
 
@@ -713,6 +781,16 @@ function AssetCatalog.Create(Library, Info)
         if Animated then
             Play(Slot.Button, "Card" .. Slot.Index, { BackgroundColor3 = Color })
         else
+            if Library and type(Library.CancelTween) == "function" then
+                Library:CancelTween(Slot.Button, "AssetCatalogCard" .. Slot.Index)
+                Library:CancelTween(Slot.ImageScale, "AssetCatalogImage" .. Slot.Index)
+            end
+            for _, Key in { "Card" .. Slot.Index, "Image" .. Slot.Index } do
+                if LocalTweens[Key] then
+                    LocalTweens[Key]:Cancel()
+                    LocalTweens[Key] = nil
+                end
+            end
             Slot.Button.BackgroundColor3 = Color
         end
         Slot.Stroke.Color = Slot.Selected and (Slot.Item.AccentColor or (Library and Library.Scheme.AccentColor) or Color3.fromRGB(133, 141, 160)) or (Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66))
@@ -722,6 +800,7 @@ function AssetCatalog.Create(Library, Info)
 
     local function ClearBadges()
         for _, Badge in Catalog.Badges do
+            RemoveRegistryTree(Library, Badge)
             Badge:Destroy()
         end
         table.clear(Catalog.Badges)
@@ -754,6 +833,13 @@ function AssetCatalog.Create(Library, Info)
     end
 
     local function SetPreview(Item, Animated)
+        if Library and type(Library.CancelTween) == "function" then
+            Library:CancelTween(PreviewImageScale, "AssetCatalogPreview")
+        end
+        if LocalTweens.Preview then
+            LocalTweens.Preview:Cancel()
+            LocalTweens.Preview = nil
+        end
         Catalog.SelectedItem = Item
         ClearBadges()
         if not Item then
@@ -907,7 +993,7 @@ function AssetCatalog.Create(Library, Info)
         }
         Catalog.Slots[Index] = Slot
         AddRegistry(Library, Button, { BackgroundColor3 = function() return CardColor(Slot) end })
-        AddRegistry(Library, Stroke, { Color = function() return Slot.Selected and Library.Scheme.AccentColor or Library.Scheme.OutlineColor end })
+        AddRegistry(Library, Stroke, { Color = function() return Slot.Selected and (Slot.Item.AccentColor or Library.Scheme.AccentColor) or Library.Scheme.OutlineColor end })
         AddRegistry(Library, Canvas, { BackgroundColor3 = "BackgroundColor" })
         AddRegistry(Library, Name, { FontFace = "Font", TextColor3 = "FontColor" })
         AddRegistry(Library, State, { BackgroundColor3 = "AccentSoftColor", FontFace = "Font", TextColor3 = "FontColor" })
@@ -954,15 +1040,28 @@ function AssetCatalog.Create(Library, Info)
     end
 
     local function Refresh()
+        if Catalog.Destroyed then
+            return
+        end
         table.clear(Catalog.Filtered)
         local Query = string.lower(Catalog.Search)
         for _, Item in Catalog.Items do
             local CategoryMatch = Catalog.Category == "All" or Item.Category == Catalog.Category
             local SearchMatch = Query == "" or string.find(Item.SearchText, Query, 1, true) ~= nil
-            if CategoryMatch and SearchMatch then
+            if CategoryMatch and SearchMatch and (not Catalog.FavoritesOnly or Item.Favorite) then
                 table.insert(Catalog.Filtered, Item)
             end
         end
+        if Catalog.Sort == "Name" then
+            table.sort(Catalog.Filtered, function(A, B)
+                if A.Name == B.Name then
+                    return tostring(A.Id) < tostring(B.Id)
+                end
+                return A.Name < B.Name
+            end)
+        end
+        Favorites.Text = Catalog.FavoritesOnly and "Saved ✓" or "Saved"
+        Sort.Text = Catalog.Sort
         Catalog.PageCount = math.max(1, math.ceil(#Catalog.Filtered / Catalog.PageSize))
         Catalog.Page = math.clamp(Catalog.Page, 1, Catalog.PageCount)
         PageLabel.Text = string.format("%d / %d  ·  %d", Catalog.Page, Catalog.PageCount, #Catalog.Filtered)
@@ -1032,9 +1131,23 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:AddItem(Item)
-        local Normalized = NormalizeItem(Item, #Catalog.Items + 1)
+        if Catalog.Destroyed then
+            return nil
+        end
+        local NextIndex = #Catalog.Items + 1
+        for _, Existing in Catalog.Items do
+            if type(Existing.Id) == "number" then
+                NextIndex = math.max(NextIndex, Existing.Id + 1)
+            end
+        end
+        local Normalized = NormalizeItem(Item, NextIndex)
         if not Normalized then
             return nil
+        end
+        for _, Existing in Catalog.Items do
+            if Existing.Id == Normalized.Id then
+                return nil
+            end
         end
         table.insert(Catalog.Items, Normalized)
         RebuildCategories()
@@ -1079,6 +1192,20 @@ function AssetCatalog.Create(Library, Info)
 
     function Catalog:SetPage(Value)
         Catalog.Page = math.clamp(math.floor(tonumber(Value) or Catalog.Page), 1, Catalog.PageCount)
+        Refresh()
+        return Catalog
+    end
+
+    function Catalog:SetFavoritesOnly(Value)
+        Catalog.FavoritesOnly = Value == true
+        Catalog.Page = 1
+        Refresh()
+        return Catalog
+    end
+
+    function Catalog:SetSort(Value)
+        Catalog.Sort = Value == "Name" and "Name" or "Original"
+        Catalog.Page = 1
         Refresh()
         return Catalog
     end
@@ -1254,6 +1381,17 @@ function AssetCatalog.Create(Library, Info)
             return
         end
         Catalog.Destroyed = true
+        for Key, Tween in LocalTweens do
+            Tween:Cancel()
+            LocalTweens[Key] = nil
+        end
+        if Library and type(Library.CancelTween) == "function" then
+            Library:CancelTween(PreviewImageScale, "AssetCatalogPreview")
+            for _, Slot in Catalog.Slots do
+                Library:CancelTween(Slot.Button, "AssetCatalogCard" .. Slot.Index)
+                Library:CancelTween(Slot.ImageScale, "AssetCatalogImage" .. Slot.Index)
+            end
+        end
         for _, Connection in Catalog.Connections do
             pcall(function()
                 Connection:Disconnect()
@@ -1286,6 +1424,12 @@ function AssetCatalog.Create(Library, Info)
         local Index = table.find(Catalog.Categories, Catalog.Category) or 1
         Catalog:SetCategory(Catalog.Categories[Index % #Catalog.Categories + 1])
     end))
+    table.insert(Catalog.Connections, Favorites.Activated:Connect(function()
+        Catalog:SetFavoritesOnly(not Catalog.FavoritesOnly)
+    end))
+    table.insert(Catalog.Connections, Sort.Activated:Connect(function()
+        Catalog:SetSort(Catalog.Sort == "Name" and "Original" or "Name")
+    end))
     table.insert(Catalog.Connections, Previous.Activated:Connect(function()
         Catalog:SetPage(Catalog.Page - 1)
     end))
@@ -1313,13 +1457,16 @@ function AssetCatalog.Create(Library, Info)
         Root.Parent = Info.Parent
     end
     SetPanelLayout()
-    Body:GetPropertyChangedSignal("AbsoluteSize"):Connect(SetPanelLayout)
+    table.insert(Catalog.Connections, Body:GetPropertyChangedSignal("AbsoluteSize"):Connect(SetPanelLayout))
     Catalog:SetItems(Info.Items or {})
     if Info.Category then
         Catalog:SetCategory(Info.Category)
     end
     if Info.Selected ~= nil then
         Catalog:Select(Info.Selected, true)
+    end
+    if Info.Model then
+        Catalog.ModelBinding = Info.Model:Bind(Catalog)
     end
     if Library and type(Library.OnUnload) == "function" then
         Library:OnUnload(function()
@@ -1354,11 +1501,15 @@ function AssetCatalog.CreateStandalone(Library, Info)
         Position = Info.Position,
         AnchorPoint = Info.AnchorPoint,
         Draggable = Info.Draggable,
+        Resizable = Info.Resizable,
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
         Style = Info.Style,
     })
+    if Info.FitHeight == nil then
+        Info.FitHeight = Info.Height == nil
+    end
     Info.Height = Info.Height or math.max(300, (Info.WindowHeight or 560) - 74)
     Info.Layout = Info.Layout or "Split"
     local Catalog = Host:AddAddon("Catalog", AssetCatalog, Info)

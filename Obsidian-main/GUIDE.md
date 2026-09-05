@@ -1,13 +1,13 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-9`
+Current release: `0.0.1-release-10`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-9"
+local RELEASE = "0.0.1-release-10"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -57,6 +57,8 @@ The version check is informational. Never stop a script only because a cached se
 | `addons/SaveManager.lua` | Config persistence |
 | `addons/ThemeManager.lua` | Built-in and custom themes |
 | `addons/AssetCatalog.lua` | Complete skin, weapon, map, or asset browser |
+| `addons/CollectionModel.lua` | UI-independent collection, selection, favorites, queries, and view bindings |
+| `addons/CollectionModel.d.luau` | Collection model types |
 | `addons/ImageGallery.lua` | Lightweight paged image grid |
 | `addons/ImagePreview.lua` | Large configurable image preview |
 | `addons/TextureGallery.lua` | Texture-focused selector |
@@ -416,7 +418,56 @@ Host:SetSize(480, 600)
 Host:SetPosition(UDim2.fromScale(0.75, 0.5))
 ```
 
-The host owns only modules mounted through it. Destroying the host destroys those module controllers and their registered theme objects.
+The host owns modules mounted through it. Destroying the host destroys those module controllers and their registered theme objects. Windows are resizable by default; pass `Resizable = false` to disable the grip. Window dimensions are clamped to the viewport.
+
+Standalone visual helpers fill the available height when `Height` is omitted. An explicit `Height` keeps the module at that size and allows the host to scroll. Use `FitHeight = true` with `Host:AddAddon` to opt into height fitting, or `FitHeight = false` to disable it. A controller's minimum height is retained on small screens.
+
+## Collections without UI
+
+Load `addons/CollectionModel.lua` independently. The module does not access `game`, create instances, or load the library. It can run in a plain Luau process. The same model can later drive embedded and independent windows.
+
+```luau
+local Skins = CollectionModel.Create({
+    Items = {
+        { Id = "violet", Name = "Violet", Category = "Rifles", Image = 123456 },
+        { Id = "arctic", Name = "Arctic", Category = "Rifles", Image = 123457 },
+    },
+    Selected = "violet",
+})
+
+Skins:Select("arctic")
+Skins:SetFavorite("arctic", true)
+local Saved = Skins:Query({ FavoritesOnly = true, Sort = "Name" })
+local SelectedSkin = Skins:GetSelected()
+
+local Listener = Skins:Subscribe(function(Model)
+    local Item = Model:GetSelected()
+    print(Item and Item.Id)
+end)
+```
+
+Selection stores the chosen item. Apply the actual cosmetic through your game's own code, for example in the catalog's `OnAction` callback. A locked item can be inspected; disabled items cannot be selected through the model.
+
+```luau
+local Embedded = AssetCatalog.CreateEmbedded(Library, Group, "Skins", {
+    Model = Skins,
+    Height = 480,
+    Layout = "Split",
+})
+
+local Detached, Host = AssetCatalog.CreateStandalone(Library, {
+    Model = Skins,
+    WindowTitle = "Skins",
+    WindowWidth = 820,
+    HideWithMenu = false,
+})
+```
+
+Both views share items, favorites, and selection. Each keeps its own search, category, sort, page, and layout. Selection alone does not rebuild item lists. `ImageGallery` accepts the same `Model` option. To attach an existing controller, use `Skins:Bind(Controller)`.
+
+When using a model, update data through `Skins:SetItems`, `AddItem`, `UpdateItem`, and `RemoveItem`. IDs are unique strings or numbers. `SetItems` rejects duplicates before replacing the current collection. Missing IDs receive generated IDs; explicit IDs are preferable for saved data. `GetItems`, `GetItem`, and `Query` return record copies, including copies of tag and badge lists; custom nested metadata remains shared.
+
+Destroying a bound view disconnects its binding. Destroying the model restores the views' original callbacks but leaves the views alive. The model owner should call `Skins:Destroy()` when finished, or register it with `Library:OnUnload`. Call `Listener:Disconnect()` to stop a subscription early. Search and favorite changes are in memory; persistence is the caller's responsibility.
 
 ## Asset catalog
 
@@ -481,7 +532,9 @@ local Catalog = AssetCatalog.CreateEmbedded(Library, Gallery, "SkinCatalog", {
 })
 ```
 
-This is the layout to use for a skin changer. Put it in a full-width groupbox (`Tab:AddFullGroupbox`) so the grid has room to breathe, or open it as its own window with `CreateStandalone`. Passing an explicit `Columns` pins the count instead and turns the automatic fitting off.
+Put a skin catalog in a full-width groupbox (`Tab:AddFullGroupbox`) or open it as its own window with `CreateStandalone`. Explicit `Columns` requests a fixed count; it is reduced when necessary to keep cards inside a narrow container. Card widths and outer padding are measured in whole pixels, including when the available width is odd.
+
+The toolbar includes search, categories, saved-item filtering, and name sorting. Below 460 pixels it uses two rows. `Layout = "Grid"` hides the preview; `Split` automatically falls back to `Stack` on narrow containers. The saved filter uses each item's `Favorite` value.
 
 For a narrow groupbox, embedded mode defaults to the stacked layout:
 
@@ -502,6 +555,8 @@ Catalog:AddItem(Item)
 Catalog:RemoveItem(Id)
 Catalog:SetSearch("violet")
 Catalog:SetCategory("Rifles")
+Catalog:SetFavoritesOnly(true)
+Catalog:SetSort("Name")
 Catalog:SetPage(2)
 Catalog:SetColumns(4)
 Catalog:SetCellHeight(112)
@@ -713,19 +768,33 @@ Library:Unload()
 
 ## Release checklist
 
-- `Library.ReleaseVersion` reports `0.0.1-release-9`.
-- Version mismatch is a warning and never blocks startup.
-- The default theme updates the top bar, sidebar, content, controls, and addons.
-- Menu open and close motion remains short.
-- Tabs switch without font replacement or delayed visibility.
-- The compact launcher stays inside the viewport.
-- The watermark starts inside the viewport.
-- Empty keybinds do not appear in the keybind list.
-- Every optional addon works embedded and in its documented direct or standalone mode.
-- Large galleries render only their current page.
-- `Library:Unload()` removes every owned instance and connection.
+- [x] Runtime sources and type modules compile with the Luau compiler.
+- [x] Collection IDs, atomic updates, selection, filters, bindings, and cleanup pass 12 regression tests.
+- [x] Seven addon contract scenarios cover catalog filtering and badge cleanup, gallery sizing, texture item replacement, image transition cancellation, shared view bindings, host lifecycle, and dashboard metrics.
+- [x] Examples include a shared skin collection, a separate gallery window, grid mode, favorites, and adjustable gallery height.
+- [x] Visual addon cleanup visits its own descendants instead of scanning the whole theme registry.
+- [ ] Verify real rendering in Roblox at 480, 780, and 1100 pixel window widths, including odd widths, DPI changes, light and dark themes.
+- [ ] Verify live image loading, fonts, touch, gamepad input, viewport previews, rapid tab changes, and full-library unload in Roblox.
+
+The addon contract tests use a small Roblox API mock. They check controller behavior and geometry calculations; they do not render Roblox UI or verify engine text metrics, assets, or input routing.
+
+Run local checks with Luau's compiler and interpreter installed:
+
+```powershell
+./tests/check.ps1 -Compiler luau-compile -Runtime luau
+```
 
 ## Changelog
+
+### 0.0.1-release-10
+
+- Added a UI-independent collection model and shared embedded/standalone skin selection.
+- Added catalog grid-only mode, saved filtering, sorting, and an adaptive toolbar.
+- Replaced fractional gallery geometry with integer card sizes and balanced integer padding; added scrolling to image galleries.
+- Added resizable addon windows and optional content height fitting. Fixed module ordering, automatic module IDs, subtitle alignment, and visibility tween cancellation.
+- Fixed stale preview data after item replacement, instant image changes racing previous fades, badge registration buildup, and module container cleanup.
+- Added dashboard and texture height setters, `Activated` button handling, and local regression checks.
+- Corrected package entry paths and refreshed the example and type declarations.
 
 ### 0.0.1-release-9
 

@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-11",
+    ReleaseVersion = "0.0.1-release-12",
 }
 
 local function NormalizeAsset(Value)
@@ -152,7 +152,7 @@ function AssetCatalog.Create(Library, Info)
     )
     local PreviewPadding = math.clamp(math.floor(tonumber(Info.PreviewPadding) or Padding), 0, 30)
 
-    local Root = Instance.new("CanvasGroup")
+    local Root = Instance.new("Frame")
     Root.Name = "MonHubAssetCatalog"
     Root.BackgroundColor3 = Library and Library.Scheme.BackgroundColor or Color3.fromRGB(17, 19, 22)
     Root.BackgroundTransparency = RootTransparency

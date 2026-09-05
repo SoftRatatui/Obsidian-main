@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-11",
+    ReleaseVersion = "0.0.1-release-12",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -639,7 +639,7 @@ function Library:SetThemeFont(FontFace): any
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-11-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-12-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -10992,6 +10992,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
+            ClipsDescendants = true,
             Size = UDim2.new(1, 0, 0, Info.Height),
             Visible = Viewport.Visible,
             Parent = Container,

@@ -1,13 +1,13 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-11`
+Current release: `0.0.1-release-12`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-11"
+local RELEASE = "0.0.1-release-12"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -801,6 +801,222 @@ Library:Notify({
 
 Notifications use the same short motion profile and active theme as the main interface.
 
+## Complete addon API reference
+
+This section is the complete public reference for every addon shipped in `addons`. Constructor settings are passed in the final `Info` table. Methods use colon syntax, for example `Gallery:SetPage(2)`.
+
+All visual addons support three mounting forms where listed:
+
+```lua
+local Controller = Addon.Create(Library, Info)
+local Embedded = Addon.CreateEmbedded(Library, Groupbox, "UniqueId", Info)
+local Standalone, Host = Addon.CreateStandalone(Library, Info)
+```
+
+`CreateEmbedded` can also be called through `Groupbox:AddAddon`. Standalone settings shared by visual addons are `WindowTitle`, `WindowSubtitle`, `WindowIcon`, `WindowWidth`, `WindowHeight`, `Position`, `AnchorPoint`, `Draggable`, `Resizable`, `Closable`, `HideWithMenu`, `Visible`, and `FitHeight`.
+
+### AssetCatalog API
+
+`AssetCatalog` is a searchable, paged collection with a large preview and two actions.
+
+| Setting | Purpose |
+| --- | --- |
+| `Items`, `Model`, `Selected` | Source records, optional shared `CollectionModel`, and initial item ID. |
+| `Height`, `Columns`, `Rows`, `PageSize` | Overall height and grid capacity. |
+| `MinCellWidth`, `CellHeight`, `Gap`, `Padding` | Responsive grid geometry in pixels. |
+| `Layout` | `Split`, `Stack`, or `Grid`. |
+| `PreviewSide`, `PreviewRatio`, `SplitMinWidth` | Preview position, split ratio, and responsive breakpoint. |
+| `ToolbarHeight`, `CategoryWidth`, `LabelHeight` | Toolbar and text geometry. |
+| `ImagePadding`, `PreviewPadding`, `ScaleType` | Card and preview image layout. `ScaleType` accepts `Fit`, `Crop`, `Stretch`, or `Tile`. |
+| `ImageTransparency`, `CardTransparency`, `PreviewTransparency`, `BackgroundTransparency` | Independent visual opacity values from `0` to `1`. |
+| `SearchPlaceholder`, `EmptyText`, `EmptyTitle`, `EmptySubtitle` | Empty and search text. |
+| `Category`, `Sort`, `FavoritesOnly` | Initial filter state. Sort accepts the modes provided by `CollectionModel`. |
+| `ActionText`, `SecondaryActionText` | Labels for the preview actions. |
+| `OnSelected`, `OnAction`, `OnSecondaryAction`, `Callback` | Selection and action callbacks. |
+| `Style` | Per-instance design token overrides. |
+
+Item records accept `Id`, `Name`, `Category`, `Subtitle`, `Image`, `PreviewImage`, `Tags`, `Badges`, `Status`, `Price`, `Favorite`, `Disabled`, `Locked`, `Color`, `ScaleType`, `ImageScale`, `ImageTransparency`, `ImagePosition`, `ImageAnchorPoint`, `RectOffset`, `RectSize`, `ActionText`, and `SecondaryActionText`.
+
+| Method | Result |
+| --- | --- |
+| `Refresh()` | Rebuilds the current filtered page. |
+| `SetItems(items)`, `AddItem(item)`, `RemoveItem(id)` | Replaces or edits collection data. |
+| `SetSearch(text)`, `SetCategory(name)`, `SetFavoritesOnly(bool)`, `SetSort(mode)` | Changes filtering and sorting. |
+| `SetPage(page)` | Opens a clamped page number. |
+| `SetColumns(count)`, `SetMinCellWidth(px)`, `SetCellHeight(px)` | Changes responsive grid geometry. |
+| `SetLayout(mode, side)`, `SetPreviewRatio(ratio)`, `SetPreviewSide(side)` | Changes catalog layout without recreating it. |
+| `SetScaleType(mode)`, `SetImagePadding(px)`, `SetPreviewPadding(px)` | Changes image fitting. |
+| `SetImageTransparency(value)`, `SetCardTransparency(value)`, `SetPreviewTransparency(value)` | Changes opacity live. |
+| `Select(id, silent)`, `GetSelected()` | Selects or reads an item. `silent` skips callbacks. |
+| `SetVisible(bool)`, `SetHeight(px)`, `Mount(parent)`, `Destroy()` | Controls lifecycle and mounting. |
+
+### ImageGallery API
+
+`ImageGallery` is the lighter grid-only selector. It can bind directly to `ImagePreview` through `Preview` or `BindPreview`.
+
+| Setting | Purpose |
+| --- | --- |
+| `Items`, `Model`, `Selected`, `Preview` | Items, shared model, initial ID, and preview controller. |
+| `Height`, `Columns`, `PageSize`, `MinCellWidth`, `CellHeight`, `Gap` | Gallery and responsive grid geometry. |
+| `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImagePadding`, `ImageScale`, `Zoom` | Image bounds and transform. |
+| `ScaleType`, `TileSize`, `Rotation` | Roblox image rendering properties. |
+| `LabelHeight`, `CornerRadius` | Caption and card corner geometry. |
+| `BackgroundTransparency`, `ContainerOutlineTransparency` | Outer surface opacity. |
+| `CellTransparency`, `CellOutlineTransparency`, `OutlineTransparency` | Card opacity and stroke. |
+| `ImageTransparency`, `ImageBackgroundTransparency` | Image and image-canvas opacity. |
+| `Category`, `SearchPlaceholder`, `EmptyText` | Initial filtering text. |
+| `ForwardItemStyle` | Forwards compatible per-item style fields to the bound preview. |
+| `OnSelected`, `Callback`, `Style`, `Visible` | Callback, style overrides, and initial visibility. |
+
+Methods: `Refresh`, `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`, `SetScaleType`, `SetImageTransparency`, `SetImageBackgroundTransparency`, `SetBackgroundTransparency`, `SetCellTransparency`, `SetOutlineTransparency`, `SetContainerOutlineTransparency`, `SetImagePadding`, `SetLabelHeight`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetCornerRadius`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`.
+
+### ImagePreview API
+
+| Setting | Purpose |
+| --- | --- |
+| `Image`, `AssetId`, `Title`, `Subtitle` | Initial image and caption. Numeric asset IDs are normalized automatically. |
+| `Height`, `CaptionHeight`, `Caption` | Overall and caption dimensions; `Caption = false` hides it. |
+| `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImagePadding`, `ImageScale` | Image layout and zoom. |
+| `ScaleType`, `TileSize`, `Rotation`, `ImageColor` | Roblox image rendering properties. |
+| `ImageTransparency`, `BackgroundTransparency`, `CanvasTransparency`, `CaptionTransparency` | Independent opacity values. |
+| `OutlineTransparency`, `OutlineThickness`, `CornerRadius` | Border geometry. |
+| `Shade`, `ShadeTransparency`, `Motion`, `Interactive` | Overlay, transitions, and interaction behavior. |
+| `Style`, `Visible` | Style overrides and initial visibility. |
+
+Methods: `SetImage(value, transition)`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetImagePadding`, `SetTileSize`, `SetRotation`, `SetBackgroundTransparency`, `SetCanvasTransparency`, `SetCaptionTransparency`, `SetOutlineTransparency`, `SetOutlineThickness`, `SetCornerRadius`, `SetShade(visible, transparency)`, `SetCaptionVisible`, `SetMotion`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
+
+### TextureGallery API
+
+`TextureGallery.DefaultItems` contains the built-in Clean, Soft beam, Lightning, Pulse, Chain, Glitch, Swirl, Neon, Plasma, and Laser presets.
+
+| Setting | Purpose |
+| --- | --- |
+| `Items`, `Selected` | Texture records and initial ID or record. |
+| `Height`, `Columns` | Gallery geometry. |
+| `ScaleType`, `ImageScale`, `Zoom` | Texture fitting and zoom. |
+| `ImageTransparency`, `PreviewImageTransparency` | Card and large preview image opacity. |
+| `CardTransparency`, `PreviewTransparency`, `OutlineTransparency` | Surface opacity. |
+| `OnSelected`, `Style`, `Visible` | Selection callback, style overrides, and visibility. |
+
+Texture items accept `Id`, `Name`, `Texture`, `AssetId`, `Image`, `ColorA`, `ColorB`, `ScaleType`, `ImageScale`, `Zoom`, `ImageTransparency`, and `Transparency`. Methods: `SetItems`, `Select`, `GetSelected`, `SetVisible`, `SetColumns`, `SetImageTransparency`, `SetPreviewImageTransparency`, `SetCardTransparency`, `SetPreviewTransparency`, `SetOutlineTransparency`, `SetScaleType`, `SetImageScale`, `Mount`, `SetHeight`, and `Destroy`.
+
+### DashboardWindow API
+
+| Setting | Purpose |
+| --- | --- |
+| `Title`, `Subtitle`, `Icon`, `Width`, `Height`, `Position`, `Side` | Window identity and geometry. |
+| `Draggable`, `Resizable`, `Closable`, `HideWithMenu`, `Visible` | Window behavior. |
+| `Sections`, `DefaultSection`, `ShowHeader`, `Style` | Initial content and presentation. |
+
+Create sections with `Dashboard:AddSection({ Title = "Runtime", Icon = "activity" })`. A section supports `AddText`, `AddMetric`, `AddButton`, `AddCustom`, generic `Add`, `SetTitle`, `SetVisible`, and `Destroy`.
+
+- Text settings: `Text`, `Provider`, `Interval`, `TextSize`, and `Wrapped`. Text widgets expose `SetText`, `SetProvider`, `SetVisible`, and `Destroy`.
+- Metric settings: `Label`, `Value`, `Provider`, `Interval`, `Format`, and `Fallback`. Metrics expose `SetLabel`, `SetValue`, `SetProvider`, `SetVisible`, and `Destroy`.
+- Button settings: `Text`, `Callback` or `Func`, `Enabled`, and `Emphasis`. Buttons expose `SetText`, `SetEnabled`, `SetVisible`, and `Destroy`.
+- Custom settings: `Instance`, `Height`, `Build`, and `ClipsDescendants`.
+
+Dashboard methods: `GetDefaultSection`, `Add`, `AddText`, `AddMetric`, `AddButton`, `AddCustom`, `SetTitle`, `SetVisible`, `Toggle`, `SetDraggable`, `SetPosition`, `SetSize`, `Refresh`, `SetHeight`, and `Destroy`.
+
+### VisualPreview API
+
+| Setting | Purpose |
+| --- | --- |
+| `Target`, `Player` | Character, model, player, or player source. |
+| `Width`, `Height`, `Side`, `Alignment`, `Gap`, `Position` | Preview placement and geometry. |
+| `Renderer` | Optional shared renderer created by `DrawingESPPreview`. |
+| `Enabled`, `Visible`, `ShowHeader`, `BindToTab` | Initial state and tab behavior. |
+| `Color`, `GradientColor`, `Gradient`, `Box`, `BoxScale`, `DynamicBoxes` | Box overlay appearance. |
+| `NameVisible`, `Distance`, `Team`, `Weapon`, `Health`, `Highlight` | Overlay components. |
+| `ChamsFillColor`, `ChamsOutlineColor`, `ChamsFillTransparency`, `ChamsOutlineTransparency` | Highlight appearance. |
+| `Style`, `OutlineTransparency` | Style overrides. |
+
+Methods: `SetTarget`, `Rotate`, `SetZoom`, `ResetView`, `GetRendererContext`, `SetEnabled`, `SetColor`, `SetBoxScale`, `SetDynamicBoxes`, `SetBoxStyle`, `SetGradientEnabled`, `SetGradientColor`, `SetOpacity`, `SetPosition`, `SetPanelGap`, `Mount`, `Embed`, `SetBoxVisible`, `SetNameVisible`, `SetDistanceVisible`, `SetTeamVisible`, `SetWeaponVisible`, `SetTracerVisible`, `SetHealthVisible`, `SetHighlightVisible`, `SetChams`, `SetDistance`, and `Destroy`.
+
+### FixedR6Preview API
+
+Call `FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, Info)`. It resolves the selected player's avatar as R6 and mounts a `VisualPreview`.
+
+Settings: `Target`, `Player`, `Renderer`, `Width`, `Height`, `Side`, `Alignment`, `Gap`, `Enabled`, `AutoRefresh`, `ShowHeader`, `Color`, `GradientColor`, `Gradient`, `Box`, `DynamicBoxes`, `NameVisible`, `Distance`, `Health`, `Highlight`, and `Style`. Methods: `SetEnabled`, `SetColors`, `SetGradientEnabled`, `SetPosition`, `Rotate`, `SetZoom`, `RefreshCharacter`, and `Destroy`.
+
+### CharacterTrail API
+
+`CharacterTrail` is UI independent. Call `CharacterTrail.Create(Info)`.
+
+| Setting | Purpose |
+| --- | --- |
+| `Target`, `AttachmentPart`, `VerticalOffset` | Character/model target and trail attachment. |
+| `Enabled`, `Lifetime`, `MinLength`, `MaxLength` | Trail state and lifetime behavior. |
+| `ColorStart`, `ColorEnd`, `ColorA`, `ColorB` | Color sequence endpoints. |
+| `TransparencyStart`, `TransparencyEnd`, `TransparencyMin`, `TransparencyMax` | Transparency sequence endpoints. |
+| `WidthStart`, `WidthEnd`, `AttachmentWidth` | Width curve and attachment spacing. |
+| `Texture`, `TextureMode`, `TextureLength` | Texture asset and repetition behavior. |
+| `FaceCamera`, `LightEmission`, `LightInfluence`, `Brightness` | Native Roblox `Trail` lighting properties. |
+
+Methods: `SetEnabled`, `SetTarget`, `SetColors`, `SetTransparency`, `SetWidthScale`, `SetAttachmentWidth`, `SetVerticalOffset`, `SetAttachmentPart`, `SetLifetime`, `SetMinLength`, `SetMaxLength`, `SetTexture`, `SetTextureMode`, `SetTextureLength`, `SetFaceCamera`, `SetLight`, `SetBrightness`, `ApplyPreset`, `Refresh`, `GetTrail`, `GetState`, and `Destroy`. Available named presets and textures are exposed as `CharacterTrail.Presets` and `CharacterTrail.TexturePresets`.
+
+### TracerPreview API
+
+Settings: `AssetId` or `Image`, `Name`, `ColorA`, `ColorB`, `Glow`, `Speed`, `Enabled`, `Visible`, `Height`, `BackgroundTransparency`, `OutlineTransparency`, and `Style`, plus the common standalone settings. Methods: `SetAssetId`, `SetColors`, `SetGlow`, `SetSpeed`, `SetEnabled`, `SetName`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
+
+### DrawingESPPreview API
+
+Call `DrawingESPPreview.Create({ Color, GradientColor, Thickness, OutlineThickness, TextSize, Continuous })`. The returned renderer exposes `CreateEntity`, `SetEntityVisible`, `UpdateEntity`, `RemoveEntity`, `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, `DetachPreview`, `SetColors`, and `Destroy`. `UpdateEntity` receives the renderer state produced by `VisualPreview` or another compatible ESP source.
+
+### UniversalESP API
+
+Load `addons/esp/ESP.lua`, then call `UniversalESP.new(Info)`. `Info.Settings` can contain the settings tree below; top-level settings in `Info` are also accepted. `AutoStart` controls the render connection and `WrapPlayers` registers current and future players.
+
+- General: `Enabled`, `Players`, `NPCs`, `Parts`, `IncludeLocalPlayer`, `AliveCheck`, `TeamCheck`, `TeamColors`, `VisibilityCheck`, `VisibilityInterval`, `MaxDistance`, `TextDistance`, `UpdateRate`, and `TextUpdateRate`.
+- `Box`: `Enabled`, `Style`, `Dynamic`, `Scale`, `Thickness`, `Transparency`, `Outline`, `OutlineThickness`, `Fill`, `FillTransparency`, `Gradient`, `Rainbow`, and `RainbowSpeed`.
+- `Text`: `Name`, `DisplayName`, `Team`, `Distance`, `Tool`, `Health`, `Category`, `Flags`, `Size`, `RelativeSize`, `Outline`, `Font`, and `Separator`.
+- `HealthBar`: `Enabled`, `Position`, `Width`, `Offset`, `Outline`, and `Text`.
+- `Tracer`: `Enabled`, `Origin`, `Target`, `Thickness`, `Transparency`, and `Outline`.
+- `Skeleton`: `Enabled`, `Thickness`, `Transparency`, `Outline`, and `MaxJoints`.
+- `HeadDot`: `Enabled`, `Filled`, `Radius`, `Sides`, `Thickness`, `Transparency`, and `Outline`.
+- `OffscreenArrow`: `Enabled`, `Radius`, `Size`, `Filled`, `Transparency`, and `Outline`.
+- `Highlight`: `Enabled`, `FillTransparency`, `OutlineTransparency`, `DepthMode`, and `HealthColor`.
+- `Colors`: `Enemy`, `Gradient`, `Tracer`, `Skeleton`, `HeadDot`, `Arrow`, `Team`, `NPC`, `Part`, `Visible`, `Occluded`, `Outline`, `Text`, `HealthLow`, `HealthHigh`, `HighlightFill`, and `HighlightOutline`.
+
+Public controller methods: `Get(path)`, `Set(path, value)`, `ApplySettings`, `ApplyPreset` (`Performance`, `Balanced`, or `Quality`), `SetEnabled`, `Start`, `Stop`, `WrapObject`, `GetEntry`, `UnwrapObject`, `WrapPlayers`, `UnwrapPlayers`, `ScanNPCs`, `WatchNPCs`, `SetAutomaticNPCs`, `HideAll`, `CreatePreviewAdapter`, `GetStats`, `Restart`, and `Destroy`.
+
+`WrapObject(object, info)` accepts `Id`, `Kind`, `Name`, `Category`, `Team`, `Tool`, `Flags`, `Color`, `GradientColor`, `MaxDistance`, `TextDistance`, `AllowedVisuals`, and `Predicate`. `WatchNPCs(container, info)` returns a watcher with `Scan()` and `Destroy()`. The preview adapter exposes `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, `DetachPreview`, and `Destroy`.
+
+### UniversalESP MonHubUI API
+
+Load `addons/esp/MonHubUI.lua` and call `MonHubUI.Mount(Library, Tab, Controller, Info)`. Settings are `Prefix` for unique option IDs, `GeneralTitle`, `Keybind`, `AutoNPCs`, `NPCContainer`, `NPCInfo`, and `OwnController`. The returned handle contains the mounted controls and exposes `Destroy()`. When `OwnController` is true, destroying the panel also destroys the ESP controller.
+
+### CollectionModel API
+
+Create it with `{ Items = {}, Selected = id }`. Item IDs remain stable through filtering and replacement.
+
+| Method | Result |
+| --- | --- |
+| `GetItems()`, `GetItem(id)`, `GetSelected()` | Returns safe copies of collection data. |
+| `SetItems(items)`, `AddItem(item)`, `UpdateItem(id, changes)`, `RemoveItem(id)` | Mutates collection data and updates bound views. |
+| `Select(id)`, `SetFavorite(id, bool)` | Changes shared selection or favorite state. |
+| `Query(options)` | Filters by `Search`, `Category`, `FavoritesOnly`, and `Sort`. |
+| `Subscribe(callback)` | Returns a listener with `Disconnect()`. |
+| `Bind(view)` | Synchronizes a compatible catalog/gallery controller and returns a binding. |
+| `Destroy()` | Disconnects bindings and listeners. |
+
+### SaveManager API
+
+Call `SetLibrary` first. Use `SetFolder` and optionally `SetSubFolder` before building UI or loading configs.
+
+Methods: `SetLibrary`, `SetLoadingOrder`, `SetIgnoreIndexes`, `IgnoreThemeSettings`, `GetPaths`, `BuildFolderTree`, `CheckFolderTree`, `CheckSubFolder`, `SetFolder`, `SetSubFolder`, `RefreshConfigList`, `SaveJSON`, `Save`, `LoadJSON`, `Load`, `Delete`, `GetAutoloadConfig`, `SaveAutoloadConfig`, `LoadAutoloadConfig`, `DeleteAutoLoadConfig`, and `BuildConfigSection`.
+
+`Save` and `Load` operate on named files. `SaveJSON` and `LoadJSON` operate on serialized text. `SetIgnoreIndexes` excludes control IDs. `SetLoadingOrder(true, ids)` controls callback restore order. `BuildConfigSection(tab, icon)` creates the complete config interface.
+
+### ThemeManager API
+
+Call `SetLibrary` first. Methods: `SyncFromLibrary`, `BeginConfigLoad`, `MarkConfigOptionLoaded`, `EndConfigLoad`, `GetPaths`, `BuildFolderTree`, `CheckFolderTree`, `SetFolder`, `SetDefaultThemeFileName`, `ReloadCustomThemes`, `GetCustomTheme`, `SaveCustomTheme`, `Delete`, `GetDefaultTheme`, `SetDefaultTheme`, `SaveDefault`, `LoadDefault`, `DeleteDefaultTheme`, `ThemeUpdate`, `ApplyTheme`, `RefreshThemeList`, `CreateThemeManager`, `CreateGroupBox`, `CreateAppearanceManager`, `ApplyToTab`, and `ApplyToGroupbox`.
+
+`CreateAppearanceManager` exposes live colors, font, corner radius, motion, shadows, dividers, navigation indicator, geometry binding, and accent scrollbar controls. `ApplyTheme(name)` updates all registered UI and addon bindings immediately. Wrap bulk config restores with `BeginConfigLoad()` and `EndConfigLoad()` to avoid intermediate theme callbacks.
+
+### Addon window host API
+
+`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `Remove`, `SetModuleHeight`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu.
+
 ## Performance rules
 
 - Load only the addons used by the project.
@@ -845,6 +1061,13 @@ Run local checks with Luau's compiler and interpreter installed:
 ```
 
 ## Changelog
+
+### 0.0.1-release-12
+
+- Clipped every embedded addon at the passthrough boundary so galleries cannot render above the menu or outside their groupbox.
+- Replaced cached canvas roots in image addons with stable clipped frames and kept image/card clipping at every nested viewport.
+- Reserved scrollbar space inside menus, dashboards, catalogs, and galleries.
+- Added the complete addon API reference with constructor settings, item formats, public methods, and lifecycle calls.
 
 ### 0.0.1-release-11
 

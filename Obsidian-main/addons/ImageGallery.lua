@@ -134,7 +134,7 @@ function ImageGallery.Create(Library, Info)
     local TileSize = typeof(Info.TileSize) == "UDim2" and Info.TileSize or UDim2.fromOffset(64, 64)
     local Rotation = tonumber(Info.Rotation) or 0
 
-    local Root = Instance.new("CanvasGroup")
+    local Root = Instance.new("Frame")
     Root.Name = "MonHubImageGallery"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(18, 20, 24)
     Root.BackgroundTransparency = BackgroundTransparency

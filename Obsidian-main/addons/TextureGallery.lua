@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-11",
+    ReleaseVersion = "0.0.1-release-12",
 }
 
 TextureGallery.DefaultItems = {
@@ -93,7 +93,7 @@ function TextureGallery.Create(Library, Info)
         Style = Style,
     }
 
-    local Root = Instance.new("CanvasGroup")
+    local Root = Instance.new("Frame")
     Root.Name = "MonHubTextureGallery"
     Root.BorderSizePixel = 0
     Root.BackgroundTransparency = 1

@@ -175,7 +175,10 @@ function AssetCatalog.Create(Library, Info)
     AddRegistry(Library, Toolbar, { BackgroundColor3 = "SurfaceColor" })
 
     local ToolbarCorner = Instance.new("UICorner")
-    ToolbarCorner.CornerRadius = UDim.new(0, Style.Radius)
+    ToolbarCorner.TopLeftRadius = UDim.new(0, 0)
+    ToolbarCorner.TopRightRadius = UDim.new(0, 0)
+    ToolbarCorner.BottomLeftRadius = UDim.new(0, Style.Radius)
+    ToolbarCorner.BottomRightRadius = UDim.new(0, Style.Radius)
     ToolbarCorner.Parent = Toolbar
 
     local Category = Instance.new("TextButton")

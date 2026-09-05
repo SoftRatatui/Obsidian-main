@@ -1280,6 +1280,15 @@ Run local checks with Luau's compiler and interpreter installed:
 - Replaced the remaining hardcoded and ad-hoc corner radii with design tokens, and expressed the switch pill and knob as fully round instead of magic numbers.
 - Rounded every integer field returned by `GetAddonStyle`, so a fractional override can no longer reach an addon's radii, padding, or control heights.
 - Centered the dropdown value icon, which sat three pixels above center.
+- Removed the window footer's own corner. `MainFrame` is a `CanvasGroup` whose `UICorner` already masks all four window corners, so the footer's radius double-rounded the bottom two and notched its top two into the content. The mask now produces every window corner, which is why all four finally match.
+- Gave the asset catalog toolbar bottom-only corners for the same reason.
+- Made the checkbox tick's resting scale derive from its glyph size, so the shrunk state lands on a whole pixel instead of `10.5`.
+- Replaced anchor-based centering in tabbox headers with a whole-pixel offset, and sized the key box from its container instead of a `0.75` scale.
+- Snapped the keybind panel, which centered on the viewport and landed on a half pixel whenever its own height was odd.
+- Cut per-frame work in the cursor render step: mouse icon, position, and visibility are now written only when they change.
+- Stopped inactive tabs recomputing their column split on every resize frame.
+
+After these changes a sweep of the full example reports zero fractional positions or sizes across all ten tabs and 2,279 visible objects, with the only remaining entries belonging to the mouse cursor, which tracks the pointer by design.
 
 ### 0.0.1-release-11
 

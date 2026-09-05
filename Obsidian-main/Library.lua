@@ -8582,8 +8582,9 @@ do
             Size = UDim2.fromOffset(CheckSize, CheckSize),
             Parent = Checkbox,
         })
+        local CheckRestScale = math.max(1, CheckSize - 2) / CheckSize
         local CheckmarkScale = New("UIScale", {
-            Scale = Toggle.Value and 1 or 0.75,
+            Scale = Toggle.Value and 1 or CheckRestScale,
             Parent = Checkmark,
         })
 
@@ -8658,7 +8659,7 @@ do
             })
             TweenCheckmarkTransparency(Toggle.Value and 0 or 1)
             Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
-                Scale = Toggle.Value and 1 or 0.75,
+                Scale = Toggle.Value and 1 or CheckRestScale,
             })
         end
 
@@ -13024,6 +13025,24 @@ function Library:CreateWindow(WindowInfo)
         Library.KeybindFrame.AnchorPoint = Vector2.new(0, 0.5)
         Library.KeybindFrame.Position = UDim2.new(0, 6, 0.5, 0)
         Library.KeybindFrame.Visible = false
+
+        local function SnapKeybindFrame()
+            local Frame = Library.KeybindFrame
+            if not Frame or Frame.Position.X.Scale ~= 0 or Frame.Position.Y.Scale ~= 0.5 then
+                return
+            end
+
+            local Height = Frame.AbsoluteSize.Y
+            local Viewport = GetViewportSize().Y
+            local Centered = Viewport * 0.5 - Height * 0.5
+            local Correction = math.round(Centered) - Centered
+            if Frame.Position.Y.Offset ~= Correction then
+                Frame.Position = UDim2.new(0, Frame.Position.X.Offset, 0.5, Correction)
+            end
+        end
+
+        Library:GiveSignal(Library.KeybindFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(SnapKeybindFrame))
+        SnapKeybindFrame()
         Library:GiveSignal(Library.KeybindFrame:GetPropertyChangedSignal("Visible"):Connect(function()
             if Library.UpdatingKeybindMenuVisibility then
                 return
@@ -13414,13 +13433,6 @@ function Library:CreateWindow(WindowInfo)
             ZIndex = 4,
             Parent = MainFrame,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                Parent = BottomBackground,
-            })
-        )
 
         
         FooterLabel = New("TextLabel", {
@@ -14717,6 +14729,9 @@ function Library:CreateWindow(WindowInfo)
         end
 
         table.insert(Tab.Connections, TabContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if Library.ActiveTab ~= nil and Library.ActiveTab ~= Tab then
+                return
+            end
             Tab:RefreshSides()
         end))
 
@@ -14888,13 +14903,25 @@ function Library:CreateWindow(WindowInfo)
                 }); table.insert(Library.SpecificCorners, ButtonCorner)
 
                 local ButtonContent = New("Frame", {
-                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    AnchorPoint = Vector2.new(0, 0.5),
                     AutomaticSize = Enum.AutomaticSize.X,
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromScale(0.5, 0.5),
+                    Position = UDim2.new(0, 0, 0.5, 0),
                     Size = UDim2.fromOffset(0, 16),
                     Parent = Button,
                 })
+
+                local function CenterTabboxContent()
+                    ButtonContent.Position = UDim2.new(
+                        0,
+                        Library:CenterOffset(Button.AbsoluteSize.X, ButtonContent.AbsoluteSize.X),
+                        0.5,
+                        0
+                    )
+                end
+
+                ButtonContent:GetPropertyChangedSignal("AbsoluteSize"):Connect(CenterTabboxContent)
+                Button:GetPropertyChangedSignal("AbsoluteSize"):Connect(CenterTabboxContent)
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
                     HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -15757,9 +15784,25 @@ function Library:CreateWindow(WindowInfo)
 
             local Holder = New("Frame", {
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0.75, 0, 0, 21),
+                Size = UDim2.new(0.75, 0, 0, 22),
                 Parent = TabContainer,
             })
+
+            local function SnapKeyBoxWidth()
+                local Available = math.floor(TabContainer.AbsoluteSize.X)
+                if Available <= 0 then
+                    return
+                end
+
+                local Width = math.floor(Available * 0.75)
+                if (Available - Width) % 2 ~= 0 then
+                    Width -= 1
+                end
+                Holder.Size = UDim2.new(0, math.max(1, Width), 0, 22)
+            end
+
+            SnapKeyBoxWidth()
+            TabContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(SnapKeyBoxWidth)
 
             local Box = New("TextBox", {
                 BackgroundColor3 = "MainColor",
@@ -16564,11 +16607,27 @@ function Library:CreateWindow(WindowInfo)
             pcall(function()
                 RunService:UnbindFromRenderStep(ShowCursorBinding)
             end)
-            RunService:BindToRenderStep(ShowCursorBinding, Enum.RenderPriority.Last.Value, function()
-                UserInputService.MouseIconEnabled = not Library.ShowCustomCursor
+            local LastCursorX, LastCursorY = -1, -1
+            local LastCursorVisible = nil
+            local LastMouseIcon = nil
 
-                Cursor.Position = UDim2.fromOffset(Mouse.X, Mouse.Y)
-                Cursor.Visible = Library.ShowCustomCursor
+            RunService:BindToRenderStep(ShowCursorBinding, Enum.RenderPriority.Last.Value, function()
+                local WantIcon = not Library.ShowCustomCursor
+                if LastMouseIcon ~= WantIcon then
+                    LastMouseIcon = WantIcon
+                    UserInputService.MouseIconEnabled = WantIcon
+                end
+
+                local X, Y = Mouse.X, Mouse.Y
+                if X ~= LastCursorX or Y ~= LastCursorY then
+                    LastCursorX, LastCursorY = X, Y
+                    Cursor.Position = UDim2.fromOffset(X, Y)
+                end
+
+                if LastCursorVisible ~= Library.ShowCustomCursor then
+                    LastCursorVisible = Library.ShowCustomCursor
+                    Cursor.Visible = Library.ShowCustomCursor
+                end
 
                 if not (Library.Toggled and ScreenGui and ScreenGui.Parent) then
                     UserInputService.MouseIconEnabled = OldMouseIconEnabled

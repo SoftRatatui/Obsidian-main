@@ -87,6 +87,7 @@ export type AddonWindow = {
     SetContentSpacing: (self: AddonWindow, Padding: number?, Gap: number?) -> AddonWindow,
     RefreshLayout: (self: AddonWindow) -> AddonWindow,
     Remove: (self: AddonWindow, Idx: any) -> boolean,
+    Detach: (self: AddonWindow, Idx: any, Parent: GuiBase2d) -> any?,
     Destroy: (self: AddonWindow) -> (),
 }
 
@@ -135,6 +136,11 @@ export type Notification = {
     Variant: string,
     Width: number,
     Padding: number,
+    TextSize: number,
+    Height: number,
+    Progress: number,
+    Root: Frame,
+    Holder: CanvasGroup,
     CornerRadius: number,
     Accent: boolean,
     ShowProgress: boolean,
@@ -142,7 +148,7 @@ export type Notification = {
     Destroyed: boolean,
     PositionInitialized: boolean?,
 
-    Resize: (self: Notification) -> (),
+    Resize: (self: Notification) -> Notification,
     ChangeTitle: (self: Notification, Text: string) -> Notification,
     ChangeDescription: (self: Notification, Text: string) -> Notification,
     ChangeStep: (self: Notification, NewStep: number) -> Notification,
@@ -166,7 +172,7 @@ export type KeybindToggle = {
 
 export type DraggableLabel = {
     Label: TextLabel,
-    SetText: (self: DraggableLabel, Text: string) -> (),
+    SetText: (self: DraggableLabel, Text: string) -> DraggableLabel,
     SetVisible: (self: DraggableLabel, Visible: boolean) -> (),
     SetPosition: (self: DraggableLabel, Position: UDim2) -> (),
     SetIcon: (self: DraggableLabel, Icon: string) -> (),
@@ -737,6 +743,7 @@ export type Dropdown = {
     AddValueImages: (self: Dropdown, ValueImages: { [any]: string }) -> (),
     SetDisabled: (self: Dropdown, Disabled: boolean) -> (),
     SetVisible: (self: Dropdown, Visible: boolean) -> (),
+    RefreshTypography: (self: Dropdown) -> (),
     SetText: (self: Dropdown, Text: string) -> (),
     SetDragSelect: (self: Dropdown, Value: boolean) -> (),
     Destroy: (self: Dropdown) -> (),
@@ -1208,7 +1215,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-13",
+    ReleaseVersion: "0.0.1-release-15",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1291,6 +1298,7 @@ export type Library = {
     ScaleMultipliers: { [UIScale]: number },
     NotificationStyle: {
         Width: number,
+        TextSize: number,
         Margin: number,
         Gap: number,
         Padding: number,
@@ -1303,6 +1311,8 @@ export type Library = {
     },
     WatermarkStyle: {
         TextSize: number,
+        HorizontalPadding: number,
+        Margin: number,
         BackgroundTransparency: number,
         OutlineTransparency: number,
         CornerRadius: number,
@@ -1404,6 +1414,15 @@ export type Library = {
                 Position: UDim2?,
                 AnchorPoint: Vector2?,
                 TextSize: number?,
+                Padding: number?,
+                HorizontalPadding: number?,
+                CornerRadius: number?,
+                Accent: boolean?,
+                AccentWidth: number?,
+                AccentColor: Color3 | string?,
+                TextColor: Color3 | string?,
+                OutlineTransparency: number?,
+                Scale: number?,
                 BackgroundColor: string | Color3?,
                 BackgroundTransparency: number?,
                 Draggable: boolean?,
@@ -1480,7 +1499,11 @@ export type Library = {
     GetFontPreset: (self: Library, Name: string) -> Font?,
     SetFontByName: (self: Library, Name: string) -> boolean,
     CurrentFontName: string,
-    FontPresets: { { Name: string, Family: string?, Weight: Enum.FontWeight?, Bundled: boolean? } },
+    FontPresets: { { Name: string, Family: string?, Weight: Enum.FontWeight?, Bundled: boolean?, Download: boolean? } },
+    BundledFontBaseURL: string,
+    StorageFontBaseURL: string,
+    BundledFonts: { [string]: { File: string?, URL: string?, Name: string, Weight: number } },
+    BundledFontCache: { [string]: Font | boolean },
     SetFont: (self: Library, FontFace: Font | Enum.Font, SkipRegistryUpdate: boolean?) -> (),
     SetNotifySide: (self: Library, Side: "Left" | "Right") -> Library,
     SetNotificationOptions: (self: Library, Info: { [string]: any }) -> Library,
@@ -1492,7 +1515,7 @@ export type Library = {
         Info: {
             Title: string?,
             Description: string?,
-            Time: number?,
+            Time: (number | Instance)?,
             SoundId: string | number?,
             Volume: number?,
             Steps: number?,
@@ -1505,13 +1528,14 @@ export type Library = {
             BigIcon: string?,
             Variant: "Default" | "Success" | "Warning" | "Error" | "Danger" | string?,
             Width: number?,
+            TextSize: number?,
             Padding: number?,
             CornerRadius: number?,
             Accent: boolean?,
             ShowProgress: boolean?,
             Dismissible: boolean?,
         } | string,
-        Time: number?,
+        Time: (number | Instance)?,
         SoundId: string | number?
     ) -> Notification,
     CreateLoading: (self: Library, LoadingInfo: LoadingInfo) -> Loading,

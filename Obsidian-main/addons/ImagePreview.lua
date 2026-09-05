@@ -328,6 +328,16 @@ function ImagePreview.Create(Library, Info)
         end
         local Asset = NormalizeAsset(Value)
         if Asset == Preview.CurrentImage then
+            if Transition == false then
+                Preview.TransitionSequence += 1
+                for Key in Preview.Tweens do StopTween(Key) end
+                for Index, Layer in Preview.Layers do
+                    local Visible = Index == Preview.CurrentLayer and Asset ~= ""
+                    Layer.Image.Visible = Visible
+                    Layer.Image.ImageTransparency = Visible and Preview.ImageTransparency or 1
+                    Layer.Scale.Scale = Preview.ImageScale
+                end
+            end
             return
         end
         StopTween("PreviousImage")
@@ -565,6 +575,7 @@ function ImagePreview.Create(Library, Info)
     function Preview:SetMotion(Enabled)
         if not Preview.Destroyed then
             Preview.Motion = Enabled == true
+            if not Preview.Motion then Preview:SetImage(Preview.CurrentImage, false) end
         end
     end
 

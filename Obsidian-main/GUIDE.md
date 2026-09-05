@@ -1,6 +1,6 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-13`
+Current release: `0.0.1-release-15`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
@@ -16,7 +16,7 @@ MonHub is a compact Roblox Luau interface library built around a neutral dark pa
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-13"
+local RELEASE = "0.0.1-release-15"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -394,6 +394,8 @@ GUI objects created by the core start with `BorderSizePixel = 0`, including `Can
 
 ### Typography and font selection
 
+Dropdown values occupy the full control height and align vertically in the center. Long labels use engine text truncation within the space before the arrow, preserving UTF-8 text. The value, label, search field, and popup rows fit the selected font's measured line height without changing the control geometry. Custom font metrics can differ; unusually tall faces reduce their text size within the existing row. Pixel fonts still look sharpest at whole-number text sizes and 100% DPI.
+
 Every label, control, and addon draws with `Library.Scheme.Font`. Text instances register that property, so changing the font updates the whole interface in place with no rebuild.
 
 MonHub ships **Inter Medium** and loads it from `assets/Inter-Medium.ttf` on first run. Inter is the default because it was drawn for user interfaces: it keeps counters open and stems even at the 12 to 14 pixel sizes this library uses, where a display face turns muddy. If the download fails the library falls back to a built-in Roblox face and records the reason in `Library.DefaultFontError`.
@@ -420,6 +422,14 @@ Settings:AddDropdown("InterfaceFont", {
 | `Gotham` | The previous default. Geometric, a little softer. |
 | `Montserrat` | Wide and round. Suits large titles more than dense rows. |
 | `Montserrat Bold` | Bundled bold cut, downloaded on first use. Heavy for dense rows; best when the menu is meant to read as a display piece. |
+| `Inter 28pt Medium` | Medium cut of Inter from the external font catalog. |
+| `Inter 28pt SemiBold` | Heavier Inter cut for headings and emphasized values. |
+| `Minecraftia` | Pixel face suited to Minecraft-style panels and labels. |
+| `Proggy Tiny` | Compact bitmap-style face for dense technical readouts. |
+| `Verdana` | Familiar, wide interface face with clear small text. |
+| `Tahoma 8px` | Small pixel-oriented Tahoma cut. Use whole-number text sizes. |
+| `Smallest Pixel 7` | Very compact pixel face for short labels and counters. |
+| `Tahoma Bold` | Bold Tahoma cut for headings and strong status labels. |
 | `Roboto` | Neutral and compact. |
 | `Source Sans` | Humanist, taller x-height. |
 | `Ubuntu` | Distinctive, rounder terminals. |
@@ -431,7 +441,7 @@ Presets come in three kinds, and `GetFontNames` handles each so the dropdown onl
 
 - **Bundled** (`Inter`) uses the face the library loads at startup. Listed only when that load succeeded, so a failed download does not leave a dead entry.
 - **Family** presets build a Roblox font family behind `pcall`. A client without that family simply omits it.
-- **Download** presets (`Montserrat Bold`) fetch a `.ttf` from the repository's `assets/` folder the first time they are selected, then cache the result. `Library:LoadBundledFont(Name)` performs that fetch and returns `(Font?, reason?)`; the outcome is cached in `Library.BundledFontCache`, so a face that fails once is dropped from later listings rather than retried on every open.
+- **Download** presets fetch a `.ttf` the first time they are selected, then cache the result. `Montserrat Bold` comes from this repository. The eight additional faces come from the supplied [font catalog](https://github.com/i77lhm/storage/tree/main/fonts). `Library:LoadBundledFont(Name)` performs the fetch and returns `(Font?, reason?)`; the outcome is cached in `Library.BundledFontCache`, so a face that fails once is dropped from later listings rather than retried on every open.
 
 Downloaded faces cost one HTTP request the first time and nothing afterwards, which is why they are resolved lazily instead of at startup.
 
@@ -1102,56 +1112,107 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 
 ## Notifications
 
+The default is a compact card with a quiet outline, 13px text, and a close button. Accent bars and progress bars are opt-in. Cards use a short fade and vertical movement without scaling the text.
+
 ```luau
 Library:SetNotificationOptions({
     Side = "Right",
     Width = 320,
     Margin = 8,
-    Gap = 8,
+    Gap = 6,
     Padding = 10,
-    CornerRadius = 7,
-    MaxVisible = 6,
+    CornerRadius = 5,
+    TextSize = 13,
+    MaxVisible = 5,
     DefaultDuration = 5,
-    Accent = true,
-    ShowProgress = true,
+    Accent = false,
+    ShowProgress = false,
     Dismissible = true,
 })
 
 Library:Notify({
-    Title = "MonHub",
-    Description = "Settings saved",
+    Title = "Saved",
+    Description = "Your changes are ready.",
     Time = 3,
     Icon = "circle-check",
-    Variant = "Success",
-    AccentColor = Color3.fromRGB(91, 194, 137),
-    Dismissible = true,
 })
 ```
 
-Variants are `Default`, `Success`, `Warning`, `Error`, and `Danger`. Every notification can override `Width`, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, and `Dismissible`. It also supports `TitleColor`, `DescriptionColor`, `IconColor`, `SoundId`, `Volume`, `BigIcon`, `Persist`, and step progress. The returned object exposes `ChangeTitle`, `ChangeDescription`, `ChangeStep`/`SetProgress`, and `Destroy`. Use `Library:ClearNotifications()` to dismiss the whole stack.
+| Setting | Range and behavior |
+| --- | --- |
+| `Width` | 180 to 520 local pixels; reduced when necessary to fit the viewport and DPI. |
+| `TextSize` | 10 to 20 pixels. Text wraps within the card and is clipped to the available screen height. |
+| `Padding` | 4 to 24 pixels inside the card. |
+| `CornerRadius` | 0 to 18 pixels. |
+| `Margin` / `Gap` | Screen margin 0 to 40; stack gap 0 to 24. |
+| `MaxVisible` | 1 to 20. The oldest cards also close when the stack exceeds the viewport height. This includes persistent cards. |
+| `DefaultDuration` | Nonnegative seconds; `Time` overrides this per notification. |
+| `Accent` / `ShowProgress` / `Dismissible` | Enable the leading accent, progress track, or close button. |
+
+Changes to global appearance update open cards. A card's explicit `Width`, `TextSize`, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
+
+`Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`. Warning and error variants choose a corresponding accent palette color; success uses a green accent; use `Icon` and `IconColor` to add an explicit status symbol. `AccentColor`, `TitleColor`, and `DescriptionColor` override colors. `BigIcon` uses a 24px icon instead of the compact 16px icon. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
+
+The returned controller supports `ChangeTitle(text)`, `ChangeDescription(text)`, `ChangeStep(number)` / `SetProgress(number)`, `Resize()`, and `Destroy(instant?)`. A title or description can be added after creation or cleared with an empty string. Calls after destruction do nothing. `Library:ClearNotifications()` also removes cards that are already fading out.
+
+```luau
+local Notice = Library:Notify({
+    Title = "Loading assets",
+    Description = "0 / 3",
+    Steps = 3,
+    Persist = true,
+    ShowProgress = true,
+})
+Notice:SetProgress(1)
+Notice:ChangeDescription("1 / 3")
+Notice:SetProgress(3)
+Notice:ChangeTitle("Assets loaded")
+Notice:Destroy()
+```
+
+`Steps` must be a finite positive number. Progress starts at zero and is clamped to that range; it is never overwritten by the lifetime timer. Use `Persist = true` when the task itself decides when to close the card. Alternatively, pass an `Instance` as `Time` to close the notification when that object is destroyed. Closing the notification never destroys the caller's object. Timers, connections, and theme bindings are released on dismissal and library unload.
 
 ## Watermark
 
+The default watermark is a single compact text strip without an icon or accent. It keeps a subtle outline and independent horizontal and vertical spacing.
+
 ```luau
 Library:SetWatermarkOptions({
-    Text = "MonHub  |  144 FPS",
-    Icon = "activity",
+    Text = "MonHub   ·   144 FPS   ·   24 ms",
+    Icon = "",
     IconPosition = "left",
     Side = "Left",
+    Margin = 8,
     Draggable = true,
     Visible = true,
     TextSize = 13,
-    BackgroundTransparency = 0.08,
+    BackgroundTransparency = 0,
     OutlineTransparency = 0.5,
-    CornerRadius = 7,
-    Padding = 7,
-    Accent = true,
+    CornerRadius = 5,
+    Padding = 6,
+    HorizontalPadding = 10,
+    Accent = false,
     AccentWidth = 2,
     Scale = 1,
 })
 ```
 
-Use `SetWatermark` for frequent text changes, such as FPS and ping. Use `SetWatermarkOptions` for appearance or behavior changes. `SetWatermarkSide`, `SetWatermarkDraggable`, and `SetWatermarkVisibility` remain available as focused methods. The watermark clamps itself after text, scale, side, viewport, and drag changes.
+| Setting | Range and behavior |
+| --- | --- |
+| `TextSize` | Whole pixels, 9 to 28. |
+| `Padding` / `HorizontalPadding` | Vertical padding 2 to 20; horizontal padding 4 to 32. |
+| `Margin` | 0 to 40 pixels. Changing it restores placement at the selected side. |
+| `CornerRadius` | 0 to 16 pixels. |
+| `BackgroundTransparency` / `OutlineTransparency` | 0 is opaque, 1 is invisible. |
+| `Accent` / `AccentWidth` | Optional marker, 1 to 4 pixels wide. It can be enabled after creation. |
+| `Scale` | 0.5 to 2, multiplied by the library DPI scale. |
+| `TextColor` / `BackgroundColor` / `AccentColor` | A `Color3` or scheme key such as `"FontColor"`; scheme keys follow theme changes. |
+| `Icon` / `IconPosition` | Asset or icon name; use `""` to clear it, and `"left"` or `"right"` to position it. |
+| `Position` | Explicit `UDim2` placement. It takes precedence over side placement in the same call. |
+
+Use `SetWatermark(text)` for frequent FPS and ping updates; unchanged text is not assigned again. `SetWatermarkOptions` changes appearance or behavior. `SetWatermarkSide`, `SetWatermarkDraggable`, and `SetWatermarkVisibility` remain available. Long text truncates at the available viewport width, and icons align in local coordinates at any DPI.
+
+`AddDraggableLabel` uses the same geometry and accepts `Padding`, `HorizontalPadding`, `Scale`, `CornerRadius`, `Accent`, `AccentWidth`, `TextColor`, `AccentColor`, and `OutlineTransparency` in its constructor or `SetStyle` method. Destroy labels when they are no longer needed so their theme and scale registrations are released.
 
 ## Addon recipes
 
@@ -1546,7 +1607,19 @@ Call `SetFolder` before `SetLibrary` when custom persistence is used. `SaveCusto
 
 ### Addon window host API
 
-`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `GetModule`, `GetModules`, `Remove`, `SetModuleHeight`, `SetModuleVisible`, `SetModuleOrder`, `SetModuleFitHeight`, `SetContentSpacing`, `RefreshLayout`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu. Multiple `FitHeight` modules share the available height instead of each claiming the full viewport.
+`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `GetModule`, `GetModules`, `Detach`, `Remove`, `SetModuleHeight`, `SetModuleVisible`, `SetModuleOrder`, `SetModuleFitHeight`, `SetContentSpacing`, `RefreshLayout`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu. Multiple `FitHeight` modules share the available height instead of each claiming the full viewport.
+
+`Host:Detach(id, parent)` transfers an existing module to a GUI container and returns its controller (or root for a custom module). It preserves the module state, removes the old holder, and stops the old host from owning its destruction. The new parent must be outside the old module holder. A missing module returns `nil`. To transfer it to another host:
+
+```luau
+local Gallery = SourceHost:Detach("Gallery", TargetHost.Content)
+if Gallery then
+    TargetHost:AddCustom("Gallery", Gallery.Root, Gallery.Height, Gallery)
+end
+```
+
+After a direct detach, call the returned controller's `Destroy()` when finished. After transfer using `AddCustom` with the controller argument, the target host owns cleanup. `Remove(id)` destroys a module instead. If `AddAddon` fails while replacing an ID, the previous module remains usable.
+
 
 ## Performance rules
 
@@ -1594,6 +1667,22 @@ Run local checks with Luau's compiler and interpreter installed:
 ```
 
 ## Changelog
+
+### 0.0.1-release-15
+
+- Rebuilt notification geometry with fixed-width cards, live appearance updates, viewport and DPI limits, optional progress, and quiet defaults. Removed scale animation and decorative layout interference.
+- Fixed notification ownership of caller-provided instances, step validation, dynamic title creation, delayed cleanup, and unload cancellation.
+- Refined the watermark with independent spacing, optional icon and accent, bounded text width, live colors, and correct DPI icon alignment. Released label registrations on destruction.
+- Fixed scaled gallery and catalog widths, double-reserved scrollbar space, and immediate image updates that left old transitions active.
+- Added module detachment and preserved an existing addon when its replacement fails to create.
+- Fixed the dropdown's 21px value label inside a taller field, arrow overlap, UTF-8 truncation, dynamic label geometry, and font-height fitting.
+- Expanded Preview and settings, updated types, and added regression cases for overlay lifecycle, gallery DPI, module ownership, and typography.
+
+### 0.0.1-release-14
+
+- Added every TTF from the external font catalog: Inter 28pt Medium, Inter 28pt SemiBold, Minecraftia, Proggy Tiny, Verdana, Tahoma 8px, Smallest Pixel 7, and Tahoma Bold.
+- Extended downloadable font presets to accept their own source URL while preserving validation, lazy loading, failure caching, and the existing local asset source.
+- Updated the public Library type and typography guide for the expanded catalog.
 
 ### 0.0.1-release-13
 

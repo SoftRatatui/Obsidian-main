@@ -1,0 +1,83 @@
+return function(CreateLibrary, Mock)
+    local Library, Scheduled = CreateLibrary()
+    local function Find(Root, Class, Text)
+        for _, Object in Root:GetDescendants() do
+            if Object.ClassName == Class and (Text == nil or Object.Text == Text) then return Object end
+        end
+    end
+    local First = Library:Notify({ Description = "Saved", Persist = true })
+    First:ChangeTitle("Configuration")
+    assert(Find(First.Holder, "TextLabel", "Configuration").Visible, "A missing title cannot be added later")
+    First:ChangeDescription("")
+    assert(not Find(First.Holder, "TextLabel", "").Visible, "Empty description reserves a row")
+    assert(not Find(First.Holder, "UIListLayout"), "Decoration participates in content layout")
+    assert(not Find(First.Holder, "UIScale"), "Notification animation scales and blurs text")
+    local Custom = Library:Notify({ Title = "Custom", Width = 240, Padding = 8, Dismissible = false, Persist = true })
+    Library:SetNotificationOptions({ Width = 400, Padding = 16, CornerRadius = 9, TextSize = 16, Accent = true, Dismissible = false })
+    assert(First.Width == 400 and First.Padding == 16 and First.TextSize == 16)
+    assert(First.CornerRadius == 9 and First.Accent and not First.Dismissible)
+    assert(Custom.Width == 240 and Custom.Padding == 8, "Global settings replace explicit overrides")
+    assert(Find(First.Holder, "UICorner").CornerRadius.Offset == 9)
+    Library:ClearNotifications()
+    assert(next(Library.Notifications) == nil)
+    print("PASS notification layout, live defaults, overrides and dynamic text")
+
+    local Owner = Mock.Instance.new("Folder")
+    local Owned = Library:Notify({ Title = "Object task", Time = Owner })
+    Owned:Destroy(true)
+    assert(not Owner.Destroyed, "Closing a notification destroyed the caller's object")
+    local Bound = Library:Notify({ Title = "Bound task", Time = Owner })
+    Owner.Destroying:Fire()
+    assert(Bound.Destroyed, "Object destruction did not dismiss its notification")
+    Library:ClearNotifications()
+    assert(Bound.Released, "Clear left a closing notification alive")
+    local Timed = Library:Notify("Short", 1)
+    Timed:Destroy(true)
+    for _, Job in Scheduled do
+        if not Job.Cancelled then Job.Callback() end
+    end
+    assert(Timed.Released and next(Library.Notifications) == nil)
+    print("PASS notification ownership, timer cancellation and closing cleanup")
+
+    local Progress = Library:Notify({ Steps = 4, ShowProgress = true, Persist = true })
+    Progress:SetProgress(2)
+    assert(Progress.Progress == 2)
+    Progress:SetProgress(0 / 0)
+    assert(Progress.Progress == 2)
+    Progress:SetProgress(90)
+    assert(Progress.Progress == 4)
+    local Invalid = Library:Notify({ Steps = 0, Persist = true })
+    assert(Invalid.Steps == nil, "Zero steps allow division by zero")
+    Library:ClearNotifications()
+    Library:SetNotificationOptions({ Width = 520, MaxVisible = 20 })
+    Library.DPIScale = 2
+    Mock.Workspace.CurrentCamera.ViewportSize = Mock.Vector2.new(400, 240)
+    local Oldest = Library:Notify({ Title = "Older", Persist = true })
+    local Latest = Library:Notify({ Title = "Newest", Persist = true })
+    assert(Latest.Root.Size.X.Offset <= 184, "Notification width ignores viewport and DPI")
+    assert(Oldest.Destroyed, "Stack exceeds the viewport height")
+    Library:ClearNotifications()
+    Mock.Workspace.CurrentCamera.ViewportSize = Mock.Vector2.new(1280, 720)
+    Library.DPIScale = 1
+    print("PASS notification progress validation and viewport stack limits")
+
+    local Label = Library:AddDraggableLabel({ Text = "MonHub", Accent = false, Draggable = false })
+    assert(not Label.Accent.Visible)
+    Label:SetStyle({ Accent = true, Padding = 5, HorizontalPadding = 14, Scale = 1.5 })
+    assert(Label.Accent.Visible, "An initially disabled accent cannot be enabled")
+    assert(Label.Padding.PaddingLeft.Offset == 20 and Label.Padding.PaddingRight.Offset == 14)
+    Label:SetIcon("activity")
+    Label.Label.AbsoluteSize = Mock.Vector2.new(240, 45)
+    Label:AlignIcon()
+    local Icon = Find(Label.Label, "ImageLabel")
+    assert(Icon.Position.Y.Offset == 2, "Icon mixes scaled and local coordinates")
+    assert(Label.Scale.Scale == 1.5)
+    Label:SetStyle({ Accent = false })
+    assert(Label.Padding.PaddingLeft.Offset == 36)
+    local Root = Label.Label
+    Label:Destroy()
+    Label:Destroy()
+    assert(Library.Registry[Root] == nil and #Library.Scales == 0)
+    for _, Connection in Label.Connections do assert(not Connection.Connected) end
+    print("PASS watermark accent, spacing, DPI alignment and registry cleanup")
+end

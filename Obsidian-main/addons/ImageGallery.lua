@@ -2,6 +2,17 @@ local TweenService = game:GetService("TweenService")
 
 local ImageGallery = {}
 
+local function GetGuiScale(Object)
+    local Scale = 1
+    local Current = Object
+    while Current do
+        local Component = Current:FindFirstChildOfClass("UIScale")
+        if Component then Scale *= Component.Scale end
+        Current = Current.Parent
+    end
+    return math.max(0.01, Scale)
+end
+
 local function NormalizeAsset(Value)
     if typeof(Value) == "number" then
         return string.format("rbxassetid://%d", Value)
@@ -239,7 +250,7 @@ function ImageGallery.Create(Library, Info)
     GridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
     GridHolder.CanvasSize = UDim2.fromOffset(0, 0)
     GridHolder.ScrollBarThickness = 2
-    GridHolder.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    GridHolder.VerticalScrollBarInset = Enum.ScrollBarInset.Always
     GridHolder.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     GridHolder.ScrollBarImageTransparency = 0.45
     GridHolder.ScrollBarImageColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
@@ -391,9 +402,7 @@ function ImageGallery.Create(Library, Info)
     local AutoColumns = Info.Columns == nil
     local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 112), 48, 400)
     local function ResolveGridMetrics()
-        local AbsoluteWindowSize = GridHolder.AbsoluteWindowSize
-        local WindowWidth = AbsoluteWindowSize and AbsoluteWindowSize.X > 0 and AbsoluteWindowSize.X or GridHolder.AbsoluteSize.X
-        local Width = math.floor(WindowWidth) - 2
+        local Width = math.floor(GridHolder.AbsoluteSize.X / GetGuiScale(GridHolder)) - GridHolder.ScrollBarThickness - 2
         if Width <= 0 or Gallery.Destroyed then
             return
         end
@@ -405,10 +414,12 @@ function ImageGallery.Create(Library, Info)
         local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
         local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
         GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
-        GridPadding.PaddingRight = UDim.new(0, 1 + GridHolder.ScrollBarThickness + math.ceil(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
         Grid.CellSize = UDim2.fromOffset(CellWidth, Gallery.CellHeight)
     end
-    table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics))
+    for _, Property in { "AbsoluteSize", "ScrollBarThickness" } do
+        table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal(Property):Connect(ResolveGridMetrics))
+    end
 
     local LocalTweens = {}
     local function Play(Object, Key, Properties)

@@ -38,6 +38,87 @@ $taskThemeStart = $taskLibrarySource.IndexOf('function Library:ResolveThemeName(
 $taskThemeEnd = $taskLibrarySource.IndexOf('function Library:SetFont(', $taskThemeStart)
 $taskThemeSource = $taskLibrarySource.Substring($taskThemeStart, $taskThemeEnd - $taskThemeStart)
 $taskSource += "local function GetSchemeValue(Key) return Library.Scheme[Key] end`nlocal function StopTween(Tween) Tween:Cancel() end`nLibrary.ActiveTweens = {}`nLibrary.ColorRevision = 0`n$taskRegistrySource`nlocal ThemeAliases = {}`n$taskThemeSource`n"
+$taskOverlayStart = $taskLibrarySource.IndexOf('local function NotificationViewport()')
+$taskOverlayEnd = $taskLibrarySource.IndexOf('function Library:CreateWindow(', $taskOverlayStart)
+$taskOverlaySource = $taskLibrarySource.Substring($taskOverlayStart, $taskOverlayEnd - $taskOverlayStart)
+$taskLabelStart = $taskLibrarySource.IndexOf('function Library:AddDraggableLabel(')
+$taskLabelEnd = $taskLibrarySource.IndexOf('function Library:AddDraggableButton(', $taskLabelStart)
+$taskLabelSource = $taskLibrarySource.Substring($taskLabelStart, $taskLabelEnd - $taskLabelStart)
+$taskOverlayStyle = [regex]::Match($taskLibrarySource, '(?s)NotificationStyle = (\{.*?\n    \}),').Groups[1].Value
+$taskSource += @'
+local function CreateOverlayLibrary()
+    local Library = Mock.HostLibrary()
+    local ScreenGui = Library.ScreenGui
+    local NotificationArea = Mock.Instance.new("Frame")
+    local NotifyOrder, Scheduled = {}, {}
+    local SoundService = Mock.Instance.new("SoundService")
+    local TweenService = Mock.game:GetService("TweenService")
+    local task = table.clone(Mock.task)
+    function task.delay(_, Callback)
+        local Job = { Callback = Callback }
+        table.insert(Scheduled, Job)
+        return Job
+    end
+    function task.cancel(Job) Job.Cancelled = true end
+    Library.Notifications = {}
+    Library.NotifySide = "Right"
+    Library.DPIScale = 1
+    Library.CornerRadius = 5
+    Library.Scales, Library.ScaleMultipliers, Library.ScalesOffset, Library.DraggableElements = {}, {}, {}, {}
+    Library.NotifyTweenInfo = Mock.TweenInfo.new(0.1)
+    Library.NotifyCloseTweenInfo = Mock.TweenInfo.new(0.1)
+    function Library:GetTextBounds(Text, _, Size, Width)
+        local Lines = math.max(1, math.ceil(#Text * Size / 2 / Width))
+        return math.min(Width, #Text * Size / 2), Lines * (Size + 2)
+    end
+    function Library:GiveSignal(Connection) return Connection end
+    function Library:ReleaseRegistryTree(Root)
+        self:RemoveFromRegistry(Root)
+        for _, Child in Root:GetDescendants() do self:RemoveFromRegistry(Child) end
+    end
+    local function New(Class, Properties)
+        local Object = Mock.New(Library, Class, Properties)
+        if Class == "UIScale" then Object.Scale = Properties.Scale or 1 end
+        return Object
+    end
+    function Library:AddOutline(Root) return New("UIStroke", { Parent = Root }) end
+    local function Trim(Text) return Text:match("^%s*(.-)%s*$") end
+    local function PositionDraggable(Root, Position) Root.Position = Position end
+'@
+$taskSource += "`nLibrary.NotificationStyle = $taskOverlayStyle`n$taskLabelSource`n$taskOverlaySource`nreturn Library, Scheduled`nend`n"
+$taskOverlaySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Overlays.spec.luau'))
+$taskSource += "local RunOverlays = (function()`n$taskOverlaySpec`nend)()`nRunOverlays(CreateOverlayLibrary, Mock)`n"
+$taskDropdownStart = $taskLibrarySource.IndexOf('    function Funcs:AddDropdown(')
+$taskDropdownMethods = ''
+foreach ($taskRange in @(@('        function Dropdown:Display()', '        function Dropdown:OnChanged'), @('        function Dropdown:RefreshTypography()', '        function Dropdown:UpdateColors'), @('        function Dropdown:SetText(', '        function Dropdown:SetDragSelect'))) {
+    $taskStart = $taskLibrarySource.IndexOf($taskRange[0], $taskDropdownStart)
+    $taskEnd = $taskLibrarySource.IndexOf($taskRange[1], $taskStart)
+    $taskDropdownMethods += $taskLibrarySource.Substring($taskStart, $taskEnd - $taskStart)
+}
+$taskSource += @'
+local function CreateDropdown(Info)
+    local Library = Mock.HostLibrary()
+    local ControlHeight, DropdownLabelRow, ItemHeight = 28, 18, 24
+    local HasLabel = false
+    local Holder = Mock.Instance.new("Frame")
+    local DisplayContainer = Mock.Instance.new("Frame")
+    local DisplayButton = Mock.Instance.new("TextButton")
+    local DisplayImage = Mock.Instance.new("ImageLabel")
+    local Label = Mock.Instance.new("TextLabel")
+    local SearchBox = Mock.Instance.new("TextBox")
+    local Pool = { { Button = Mock.Instance.new("TextButton") } }
+    local Groupbox = { Resize = function() end }
+    local View = { Button = DisplayButton, Row = Pool[1].Button, Holder = Holder, Display = DisplayContainer, Label = Label, FontHeight = 14 }
+    function Library:GetTextBounds() return 20, View.FontHeight end
+    local Dropdown = { Values = { "Head" }, ValueImages = {} }
+    local function IsSequentialArray(Values) return #Values > 0 end
+    local function GetValueImage(Value)
+        return Dropdown.ValueImages[Value] and { Url = Dropdown.ValueImages[Value] } or nil
+    end
+'@
+$taskSource += "`n$taskDropdownMethods`nreturn Dropdown, View`nend`n"
+$taskTypographySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Typography.spec.luau'))
+$taskSource += "local RunTypography = (function()`n$taskTypographySpec`nend)()`nRunTypography(CreateDropdown, Mock)`n"
 $taskSpecs = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Addons.spec.luau'))
 $taskSource += "local Run = (function()`n$taskSpecs`nend)()`nRun(Modules, Mock)`n"
 $taskGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-addons-" + [guid]::NewGuid().ToString() + '.luau')

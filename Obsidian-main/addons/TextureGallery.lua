@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-13",
+    ReleaseVersion = "0.0.1-release-15",
 }
 
 TextureGallery.DefaultItems = {
@@ -14,6 +14,17 @@ TextureGallery.DefaultItems = {
     { Id = "plasma", Name = "Plasma", Texture = "rbxassetid://8993645509", ColorA = Color3.fromRGB(134, 192, 239), ColorB = Color3.fromRGB(210, 145, 233) },
     { Id = "laser", Name = "Laser", Texture = "rbxassetid://14549123968", ColorA = Color3.fromRGB(233, 144, 159), ColorB = Color3.fromRGB(224, 190, 121) },
 }
+
+local function GetGuiScale(Object)
+    local Scale = 1
+    local Current = Object
+    while Current do
+        local Component = Current:FindFirstChildOfClass("UIScale")
+        if Component then Scale *= Component.Scale end
+        Current = Current.Parent
+    end
+    return math.max(0.01, Scale)
+end
 
 local function NormalizeAsset(Value)
     if typeof(Value) == "number" then
@@ -185,6 +196,7 @@ function TextureGallery.Create(Library, Info)
     Grid.ScrollBarImageColor3 = Library.Scheme.AccentColor
     Grid.ScrollBarImageTransparency = 0.35
     Grid.ScrollBarThickness = 2
+    Grid.VerticalScrollBarInset = Enum.ScrollBarInset.Always
     Grid.ScrollingDirection = Enum.ScrollingDirection.Y
     Grid.Size = UDim2.new(1, 0, 1, -86)
     Grid.Parent = Root
@@ -206,7 +218,7 @@ function TextureGallery.Create(Library, Info)
     GridPadding.Parent = Grid
 
     local function ResolveGridMetrics()
-        local Width = math.floor(Grid.AbsoluteSize.X) - 4 - Grid.ScrollBarThickness
+        local Width = math.floor(Grid.AbsoluteSize.X / GetGuiScale(Grid)) - 2 - Grid.ScrollBarThickness
         if Gallery.Destroyed or Width <= 0 then
             return
         end
@@ -215,10 +227,11 @@ function TextureGallery.Create(Library, Info)
         local CellWidth = math.max(1, math.floor((Width - Style.Gap * (Count - 1)) / Count))
         local Remaining = math.max(0, Width - CellWidth * Count - Style.Gap * (Count - 1))
         GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
-        GridPadding.PaddingRight = UDim.new(0, 3 + Grid.ScrollBarThickness + math.ceil(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
         GridLayout.CellSize = UDim2.fromOffset(CellWidth, 64)
     end
     local GridConnection = Grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
+    local ScrollbarConnection = Grid:GetPropertyChangedSignal("ScrollBarThickness"):Connect(ResolveGridMetrics)
     ResolveGridMetrics()
 
     local function DisconnectAll()
@@ -507,11 +520,11 @@ function TextureGallery.Create(Library, Info)
     end
 
     function Gallery:Mount(Parent, Height)
-        if typeof(Parent) ~= "Instance" or not Parent:IsA("GuiBase2d") then
+        if Gallery.Destroyed or typeof(Parent) ~= "Instance" or not Parent:IsA("GuiBase2d") then
             return false
         end
         Root.Parent = Parent
-        Root.Size = UDim2.new(1, 0, 0, math.max(1, tonumber(Height) or Gallery.Height))
+        if Height ~= nil then Gallery:SetHeight(Height) end
         return true
     end
 
@@ -533,6 +546,7 @@ function TextureGallery.Create(Library, Info)
         end
         Gallery.Destroyed = true
         GridConnection:Disconnect()
+        ScrollbarConnection:Disconnect()
         ClearCards()
         RemoveRegistryTree(Library, Root)
         if Gallery.Element and Gallery.Element.Destroy then

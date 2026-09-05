@@ -1,8 +1,19 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-13",
+    ReleaseVersion = "0.0.1-release-15",
 }
+
+local function GetGuiScale(Object)
+    local Scale = 1
+    local Current = Object
+    while Current do
+        local Component = Current:FindFirstChildOfClass("UIScale")
+        if Component then Scale *= Component.Scale end
+        Current = Current.Parent
+    end
+    return math.max(0.01, Scale)
+end
 
 local function NormalizeAsset(Value)
     if typeof(Value) == "number" then
@@ -294,6 +305,7 @@ function AssetCatalog.Create(Library, Info)
     GridScroll.ScrollBarImageColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
     GridScroll.ScrollBarImageTransparency = 0.45
     GridScroll.ScrollBarThickness = 2
+    GridScroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
     GridScroll.ScrollingDirection = Enum.ScrollingDirection.Y
     GridScroll.Size = UDim2.new(1, -Padding * 2, 1, -(Padding * 2 + FooterHeight))
     GridScroll.Parent = GridPanel
@@ -314,7 +326,7 @@ function AssetCatalog.Create(Library, Info)
     GridPadding.Parent = GridScroll
 
     local function ResolveGridMetrics()
-        local Width = math.floor(GridScroll.AbsoluteSize.X) - GridScroll.ScrollBarThickness - 2
+        local Width = math.floor(GridScroll.AbsoluteSize.X / GetGuiScale(GridScroll)) - GridScroll.ScrollBarThickness - 2
         if Width <= 0 then
             return
         end
@@ -328,7 +340,7 @@ function AssetCatalog.Create(Library, Info)
         local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
         local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
         GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
-        GridPadding.PaddingRight = UDim.new(0, 1 + GridScroll.ScrollBarThickness + math.ceil(Remaining / 2))
+        GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
         Grid.FillDirectionMaxCells = Count
         Grid.CellSize = UDim2.fromOffset(CellWidth, CellHeight)
     end
@@ -519,7 +531,7 @@ function AssetCatalog.Create(Library, Info)
     })
 
     local function ResolveActionMetrics()
-        local Width = math.floor(Actions.AbsoluteSize.X)
+        local Width = math.floor(Actions.AbsoluteSize.X / GetGuiScale(Actions))
         if Width <= 0 then
             return
         end
@@ -611,6 +623,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     table.insert(Catalog.Connections, GridConnection)
+    table.insert(Catalog.Connections, GridScroll:GetPropertyChangedSignal("ScrollBarThickness"):Connect(ResolveGridMetrics))
     table.insert(Catalog.Connections, ActionConnection)
     local LocalTweens = {}
     local function Play(Object, Key, Properties)
@@ -687,7 +700,7 @@ function AssetCatalog.Create(Library, Info)
     local SplitMinWidth = math.max(360, math.floor(tonumber(Info.SplitMinWidth) or 560))
 
     local function SetPanelLayout()
-        local Available = math.max(1, math.floor(Root.AbsoluteSize.X))
+        local Available = math.max(1, math.floor(Root.AbsoluteSize.X / GetGuiScale(Root)))
         local Compact = Available < 460
         local ControlsTop = math.floor((ToolbarHeight - Style.ControlHeight) * 0.5)
         local ActualToolbarHeight = ToolbarHeight + (Compact and (Style.ControlHeight + Gap) or 0)
@@ -713,7 +726,7 @@ function AssetCatalog.Create(Library, Info)
         end
         local Split = Catalog.Layout == "split"
         if Split then
-            local Available = math.floor(Body.AbsoluteSize.X)
+            local Available = math.floor(Body.AbsoluteSize.X / GetGuiScale(Body))
             if Available > 0 and Available < SplitMinWidth then
                 Split = false
             end
@@ -728,7 +741,7 @@ function AssetCatalog.Create(Library, Info)
             Badges.Size = UDim2.new(1, -PreviewPadding * 2, 0, 20)
             Actions.Position = UDim2.new(0, PreviewPadding, 1, -PreviewPadding)
             Actions.Size = UDim2.new(1, -PreviewPadding * 2, 0, Style.ControlHeight)
-            local Total = math.floor(Body.AbsoluteSize.X)
+            local Total = math.floor(Body.AbsoluteSize.X / GetGuiScale(Body))
             GridPanel.AnchorPoint = Vector2.zero
             if Total <= 0 then
                 local GridRatio = 1 - Catalog.PreviewRatio
@@ -1406,7 +1419,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:Mount(Parent)
-        if typeof(Parent) ~= "Instance" or not Parent:IsA("GuiObject") then
+        if Catalog.Destroyed or typeof(Parent) ~= "Instance" or not Parent:IsA("GuiBase2d") then
             return false
         end
         Root.Parent = Parent

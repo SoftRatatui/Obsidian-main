@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-13"
+local RELEASE_VERSION = "0.0.1-release-15"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -1886,9 +1886,28 @@ do
 	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
 	PreviewControls:AddLabel("A compact interactive index of the library.", true)
 	PreviewControls:AddButton("Show notification", function()
-		Notify("Preview", "Buttons, notifications, and theme updates are working.", 3)
+		Notify("Saved", "Your changes are ready.", 3)
 	end)
-	PreviewControls:AddToggle("PreviewFeatureToggle", {
+    PreviewControls:AddButton("Show progress notification", function()
+        local Notice = Library:Notify({ Title = "Loading assets", Description = "0 / 3", Steps = 3, Persist = true, ShowProgress = true })
+        for Step = 1, 3 do
+            task.delay(Step * 0.7, function()
+                if Library.Unloaded or Notice.Destroyed then return end
+                Notice:SetProgress(Step)
+                Notice:ChangeDescription(tostring(Step) .. " / 3")
+                if Step == 3 then
+                    Notice:ChangeTitle("Assets loaded")
+                    task.delay(1, function() Notice:Destroy() end)
+                end
+            end)
+        end
+    end)
+    PreviewControls:AddButton("Toggle watermark", function()
+        if Toggles.WatermarkEnabled then
+            Toggles.WatermarkEnabled:SetValue(not Toggles.WatermarkEnabled.Value)
+        end
+    end)
+    PreviewControls:AddToggle("PreviewFeatureToggle", {
 		Text = "Example toggle",
 		Default = true,
 	})
@@ -2263,7 +2282,7 @@ local function RefreshWatermark()
 	if WatermarkShowPing then
 		table.insert(Sections, string.format("%d ms", WatermarkPing))
 	end
-	Library:SetWatermark(table.concat(Sections, "  |  "))
+	Library:SetWatermark(table.concat(Sections, "   ·   "))
 	Library:SetWatermarkVisibility(WatermarkEnabled)
 end
 
@@ -2325,7 +2344,7 @@ WatermarkSettings:AddToggle("WatermarkDraggable", {
 })
 WatermarkSettings:AddToggle("WatermarkAccent", {
 	Text = "Accent marker",
-	Default = true,
+	Default = false,
 	Callback = function(Value)
 		Library:SetWatermarkOptions({ Accent = Value })
 	end,
@@ -2365,7 +2384,7 @@ WatermarkSettings:AddSlider("WatermarkOutline", {
 })
 WatermarkSettings:AddSlider("WatermarkRadius", {
 	Text = "Corner radius",
-	Default = 7,
+	Default = 5,
 	Min = 0,
 	Max = 16,
 	Rounding = 0,
@@ -2375,8 +2394,8 @@ WatermarkSettings:AddSlider("WatermarkRadius", {
 	end,
 })
 WatermarkSettings:AddSlider("WatermarkPadding", {
-	Text = "Padding",
-	Default = 7,
+	Text = "Vertical padding",
+	Default = 6,
 	Min = 2,
 	Max = 16,
 	Rounding = 0,
@@ -2384,6 +2403,28 @@ WatermarkSettings:AddSlider("WatermarkPadding", {
 	Callback = function(Value)
 		Library:SetWatermarkOptions({ Padding = Value })
 	end,
+})
+WatermarkSettings:AddSlider("WatermarkHorizontalPadding", {
+    Text = "Horizontal padding",
+    Default = 10,
+    Min = 4,
+    Max = 32,
+    Rounding = 0,
+    Suffix = "px",
+    Callback = function(Value)
+        Library:SetWatermarkOptions({ HorizontalPadding = Value })
+    end,
+})
+WatermarkSettings:AddSlider("WatermarkMargin", {
+    Text = "Screen margin",
+    Default = 8,
+    Min = 0,
+    Max = 40,
+    Rounding = 0,
+    Suffix = "px",
+    Callback = function(Value)
+        Library:SetWatermarkOptions({ Margin = Value })
+    end,
 })
 WatermarkSettings:AddSlider("WatermarkScale", {
 	Text = "Scale",
@@ -2506,22 +2547,24 @@ local NotificationGroup = Tabs.Settings:AddGroupbox({
 	Collapsed = true,
 })
 SetGroupOrder(NotificationGroup, -70)
-local NotificationWidth = 320
-local NotificationMargin = 8
-local NotificationGap = 8
-local NotificationPadding = 10
-local NotificationRadius = 7
-local NotificationMaxVisible = 6
-local NotificationDuration = 5
-local NotificationProgress = true
-local NotificationAccent = true
-local NotificationDismissible = true
+local NotificationWidth = Library.NotificationStyle.Width
+local NotificationMargin = Library.NotificationStyle.Margin
+local NotificationGap = Library.NotificationStyle.Gap
+local NotificationPadding = Library.NotificationStyle.Padding
+local NotificationRadius = Library.NotificationStyle.CornerRadius
+local NotificationMaxVisible = Library.NotificationStyle.MaxVisible
+local NotificationDuration = Library.NotificationStyle.DefaultDuration
+local NotificationProgress = Library.NotificationStyle.ShowProgress
+local NotificationAccent = Library.NotificationStyle.Accent
+local NotificationDismissible = Library.NotificationStyle.Dismissible
+local NotificationTextSize = Library.NotificationStyle.TextSize
 local function ApplyNotificationStyle()
 	Library:SetNotificationOptions({
 		Width = NotificationWidth,
 		Margin = NotificationMargin,
 		Gap = NotificationGap,
 		Padding = NotificationPadding,
+        TextSize = NotificationTextSize,
 		CornerRadius = NotificationRadius,
 		MaxVisible = NotificationMaxVisible,
 		DefaultDuration = NotificationDuration,
@@ -2530,6 +2573,18 @@ local function ApplyNotificationStyle()
 		Dismissible = NotificationDismissible,
 	})
 end
+NotificationGroup:AddSlider("NotificationTextSize", {
+    Text = "Text size",
+    Default = NotificationTextSize,
+    Min = 10,
+    Max = 20,
+    Rounding = 0,
+    Suffix = "px",
+    Callback = function(Value)
+        NotificationTextSize = Value
+        ApplyNotificationStyle()
+    end,
+})
 NotificationGroup:AddSlider("NotificationWidth", {
 	Text = "Width",
 	Default = NotificationWidth,
@@ -2641,7 +2696,7 @@ NotificationGroup:AddButton("Preview notification styles", function()
 	for Index, Variant in { "Default", "Success", "Warning", "Error" } do
 		Library:Notify({
 			Title = Variant,
-			Description = "Theme-aware notification preview",
+			Description = Index == 2 and "Settings saved." or Index == 3 and "Select an item first." or Index == 4 and "Could not load the image." or "Library is ready.",
 			Variant = Variant,
 			Icon = Index == 2 and "circle-check" or Index == 3 and "triangle-alert" or Index == 4 and "circle-x" or "info",
 			Time = 3,

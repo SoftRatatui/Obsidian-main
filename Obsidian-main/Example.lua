@@ -197,6 +197,7 @@ local function SetGroupOrder(Group, Order)
 end
 
 local Tabs = {
+	Preview = Window:AddTab("Preview", "sparkles"),
 	Controls = Window:AddTab("Controls", "sliders-horizontal"),
 	Media = Window:AddTab("Media", "gallery-horizontal-end"),
 	Visuals = Window:AddTab("Visuals", "eye"),
@@ -1879,6 +1880,151 @@ if ESPPreview then
 end
 
 
+local PreviewImage
+local PreviewGallery
+do
+	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
+	PreviewControls:AddLabel("A compact interactive index of the library.", true)
+	PreviewControls:AddButton("Show notification", function()
+		Notify("Preview", "Buttons, notifications, and theme updates are working.", 3)
+	end)
+	PreviewControls:AddToggle("PreviewFeatureToggle", {
+		Text = "Example toggle",
+		Default = true,
+	})
+	PreviewControls:AddSlider("PreviewStrength", {
+		Text = "Example slider",
+		Default = 65,
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Suffix = "%",
+	})
+	PreviewControls:AddDropdown("PreviewMode", {
+		Text = "Example dropdown",
+		Values = { "Balanced", "Smooth", "Fast" },
+		Default = "Balanced",
+	})
+	PreviewControls:AddInput("PreviewText", {
+		Text = "Example input",
+		Default = "MonHub",
+		ClearTextOnFocus = false,
+	})
+	local PreviewAccent = PreviewControls:AddToggle("PreviewAccentEnabled", {
+		Text = "Color and key addons",
+		Default = true,
+	})
+	PreviewAccent:AddColorPicker("PreviewAccentColor", {
+		Title = "Preview color",
+		Default = Color3.fromRGB(139, 131, 214),
+	})
+	PreviewAccent:AddKeyPicker("PreviewAccentKey", {
+		Default = "P",
+		Text = "Preview action",
+	})
+
+	local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
+	PreviewAddons:AddLabel("Open or trigger every large module from one place.", true)
+	PreviewAddons:AddButton("Toggle skin catalog", function()
+		if CatalogHost then
+			CatalogHost:Toggle()
+		end
+	end)
+	PreviewAddons:AddButton("Toggle dashboard", function()
+		if Dashboard then
+			Dashboard:Toggle()
+		end
+	end)
+	PreviewAddons:AddButton("Next gallery image", function()
+		if AddonGallery then
+			AddonGallery:NextPage()
+			local Current = AddonGallery:GetSelected()
+			local CurrentIndex = 0
+			for Index, Item in GalleryItems do
+				if Current and Item.Id == Current.Id then
+					CurrentIndex = Index
+					break
+				end
+			end
+			AddonGallery:Select(GalleryItems[(CurrentIndex % #GalleryItems) + 1].Id)
+		end
+	end)
+	PreviewAddons:AddToggle("PreviewESPEnabled", {
+		Text = "Live ESP preview",
+		Default = false,
+		Callback = function(Value)
+			if Toggles.ESPEnabled then
+				Toggles.ESPEnabled:SetValue(Value)
+			elseif ESPPreview then
+				ESPPreview:SetEnabled(Value)
+			end
+		end,
+	})
+	PreviewAddons:AddToggle("PreviewTrailEnabled", {
+		Text = "Character trail",
+		Default = false,
+		Callback = function(Value)
+			if Toggles.CharacterTrailEnabled then
+				Toggles.CharacterTrailEnabled:SetValue(Value)
+			elseif TrailController then
+				TrailController:SetEnabled(Value)
+			end
+		end,
+	})
+
+	if ImagePreview then
+		local PreviewImageBox = Tabs.Preview:AddRightGroupbox("Selected asset", "image")
+		local Created, Result = pcall(function()
+			return PreviewImageBox:AddAddon("PreviewImage", ImagePreview, {
+				Height = 178,
+				ImagePadding = 10,
+				Title = "Neptune",
+				Subtitle = "Interactive addon preview",
+				Motion = true,
+			})
+		end)
+		if Created then
+			PreviewImage = Result
+		end
+	end
+
+	if ImageGallery then
+		local PreviewGalleryBox = Tabs.Preview:AddFullGroupbox("Gallery preview", "layout-grid")
+		local Created, Result = pcall(function()
+			return PreviewGalleryBox:AddAddon("PreviewGallery", ImageGallery, {
+				Height = 250,
+				MinCellWidth = 108,
+				PageSize = 9,
+				CellHeight = 82,
+				ImagePadding = 5,
+				Preview = PreviewImage,
+				Items = GalleryItems,
+			})
+		end)
+		if Created then
+			PreviewGallery = Result
+			PreviewGallery:Select("neptune", true)
+		end
+	end
+
+	local PreviewPages = Tabs.Preview:AddFullGroupbox("Complete examples", "panels-top-left")
+	PreviewPages:AddLabel("Each page contains the full API example for that area.", true)
+	for _, Entry in {
+		{ "Controls", Tabs.Controls },
+		{ "Media", Tabs.Media },
+		{ "Visuals", Tabs.Visuals },
+		{ "ESP", Tabs.ESP },
+		{ "Addons", Tabs.Addons },
+		{ "Gallery", Tabs.Gallery },
+		{ "Advanced", Tabs.Advanced },
+		{ "UI settings", Tabs.Settings },
+	} do
+		PreviewPages:AddButton(Entry[1], function()
+			Entry[2]:Show()
+		end)
+	end
+end
+
 local AdvancedActions = Tabs.Advanced:AddLeftGroupbox("System actions", "blocks")
 
 AdvancedActions:AddButton({
@@ -2322,6 +2468,8 @@ return {
 		ThemeManager = ThemeManager,
 	},
 	AddonExamples = {
+		PreviewGallery = PreviewGallery,
+		PreviewImage = PreviewImage,
 		ImageGallery = AddonGallery,
 		ImagePreview = AddonImagePreview,
 		AssetCatalog = CatalogModule,

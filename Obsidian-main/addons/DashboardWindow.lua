@@ -198,6 +198,9 @@ function DashboardWindow.Create(Library, Info)
     Library:AddToRegistry(CloseIcon, { ImageColor3 = "MutedFontColor" })
 
     local Content = Instance.new("ScrollingFrame")
+    Content.ClipsDescendants = true
+    Content.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    Content.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     Content.Name = "Content"
     Content.Active = true
     Content.AutomaticCanvasSize = Enum.AutomaticSize.Y

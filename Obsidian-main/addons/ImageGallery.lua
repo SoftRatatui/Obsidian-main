@@ -239,6 +239,8 @@ function ImageGallery.Create(Library, Info)
     GridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
     GridHolder.CanvasSize = UDim2.fromOffset(0, 0)
     GridHolder.ScrollBarThickness = 2
+    GridHolder.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    GridHolder.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     GridHolder.ScrollBarImageTransparency = 0.45
     GridHolder.ScrollBarImageColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
     GridHolder.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -389,7 +391,9 @@ function ImageGallery.Create(Library, Info)
     local AutoColumns = Info.Columns == nil
     local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 112), 48, 400)
     local function ResolveGridMetrics()
-        local Width = math.floor(GridHolder.AbsoluteSize.X) - GridHolder.ScrollBarThickness - 2
+        local AbsoluteWindowSize = GridHolder.AbsoluteWindowSize
+        local WindowWidth = AbsoluteWindowSize and AbsoluteWindowSize.X > 0 and AbsoluteWindowSize.X or GridHolder.AbsoluteSize.X
+        local Width = math.floor(WindowWidth) - 2
         if Width <= 0 or Gallery.Destroyed then
             return
         end

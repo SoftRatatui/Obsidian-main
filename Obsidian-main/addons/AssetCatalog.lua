@@ -277,6 +277,9 @@ function AssetCatalog.Create(Library, Info)
     AddRegistry(Library, GridStroke, { Color = "OutlineColor" })
 
     local GridScroll = Instance.new("ScrollingFrame")
+    GridScroll.ClipsDescendants = true
+    GridScroll.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    GridScroll.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     GridScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     GridScroll.BackgroundTransparency = 1
     GridScroll.BorderSizePixel = 0
@@ -903,6 +906,7 @@ function AssetCatalog.Create(Library, Info)
         Button.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(31, 34, 39)
         Button.BackgroundTransparency = CardTransparency
         Button.BorderSizePixel = 0
+        Button.ClipsDescendants = true
         Button.LayoutOrder = Index
         Button.Text = ""
         Button.Visible = false

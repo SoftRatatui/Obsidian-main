@@ -837,6 +837,7 @@ local Templates = {
     },
     ScrollingFrame = {
         BorderSizePixel = 0,
+        ClipsDescendants = true,
     },
     TextLabel = {
         BorderSizePixel = 0,
@@ -2290,6 +2291,10 @@ local function New(ClassName: string, Properties: { [string]: any }): any
     FillInstance(Properties, Instance)
 
     if ClassName == "ScrollingFrame" then
+        pcall(function()
+            Instance.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+            Instance.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        end)
         local Bindings = Library.Registry[Instance] or {}
         if Properties.ScrollBarThickness and Properties.ScrollBarThickness > 0 then
             Bindings.ScrollBarThickness = function()
@@ -3048,6 +3053,12 @@ end
 local function ConfigureAutoScrollbar(ScrollFrame: ScrollingFrame, IdleTransparency: number?, HoverTransparency: number?)
     IdleTransparency = IdleTransparency or 0.62
     HoverTransparency = HoverTransparency or 0.18
+
+    ScrollFrame.ClipsDescendants = true
+    pcall(function()
+        ScrollFrame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        ScrollFrame.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    end)
 
     local Hovering = false
     local function Refresh(Animate: boolean?)

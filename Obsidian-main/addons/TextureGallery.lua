@@ -173,6 +173,9 @@ function TextureGallery.Create(Library, Info)
     Library:AddToRegistry(PreviewName, { FontFace = "Font", TextColor3 = "MutedFontColor" })
 
     local Grid = Instance.new("ScrollingFrame")
+    Grid.ClipsDescendants = true
+    Grid.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+    Grid.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     Grid.Active = true
     Grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Grid.BackgroundTransparency = 1
@@ -271,6 +274,7 @@ function TextureGallery.Create(Library, Info)
         Button.BackgroundColor3 = Library.Scheme.ElementColor
         Button.BackgroundTransparency = Gallery.CardTransparency
         Button.BorderSizePixel = 0
+        Button.ClipsDescendants = true
         Button.LayoutOrder = Index
         Button.Size = UDim2.fromScale(1, 1)
         Button.Text = ""

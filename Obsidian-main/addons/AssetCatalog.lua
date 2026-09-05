@@ -271,13 +271,16 @@ function AssetCatalog.Create(Library, Info)
     GridCorner.CornerRadius = UDim.new(0, Style.Radius)
     GridCorner.Parent = GridPanel
 
+    local StrokeToken = Style.Highlight and "AccentColor" or "OutlineColor"
+    local StrokeColor = Library and Library.Scheme[StrokeToken] or Color3.fromRGB(52, 57, 66)
+
     local GridStroke = Instance.new("UIStroke")
     GridStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    GridStroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
+    GridStroke.Color = StrokeColor
     GridStroke.Thickness = Style.StrokeThickness
     GridStroke.Transparency = Style.OutlineTransparency
     GridStroke.Parent = GridPanel
-    AddRegistry(Library, GridStroke, { Color = "OutlineColor" })
+    AddRegistry(Library, GridStroke, { Color = StrokeToken })
 
     local GridScroll = Instance.new("ScrollingFrame")
     GridScroll.ClipsDescendants = true
@@ -389,11 +392,11 @@ function AssetCatalog.Create(Library, Info)
 
     local PreviewStroke = Instance.new("UIStroke")
     PreviewStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    PreviewStroke.Color = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
+    PreviewStroke.Color = StrokeColor
     PreviewStroke.Thickness = Style.StrokeThickness
     PreviewStroke.Transparency = Style.OutlineTransparency
     PreviewStroke.Parent = PreviewPanel
-    AddRegistry(Library, PreviewStroke, { Color = "OutlineColor" })
+    AddRegistry(Library, PreviewStroke, { Color = StrokeToken })
 
     local PreviewCanvas = Instance.new("Frame")
     PreviewCanvas.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(31, 34, 39)

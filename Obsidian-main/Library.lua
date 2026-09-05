@@ -1412,6 +1412,25 @@ function Library:GetAddonStyle(Overrides)
     Style.SelectionThickness = math.clamp(tonumber(Style.SelectionThickness) or 1, 0, 4)
     Style.PreviewRatio = math.clamp(tonumber(Style.PreviewRatio) or 0.58, 0.3, 0.8)
     Style.Motion = Style.Motion ~= false
+    Style.Minimal = Style.Minimal == true
+    Style.Highlight = Style.Highlight == true
+
+    if Style.Minimal then
+        Style.OutlineTransparency = 1
+        Style.StrokeThickness = 0
+        Style.Padding = math.max(0, Style.Padding - 2)
+        Style.Gap = math.max(0, Style.Gap - 2)
+        Style.Radius = math.max(0, Style.Radius - 2)
+        Style.CellRadius = math.max(0, Style.CellRadius - 1)
+    end
+
+    if Style.Highlight then
+        Style.OutlineTransparency = math.min(Style.OutlineTransparency, 0.12)
+        Style.StrokeThickness = math.max(1, Style.StrokeThickness)
+        Style.HighlightColor = function()
+            return Library.Scheme.AccentColor
+        end
+    end
 
     for _, Key in {
         "HeaderHeight",
@@ -3625,7 +3644,7 @@ function Library:CreateAddonWindow(Info)
         Parent = Root,
     })
     local RootStroke = New("UIStroke", {
-        Color = "OutlineColor",
+        Color = Style.HighlightColor or "OutlineColor",
         Thickness = Style.StrokeThickness,
         Transparency = Style.OutlineTransparency,
         Parent = Root,
@@ -4268,6 +4287,12 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
         local TweenInfo = Library.TabTransitionInfo or Library:GetMotion("TabEnter")
         local Offset = Library.TabSwipeOffset or 2
         local SwipeFrom = string.lower(Library.TabSwipeFrom or "bottom")
+
+        if SwipeFrom == "auto" then
+            local Direction = Library.TabSwipeDirection
+            SwipeFrom = Direction == -1 and "top" or "bottom"
+        end
+
         local StartPosition
 
         if SwipeFrom == "left" then
@@ -4488,18 +4513,36 @@ function Library:AddDraggableLabel(...)
     })
 
     table.insert(
-        Library.Corners, 
+        Library.Corners,
         New("UICorner", {
             CornerRadius = UDim.new(0, Library.CornerRadius),
             Parent = Label,
         })
     )
 
+    local Accent
+    if Params ~= nil and typeof(Params) == "table" and Params.Accent ~= false then
+        Accent = New("Frame", {
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundColor3 = "AccentColor",
+            Position = UDim2.new(0, 7, 0.5, 0),
+            Size = UDim2.fromOffset(2, 12),
+            ZIndex = 11,
+            Parent = Label,
+        })
+        New("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = Accent,
+        })
+    end
+
+    local BasePadding = Accent and 17 or 12
+
     local Padding = New("UIPadding", {
-        PaddingBottom = UDim.new(0, 6),
-        PaddingLeft = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 7),
+        PaddingLeft = UDim.new(0, BasePadding),
         PaddingRight = UDim.new(0, 12),
-        PaddingTop = UDim.new(0, 6),
+        PaddingTop = UDim.new(0, 7),
         Parent = Label,
     })
     table.insert(
@@ -4548,24 +4591,37 @@ function Library:AddDraggableLabel(...)
         assert(IconPosition == "left" or IconPosition == "right", "Icon Position needs to be either 'left' or 'right'.")
 
         local IsNotEmpty = Icon and Trim(tostring(Icon)) ~= ""
-        Padding.PaddingLeft = UDim.new(0, (IsNotEmpty and IconPosition == "left") and 34 or 12)
+        local IconInset = BasePadding + 22
+        Padding.PaddingLeft = UDim.new(0, (IsNotEmpty and IconPosition == "left") and IconInset or BasePadding)
         Padding.PaddingRight = UDim.new(0, (IsNotEmpty and IconPosition == "right") and 34 or 12)
 
         if IconImage then
             IconImage.AnchorPoint = Vector2.new(IconPosition == "left" and 0 or 1, 0)
-            DraggableLabel:AlignIcon()
         end
+
+        DraggableLabel:AlignIcon()
     end
 
     function DraggableLabel:AlignIcon()
-        if not IconImage then
-            return
+        local Inner = Label.AbsoluteSize.Y - Padding.PaddingTop.Offset - Padding.PaddingBottom.Offset
+
+        if IconImage then
+            local Offset = Library:CenterOffset(Inner, IconImage.AbsoluteSize.Y)
+            IconImage.Position = IconPosition == "left" and UDim2.new(0, -22, 0, Offset)
+                or UDim2.new(1, 22, 0, Offset)
         end
 
-        local Inner = Label.AbsoluteSize.Y - Padding.PaddingTop.Offset - Padding.PaddingBottom.Offset
-        local Offset = Library:CenterOffset(Inner, IconImage.AbsoluteSize.Y)
-        IconImage.Position = IconPosition == "left" and UDim2.new(0, -22, 0, Offset)
-            or UDim2.new(1, 22, 0, Offset)
+        if Accent then
+            local Height = Library:MatchParity(Inner, math.max(10, Inner - 4))
+            Accent.AnchorPoint = Vector2.zero
+            Accent.Size = UDim2.fromOffset(2, Height)
+            Accent.Position = UDim2.new(
+                0,
+                7 - Padding.PaddingLeft.Offset,
+                0,
+                Library:CenterOffset(Inner, Height)
+            )
+        end
     end
 
     Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -5977,11 +6033,20 @@ do
                 Parent = Holder,
             })
 
+            local RowScale = New("UIScale", {
+                Scale = 1,
+                Parent = Holder,
+            })
+
             local Switch = New("Frame", {
                 BackgroundColor3 = "MainColor",
                 Size = UDim2.fromOffset(14, 14),
                 LayoutOrder = 1,
                 Parent = Holder,
+            })
+            local SwitchScale = New("UIScale", {
+                Scale = 1,
+                Parent = Switch,
             })
             local SwitchStroke = New("UIStroke", {
                 Color = "OutlineColor",
@@ -6057,6 +6122,36 @@ do
                 KeybindsToggle.IndicatorTween:Play()
                 KeybindsToggle.IndicatorStrokeTween:Play()
                 KeybindsToggle.IndicatorCheckTween:Play()
+
+                if State then
+                    KeybindsToggle:Pulse()
+                end
+            end
+
+            function KeybindsToggle:Pulse()
+                if Library.Design.Motion.Reduced then
+                    return
+                end
+
+                Library:CancelTween(SwitchScale, "KeybindPulse")
+                SwitchScale.Scale = 1.24
+                Library:PlayTween(SwitchScale, "KeybindPulse", Library:GetMotion("Control"), {
+                    Scale = 1,
+                })
+            end
+
+            function KeybindsToggle:AnimateIn()
+                if Library.Design.Motion.Reduced then
+                    return
+                end
+
+                Library:CancelTween(Holder, "KeybindEnter")
+                Library:CancelTween(RowScale, "KeybindEnter")
+
+                Holder.BackgroundTransparency = 1
+                RowScale.Scale = 0.94
+                Library:PlayTween(RowScale, "KeybindEnter", Library:GetMotion("Popup"), { Scale = 1 })
+                Library:RevealText(Holder, { Stagger = 0 })
             end
 
             function KeybindsToggle:UpdateColors()
@@ -6109,6 +6204,7 @@ do
                         Size = UDim2.new(1, 0, 0, 18),
                     })
                     KeybindsToggle.VisibilityTween:Play()
+                    KeybindsToggle:AnimateIn()
                 else
                     KeybindsToggle.VisibilityTween = TweenService:Create(Holder, Library.KeybindRowTweenInfo, {
                         Size = UDim2.new(1, 0, 0, 0),
@@ -13576,10 +13672,12 @@ function Library:CreateWindow(WindowInfo)
             Parent = MainFrame,
         })
         Library:MakeLine(MainFrame, {
-            AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 8, 1, -BottomBarHeight),
-            Size = UDim2.new(1, -16, 0, 1),
-            Transparency = 0.45,
+            Color = function()
+                return Library:GetAccentSurfaceColor(0.2)
+            end,
+            Position = UDim2.new(0, 0, 1, -BottomBarHeight),
+            Size = UDim2.new(1, 0, 0, 1),
+            Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
             ZIndex = 4,
         })
 
@@ -14713,6 +14811,7 @@ function Library:CreateWindow(WindowInfo)
         
         local Tab = {
             Description = Description,
+            Order = Order,
 
             Connections = {},
             Destroyed = false,
@@ -16796,13 +16895,10 @@ function Library:CreateWindow(WindowInfo)
                 RunService:UnbindFromRenderStep(ShowCursorBinding)
             end)
             local LastCursorX, LastCursorY = -1, -1
-            local LastCursorVisible = nil
-            local LastMouseIcon = nil
 
             RunService:BindToRenderStep(ShowCursorBinding, Enum.RenderPriority.Last.Value, function()
                 local WantIcon = not Library.ShowCustomCursor
-                if LastMouseIcon ~= WantIcon then
-                    LastMouseIcon = WantIcon
+                if UserInputService.MouseIconEnabled ~= WantIcon then
                     UserInputService.MouseIconEnabled = WantIcon
                 end
 
@@ -16812,8 +16908,7 @@ function Library:CreateWindow(WindowInfo)
                     Cursor.Position = UDim2.fromOffset(X, Y)
                 end
 
-                if LastCursorVisible ~= Library.ShowCustomCursor then
-                    LastCursorVisible = Library.ShowCustomCursor
+                if Cursor.Visible ~= Library.ShowCustomCursor then
                     Cursor.Visible = Library.ShowCustomCursor
                 end
 

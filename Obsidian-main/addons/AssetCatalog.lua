@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-12",
+    ReleaseVersion = "0.0.1-release-13",
 }
 
 local function NormalizeAsset(Value)

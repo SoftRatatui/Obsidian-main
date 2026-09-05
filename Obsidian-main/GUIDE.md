@@ -1,13 +1,22 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-12`
+Current release: `0.0.1-release-13`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
+
+## Contents
+
+- [Quick start](#quick-start) and [Standards](#standards)
+- [Window](#window), [tabs and groupboxes](#tabs-and-groupboxes), [controls](#controls), and [design system](#design-system)
+- [Addon mounting](#addon-mounting), [generic addon windows](#generic-addon-windows), and [collections without UI](#collections-without-ui)
+- [Asset catalog](#asset-catalog), [image gallery and preview](#image-gallery-and-image-preview), [dashboard](#dashboard), and [character preview](#character-preview)
+- [Themes](#themes), [configs](#configs), [notifications](#notifications), and [watermark](#watermark)
+- [Addon recipes](#addon-recipes), [complete API reference](#complete-addon-api-reference), and [release checklist](#release-checklist)
 
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-12"
+local RELEASE = "0.0.1-release-13"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -45,6 +54,79 @@ Main:AddToggle("Enabled", {
 ```
 
 The version check is informational. Never stop a script only because a cached server returned an older patch.
+
+## Standards
+
+These rules form the supported way to build a reliable MonHub interface.
+
+### Initialization order
+
+1. Load `Library.lua` and verify `Library.ReleaseVersion`.
+2. Load only the addon modules the project uses.
+3. Create one window, its tabs, groupboxes, controls, and addon controllers.
+4. Choose the ThemeManager folder, then call `ThemeManager:SetLibrary(Library)` before creating theme controls.
+5. Call `SaveManager:SetLibrary(Library)`, choose its folder, and register module adapters.
+6. Build the config section after every saved control exists.
+7. Call `LoadAutoloadConfig()` last.
+
+Loading a config before controls or adapters exist is supported for compatibility, but those missing entries are skipped. The returned load report tells you how many values were applied and skipped.
+
+### Stable IDs and state
+
+- Give every toggle, slider, dropdown, input, color picker, key picker, passthrough, and config adapter a unique ID that never changes between releases.
+- Never reuse an ID for a different control type. Existing user configs identify state by type and ID.
+- Keep gameplay state in a controller or model. UI callbacks should call controller methods instead of owning the feature state.
+- Use `CollectionModel` when embedded and standalone views must share items, favorites, and selection.
+- Register non-control state with `SaveManager:RegisterAdapter`. This covers addon layout, selected presets, module visibility, and project-specific settings.
+
+### Layout and visual quality
+
+- Use `AddFullGroupbox` for catalogs, galleries, and other wide content. Half-width columns are intended for ordinary controls.
+- Size custom GUI in whole pixels. Avoid fractional offsets, strokes wider than the available padding, and negative bounds unless the direct parent clips descendants.
+- Mount custom content through `AddUIPassthrough`, `Groupbox:AddAddon`, or `Library:CreateAddonWindow`; these containers handle clipping and cleanup.
+- Use `MinCellWidth` instead of a fixed column count when a gallery must respond to different window widths.
+- Use `Library:SetPalette`, `SetTheme`, `SetDesign`, `BindTheme`, or `BindAddonStyle` for theme-dependent properties. Raw colors are suitable only for content-specific colors such as item rarity.
+- Keep one strong owner for each addon controller and call `Destroy()` when that feature is removed.
+
+### Callbacks and performance
+
+- Keep UI callbacks short. Move yielding work, HTTP requests, and expensive scans into a controller task.
+- Reuse one data model and one render loop instead of polling the same state from every widget.
+- Use paged catalogs for large item collections and load large preview assets only for the selected item.
+- Dashboard providers should normally use intervals of at least `0.1` seconds.
+- Register external connections and instances with `Library:OnUnload`, or let an addon controller own and destroy them.
+- Prefer `SetReducedMotion(true)` on constrained devices rather than removing state feedback.
+
+### Module selection
+
+| Need | Module |
+| --- | --- |
+| Skin, weapon, map, vehicle, or inventory browser | `AssetCatalog` |
+| Small paged thumbnail selector | `ImageGallery` |
+| Large selected image or inspect panel | `ImagePreview` |
+| Beam, trail, or texture preset chooser | `TextureGallery` |
+| Shared collection state without UI | `CollectionModel` |
+| Movable metrics and action panel | `DashboardWindow` |
+| Character model and ESP inspection | `VisualPreview` or `FixedR6Preview` |
+| Native character trail effect | `CharacterTrail` |
+| Decorative tracer configuration | `TracerPreview` |
+| Live ESP runtime | `addons/esp/ESP.lua` with `MonHubUI.lua` |
+| Persistent controls and module state | `SaveManager` |
+| Built-in themes and live appearance editing | `ThemeManager` |
+
+### Config reliability
+
+- Use a project-specific root folder and a place or profile subfolder.
+- Treat config names as file names: no slashes, reserved characters, `.`/`..`, or the reserved name `autoload`.
+- Keep `LoadAutoloadConfig()` after all setup. It returns `true` when no autoload is configured, so first launch is not an error.
+- Check the boolean and error returned by every direct `Save`, `Load`, `Delete`, and autoload operation.
+- Call `IgnoreThemeSettings()` when theme choice belongs to the user rather than to each gameplay config.
+- Do not edit the generated `schema` field. Newer unsupported schema versions are rejected before any state changes.
+- Config writes are staged and read back before replacement. Failed loads restore the pre-load snapshot when possible.
+
+### Cleanup
+
+`Library:Unload()` is the final owner. It closes UI, stops registered tweens and signals, and destroys registered addons. Custom services, Drawing objects, and controllers created outside the library still need an `OnUnload` callback or their own explicit `Destroy()` call.
 
 ## Project structure
 
@@ -505,6 +587,7 @@ Window:AddTab({ Name = "Combat", Icon = "crosshair", Order = 1 })
 The full example includes a collapsed Appearance group. Add it to another project with:
 
 ```luau
+ThemeManager:SetFolder("MonHub")
 ThemeManager:SetLibrary(Library)
 ThemeManager:CreateAppearanceManager(Settings:AddLeftGroupbox("Appearance", "sliders-horizontal"))
 ```
@@ -525,6 +608,22 @@ Library:SetTheme("My theme")
 ```
 
 Palette changes affect the current session. Switching themes restores that theme's palette. When changed individually, `ElementColor` and legacy `MainColor` stay synchronized; provide both to style them separately. `AccentSoftColor` is recalculated after an accent or control surface change unless supplied explicitly. Runtime theme registration updates the theme selector; it does not write a custom theme file.
+
+Persist the current palette and choose a startup theme with the ThemeManager filesystem API:
+
+```luau
+local Saved, SaveError = ThemeManager:SaveCustomTheme("Ocean")
+if Saved then
+    ThemeManager:SaveDefault("Ocean")
+else
+    warn(SaveError)
+end
+
+ThemeManager:ReloadCustomThemes()
+ThemeManager:LoadDefault()
+```
+
+Call `SetFolder` before `SetLibrary`, because initialization scans `<folder>/themes` and applies the saved startup theme. Custom theme files use schema validation and verified temporary writes. The persistence controls appear in `CreateThemeManager` when the executor exposes `isfolder`, `isfile`, `listfiles`, `makefolder`, `readfile`, `writefile`, and `delfile`.
 
 Custom UI can join the same theme refresh without replacing its existing bindings:
 
@@ -953,10 +1052,11 @@ local ThemeManager = loadstring(game:HttpGet(
     BASE .. "addons/ThemeManager.lua?monhub=" .. RELEASE
 ))()
 
-ThemeManager:SetLibrary(Library)
 ThemeManager:SetFolder("MonHub")
+ThemeManager:SetLibrary(Library)
 ThemeManager:ApplyTheme("Default")
-ThemeManager:BuildThemeSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+ThemeManager:CreateAppearanceManager(Tabs.Settings:AddRightGroupbox("Appearance", "sliders-horizontal"))
 ```
 
 Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, and `Ash`. Every core surface and every current visual addon registers its palette properties. Theme changes update the top bar, sidebar, content, controls, addon windows, cards, previews, text, and outlines together.
@@ -978,18 +1078,80 @@ SaveManager:LoadAutoloadConfig()
 
 Create all saved controls before loading the autoload config. Use stable option IDs and do not reuse one ID for different controls.
 
+Register UI-independent module state before autoload:
+
+```luau
+SaveManager:RegisterAdapter("SkinCatalog", {
+    Save = function()
+        return {
+            Selected = Catalog:GetSelected() and Catalog:GetSelected().Id,
+            Layout = Catalog.Layout,
+        }
+    end,
+    Validate = function(Value)
+        return type(Value) == "table" and type(Value.Layout) == "string", "invalid catalog state"
+    end,
+    Load = function(Value)
+        Catalog:SetLayout(Value.Layout)
+        Catalog:Select(Value.Selected, true)
+    end,
+})
+```
+
+`Load` and `LoadJSON` return `success, errorMessage, report`. `report.Applied`, `report.Skipped`, and `report.Total` make version compatibility visible without treating missing optional controls as a fatal error. Values are validated before changes begin. If a control callback or adapter fails during loading, the manager restores the snapshot taken immediately before the load and includes any rollback failure in `errorMessage`.
+
 ## Notifications
 
 ```luau
+Library:SetNotificationOptions({
+    Side = "Right",
+    Width = 320,
+    Margin = 8,
+    Gap = 8,
+    Padding = 10,
+    CornerRadius = 7,
+    MaxVisible = 6,
+    DefaultDuration = 5,
+    Accent = true,
+    ShowProgress = true,
+    Dismissible = true,
+})
+
 Library:Notify({
     Title = "MonHub",
     Description = "Settings saved",
     Time = 3,
-    Icon = "check",
+    Icon = "circle-check",
+    Variant = "Success",
+    AccentColor = Color3.fromRGB(91, 194, 137),
+    Dismissible = true,
 })
 ```
 
-Notifications use the same short motion profile and active theme as the main interface.
+Variants are `Default`, `Success`, `Warning`, `Error`, and `Danger`. Every notification can override `Width`, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, and `Dismissible`. It also supports `TitleColor`, `DescriptionColor`, `IconColor`, `SoundId`, `Volume`, `BigIcon`, `Persist`, and step progress. The returned object exposes `ChangeTitle`, `ChangeDescription`, `ChangeStep`/`SetProgress`, and `Destroy`. Use `Library:ClearNotifications()` to dismiss the whole stack.
+
+## Watermark
+
+```luau
+Library:SetWatermarkOptions({
+    Text = "MonHub  |  144 FPS",
+    Icon = "activity",
+    IconPosition = "left",
+    Side = "Left",
+    Draggable = true,
+    Visible = true,
+    TextSize = 13,
+    BackgroundTransparency = 0.08,
+    OutlineTransparency = 0.5,
+    CornerRadius = 7,
+    Padding = 7,
+    Accent = true,
+    AccentWidth = 2,
+    Scale = 1,
+})
+```
+
+Use `SetWatermark` for frequent text changes, such as FPS and ping. Use `SetWatermarkOptions` for appearance or behavior changes. `SetWatermarkSide`, `SetWatermarkDraggable`, and `SetWatermarkVisibility` remain available as focused methods. The watermark clamps itself after text, scale, side, viewport, and drag changes.
 
 ## Addon recipes
 
@@ -1370,9 +1532,9 @@ Create it with `{ Items = {}, Selected = id }`. Item IDs remain stable through f
 
 Call `SetLibrary` first. Use `SetFolder` and optionally `SetSubFolder` before building UI or loading configs.
 
-Methods: `SetLibrary`, `SetLoadingOrder`, `SetIgnoreIndexes`, `IgnoreThemeSettings`, `GetPaths`, `BuildFolderTree`, `CheckFolderTree`, `CheckSubFolder`, `SetFolder`, `SetSubFolder`, `RefreshConfigList`, `SaveJSON`, `Save`, `LoadJSON`, `Load`, `Delete`, `GetAutoloadConfig`, `SaveAutoloadConfig`, `LoadAutoloadConfig`, `DeleteAutoLoadConfig`, and `BuildConfigSection`.
+Methods: `SetLibrary`, `SetLoadingOrder`, `SetIgnoreIndexes`, `IgnoreThemeSettings`, `RegisterAdapter`, `UnregisterAdapter`, `GetPaths`, `BuildFolderTree`, `CheckFolderTree`, `CheckSubFolder`, `SetFolder`, `SetSubFolder`, `RefreshConfigList`, `SaveJSON`, `Save`, `LoadJSON`, `Load`, `Delete`, `GetAutoloadConfig`, `SaveAutoloadConfig`, `LoadAutoloadConfig`, `DeleteAutoLoadConfig`, and `BuildConfigSection`.
 
-`Save` and `Load` operate on named files. `SaveJSON` and `LoadJSON` operate on serialized text. `SetIgnoreIndexes` excludes control IDs. `SetLoadingOrder(true, ids)` controls callback restore order. `BuildConfigSection(tab, icon)` creates the complete config interface.
+`Save` and `Load` operate on named files. `SaveJSON` and `LoadJSON` operate on serialized text. `SetIgnoreIndexes(ids, true)` replaces the ignore set; omitting the second argument extends it. `SetLoadingOrder(true, idsOrTypes)` controls callback restore order. `RegisterAdapter` adds serializable state that is independent of a built-in control. `BuildConfigSection(tab, icon)` creates the complete config interface.
 
 ### ThemeManager API
 
@@ -1380,9 +1542,11 @@ Call `SetLibrary` first. Methods: `SyncFromLibrary`, `BeginConfigLoad`, `MarkCon
 
 `CreateAppearanceManager` exposes live colors, font, corner radius, motion, shadows, dividers, navigation indicator, geometry binding, and accent scrollbar controls. `ApplyTheme(name)` updates all registered UI and addon bindings immediately. Wrap bulk config restores with `BeginConfigLoad()` and `EndConfigLoad()` to avoid intermediate theme callbacks.
 
+Call `SetFolder` before `SetLibrary` when custom persistence is used. `SaveCustomTheme(name)` writes the active palette, `ReloadCustomThemes()` discovers saved JSON themes, `SaveDefault(name)` selects the startup theme, and `LoadDefault()` applies it. Built-in names are protected case-insensitively and cannot be overwritten by custom files.
+
 ### Addon window host API
 
-`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `Remove`, `SetModuleHeight`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu.
+`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `GetModule`, `GetModules`, `Remove`, `SetModuleHeight`, `SetModuleVisible`, `SetModuleOrder`, `SetModuleFitHeight`, `SetContentSpacing`, `RefreshLayout`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu. Multiple `FitHeight` modules share the available height instead of each claiming the full viewport.
 
 ## Performance rules
 
@@ -1414,6 +1578,8 @@ Library:Unload()
 - [x] Runtime sources and type modules compile with the Luau compiler.
 - [x] Collection IDs, atomic updates, selection, filters, bindings, and cleanup pass 12 regression tests.
 - [x] Twelve UI contract scenarios cover addon lifecycle and geometry, repeated palette/theme changes, custom theme validation, appearance picker synchronization, texture colors, and live addon corners.
+- [x] Config regression coverage verifies round-trip values, legacy color transparency, custom adapters, deterministic compatibility skips, autoload cleanup, and rollback after a callback failure.
+- [x] Theme persistence coverage verifies custom theme writes, reload, startup selection, protected built-in names, and deletion.
 - [x] Examples include a shared skin collection, a separate gallery window, grid mode, favorites, and adjustable gallery height.
 - [x] Visual addon cleanup visits its own descendants instead of scanning the whole theme registry.
 - [ ] Verify real rendering in Roblox at 480, 780, and 1100 pixel window widths, including odd widths, DPI changes, light and dark themes.
@@ -1428,6 +1594,19 @@ Run local checks with Luau's compiler and interpreter installed:
 ```
 
 ## Changelog
+
+### 0.0.1-release-13
+
+- Rebuilt config persistence around schema validation, deterministic serialization, verified temporary writes, final readback, and restoration of the previous file when verification fails.
+- Added transactional config loading. Invalid data is rejected before mutation, callback failures restore the pre-load snapshot, and load reports expose applied and compatibility-skipped entries.
+- Added `RegisterAdapter` and `UnregisterAdapter` so controllers, addon layouts, selections, presets, and other state outside core controls can participate in configs.
+- Fixed autoload discovery, stale autoload cleanup after restart, safe empty autoload behavior, config list sorting, subfolder clearing, and the keybind menu toggle lookup.
+- Enabled real custom theme persistence with validation, reload, deletion, verified writes, protected built-in names, and a saved startup theme.
+- Reworked the color picker trigger into a larger layered swatch with a transparency checker, inset color surface, theme-aware outline, and reliable transparency restoration.
+- Expanded addon windows with module lookup, visibility, order, height allocation, fit behavior, and content spacing controls. Multiple fit modules now share available height.
+- Redesigned notifications with configurable width, margin, gap, padding, radius, stack limit, duration, accent, progress, dismissal, variants, and per-notification overrides.
+- Redesigned the watermark with configurable typography, opacity, outline, radius, padding, accent, scale, side, drag state, position, icon, and visibility. Its scale now composes correctly with global DPI.
+- Extended the Preview page and UI Settings examples, updated all public types, added Standards and complete usage guidance, and added regression coverage for config rollback and theme persistence.
 
 ### 0.0.1-release-12
 

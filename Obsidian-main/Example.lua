@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-12"
+local RELEASE_VERSION = "0.0.1-release-13"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -2323,6 +2323,90 @@ WatermarkSettings:AddToggle("WatermarkDraggable", {
 		Library:SetWatermarkDraggable(Value)
 	end,
 })
+WatermarkSettings:AddToggle("WatermarkAccent", {
+	Text = "Accent marker",
+	Default = true,
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ Accent = Value })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkOpacity", {
+	Text = "Background transparency",
+	Default = 0,
+	Min = 0,
+	Max = 90,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ BackgroundTransparency = Value / 100 })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkTextSize", {
+	Text = "Text size",
+	Default = 13,
+	Min = 10,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ TextSize = Value })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkOutline", {
+	Text = "Outline transparency",
+	Default = 50,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ OutlineTransparency = Value / 100 })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkRadius", {
+	Text = "Corner radius",
+	Default = 7,
+	Min = 0,
+	Max = 16,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ CornerRadius = Value })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkPadding", {
+	Text = "Padding",
+	Default = 7,
+	Min = 2,
+	Max = 16,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ Padding = Value })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkScale", {
+	Text = "Scale",
+	Default = 100,
+	Min = 60,
+	Max = 160,
+	Rounding = 0,
+	Suffix = "%",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ Scale = Value / 100 })
+	end,
+})
+WatermarkSettings:AddSlider("WatermarkAccentWidth", {
+	Text = "Accent width",
+	Default = 2,
+	Min = 1,
+	Max = 4,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		Library:SetWatermarkOptions({ AccentWidth = Value })
+	end,
+})
 WatermarkSettings:SetupDependencies({ { WatermarkToggle, true } })
 
 Library:GiveSignal(RunService.RenderStepped:Connect(function(DeltaTime)
@@ -2415,8 +2499,159 @@ MenuGroup:AddButton({
 	end,
 })
 
+local NotificationGroup = Tabs.Settings:AddGroupbox({
+	Name = "Notifications",
+	IconName = "bell",
+	Side = 2,
+	Collapsed = true,
+})
+SetGroupOrder(NotificationGroup, -70)
+local NotificationWidth = 320
+local NotificationMargin = 8
+local NotificationGap = 8
+local NotificationPadding = 10
+local NotificationRadius = 7
+local NotificationMaxVisible = 6
+local NotificationDuration = 5
+local NotificationProgress = true
+local NotificationAccent = true
+local NotificationDismissible = true
+local function ApplyNotificationStyle()
+	Library:SetNotificationOptions({
+		Width = NotificationWidth,
+		Margin = NotificationMargin,
+		Gap = NotificationGap,
+		Padding = NotificationPadding,
+		CornerRadius = NotificationRadius,
+		MaxVisible = NotificationMaxVisible,
+		DefaultDuration = NotificationDuration,
+		ShowProgress = NotificationProgress,
+		Accent = NotificationAccent,
+		Dismissible = NotificationDismissible,
+	})
+end
+NotificationGroup:AddSlider("NotificationWidth", {
+	Text = "Width",
+	Default = NotificationWidth,
+	Min = 240,
+	Max = 480,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationWidth = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationGap", {
+	Text = "Stack gap",
+	Default = NotificationGap,
+	Min = 0,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationGap = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationMargin", {
+	Text = "Screen margin",
+	Default = NotificationMargin,
+	Min = 0,
+	Max = 32,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationMargin = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationPadding", {
+	Text = "Card padding",
+	Default = NotificationPadding,
+	Min = 4,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationPadding = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationRadius", {
+	Text = "Corner radius",
+	Default = NotificationRadius,
+	Min = 0,
+	Max = 18,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationRadius = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationMaxVisible", {
+	Text = "Visible cards",
+	Default = NotificationMaxVisible,
+	Min = 1,
+	Max = 12,
+	Rounding = 0,
+	Callback = function(Value)
+		NotificationMaxVisible = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationDuration", {
+	Text = "Default duration",
+	Default = NotificationDuration,
+	Min = 1,
+	Max = 12,
+	Rounding = 1,
+	Suffix = "s",
+	Callback = function(Value)
+		NotificationDuration = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddToggle("NotificationProgress", {
+	Text = "Progress bar",
+	Default = NotificationProgress,
+	Callback = function(Value)
+		NotificationProgress = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddToggle("NotificationAccent", {
+	Text = "Accent marker",
+	Default = NotificationAccent,
+	Callback = function(Value)
+		NotificationAccent = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddToggle("NotificationDismissible", {
+	Text = "Close button",
+	Default = NotificationDismissible,
+	Callback = function(Value)
+		NotificationDismissible = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddButton("Preview notification styles", function()
+	for Index, Variant in { "Default", "Success", "Warning", "Error" } do
+		Library:Notify({
+			Title = Variant,
+			Description = "Theme-aware notification preview",
+			Variant = Variant,
+			Icon = Index == 2 and "circle-check" or Index == 3 and "triangle-alert" or Index == 4 and "circle-x" or "info",
+			Time = 3,
+		})
+	end
+end)
+
 if ThemeManager then
 	local ThemeReady, ThemeError = pcall(function()
+		ThemeManager:SetFolder("MonHub")
 		ThemeManager:SetLibrary(Library)
 		local AppearanceBox = ThemeManager:ApplyToTab(Tabs.Settings)
 		SetGroupOrder(AppearanceBox, -90)
@@ -2444,6 +2679,31 @@ if SaveManager then
 		SaveManager:IgnoreThemeSettings()
 		SaveManager:SetFolder("MonHub")
 		SaveManager:SetSubFolder(tostring(game.PlaceId))
+		SaveManager:RegisterAdapter("ExampleModuleState", {
+			Save = function()
+				local Selected = SkinCollection and SkinCollection:GetSelected()
+				return {
+					Selected = Selected and Selected.Id or nil,
+					CatalogVisible = CatalogHost and CatalogHost.Visible or false,
+					CatalogLayout = CatalogModule and CatalogModule.Layout or nil,
+					DashboardVisible = Dashboard and Dashboard.Visible or false,
+				}
+			end,
+			Validate = function(Value)
+				if type(Value) ~= "table" then return false, "expected module state table" end
+				if Value.Selected ~= nil and type(Value.Selected) ~= "string" then return false, "invalid selection" end
+				if Value.CatalogLayout ~= nil and type(Value.CatalogLayout) ~= "string" then return false, "invalid layout" end
+				if Value.CatalogVisible ~= nil and type(Value.CatalogVisible) ~= "boolean" then return false, "invalid catalog visibility" end
+				if Value.DashboardVisible ~= nil and type(Value.DashboardVisible) ~= "boolean" then return false, "invalid dashboard visibility" end
+				return true
+			end,
+			Load = function(Value)
+				if SkinCollection then SkinCollection:Select(Value.Selected) end
+				if CatalogModule and Value.CatalogLayout then CatalogModule:SetLayout(Value.CatalogLayout) end
+				if CatalogHost then CatalogHost:SetVisible(Value.CatalogVisible == true) end
+				if Dashboard then Dashboard:SetVisible(Value.DashboardVisible == true) end
+			end,
+		})
 		local ConfigurationBox = SaveManager:BuildConfigSection(Tabs.Settings)
 		SetGroupOrder(ConfigurationBox, -100)
 		SaveManager:LoadAutoloadConfig()

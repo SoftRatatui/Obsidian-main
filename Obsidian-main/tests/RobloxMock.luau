@@ -235,6 +235,12 @@ Mock.game = {
         if Name == "Workspace" then
             return Mock.Workspace
         end
+        if Name == "HttpService" then
+            return {
+                JSONEncode = function() error("JSON is unavailable in this mock") end,
+                JSONDecode = function() error("JSON is unavailable in this mock") end,
+            }
+        end
         error("Unexpected service " .. Name)
     end,
 }

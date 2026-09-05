@@ -50,4 +50,74 @@ try {
 } finally {
     Remove-Item -LiteralPath $taskGenerated -ErrorAction SilentlyContinue
 }
+$taskSaveManagerSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'addons/SaveManager.lua'))
+$taskSaveManagerSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'SaveManager.spec.luau'))
+$taskSaveSource = @'
+local storedJson = {}
+local jsonSequence = 0
+local files = {}
+local folders = {}
+local function typeof(Value)
+    return type(Value) == "table" and Value._type or type(Value)
+end
+local UDim2 = {}
+function UDim2.new(XScale, XOffset, YScale, YOffset)
+    return { _type = "UDim2", X = { Scale = XScale, Offset = XOffset }, Y = { Scale = YScale, Offset = YOffset } }
+end
+local Color3 = {}
+function Color3.fromHex(Hex)
+    Hex = tostring(Hex):gsub("#", "")
+    assert(Hex:match("^[%da-fA-F][%da-fA-F][%da-fA-F][%da-fA-F][%da-fA-F][%da-fA-F]$"), "invalid hex")
+    local Color = { _type = "Color3", Hex = string.upper(Hex) }
+    function Color:ToHex() return self.Hex end
+    return Color
+end
+local HttpService = {}
+function HttpService:JSONEncode(Value)
+    jsonSequence += 1
+    local Key = "json:" .. tostring(jsonSequence)
+    storedJson[Key] = Value
+    return Key
+end
+function HttpService:JSONDecode(Value)
+    assert(storedJson[Value], "invalid json")
+    return storedJson[Value]
+end
+local game = { GetService = function(_, Name) assert(Name == "HttpService"); return HttpService end }
+local function cloneref(Value) return Value end
+local function isfolder(Path) return folders[Path] == true end
+local function isfile(Path) return files[Path] ~= nil end
+local function listfiles(Path)
+    local Result = {}
+    local Prefix = Path .. "/"
+    for FilePath in files do
+        if string.sub(FilePath, 1, #Prefix) == Prefix and not string.find(string.sub(FilePath, #Prefix + 1), "/", 1, true) then
+            table.insert(Result, FilePath)
+        end
+    end
+    return Result
+end
+local function makefolder(Path) folders[Path] = true end
+local function readfile(Path) assert(files[Path] ~= nil, "missing file"); return files[Path] end
+local function writefile(Path, Content) files[Path] = Content end
+local function delfile(Path) assert(files[Path] ~= nil, "missing file"); files[Path] = nil end
+local globalEnvironment = {}
+local function getgenv() return globalEnvironment end
+'@
+$taskSaveSource += "`nlocal SaveManager = (function()`n$taskSaveManagerSource`nend)()`n"
+$taskSaveSource += "local Run = (function()`n$taskSaveManagerSpec`nend)()`nRun(SaveManager, { files = files, folders = folders, storedJson = storedJson, UDim2 = UDim2, Color3 = Color3 })`n"
+$taskThemeManagerSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'addons/ThemeManager.lua'))
+$taskThemeManagerSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'ThemeManagerPersistence.spec.luau'))
+$taskSaveSource += "local ThemeManager = (function()`n$taskThemeManagerSource`nend)()`n"
+$taskSaveSource += "local RunThemes = (function()`n$taskThemeManagerSpec`nend)()`nRunThemes(ThemeManager, { files = files, folders = folders, Color3 = Color3 })`n"
+$taskSaveGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-save-manager-" + [guid]::NewGuid().ToString() + '.luau')
+try {
+    [IO.File]::WriteAllText($taskSaveGenerated, $taskSaveSource)
+    & $Runtime $taskSaveGenerated
+    if ($LASTEXITCODE -ne 0) {
+        throw 'SaveManager regression tests failed'
+    }
+} finally {
+    Remove-Item -LiteralPath $taskSaveGenerated -ErrorAction SilentlyContinue
+}
 Write-Output "Compiled $($taskFiles.Count) Luau files"

@@ -23,6 +23,7 @@ end
 
 
 local SaveManager = {
+    ReleaseVersion = "0.0.1-release-13",
     Library = nil,
     FileSystemAvailable = FileSystemAvailable,
 
@@ -32,9 +33,12 @@ local SaveManager = {
     Ignore = {},
     LoadingOrder = {},
     UseLoadingOrder = false,
+    Adapters = {},
 
     AutoloadConfig = nil
 }
+
+local ConfigSchemaVersion = 2
 
 local ThemeOptionPrefix = "ThemeManager_"
 
@@ -43,7 +47,9 @@ local function IsThemeManagerOption(OptionId: any): boolean
 end
 
 function SaveManager:SetLibrary(Library)
+    assert(typeof(Library) == "table", "SaveManager requires a library table")
     SaveManager.Library = Library
+    return SaveManager
 end
 
 
@@ -227,6 +233,25 @@ local ElementParser = {}; do
         end,
         true
     )
+
+    CreateParser(
+        "Custom", "Adapters",
+        function(Index: string, Adapter: any)
+            return { value = Adapter.Save() }
+        end,
+        function(_, Data: any)
+            local Adapter = SaveManager.Adapters[Data.idx]
+            if not Adapter then return end
+            if Adapter.Validate then
+                local Valid, ErrorMessage = Adapter.Validate(Data.value)
+                if Valid == false then
+                    error(ErrorMessage or "custom value was rejected")
+                end
+            end
+            Adapter.Load(Data.value)
+        end,
+        true
+    )
 end
 
 
@@ -251,11 +276,23 @@ local function IsValidConfigName(Name: any): boolean
 end
 
 local function IsValidFolderPath(Name: string): boolean
-    return typeof(Name) == "string" and (
-        Trim(Name) ~= "" and 
-        not Name:match("^%s*$") and 
-        not Name:find('[<>:"|%?%*%z]')
-    )
+    if typeof(Name) ~= "string" then
+        return false
+    end
+    local Normalized = Trim(Name):gsub("\\", "/"):gsub("/+", "/"):gsub("^/", ""):gsub("/$", "")
+    if Normalized == "" or Normalized:find('[<>:"|%?%*%z]') then
+        return false
+    end
+    for Segment in string.gmatch(Normalized, "[^/]+") do
+        if Segment == "." or Segment == ".." or not IsValidLeafName(Segment) then
+            return false
+        end
+    end
+    return true
+end
+
+local function NormalizeFolderPath(Name: string): string
+    return Trim(Name):gsub("\\", "/"):gsub("/+", "/"):gsub("^/", ""):gsub("/$", "")
 end
 
 
@@ -312,26 +349,95 @@ local function GetAutoloadPath(): false | string
     return if CurrentSettingsPath == false then false else string.format("%s/autoload.txt", CurrentSettingsPath)
 end
 
+local function WriteVerified(Path: string, Content: string): (boolean, string?)
+    local TemporaryPath = Path .. ".tmp"
+    local HadPrevious = isfile(Path)
+    local PreviousContent = nil
+    if HadPrevious then
+        local ReadOld, OldContent = pcall(readfile, Path)
+        if ReadOld and typeof(OldContent) == "string" then
+            PreviousContent = OldContent
+        end
+    end
+
+    local WroteTemporary, TemporaryError = pcall(writefile, TemporaryPath, Content)
+    if not WroteTemporary then
+        return false, "Failed to write temporary file: " .. tostring(TemporaryError)
+    end
+
+    local ReadTemporary, TemporaryContent = pcall(readfile, TemporaryPath)
+    if not ReadTemporary or TemporaryContent ~= Content then
+        pcall(delfile, TemporaryPath)
+        return false, "Temporary file verification failed"
+    end
+
+    local WroteFinal, FinalError = pcall(writefile, Path, Content)
+    if not WroteFinal then
+        pcall(delfile, TemporaryPath)
+        return false, "Failed to write file: " .. tostring(FinalError)
+    end
+
+    local ReadFinal, FinalContent = pcall(readfile, Path)
+    if not ReadFinal or FinalContent ~= Content then
+        if PreviousContent ~= nil then
+            pcall(writefile, Path, PreviousContent)
+        elseif not HadPrevious and isfile(Path) then
+            pcall(delfile, Path)
+        end
+        pcall(delfile, TemporaryPath)
+        return false, "File verification failed"
+    end
+
+    pcall(delfile, TemporaryPath)
+    return true
+end
+
 
 function SaveManager:SetLoadingOrder(Enabled: boolean, Order: {string}?)
     SaveManager.UseLoadingOrder = Enabled == true
     SaveManager.LoadingOrder = typeof(Order) == "table" and Order or SaveManager.LoadingOrder
+    return SaveManager
 end
 
-function SaveManager:SetIgnoreIndexes(Indexes: {string}?)
+function SaveManager:SetIgnoreIndexes(Indexes: {string}?, Replace: boolean?)
     assert(typeof(Indexes) == "table", "Expected table, got " .. typeof(Indexes))
 
-    for _, Index in Indexes do
-        SaveManager.Ignore[Index] = true
+    if Replace == true then
+        table.clear(SaveManager.Ignore)
     end
+
+    for _, Index in Indexes do
+        if typeof(Index) == "string" or typeof(Index) == "number" then
+            SaveManager.Ignore[Index] = true
+        end
+    end
+
+    return SaveManager
+end
+
+function SaveManager:RegisterAdapter(Index: string, Adapter: any)
+    assert(typeof(Index) == "string" and Index ~= "", "Adapter index must be a non-empty string")
+    assert(typeof(Adapter) == "table", "Adapter must be a table")
+    assert(typeof(Adapter.Save) == "function", "Adapter.Save must be a function")
+    assert(typeof(Adapter.Load) == "function", "Adapter.Load must be a function")
+    SaveManager.Adapters[Index] = Adapter
+    return SaveManager
+end
+
+function SaveManager:UnregisterAdapter(Index: string)
+    SaveManager.Adapters[Index] = nil
+    return SaveManager
 end
 
 function SaveManager:IgnoreThemeSettings()
     SaveManager:SetIgnoreIndexes({
         "BackgroundColor", "MainColor", "TopBarColor", "SurfaceColor", "RaisedColor", "ElementColor", "HoverColor", "AccentColor", "AccentSoftColor", "OutlineColor", "FontColor", "MutedFontColor", "ShadowColor", "WarningColor", "DestructiveColor", "FontFace", "BackgroundImage",
         "ThemeManager_BackgroundColor", "ThemeManager_MainColor", "ThemeManager_TopBarColor", "ThemeManager_SurfaceColor", "ThemeManager_RaisedColor", "ThemeManager_ElementColor", "ThemeManager_HoverColor", "ThemeManager_AccentColor", "ThemeManager_AccentSoftColor", "ThemeManager_OutlineColor", "ThemeManager_FontColor", "ThemeManager_MutedFontColor", "ThemeManager_ShadowColor", "ThemeManager_WarningColor", "ThemeManager_DestructiveColor", "ThemeManager_FontFace", "ThemeManager_BackgroundImage",
-        "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName"
+        "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName",
+        "ThemeManager_Radius_Window", "ThemeManager_Radius_Card", "ThemeManager_Radius_Control", "ThemeManager_Radius_Indicator",
+        "ThemeManager_ScrollbarThickness", "ThemeManager_Effect_Shadows", "ThemeManager_Effect_Dividers", "ThemeManager_Effect_NavigationIndicator", "ThemeManager_Effect_AccentScrollbars", "ThemeManager_ReducedMotion"
     })
+    return SaveManager
 end
 
 
@@ -407,51 +513,77 @@ end
 function SaveManager:SetFolder(Folder: string)
     assert(IsValidFolderPath(Folder), "Invalid path provided")
 
-    SaveManager.Folder = Folder
+    SaveManager.Folder = NormalizeFolderPath(Folder)
     SaveManager.AutoloadConfig = nil
     SaveManager:BuildFolderTree()
+    return SaveManager
 end
 
 function SaveManager:SetSubFolder(SubFolder: string)
+    if IsStringEmpty(SubFolder) then
+        SaveManager.SubFolder = ""
+        SaveManager.AutoloadConfig = nil
+        SaveManager:BuildFolderTree()
+        return SaveManager
+    end
     assert(IsValidFolderPath(SubFolder), "Invalid path provided")
 
-    SaveManager.SubFolder = SubFolder
+    SaveManager.SubFolder = NormalizeFolderPath(SubFolder)
     SaveManager.AutoloadConfig = nil
     SaveManager:BuildFolderTree()
+    return SaveManager
 end
 
 
 function SaveManager:RefreshConfigList()
+    if not SaveManager.FileSystemAvailable then
+        return {}
+    end
+
     local SettingsPath = GetCurrentSettingsPath()
     if SettingsPath == false then
         return {}
     end
 
+    local FolderReady = SaveManager:CheckFolderTree()
+    if not FolderReady then
+        return {}
+    end
+
     local SuccessList, Files = pcall(listfiles, SettingsPath)
     if not (SuccessList and typeof(Files) == "table") then
-        SaveManager.Library:Notify(string.format("Failed to load config list: %s", tostring(Files)))
+        if SaveManager.Library and SaveManager.Library.Notify then
+            SaveManager.Library:Notify(string.format("Failed to load config list: %s", tostring(Files)))
+        end
         return {}
     end
 
     local FileNames = {}
     for _, FilePath in Files do
-        local RawFileName = FilePath:match("(.+)%..+$")
-        if not RawFileName then continue end
-
-        local Position = RawFileName:gsub("\\", "/"):find("/[^/]*$")
-        local FileName = Position and RawFileName:sub(Position + 1) or RawFileName
+        local Normalized = tostring(FilePath):gsub("\\", "/")
+        local FileName = Normalized:match("([^/]+)%.json$")
         if not IsValidConfigName(FileName) then continue end
 
         table.insert(FileNames, FileName)
     end
+
+    table.sort(FileNames, function(First, Second)
+        return string.lower(First) < string.lower(Second)
+    end)
 
     return FileNames
 end
 
 function SaveManager:SaveJSON(ConfigName)
     local Library = SaveManager.Library
+    if not Library then
+        return "", false, "Library is not set"
+    end
+
     local IgnoreIndexes = SaveManager.Ignore
     local CurrentData = {
+        schema = ConfigSchemaVersion,
+        libraryVersion = tostring(Library.ReleaseVersion or "unknown"),
         timestamp = os.date("%d.%m.%Y %H:%M:%S"),
         name = ConfigName or "",
 
@@ -462,7 +594,15 @@ function SaveManager:SaveJSON(ConfigName)
         } else nil
     }
 
-    
+    local function Append(Parser, Index, Value, ...)
+        local Success, Data = pcall(Parser.Save, Index, Value, ...)
+        if not Success then
+            return false, string.format("Failed to save %q: %s", tostring(Index), tostring(Data))
+        end
+        table.insert(CurrentData.objects, Data)
+        return true
+    end
+
     for Index, Toggle in Library.Toggles do
         if not Toggle.Type then continue end
         if IgnoreIndexes[Index] then continue end
@@ -470,7 +610,8 @@ function SaveManager:SaveJSON(ConfigName)
         local Parser = ElementParser[Toggle.Type]
         if not Parser then continue end
 
-        table.insert(CurrentData.objects, Parser.Save(Index, Toggle))
+        local Success, ErrorMessage = Append(Parser, Index, Toggle)
+        if not Success then return "", false, ErrorMessage end
     end
 
     
@@ -481,7 +622,8 @@ function SaveManager:SaveJSON(ConfigName)
         local Parser = ElementParser[Option.Type]
         if not Parser then continue end
 
-        table.insert(CurrentData.objects, Parser.Save(Index, Option))
+        local Success, ErrorMessage = Append(Parser, Index, Option)
+        if not Success then return "", false, ErrorMessage end
     end
 
     
@@ -494,13 +636,26 @@ function SaveManager:SaveJSON(ConfigName)
             local Parser = ElementParser.Groupbox
             if not Parser then continue end
 
-            table.insert(CurrentData.objects, Parser.Save(Index, Groupbox, TabIndex))
+            local Success, ErrorMessage = Append(Parser, Index, Groupbox, TabIndex)
+            if not Success then return "", false, ErrorMessage end
         end
     end
 
+    for Index, Adapter in SaveManager.Adapters do
+        if IgnoreIndexes[Index] then continue end
+        local Success, ErrorMessage = Append(ElementParser.Custom, Index, Adapter)
+        if not Success then return "", false, ErrorMessage end
+    end
+
+    table.sort(CurrentData.objects, function(First, Second)
+        local FirstKey = string.format("%s:%s", tostring(First.type), tostring(First.idx))
+        local SecondKey = string.format("%s:%s", tostring(Second.type), tostring(Second.idx))
+        return FirstKey < SecondKey
+    end)
+
     local SuccessEncode, EncodedData = pcall(HttpService.JSONEncode, HttpService, CurrentData)
     if not SuccessEncode then
-        return "", false, "Failed to encode data"
+        return "", false, "Failed to encode data: " .. tostring(EncodedData)
     end
 
     return EncodedData, true
@@ -526,15 +681,14 @@ function SaveManager:Save(ConfigName: string): (boolean, string?)
         return false, EncodeErrorMessage
     end
 
-    local SuccessWrite, ErrorMessage = pcall(writefile, ConfigPath, EncodedData)
-    if not SuccessWrite then
-        return false, "Failed to write config file: " .. tostring(ErrorMessage)
-    end
-
-    return true
+    return WriteVerified(ConfigPath, EncodedData)
 end
 
-function SaveManager:LoadJSON(Content: string)
+function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
+    if not SaveManager.Library then
+        return false, "Library is not set"
+    end
+
     if IsStringEmpty(Content) then
         return false, "No JSON provided"
     end
@@ -542,6 +696,10 @@ function SaveManager:LoadJSON(Content: string)
     local SuccessDecode, Decoded = pcall(HttpService.JSONDecode, HttpService, Content)
     if not SuccessDecode or typeof(Decoded) ~= "table" or typeof(Decoded.objects) ~= "table" then
         return false, "Failed to decode config data"
+    end
+
+    if Decoded.schema ~= nil and (typeof(Decoded.schema) ~= "number" or Decoded.schema < 1 or Decoded.schema > ConfigSchemaVersion) then
+        return false, "Unsupported config schema"
     end
 
     local function ValidateObject(ObjectIndex: any, Option: any): (boolean, string?)
@@ -583,6 +741,7 @@ function SaveManager:LoadJSON(Content: string)
             if not IsColorValid or Option.transparency ~= nil and typeof(Option.transparency) ~= "number" then
                 return false, string.format("ColorPicker %q: invalid color data", tostring(Option.idx))
             end
+            Option.transparency = math.clamp(tonumber(Option.transparency) or 0, 0, 1)
         elseif Option.type == "KeyPicker" then
             if Option.key ~= nil and typeof(Option.key) ~= "string" or Option.mode ~= nil and typeof(Option.mode) ~= "string" or Option.modifiers ~= nil and typeof(Option.modifiers) ~= "table" or Option.toggled ~= nil and typeof(Option.toggled) ~= "boolean" then
                 return false, string.format("KeyPicker %q: invalid keybind data", tostring(Option.idx))
@@ -595,12 +754,21 @@ function SaveManager:LoadJSON(Content: string)
             if typeof(Option.idx) ~= "string" or typeof(Option.tabIdx) ~= "string" or Option.collapsed ~= nil and typeof(Option.collapsed) ~= "boolean" then
                 return false, string.format("Groupbox %q: invalid groupbox data", tostring(Option.idx))
             end
+        elseif Option.type == "Custom" then
+            local Adapter = SaveManager.Adapters[Option.idx]
+            if Adapter and Adapter.Validate then
+                local SuccessValidate, Valid, ErrorMessage = pcall(Adapter.Validate, Option.value)
+                if not SuccessValidate or Valid == false then
+                    return false, string.format("Custom %q: %s", tostring(Option.idx), tostring(if SuccessValidate then ErrorMessage or "invalid value" else Valid))
+                end
+            end
         end
 
         return true
     end
 
     local Objects = {}
+    local ObjectKeys = {}
     for ObjectIndex, Option in Decoded.objects do
         local Valid, ValidationError = ValidateObject(ObjectIndex, Option)
         if not Valid then
@@ -608,6 +776,11 @@ function SaveManager:LoadJSON(Content: string)
         end
 
         if Option.type ~= nil then
+            local ObjectKey = string.format("%s:%s", tostring(Option.type), tostring(Option.idx))
+            if ObjectKeys[ObjectKey] then
+                return false, "Failed to load config data: duplicate object " .. ObjectKey
+            end
+            ObjectKeys[ObjectKey] = true
             table.insert(Objects, Option)
         end
     end
@@ -635,11 +808,22 @@ function SaveManager:LoadJSON(Content: string)
     local LoadingOrder = SaveManager.LoadingOrder
     local IgnoreIndexes = SaveManager.Ignore
     local LoadErrors = {}
+    local LoadReport = { Applied = 0, Skipped = 0, Total = #Objects }
+    local RollbackJSON = nil
+    if not SkipRollback then
+        local Snapshot, SnapshotReady = SaveManager:SaveJSON("rollback")
+        if SnapshotReady then
+            RollbackJSON = Snapshot
+        end
+    end
 
     if SaveManager.UseLoadingOrder == true and typeof(LoadingOrder) == "table" then
         table.sort(Objects, function(a, b)
-            local aIndex = table.find(LoadingOrder, a.type) or math.huge
-            local bIndex = table.find(LoadingOrder, b.type) or math.huge
+            local aIndex = table.find(LoadingOrder, a.idx) or table.find(LoadingOrder, a.type) or math.huge
+            local bIndex = table.find(LoadingOrder, b.idx) or table.find(LoadingOrder, b.type) or math.huge
+            if aIndex == bIndex then
+                return string.format("%s:%s", tostring(a.type), tostring(a.idx)) < string.format("%s:%s", tostring(b.type), tostring(b.idx))
+            end
             return aIndex < bIndex
         end)
     end
@@ -655,7 +839,7 @@ function SaveManager:LoadJSON(Content: string)
         end
         Library.KeybindFrame.Position = KeybindMenuPosition or Library.KeybindFrame.Position
         
-        local KeybindMenuToggle = Library.Options and Library.Options.KeybindMenuOpen
+        local KeybindMenuToggle = Library.Toggles and Library.Toggles.KeybindMenuOpen
         if KeybindMenuToggle then
             KeybindMenuToggle:SetValue(IsVisible)
         end
@@ -691,17 +875,43 @@ function SaveManager:LoadJSON(Content: string)
     
     for _ObjectIndex, Option in Objects do
         if not Option.type then continue end
-        if IgnoreIndexes[Option.idx] then continue end
-        if SkipThemeOptions and IsThemeManagerOption(Option.idx) then continue end
+        if IgnoreIndexes[Option.idx] then
+            LoadReport.Skipped += 1
+            continue
+        end
+        if SkipThemeOptions and IsThemeManagerOption(Option.idx) then
+            LoadReport.Skipped += 1
+            continue
+        end
 
         local Parser = ElementParser[Option.type]
-        if not Parser then continue end
+        if not Parser then
+            LoadReport.Skipped += 1
+            continue
+        end
+
+        local TargetExists = false
+        if Option.type == "Toggle" then
+            TargetExists = Library.Toggles and Library.Toggles[Option.idx] ~= nil
+        elseif Option.type == "Groupbox" then
+            local Tab = Library.Tabs and Library.Tabs[Option.tabIdx]
+            TargetExists = Tab and Tab.Groupboxes and Tab.Groupboxes[Option.idx] ~= nil
+        elseif Option.type == "Custom" then
+            TargetExists = SaveManager.Adapters[Option.idx] ~= nil
+        else
+            TargetExists = Library.Options and Library.Options[Option.idx] ~= nil
+        end
+        if not TargetExists then
+            LoadReport.Skipped += 1
+            continue
+        end
 
         local SuccessLoad, LoadError = pcall(Parser.Load, Option.idx, Option)
         if not SuccessLoad then
             table.insert(LoadErrors, string.format("%s %q: %s", tostring(Option.type), tostring(Option.idx), tostring(LoadError)))
             continue
         end
+        LoadReport.Applied += 1
 
         if ThemeLoadStarted and IsThemeManagerOption(Option.idx) then
             local SuccessMark, MarkError = pcall(ThemeManager.MarkConfigOptionLoaded, ThemeManager, Option.idx)
@@ -721,10 +931,16 @@ function SaveManager:LoadJSON(Content: string)
     end
 
     if #LoadErrors > 0 then
-        return false, "Failed to load config data: " .. table.concat(LoadErrors, "; ")
+        if RollbackJSON then
+            local RolledBack, RollbackError = SaveManager:LoadJSON(RollbackJSON, true)
+            if not RolledBack then
+                table.insert(LoadErrors, "rollback: " .. tostring(RollbackError))
+            end
+        end
+        return false, "Failed to load config data: " .. table.concat(LoadErrors, "; "), LoadReport
     end
 
-    return true
+    return true, nil, LoadReport
 end
 
 function SaveManager:Load(ConfigName: string): (boolean, string?)
@@ -763,13 +979,20 @@ function SaveManager:Delete(ConfigName: string): (boolean | string?)
         return false, "Config file does not exist"
     end
 
+    local AutoloadConfig = SaveManager.AutoloadConfig
+    if not AutoloadConfig then
+        local SavedAutoload, HasAutoload = SaveManager:GetAutoloadConfig()
+        if HasAutoload then AutoloadConfig = SavedAutoload end
+    end
+
     local SuccessDelete, ErrorMessage = pcall(delfile, ConfigPath)
     if not SuccessDelete then
         return false, "Failed to delete config file: " .. tostring(ErrorMessage)
     end
 
-    if ConfigName == SaveManager.AutoloadConfig then
-        SaveManager:DeleteAutoLoadConfig()
+    if ConfigName == AutoloadConfig then
+        local Cleared, ClearError = SaveManager:DeleteAutoLoadConfig()
+        if not Cleared then return false, "Config deleted, but autoload cleanup failed: " .. tostring(ClearError) end
     end
 
     return true
@@ -777,6 +1000,7 @@ end
 
 
 function SaveManager:GetAutoloadConfig(): (string, boolean, string?)
+    SaveManager.AutoloadConfig = nil
     local FolderReady, FolderError = SaveManager:CheckFolderTree()
     if not FolderReady then
         return "none", false, FolderError or "Failed to prepare config folder"
@@ -833,32 +1057,35 @@ function SaveManager:SaveAutoloadConfig(ConfigName: string): (boolean, string?)
         return false, "Config does not exist"
     end
 
-    local SuccessWrite, ErrorMessage = pcall(writefile, AutoloadPath, ConfigName)
-    if not SuccessWrite then
-        return false, ErrorMessage
-    end
+    local SuccessWrite, ErrorMessage = WriteVerified(AutoloadPath, ConfigName)
+    if not SuccessWrite then return false, ErrorMessage end
 
     SaveManager.AutoloadConfig = ConfigName
     return true
 end
 
 function SaveManager:LoadAutoloadConfig()
+    if not SaveManager.Library then return false, "Library is not set" end
+    local function Notify(Message)
+        if typeof(SaveManager.Library.Notify) == "function" then SaveManager.Library:Notify(Message) end
+    end
     local ConfigName, Success, FetchErrorMessage = SaveManager:GetAutoloadConfig()
     if not Success or FetchErrorMessage then
-        if FetchErrorMessage ~= "Autoload config is not set" then
-            SaveManager.Library:Notify(string.format("Failed to load autoload config: %s", FetchErrorMessage))
+        if FetchErrorMessage == "Autoload config is not set" then
+            return true
         end
-
-        return
+        Notify(string.format("Failed to load autoload config: %s", FetchErrorMessage))
+        return false, FetchErrorMessage
     end
 
     local SuccessLoad, LoadErrorMessage = SaveManager:Load(ConfigName)
     if not SuccessLoad then
-        SaveManager.Library:Notify(string.format("Failed to load autoload config: %s", LoadErrorMessage))
-        return
+        Notify(string.format("Failed to load autoload config: %s", LoadErrorMessage))
+        return false, LoadErrorMessage
     end
 
-    SaveManager.Library:Notify(string.format("Successfully loaded autoload config %q", ConfigName))
+    Notify(string.format("Successfully loaded autoload config %q", ConfigName))
+    return true
 end
 
 function SaveManager:DeleteAutoLoadConfig(): (boolean, string?)
@@ -873,7 +1100,8 @@ function SaveManager:DeleteAutoLoadConfig(): (boolean, string?)
     end
 
     if not isfile(AutoloadPath) then
-        return false, "Autoload config is not set"
+        SaveManager.AutoloadConfig = nil
+        return true
     end
 
     local SuccessDelete, ErrorMessage = pcall(delfile, AutoloadPath)
@@ -934,8 +1162,10 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
     
     local ConfigNameInput, ConfigList, ConfigJSONInput, AutoloadConfigLabel
     local function RefreshList()
-        ConfigList:SetValues(SaveManager:RefreshConfigList())
-        ConfigList:SetValue(nil)
+        local Previous = ConfigList.Value
+        local Values = SaveManager:RefreshConfigList()
+        ConfigList:SetValues(Values)
+        ConfigList:SetValue(table.find(Values, Previous) and Previous or nil)
     end
 
     local function RefreshAutoloadConfigLabel()
@@ -951,7 +1181,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
     })
 
     ConfigurationBox:AddButton("Create config", function()
-        local ConfigName = ConfigNameInput.Value
+        local ConfigName = Trim(ConfigNameInput.Value)
         if IsStringEmpty(ConfigName) then
             SaveManager.Library:Notify("Configuration name cannot be empty.")
             return

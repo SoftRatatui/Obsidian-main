@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-12",
+    ReleaseVersion = "0.0.1-release-13",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -280,6 +280,18 @@ local Library = {
     NotifySide = "Right",
     NotifyTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     NotifyCloseTweenInfo = TweenInfo.new(0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    NotificationStyle = {
+        Width = 320,
+        Margin = 8,
+        Gap = 8,
+        Padding = 10,
+        CornerRadius = 7,
+        MaxVisible = 6,
+        DefaultDuration = 5,
+        Accent = true,
+        ShowProgress = true,
+        Dismissible = true,
+    },
 
     
     Dialogues = {},
@@ -499,6 +511,7 @@ local Library = {
 	ColorRevision = 0,
 	Scales = {},
 	ScalesOffset = {},
+	ScaleMultipliers = setmetatable({}, { __mode = "k" }),
 
     
     ImageManager = CustomImageManager,
@@ -732,7 +745,7 @@ function Library:SetFontByName(Name: string): boolean
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-12-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-13-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -2375,11 +2388,13 @@ function Library:SetDPIScale(DPIScale: number)
         if not UIScale or not UIScale.Parent then
             if UIScale then
                 Library.ScalesOffset[UIScale] = nil
+                Library.ScaleMultipliers[UIScale] = nil
             end
             table.remove(Library.Scales, Index)
         else
             Library:CancelTween(UIScale, "WindowVisibilityScale")
-            UIScale.Scale = Library.DPIScale - (tonumber(Library.ScalesOffset[UIScale]) or 0)
+            local BaseScale = Library.DPIScale - (tonumber(Library.ScalesOffset[UIScale]) or 0)
+            UIScale.Scale = BaseScale * (tonumber(Library.ScaleMultipliers[UIScale]) or 1)
         end
     end
 
@@ -2791,11 +2806,12 @@ end
 local NotificationArea
 local NotifyOrder = {}
 do
+    local Style = Library.NotificationStyle
     NotificationArea = New("Frame", {
         AnchorPoint = Vector2.new(1, 0),
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -6, 0, 6),
-        Size = UDim2.new(0, 300, 1, -6),
+        Position = UDim2.new(1, -Style.Margin, 0, Style.Margin),
+        Size = UDim2.new(0, Style.Width, 1, -Style.Margin * 2),
         Parent = ScreenGui,
     })
     table.insert(
@@ -3784,7 +3800,7 @@ function Library:CreateAddonWindow(Info)
         Padding = UDim.new(0, Style.Gap),
         Parent = Content,
     })
-    New("UIPadding", {
+    local ContentPadding = New("UIPadding", {
         PaddingBottom = UDim.new(0, Style.Padding),
         PaddingLeft = UDim.new(0, Style.Padding),
         PaddingRight = UDim.new(0, Style.Padding),
@@ -3898,6 +3914,7 @@ function Library:CreateAddonWindow(Info)
         local Viewport = GetViewportSize()
         Root.Size = UDim2.fromOffset(math.min(Width, math.max(1, Viewport.X - 16)), math.min(Height, math.max(1, Viewport.Y - 16)))
         ClampGuiToViewport(Root, 8)
+        Host:RefreshLayout()
         return Host
     end
 
@@ -3921,6 +3938,7 @@ function Library:CreateAddonWindow(Info)
         end
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
+            ClipsDescendants = true,
             LayoutOrder = ModuleSequence,
             Size = UDim2.new(1, 0, 0, math.max(1, tonumber(ModuleHeight) or Object.Size.Y.Offset)),
             Parent = Content,
@@ -3932,7 +3950,10 @@ function Library:CreateAddonWindow(Info)
             Holder = Holder,
             Root = Object,
             Controller = Controller,
+            FitHeight = false,
+            Visible = true,
         }
+        Host:RefreshLayout()
         return Modules[Key]
     end
 
@@ -3950,6 +3971,7 @@ function Library:CreateAddonWindow(Info)
         local ModuleHeight = math.max(1, tonumber(AddonInfo.Height) or tonumber(AddonInfo.ModuleHeight) or 280)
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
+            ClipsDescendants = true,
             LayoutOrder = ModuleSequence,
             Size = UDim2.new(1, 0, 0, ModuleHeight),
             Parent = Content,
@@ -3968,9 +3990,10 @@ function Library:CreateAddonWindow(Info)
             Controller = Controller,
             Root = type(Controller) == "table" and Controller.Root or nil,
             FitHeight = AddonInfo.FitHeight == true,
+            Visible = true,
         }
         if Modules[Key].FitHeight then
-            Host:SetModuleHeight(Key, math.max(1, Content.AbsoluteSize.Y - Style.Padding * 2))
+            Host:RefreshLayout()
         elseif type(Controller) == "table" and tonumber(Controller.Height) then
             Holder.Size = UDim2.new(1, 0, 0, Controller.Height)
         end
@@ -3992,6 +4015,7 @@ function Library:CreateAddonWindow(Info)
             Module.Holder:Destroy()
         end
         Modules[Idx] = nil
+        Host:RefreshLayout()
         return true
     end
 
@@ -4011,6 +4035,89 @@ function Library:CreateAddonWindow(Info)
             Module.Root.Size = UDim2.fromScale(1, 1)
         end
         return true
+    end
+
+    function Host:GetModule(Idx)
+        local Module = Modules[Idx]
+        return Module and (Module.Controller or Module.Root) or nil
+    end
+
+    function Host:GetModules()
+        local Result = {}
+        for Idx, Module in Modules do
+            Result[Idx] = Module.Controller or Module.Root
+        end
+        return Result
+    end
+
+    function Host:SetModuleVisible(Idx, Visible)
+        local Module = Modules[Idx]
+        if not Module then return false end
+        Module.Visible = Visible == true
+        Module.Holder.Visible = Module.Visible
+        if Module.Controller and type(Module.Controller.SetVisible) == "function" then
+            Module.Controller:SetVisible(Module.Visible)
+        elseif Module.Root then
+            Module.Root.Visible = Module.Visible
+        end
+        Host:RefreshLayout()
+        return true
+    end
+
+    function Host:SetModuleOrder(Idx, Order)
+        local Module = Modules[Idx]
+        if not Module then return false end
+        Module.Holder.LayoutOrder = math.floor(tonumber(Order) or Module.Holder.LayoutOrder)
+        return true
+    end
+
+    function Host:SetModuleFitHeight(Idx, Enabled)
+        local Module = Modules[Idx]
+        if not Module then return false end
+        Module.FitHeight = Enabled == true
+        Host:RefreshLayout()
+        return true
+    end
+
+    function Host:SetContentSpacing(Padding, Gap)
+        Style.Padding = math.clamp(math.floor(tonumber(Padding) or Style.Padding), 0, 32)
+        Style.Gap = math.clamp(math.floor(tonumber(Gap) or Style.Gap), 0, 24)
+        ContentPadding.PaddingBottom = UDim.new(0, Style.Padding)
+        ContentPadding.PaddingLeft = UDim.new(0, Style.Padding)
+        ContentPadding.PaddingRight = UDim.new(0, Style.Padding)
+        ContentPadding.PaddingTop = UDim.new(0, Style.Padding)
+        ContentLayout.Padding = UDim.new(0, Style.Gap)
+        Host:RefreshLayout()
+        return Host
+    end
+
+    function Host:RefreshLayout()
+        if Host.Destroyed then return Host end
+        local VisibleCount = 0
+        local FitCount = 0
+        local FixedHeight = 0
+        for _, Module in Modules do
+            if Module.Visible ~= false and Module.Holder.Visible then
+                VisibleCount += 1
+                if Module.FitHeight then
+                    FitCount += 1
+                else
+                    FixedHeight += Module.Holder.Size.Y.Offset
+                end
+            end
+        end
+        if FitCount == 0 then return Host end
+        local Available = math.max(
+            1,
+            math.floor(Content.AbsoluteSize.Y) - Style.Padding * 2 - FixedHeight - math.max(0, VisibleCount - 1) * Style.Gap
+        )
+        local FitHeight = math.max(1, math.floor(Available / FitCount))
+        for Key, Module in Modules do
+            if Module.FitHeight and Module.Visible ~= false and Module.Holder.Visible then
+                Host:SetModuleHeight(Key, FitHeight)
+            end
+        end
+        return Host
     end
 
     function Host:Destroy()
@@ -4041,14 +4148,7 @@ function Library:CreateAddonWindow(Info)
         end))
     end
     table.insert(Connections, Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if Host.Destroyed then
-            return
-        end
-        for Key, Module in Modules do
-            if Module.FitHeight then
-                Host:SetModuleHeight(Key, math.max(1, math.floor(Content.AbsoluteSize.Y) - Style.Padding * 2))
-            end
-        end
+        Host:RefreshLayout()
     end))
     if Info.Draggable ~= false then
         Library:MakeDraggable(Root, Header, true, false)
@@ -4470,6 +4570,7 @@ function Library:AddDraggableLabel(...)
     local AnchorPoint = Vector2.zero
     local TextSize = 15
     local BackgroundColor = "BackgroundColor"
+    local BackgroundTransparency = 0
     local Draggable = true
 
     if typeof(Params) == "table" then
@@ -4480,6 +4581,7 @@ function Library:AddDraggableLabel(...)
         AnchorPoint = Params.AnchorPoint or AnchorPoint
         TextSize = Params.TextSize or TextSize
         BackgroundColor = Params.BackgroundColor or BackgroundColor
+        BackgroundTransparency = math.clamp(tonumber(Params.BackgroundTransparency) or 0, 0, 1)
         Draggable = Params.Draggable ~= false
     elseif typeof(Params) == "string" then
         Text = Params
@@ -4504,6 +4606,7 @@ function Library:AddDraggableLabel(...)
         AnchorPoint = AnchorPoint,
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundColor3 = BackgroundColor,
+        BackgroundTransparency = BackgroundTransparency,
         Size = UDim2.fromOffset(0, 0),
         Position = Position,
         Text = Text or "",
@@ -4512,13 +4615,11 @@ function Library:AddDraggableLabel(...)
         Parent = ScreenGui,
     })
 
-    table.insert(
-        Library.Corners,
-        New("UICorner", {
+    local LabelCorner = New("UICorner", {
             CornerRadius = UDim.new(0, Library.CornerRadius),
             Parent = Label,
         })
-    )
+    table.insert(Library.Corners, LabelCorner)
 
     local Accent
     if Params ~= nil and typeof(Params) == "table" and Params.Accent ~= false then
@@ -4536,23 +4637,24 @@ function Library:AddDraggableLabel(...)
         })
     end
 
-    local BasePadding = Accent and 17 or 12
+    local Spacing = 7
+    local AccentWidth = 2
+    local BasePadding = Accent and Spacing + 10 or Spacing + 5
 
     local Padding = New("UIPadding", {
-        PaddingBottom = UDim.new(0, 7),
+        PaddingBottom = UDim.new(0, Spacing),
         PaddingLeft = UDim.new(0, BasePadding),
-        PaddingRight = UDim.new(0, 12),
-        PaddingTop = UDim.new(0, 7),
+        PaddingRight = UDim.new(0, Spacing + 5),
+        PaddingTop = UDim.new(0, Spacing),
         Parent = Label,
     })
-    table.insert(
-        Library.Scales,
-        New("UIScale", {
+    local LabelScale = New("UIScale", {
             Parent = Label,
         })
-    )
+    table.insert(Library.Scales, LabelScale)
+    Library.ScaleMultipliers[LabelScale] = 1
 
-    Library:AddOutline(Label)
+    local LabelStroke = Library:AddOutline(Label)
     if Draggable then
         Library:MakeDraggable(Label, Label, true)
     end
@@ -4593,7 +4695,7 @@ function Library:AddDraggableLabel(...)
         local IsNotEmpty = Icon and Trim(tostring(Icon)) ~= ""
         local IconInset = BasePadding + 22
         Padding.PaddingLeft = UDim.new(0, (IsNotEmpty and IconPosition == "left") and IconInset or BasePadding)
-        Padding.PaddingRight = UDim.new(0, (IsNotEmpty and IconPosition == "right") and 34 or 12)
+        Padding.PaddingRight = UDim.new(0, (IsNotEmpty and IconPosition == "right") and Spacing + 27 or Spacing + 5)
 
         if IconImage then
             IconImage.AnchorPoint = Vector2.new(IconPosition == "left" and 0 or 1, 0)
@@ -4614,10 +4716,10 @@ function Library:AddDraggableLabel(...)
         if Accent then
             local Height = Library:MatchParity(Inner, math.max(10, Inner - 4))
             Accent.AnchorPoint = Vector2.zero
-            Accent.Size = UDim2.fromOffset(2, Height)
+            Accent.Size = UDim2.fromOffset(AccentWidth, Height)
             Accent.Position = UDim2.new(
                 0,
-                7 - Padding.PaddingLeft.Offset,
+                Spacing - Padding.PaddingLeft.Offset,
                 0,
                 Library:CenterOffset(Inner, Height)
             )
@@ -4632,6 +4734,43 @@ function Library:AddDraggableLabel(...)
         Label.Visible = Visible
     end
 
+    function DraggableLabel:SetStyle(Style)
+        Style = Style or {}
+        if Style.TextSize ~= nil then
+            Label.TextSize = math.clamp(tonumber(Style.TextSize) or Label.TextSize, 9, 28)
+        end
+        if Style.BackgroundTransparency ~= nil then
+            Label.BackgroundTransparency = math.clamp(tonumber(Style.BackgroundTransparency) or Label.BackgroundTransparency, 0, 1)
+        end
+        if Style.OutlineTransparency ~= nil then
+            LabelStroke.Transparency = math.clamp(tonumber(Style.OutlineTransparency) or LabelStroke.Transparency, 0, 1)
+        end
+        if Style.CornerRadius ~= nil then
+            LabelCorner.CornerRadius = UDim.new(0, math.clamp(math.floor(tonumber(Style.CornerRadius) or Library.CornerRadius), 0, 16))
+        end
+        if Style.Scale ~= nil then
+            local Multiplier = math.clamp(tonumber(Style.Scale) or Library.ScaleMultipliers[LabelScale] or 1, 0.5, 2)
+            Library.ScaleMultipliers[LabelScale] = Multiplier
+            local BaseScale = Library.DPIScale - (tonumber(Library.ScalesOffset[LabelScale]) or 0)
+            LabelScale.Scale = BaseScale * Multiplier
+        end
+        if Style.Padding ~= nil then
+            Spacing = math.clamp(math.floor(tonumber(Style.Padding) or Spacing), 2, 20)
+            Padding.PaddingBottom = UDim.new(0, Spacing)
+            Padding.PaddingTop = UDim.new(0, Spacing)
+            BasePadding = Accent and Accent.Visible and Spacing + 10 or Spacing + 5
+        end
+        if Style.Accent ~= nil and Accent then
+            Accent.Visible = Style.Accent == true
+            BasePadding = Accent.Visible and Spacing + 10 or Spacing + 5
+        end
+        if Style.AccentWidth ~= nil and Accent then
+            AccentWidth = math.clamp(math.floor(tonumber(Style.AccentWidth) or AccentWidth), 1, 4)
+        end
+        DraggableLabel:SetIconPosition(IconPosition)
+        return DraggableLabel
+    end
+
     function DraggableLabel:SetPosition(NewPosition: UDim2)
         if Draggable then
             PositionDraggable(Label, NewPosition)
@@ -4644,6 +4783,11 @@ function Library:AddDraggableLabel(...)
     
     DraggableLabel:SetIcon(Icon)
     DraggableLabel.Label = Label
+    DraggableLabel.Accent = Accent
+    DraggableLabel.Stroke = LabelStroke
+    DraggableLabel.Padding = Padding
+    DraggableLabel.Corner = LabelCorner
+    DraggableLabel.Scale = LabelScale
 
     if Draggable and not table.find(Library.DraggableElements, Label) then
         table.insert(Library.DraggableElements, Label)
@@ -5078,6 +5222,16 @@ end
 do
     local WatermarkSide = "Left"
     local WatermarkDraggable = true
+    local WatermarkStyle = {
+        TextSize = 13,
+        BackgroundTransparency = 0,
+        OutlineTransparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
+        CornerRadius = Library:GetDesignToken("Radius.Card", Library.CornerRadius),
+        Padding = 7,
+        Accent = true,
+        AccentWidth = 2,
+        Scale = 1,
+    }
     local WatermarkLabel = Library:AddDraggableLabel({
         Text = "",
         Icon = "activity",
@@ -5089,6 +5243,7 @@ do
     })
     WatermarkLabel:SetVisible(false)
     Library.Watermark = WatermarkLabel
+    Library.WatermarkStyle = WatermarkStyle
     Library.WatermarkSide = WatermarkSide
     Library.WatermarkDraggable = WatermarkDraggable
     WatermarkLabel.Label.Active = true
@@ -5134,8 +5289,9 @@ do
     end
 
     function Library:SetWatermark(Text: string)
-        WatermarkLabel:SetText(Text)
+        WatermarkLabel:SetText(tostring(Text or ""))
         QueueWatermarkClamp()
+        return Library
     end
 
     function Library:SetWatermarkVisibility(Visible: boolean)
@@ -5143,6 +5299,7 @@ do
         if Visible then
             QueueWatermarkClamp()
         end
+        return Library
     end
 
     function Library:SetWatermarkSide(Side: "Left" | "Right")
@@ -5151,13 +5308,36 @@ do
         WatermarkSide = Normalized == "left" and "Left" or "Right"
         Library.WatermarkSide = WatermarkSide
         ApplyWatermarkSide()
+        return Library
     end
 
     function Library:SetWatermarkDraggable(Draggable: boolean)
         WatermarkDraggable = Draggable == true
         Library.WatermarkDraggable = WatermarkDraggable
         WatermarkLabel.Label.Active = WatermarkDraggable
+        return Library
     end
+
+    function Library:SetWatermarkOptions(Info)
+        assert(typeof(Info) == "table", "Watermark options must be a table")
+        for Key, Value in Info do
+            if WatermarkStyle[Key] ~= nil then
+                WatermarkStyle[Key] = Value
+            end
+        end
+        WatermarkLabel:SetStyle(WatermarkStyle)
+        if Info.Text ~= nil then WatermarkLabel:SetText(tostring(Info.Text)) end
+        if Info.Icon ~= nil then WatermarkLabel:SetIcon(Info.Icon) end
+        if Info.IconPosition ~= nil then WatermarkLabel:SetIconPosition(Info.IconPosition) end
+        if Info.Side ~= nil then Library:SetWatermarkSide(Info.Side) end
+        if Info.Draggable ~= nil then Library:SetWatermarkDraggable(Info.Draggable) end
+        if Info.Position ~= nil then WatermarkLabel:SetPosition(Info.Position) end
+        if Info.Visible ~= nil then Library:SetWatermarkVisibility(Info.Visible) end
+        QueueWatermarkClamp()
+        return Library
+    end
+
+    Library.SetWatermarkStyle = Library.SetWatermarkOptions
 
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))
@@ -6936,7 +7116,7 @@ do
 
             Value = Info.Default,
 
-            Transparency = Info.Transparency or 0,
+            Transparency = math.clamp(tonumber(Info.Transparency) or 0, 0, 1),
             Title = Info.Title,
 
             Callback = Info.Callback,
@@ -6947,9 +7127,9 @@ do
         ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib = ColorPicker.Value:ToHSV()
 
         local Holder = New("TextButton", {
-            BackgroundColor3 = ColorPicker.Value,
+            BackgroundColor3 = "RaisedColor",
             ClipsDescendants = true,
-            Size = UDim2.fromOffset(18, 18),
+            Size = UDim2.fromOffset(36, 18),
             Text = "",
             Parent = ToggleLabel,
         })
@@ -6970,21 +7150,49 @@ do
 
         local HolderTransparency = New("ImageLabel", {
             Image = CustomImageManager.GetAsset("TransparencyTexture"),
-            ImageTransparency = (1 - ColorPicker.Transparency),
+            ImageTransparency = 0,
             ScaleType = Enum.ScaleType.Tile,
-            Position = UDim2.fromOffset(0, 0),
-            Size = UDim2.fromScale(1, 1),
-            TileSize = UDim2.fromOffset(9, 9),
+            Position = UDim2.fromOffset(3, 3),
+            Size = UDim2.new(1, -6, 1, -6),
+            TileSize = UDim2.fromOffset(6, 6),
             Parent = Holder,
         })
 
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+                CornerRadius = UDim.new(0, math.max(1, Library.CornerRadius / 2 - 1)),
                 Parent = HolderTransparency,
             })
         )
+
+        local HolderColor = New("Frame", {
+            BackgroundColor3 = ColorPicker.Value,
+            BackgroundTransparency = ColorPicker.Transparency,
+            Position = UDim2.fromOffset(3, 3),
+            Size = UDim2.new(1, -6, 1, -6),
+            Parent = Holder,
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, math.max(1, Library.CornerRadius / 2 - 1)),
+                Parent = HolderColor,
+            })
+        )
+
+        table.insert(ColorPicker.Connections, Holder.MouseEnter:Connect(function()
+            Library:PlayTween(HolderStroke, "ColorPickerSwatchHover", Library:GetMotion("Hover"), {
+                Color = Library.Scheme.AccentColor,
+                Transparency = 0.08,
+            })
+        end))
+        table.insert(ColorPicker.Connections, Holder.MouseLeave:Connect(function()
+            Library:PlayTween(HolderStroke, "ColorPickerSwatchHover", Library:GetMotion("Hover"), {
+                Color = Library.Scheme.OutlineColor,
+                Transparency = Library:GetDesignToken("Stroke.ControlTransparency", 0.38),
+            })
+        end))
 
         
         local ColorMenu = Library:AddContextMenu(
@@ -7539,8 +7747,8 @@ do
 
             ColorPicker.Value = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib)
 
-            Holder.BackgroundColor3 = ColorPicker.Value
-            HolderTransparency.ImageTransparency = (1 - ColorPicker.Transparency)
+            HolderColor.BackgroundColor3 = ColorPicker.Value
+            HolderColor.BackgroundTransparency = ColorPicker.Transparency
 
             SatVipMap.BackgroundColor3 = Color3.fromHSV(ColorPicker.Hue, 1, 1)
             if TransparencyColor then
@@ -7564,8 +7772,8 @@ do
         end
 
         function ColorPicker:RunChanged()
-            Library:SafeCallback(ColorPicker.Callback, ColorPicker.Value)
-            Library:SafeCallback(ColorPicker.Changed, ColorPicker.Value)
+            Library:SafeCallback(ColorPicker.Callback, ColorPicker.Value, ColorPicker.Transparency)
+            Library:SafeCallback(ColorPicker.Changed, ColorPicker.Value, ColorPicker.Transparency)
         end
 
         function ColorPicker:Update()
@@ -7584,13 +7792,14 @@ do
             end
 
             local Color = Color3.fromHSV(HSV[1], HSV[2], HSV[3])
-            ColorPicker.Transparency = Info.Transparency and Transparency or 0
+            ColorPicker.Transparency = Info.Transparency ~= nil and math.clamp(tonumber(Transparency) or ColorPicker.Transparency or 0, 0, 1) or 0
             ColorPicker:SetHSVFromRGB(Color)
             ColorPicker:Update()
         end
 
         function ColorPicker:SetValueRGB(Color, Transparency)
-            ColorPicker.Transparency = Info.Transparency and Transparency or 0
+            assert(typeof(Color) == "Color3", "ColorPicker:SetValueRGB expects Color3")
+            ColorPicker.Transparency = Info.Transparency ~= nil and math.clamp(tonumber(Transparency) or ColorPicker.Transparency or 0, 0, 1) or 0
             ColorPicker:SetHSVFromRGB(Color)
             ColorPicker:Update()
         end
@@ -7711,6 +7920,7 @@ do
         end
 
         ColorPicker.Default = ColorPicker.Value
+        ColorPicker.DefaultTransparency = ColorPicker.Transparency
 
         function ColorPicker:Destroy()
             if ColorPicker.Destroyed then
@@ -12766,20 +12976,23 @@ function Library:UpdateNotificationPositions(Snap: boolean?)
             })
         end
 
-        RunningY = RunningY + FakeBackground.AbsoluteSize.Y + 8
+        RunningY = RunningY + FakeBackground.AbsoluteSize.Y + Library.NotificationStyle.Gap
     end
 end
 
 function Library:SetNotifySide(Side: string)
-    Library.NotifySide = Side
+    local Normalized = string.lower(tostring(Side))
+    assert(Normalized == "left" or Normalized == "right", "Notification side must be Left or Right")
+    Library.NotifySide = Normalized == "left" and "Left" or "Right"
 
-    local IsLeft = Side:lower() == "left"
+    local IsLeft = Normalized == "left"
+    local Margin = Library.NotificationStyle.Margin
     if IsLeft then
         NotificationArea.AnchorPoint = Vector2.new(0, 0)
-        NotificationArea.Position = UDim2.fromOffset(6, 6)
+        NotificationArea.Position = UDim2.fromOffset(Margin, Margin)
     else
         NotificationArea.AnchorPoint = Vector2.new(1, 0)
-        NotificationArea.Position = UDim2.new(1, -6, 0, 6)
+        NotificationArea.Position = UDim2.new(1, -Margin, 0, Margin)
     end
 
     for FakeBackground in Library.Notifications do
@@ -12790,6 +13003,45 @@ function Library:SetNotifySide(Side: string)
     if Library.UpdateNotificationPositions then
         Library:UpdateNotificationPositions(true)
     end
+    return Library
+end
+
+function Library:SetNotificationOptions(Info)
+    assert(typeof(Info) == "table", "Notification options must be a table")
+    local Current = Library.NotificationStyle
+    local Next = table.clone(Current)
+    if Info.Width ~= nil then Next.Width = math.clamp(math.floor(tonumber(Info.Width) or Current.Width), 220, 520) end
+    if Info.Margin ~= nil then Next.Margin = math.clamp(math.floor(tonumber(Info.Margin) or Current.Margin), 0, 40) end
+    if Info.Gap ~= nil then Next.Gap = math.clamp(math.floor(tonumber(Info.Gap) or Current.Gap), 0, 24) end
+    if Info.Padding ~= nil then Next.Padding = math.clamp(math.floor(tonumber(Info.Padding) or Current.Padding), 4, 24) end
+    if Info.CornerRadius ~= nil then Next.CornerRadius = math.clamp(math.floor(tonumber(Info.CornerRadius) or Current.CornerRadius), 0, 18) end
+    if Info.MaxVisible ~= nil then Next.MaxVisible = math.clamp(math.floor(tonumber(Info.MaxVisible) or Current.MaxVisible), 1, 20) end
+    if Info.DefaultDuration ~= nil then Next.DefaultDuration = math.max(0, tonumber(Info.DefaultDuration) or Current.DefaultDuration) end
+    for _, Key in { "Accent", "ShowProgress", "Dismissible" } do
+        if Info[Key] ~= nil then Next[Key] = Info[Key] == true end
+    end
+    Library.NotificationStyle = Next
+    NotificationArea.Size = UDim2.new(0, Next.Width, 1, -Next.Margin * 2)
+    Library:SetNotifySide(Info.Side or Library.NotifySide)
+    for _, Notification in Library.Notifications do
+        if Info.Width ~= nil and Notification.UsesDefaultWidth then Notification.Width = Next.Width end
+        Notification:Resize()
+    end
+    while #NotifyOrder > Next.MaxVisible do
+        local Oldest = Library.Notifications[NotifyOrder[1]]
+        if Oldest then Oldest:Destroy() else table.remove(NotifyOrder, 1) end
+    end
+    return Library
+end
+
+Library.SetNotifyOptions = Library.SetNotificationOptions
+
+function Library:ClearNotifications()
+    for _, FakeBackground in table.clone(NotifyOrder) do
+        local Notification = Library.Notifications[FakeBackground]
+        if Notification then Notification:Destroy(true) end
+    end
+    return Library
 end
 
 function Library:Notify(...)
@@ -12797,13 +13049,13 @@ function Library:Notify(...)
     local Info = select(1, ...)
 
     if typeof(Info) == "table" then
-        Data.Title = tostring(Info.Title)
+        Data.Title = Info.Title ~= nil and tostring(Info.Title) or nil
         Data.TitleColor = Info.TitleColor
 
-        Data.Description = tostring(Info.Description)
+        Data.Description = Info.Description ~= nil and tostring(Info.Description) or nil
         Data.DescriptionColor = Info.DescriptionColor
 
-        Data.Time = Info.Time or 5
+        Data.Time = Info.Time ~= nil and Info.Time or Library.NotificationStyle.DefaultDuration
         Data.SoundId = Info.SoundId
         Data.Steps = Info.Steps
         Data.Persist = Info.Persist
@@ -12811,18 +13063,51 @@ function Library:Notify(...)
         Data.Icon = Info.Icon
         Data.BigIcon = Info.BigIcon
         Data.IconColor = Info.IconColor
+        Data.AccentColor = Info.AccentColor
+
+        Data.Width = math.clamp(math.floor(tonumber(Info.Width) or Library.NotificationStyle.Width), 220, 520)
+        Data.UsesDefaultWidth = Info.Width == nil
+        Data.Padding = math.clamp(math.floor(tonumber(Info.Padding) or Library.NotificationStyle.Padding), 4, 24)
+        Data.CornerRadius = math.clamp(math.floor(tonumber(Info.CornerRadius) or Library.NotificationStyle.CornerRadius), 0, 18)
+        Data.Accent = if Info.Accent ~= nil then Info.Accent == true else Library.NotificationStyle.Accent
+        Data.ShowProgress = if Info.ShowProgress ~= nil then Info.ShowProgress == true else Library.NotificationStyle.ShowProgress
+        Data.Dismissible = if Info.Dismissible ~= nil then Info.Dismissible == true else Library.NotificationStyle.Dismissible
+        Data.Variant = tostring(Info.Variant or "Default")
 
         Data.Volume = tonumber(Info.Volume) or 3
     else
         Data.Description = tostring(Info)
-        Data.Time = select(2, ...) or 5
+        Data.Time = select(2, ...) or Library.NotificationStyle.DefaultDuration
         Data.SoundId = select(3, ...)
         Data.Volume = select(4, ...) or 3
+        Data.Width = Library.NotificationStyle.Width
+        Data.UsesDefaultWidth = true
+        Data.Padding = Library.NotificationStyle.Padding
+        Data.CornerRadius = Library.NotificationStyle.CornerRadius
+        Data.Accent = Library.NotificationStyle.Accent
+        Data.ShowProgress = Library.NotificationStyle.ShowProgress
+        Data.Dismissible = Library.NotificationStyle.Dismissible
+        Data.Variant = "Default"
     end
     if typeof(Data.Time) ~= "Instance" then
         Data.Time = math.max(tonumber(Data.Time) or 5, 0)
     end
     Data.Destroyed = false
+    Data.Connections = {}
+
+    local Variant = string.lower(Data.Variant)
+    local AccentColor = Data.AccentColor
+    if AccentColor == nil then
+        if Variant == "success" then
+            AccentColor = Color3.fromRGB(91, 194, 137)
+        elseif Variant == "warning" then
+            AccentColor = "WarningColor"
+        elseif Variant == "error" or Variant == "danger" then
+            AccentColor = "DestructiveColor"
+        else
+            AccentColor = "AccentColor"
+        end
+    end
 
     local DeletedInstance = false
     local DeleteConnection = nil
@@ -12849,14 +13134,14 @@ function Library:Notify(...)
         BackgroundColor3 = "RaisedColor",
         GroupTransparency = 1,
         Position = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2),
-        Size = UDim2.fromScale(1, 1),
+        Size = UDim2.fromScale(1, 0),
         ZIndex = 5,
         Parent = FakeBackground,
     })
     table.insert(
         Library.Corners,
         New("UICorner", {
-            CornerRadius = UDim.new(0, Library.CornerRadius),
+            CornerRadius = UDim.new(0, Data.CornerRadius),
             Parent = Holder,
         })
     )
@@ -12865,10 +13150,10 @@ function Library:Notify(...)
         Parent = Holder,
     })
     New("UIPadding", {
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0, 8),
-        PaddingRight = UDim.new(0, 8),
-        PaddingTop = UDim.new(0, 8),
+        PaddingBottom = UDim.new(0, Data.Padding),
+        PaddingLeft = UDim.new(0, Data.Padding + (Data.Accent and 4 or 0)),
+        PaddingRight = UDim.new(0, Data.Padding + (Data.Dismissible and 18 or 0)),
+        PaddingTop = UDim.new(0, Data.Padding),
         Parent = Holder,
     })
     Library:AddOutline(Holder)
@@ -12878,9 +13163,52 @@ function Library:Notify(...)
         Parent = Holder,
     })
 
+    local AccentBar = New("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = AccentColor,
+        Position = UDim2.new(0, 5, 0.5, 0),
+        Size = UDim2.new(0, 2, 1, -12),
+        Visible = Data.Accent,
+        ZIndex = Holder.ZIndex + 1,
+        Parent = Holder,
+    })
+    New("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = AccentBar,
+    })
+
+    local CloseButton
+    if Data.Dismissible then
+        CloseButton = New("TextButton", {
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -5, 0, 5),
+            Size = UDim2.fromOffset(18, 18),
+            Text = "",
+            ZIndex = Holder.ZIndex + 2,
+            Parent = Holder,
+        })
+        local CloseData = Library:GetIcon("x")
+        local CloseImage = New("ImageLabel", {
+            Image = CloseData and CloseData.Url or "",
+            ImageColor3 = "MutedFontColor",
+            ImageRectOffset = CloseData and CloseData.ImageRectOffset or Vector2.zero,
+            ImageRectSize = CloseData and CloseData.ImageRectSize or Vector2.zero,
+            Position = UDim2.fromOffset(3, 3),
+            Size = UDim2.fromOffset(12, 12),
+            Parent = CloseButton,
+        })
+        table.insert(Data.Connections, CloseButton.MouseEnter:Connect(function()
+            Library:PlayTween(CloseImage, "NotificationCloseHover", Library:GetMotion("Hover"), { ImageColor3 = Library.Scheme.FontColor })
+        end))
+        table.insert(Data.Connections, CloseButton.MouseLeave:Connect(function()
+            Library:PlayTween(CloseImage, "NotificationCloseHover", Library:GetMotion("Hover"), { ImageColor3 = Library.Scheme.MutedFontColor })
+        end))
+    end
+
     local ContentContainer = New("Frame", {
         BackgroundTransparency = 1,
-        AutomaticSize = Enum.AutomaticSize.XY,
+        AutomaticSize = Enum.AutomaticSize.Y,
         Size = UDim2.fromScale(1, 0),
         Parent = Holder,
     })
@@ -12902,7 +13230,7 @@ function Library:Notify(...)
                 BackgroundTransparency = 1,
                 Size = UDim2.fromOffset(24, 24),
                 Image = ParsedIcon.Url,
-                ImageColor3 = Data.IconColor or "AccentColor",
+                ImageColor3 = Data.IconColor or AccentColor,
                 ImageRectOffset = ParsedIcon.ImageRectOffset,
                 ImageRectSize = ParsedIcon.ImageRectSize,
                 Parent = ContentContainer,
@@ -12960,7 +13288,7 @@ function Library:Notify(...)
             AutomaticSize = Enum.AutomaticSize.None,
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, (Data.Icon and 21 or 0), 0.5, 0),
+            Position = UDim2.new(0, (IconLabel and 21 or 0), 0.5, 0),
             Size = UDim2.fromScale(0, 0),
             Text = Data.Title,
             TextColor3 = Data.TitleColor or "FontColor",
@@ -12978,7 +13306,7 @@ function Library:Notify(...)
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(0, 0),
             Text = Data.Description,
-            TextColor3 = Data.DescriptionColor or "FontColor",
+            TextColor3 = Data.DescriptionColor or "MutedFontColor",
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
@@ -12989,10 +13317,12 @@ function Library:Notify(...)
     function Data:Resize()
         local ExtraWidth = BigIconLabel and 32 or 0
         local IconWidth = IconLabel and 21 or 0
+        local CloseWidth = CloseButton and 18 or 0
+        local MaximumTextWidth = math.max(80, Data.Width - Data.Padding * 2 - ExtraWidth - CloseWidth - (Data.Accent and 4 or 0))
 
         if Title then
             local X, Y =
-                Library:GetTextBounds(Title.Text, Title.FontFace, Title.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24 - ExtraWidth - IconWidth)
+                Library:GetTextBounds(Title.Text, Title.FontFace, Title.TextSize, MaximumTextWidth - IconWidth)
             Title.Size = UDim2.fromOffset(X, Y)
             TitleX = X + IconWidth
             TitleContainer.Size = UDim2.fromOffset(TitleX, math.max(Y, IconLabel and 16 or 0))
@@ -13000,12 +13330,13 @@ function Library:Notify(...)
 
         if Desc then
             local X, Y =
-                Library:GetTextBounds(Desc.Text, Desc.FontFace, Desc.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24 - ExtraWidth)
+                Library:GetTextBounds(Desc.Text, Desc.FontFace, Desc.TextSize, MaximumTextWidth)
             Desc.Size = UDim2.fromOffset(X, Y)
             DescX = X
         end
 
-        FakeBackground.Size = UDim2.fromOffset(math.max(TitleX, DescX) + 24 + ExtraWidth, 0)
+        local NaturalWidth = math.max(TitleX, DescX) + Data.Padding * 2 + ExtraWidth + CloseWidth + (Data.Accent and 4 or 0)
+        FakeBackground.Size = UDim2.fromOffset(math.min(Data.Width, math.max(180, NaturalWidth)), 0)
 
         if Library.Notifications[FakeBackground] then
             Library:UpdateNotificationPositions()
@@ -13018,6 +13349,7 @@ function Library:Notify(...)
             Title.Text = Data.Title
             Data:Resize()
         end
+        return Data
     end
 
     function Data:ChangeDescription(Text)
@@ -13026,6 +13358,7 @@ function Library:Notify(...)
             Desc.Text = Data.Description
             Data:Resize()
         end
+        return Data
     end
 
     function Data:ChangeStep(NewStep)
@@ -13033,11 +13366,14 @@ function Library:Notify(...)
             NewStep = math.clamp(NewStep or 0, 0, Data.Steps)
             TimerFill.Size = UDim2.fromScale(NewStep / Data.Steps, 1)
         end
+        return Data
     end
 
-    function Data:Destroy()
+    Data.SetProgress = Data.ChangeStep
+
+    function Data:Destroy(Instant)
         if Data.Destroyed then
-            return
+            return Data
         end
 
         Data.Destroyed = true
@@ -13050,6 +13386,11 @@ function Library:Notify(...)
             DeleteConnection:Disconnect()
         end
 
+        for _, Connection in Data.Connections do
+            pcall(function() Connection:Disconnect() end)
+        end
+        table.clear(Data.Connections)
+
         if FakeBackground then
             local Idx = table.find(NotifyOrder, FakeBackground)
             if Idx then
@@ -13058,6 +13399,13 @@ function Library:Notify(...)
         end
 
         Library:UpdateNotificationPositions()
+
+        if Instant then
+            Library.Notifications[FakeBackground] = nil
+            Library:ReleaseRegistryTree(FakeBackground)
+            FakeBackground:Destroy()
+            return Data
+        end
 
         local ExitPosition = Library.NotifySide:lower() == "left" and UDim2.new(-1, -8, 0, -2) or UDim2.new(1, 8, 0, -2)
         Library:CancelTween(Holder, "NotifyEnterPosition")
@@ -13076,6 +13424,13 @@ function Library:Notify(...)
             Library:ReleaseRegistryTree(FakeBackground)
             FakeBackground:Destroy()
         end)
+        return Data
+    end
+
+    if CloseButton then
+        table.insert(Data.Connections, CloseButton.Activated:Connect(function()
+            Data:Destroy()
+        end))
     end
 
     Data:Resize()
@@ -13083,22 +13438,23 @@ function Library:Notify(...)
     local TimerHolder = New("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 7),
-        Visible = (Data.Persist ~= true and typeof(Data.Time) ~= "Instance") or typeof(Data.Steps) == "number",
+        Visible = Data.ShowProgress and ((Data.Persist ~= true and typeof(Data.Time) ~= "Instance") or typeof(Data.Steps) == "number"),
         Parent = Holder,
     })
     local TimerBar = New("Frame", {
         BackgroundColor3 = "BackgroundColor",
-        BorderColor3 = "OutlineColor",
-        BorderSizePixel = 1,
+        BackgroundTransparency = 0.28,
         Position = UDim2.fromOffset(0, 3),
         Size = UDim2.new(1, 0, 0, 2),
         Parent = TimerHolder,
     })
+    New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = TimerBar })
     TimerFill = New("Frame", {
-        BackgroundColor3 = "AccentColor",
+        BackgroundColor3 = AccentColor,
         Size = UDim2.fromScale(1, 1),
         Parent = TimerBar,
     })
+    New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = TimerFill })
 
     if typeof(Data.Time) == "Instance" then
         TimerFill.Size = UDim2.fromScale(0, 1)
@@ -13122,6 +13478,15 @@ function Library:Notify(...)
     table.insert(NotifyOrder, FakeBackground)
     Library.Notifications[FakeBackground] = Data
 
+    while #NotifyOrder > Library.NotificationStyle.MaxVisible do
+        local Oldest = Library.Notifications[NotifyOrder[1]]
+        if Oldest and Oldest ~= Data then
+            Oldest:Destroy()
+        else
+            break
+        end
+    end
+
     Library:UpdateNotificationPositions()
 
     FakeBackground.Visible = true
@@ -13144,11 +13509,13 @@ function Library:Notify(...)
                 task.wait()
             until DeletedInstance or Data.Destroyed
         else
-            TweenService
-                :Create(TimerFill, TweenInfo.new(Data.Time, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
-                    Size = UDim2.fromScale(0, 1),
-                })
-                :Play()
+            if Data.ShowProgress then
+                TweenService
+                    :Create(TimerFill, TweenInfo.new(Data.Time, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+                        Size = UDim2.fromScale(0, 1),
+                    })
+                    :Play()
+            end
             task.wait(Data.Time)
         end
 
@@ -18285,6 +18652,7 @@ function Library:Unload()
 
     table.clear(Library.Scales)
     table.clear(Library.ScalesOffset)
+    table.clear(Library.ScaleMultipliers)
 
     table.clear(Library.Corners)
     table.clear(Library.SpecificCorners)

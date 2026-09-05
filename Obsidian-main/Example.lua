@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-10"
+local RELEASE_VERSION = "0.0.1-release-11"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -2259,6 +2259,16 @@ if ThemeManager then
 		ThemeManager:SetLibrary(Library)
 		local AppearanceBox = ThemeManager:ApplyToTab(Tabs.Settings)
 		SetGroupOrder(AppearanceBox, -90)
+		if ThemeManager.CreateAppearanceManager then
+			local Details = Tabs.Settings:AddGroupbox({
+				Name = "Appearance",
+				IconName = "sliders-horizontal",
+				Side = 1,
+				Collapsed = true,
+			})
+			ThemeManager:CreateAppearanceManager(Details)
+			SetGroupOrder(Details, -80)
+		end
 	end)
 
 	if not ThemeReady then

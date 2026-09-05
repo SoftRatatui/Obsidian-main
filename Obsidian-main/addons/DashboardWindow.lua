@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local DashboardWindow = {
-    ReleaseVersion = "0.0.1-release-10",
+    ReleaseVersion = "0.0.1-release-11",
 }
 
 local function ApplyCorner(Object, Radius)

@@ -132,4 +132,168 @@ return function(Modules, Mock)
     Dashboard:Destroy()
     assert(Count(HostLibrary.Registry) == 0)
     print("PASS dashboard height, metric lifecycle and cleanup")
+
+    local ThemeLibrary = Modules.HostLibrary
+    ThemeLibrary.Scheme = {
+        AccentColor = Mock.Color3.new(0.2, 0.3, 0.8),
+        BackgroundColor = Mock.Color3.new(0.1, 0.1, 0.1),
+        ElementColor = Mock.Color3.new(0.2, 0.2, 0.2),
+        FontColor = Mock.Color3.new(1, 1, 1),
+        OutlineColor = Mock.Color3.new(0.3, 0.3, 0.3),
+    }
+    local Surface = Mock.Instance.new("Frame")
+    ThemeLibrary:BindTheme(Surface, { BackgroundColor3 = "BackgroundColor" })
+    ThemeLibrary:BindTheme(Surface, {
+        Visible = function()
+            return false
+        end,
+    })
+    local Accent = Mock.Instance.new("Frame")
+    ThemeLibrary:BindTheme(Accent, {
+        BackgroundColor3 = function()
+            return ThemeLibrary.Scheme.AccentColor
+        end,
+    })
+    local Stroke = Mock.Instance.new("UIStroke")
+    ThemeLibrary:AddToRegistry(Stroke, { Color = "OutlineColor" })
+    assert(Stroke.BorderStrokePosition == Mock.Enum.BorderStrokePosition.Inner)
+    function ThemeLibrary:RefreshThemeState() end
+    for Index = 1, 20 do
+        local Color = Mock.Color3.new(Index / 20, 0.4, 0.5)
+        ThemeLibrary:SetPalette({ AccentColor = Color, BackgroundColor = Color })
+        assert(Accent.BackgroundColor3 == Color and Surface.BackgroundColor3 == Color and not Surface.Visible)
+        assert(#ThemeLibrary.ThemeErrors == 0)
+    end
+    local Before = ThemeLibrary.Scheme.AccentColor
+    assert(not pcall(function()
+        ThemeLibrary:SetPalette({ AccentColor = Mock.Color3.new(1, 0, 0), Missing = true })
+    end))
+    assert(ThemeLibrary.Scheme.AccentColor == Before)
+    ThemeLibrary.Registry[Stroke].Color = "MissingToken"
+    ThemeLibrary:UpdateColorsUsingRegistry()
+    assert(#ThemeLibrary.ThemeErrors == 1 and ThemeLibrary.ThemeErrors[1].Property == "Color")
+    ThemeLibrary:RemoveFromRegistry(Stroke)
+    ThemeLibrary:RemoveFromRegistry(Surface)
+    ThemeLibrary:RemoveFromRegistry(Accent)
+    print("PASS repeated palette changes, merged bindings, false values and theme diagnostics")
+
+    local Dark = { CornerRadius = 8, Font = {}, BackgroundImage = "", IsLight = false }
+    for _, Key in
+        {
+            "BackgroundColor",
+            "MainColor",
+            "TopBarColor",
+            "SurfaceColor",
+            "RaisedColor",
+            "ElementColor",
+            "HoverColor",
+            "AccentColor",
+            "AccentSoftColor",
+            "OutlineColor",
+            "FontColor",
+            "MutedFontColor",
+            "ShadowColor",
+            "RedColor",
+            "WarningColor",
+            "DestructiveColor",
+            "DarkColor",
+            "WhiteColor",
+        }
+    do
+        Dark[Key] = Mock.Color3.new(0.2, 0.3, 0.4)
+    end
+    local Light = table.clone(Dark)
+    Light.AccentColor = Mock.Color3.new(0.6, 0.7, 0.8)
+    Light.BackgroundColor = Mock.Color3.new(0.95, 0.95, 0.95)
+    Light.CornerRadius = 2
+    ThemeLibrary.DefaultTheme = "Dark"
+    ThemeLibrary.Themes = { Dark = Dark, Light = Light }
+    ThemeLibrary.CornerRadius = 6
+    function ThemeLibrary:SetFont(Font)
+        ThemeLibrary.Scheme.Font = Font
+    end
+    function ThemeLibrary.Window:SetBackgroundImage() end
+    local Panel = Mock.Instance.new("Frame")
+    ThemeLibrary:BindTheme(Panel, { BackgroundColor3 = "BackgroundColor" })
+    for Index = 1, 20 do
+        local Name = Index % 2 == 0 and "Dark" or "Light"
+        ThemeLibrary:SetTheme(Name)
+        assert(Panel.BackgroundColor3 == ThemeLibrary.Themes[Name].BackgroundColor)
+        assert(ThemeLibrary.CornerRadius == 6, "Theme changed geometry")
+    end
+    ThemeLibrary:RegisterTheme("Custom", { AccentColor = Before }, "Dark")
+    ThemeLibrary:SetTheme("Custom")
+    assert(ThemeLibrary.CurrentTheme == "Custom" and ThemeLibrary.Scheme.AccentColor == Before)
+    assert(not pcall(function()
+        ThemeLibrary:RegisterTheme("Invalid", { Missing = true })
+    end))
+    assert(ThemeLibrary.Themes.Invalid == nil)
+    ThemeLibrary:RemoveFromRegistry(Panel)
+    print("PASS theme cycling preserves geometry and custom themes validate atomically")
+
+    ThemeLibrary.Options = {}
+    local Group = {}
+    function Group:AddLabel()
+        local Label = {}
+        function Label:AddColorPicker(Id, Info)
+            local Picker = { Value = Info.Default }
+            function Picker:SetValueRGB(Value)
+                Picker.Value = Value
+                Info.Callback(Value)
+            end
+            ThemeLibrary.Options[Id] = Picker
+            return Label
+        end
+        return Label
+    end
+    function Group:AddSlider() end
+    function Group:AddToggle() end
+    function Group:AddButton() end
+    local Manager = Modules.ThemeManager
+    Manager:SetLibrary(ThemeLibrary)
+    Manager:CreateAppearanceManager(Group)
+    local Chosen = Mock.Color3.new(0.8, 0.1, 0.2)
+    Manager.PalettePickers.AccentColor:SetValueRGB(Chosen)
+    assert(ThemeLibrary.Scheme.AccentColor == Chosen)
+    Manager:ApplyTheme("Light")
+    assert(Manager.PalettePickers.AccentColor.Value == Light.AccentColor)
+    assert(#ThemeLibrary.ThemeErrors == 0)
+    print("PASS appearance color pickers synchronize with theme changes without callback loops")
+
+    local Explicit = Mock.Color3.new(0.7, 0.2, 0.3)
+    local Textures = Modules.TextureGallery.Create(ThemeLibrary, {
+        Items = { { Id = "fixed", Name = "Fixed", ColorA = Explicit } },
+    })
+    Textures:Select("fixed")
+    local Gradient = Find(Textures.Root, "UIGradient")
+    ThemeLibrary:SetPalette({ AccentColor = Mock.Color3.new(0.1, 0.8, 0.3) })
+    assert(Gradient.Color[1] == Explicit, "Theme overwrote explicit texture colors")
+    Textures:SetItems({ { Id = "adaptive", Name = "Adaptive" } })
+    Textures:Select("adaptive")
+    local NewAccent = Mock.Color3.new(0.1, 0.3, 0.9)
+    ThemeLibrary:SetPalette({ AccentColor = NewAccent })
+    assert(Gradient.Color[1] == NewAccent, "Texture preview retained the previous theme")
+    assert(#ThemeLibrary.ThemeErrors == 0)
+    Textures:Destroy()
+    print("PASS texture gradients follow the palette while explicit item colors are preserved")
+
+    local Root = Mock.Instance.new("CanvasGroup")
+    local Corner = Mock.Instance.new("UICorner")
+    Corner.CornerRadius = Mock.UDim.new(0, 4)
+    Corner.Parent = Root
+    local OriginalGetter = ThemeLibrary.GetDesignToken
+    local Radius = 7
+    function ThemeLibrary:GetDesignToken(Path, Fallback)
+        return Path == "Radius.Card" and Radius or Fallback
+    end
+    ThemeLibrary:BindAddonStyle(Root, { Radius = 4, CellRadius = 4, ControlRadius = 3 }, {})
+    assert(Corner.CornerRadius.Offset == 7)
+    Radius = 2
+    ThemeLibrary:UpdateColorsUsingRegistry()
+    assert(Corner.CornerRadius.Offset == 2)
+    ThemeLibrary:RemoveFromRegistry(Corner)
+    ThemeLibrary.GetDesignToken = OriginalGetter
+    Root:Destroy()
+    assert(Count(ThemeLibrary.Registry) == 0)
+    print("PASS addon corner bindings update live and release cleanly")
 end

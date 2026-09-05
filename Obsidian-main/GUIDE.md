@@ -1,13 +1,13 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-10`
+Current release: `0.0.1-release-11`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-10"
+local RELEASE = "0.0.1-release-11"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -287,6 +287,66 @@ Group:AddUIPassthrough("Custom", {
 ## Design system
 
 `Library.Scheme` stores theme colors. `Library.Design` stores geometry, density, typography, outlines, and motion. Apply design overrides before creating the window.
+
+Radius tokens on bound controls, decorative effects, and menu scrollbar width can also be changed while the UI is open. Spacing, density, and font sizes should still be configured before creation. Explicit addon style overrides and addon `SetCornerRadius` calls retain their own values.
+
+The default appearance has no shadows, navigation accent line, or decorative section dividers. Scrollbars use muted text color. Use these switches to restore individual effects:
+
+```luau
+Library:SetDesign({
+    Effects = {
+        Shadows = false,
+        Dividers = false,
+        NavigationIndicator = false,
+        AccentScrollbars = false,
+        ThemeGeometry = false,
+    },
+    Shell = { ScrollbarThickness = 2 },
+    Radius = { Window = 6, Card = 4, Control = 3, Indicator = 2 },
+})
+```
+
+`ThemeGeometry = false` keeps the chosen radii when changing themes. Set it to `true` only when the theme should also choose geometry. A menu scrollbar thickness of `0` hides its thumb while preserving scrolling. Image addons retain their own scrollbar width.
+
+GUI objects created by the core start with `BorderSizePixel = 0`, including `CanvasGroup`. Borders use an inner `UIStroke` so they stay within the clipping boundary. This uses Roblox's documented [border position support](https://create.roblox.com/docs/reference/engine/enums/BorderStrokePosition). Image addon roots use `CanvasGroup` to clip their children to rounded corners.
+
+### Live palette and appearance controls
+
+The full example includes a collapsed Appearance group. Add it to another project with:
+
+```luau
+ThemeManager:SetLibrary(Library)
+ThemeManager:CreateAppearanceManager(Settings:AddLeftGroupbox("Appearance", "sliders-horizontal"))
+```
+
+It exposes ten palette colors, four radius controls, menu scrollbar width, four decoration switches, reduced motion, and palette reset. Color pickers synchronize when the active theme changes.
+
+```luau
+Library:SetPalette({
+    AccentColor = Color3.fromRGB(130, 150, 220),
+    ElementColor = Color3.fromRGB(28, 30, 36),
+})
+
+Library:RegisterTheme("My theme", {
+    AccentColor = Color3.fromRGB(130, 150, 220),
+    OutlineColor = Color3.fromRGB(46, 48, 55),
+}, "Default")
+Library:SetTheme("My theme")
+```
+
+Palette changes affect the current session. Switching themes restores that theme's palette. When changed individually, `ElementColor` and legacy `MainColor` stay synchronized; provide both to style them separately. `AccentSoftColor` is recalculated after an accent or control surface change unless supplied explicitly. Runtime theme registration updates the theme selector; it does not write a custom theme file.
+
+Custom UI can join the same theme refresh without replacing its existing bindings:
+
+```luau
+Library:BindTheme(CustomFrame, { BackgroundColor3 = "SurfaceColor" })
+Library:BindTheme(CustomLabel, {
+    TextColor3 = "FontColor",
+    FontFace = "Font",
+})
+```
+
+Bindings accept theme token names, functions, and non-string literal values. Invalid bindings are reported in `Library.ThemeErrors` with the object, property, and message after a refresh. Remove a custom object's bindings with `Library:RemoveFromRegistry(Object)` when destroying it.
 
 ```luau
 Library:SetDesign({
@@ -770,7 +830,7 @@ Library:Unload()
 
 - [x] Runtime sources and type modules compile with the Luau compiler.
 - [x] Collection IDs, atomic updates, selection, filters, bindings, and cleanup pass 12 regression tests.
-- [x] Seven addon contract scenarios cover catalog filtering and badge cleanup, gallery sizing, texture item replacement, image transition cancellation, shared view bindings, host lifecycle, and dashboard metrics.
+- [x] Twelve UI contract scenarios cover addon lifecycle and geometry, repeated palette/theme changes, custom theme validation, appearance picker synchronization, texture colors, and live addon corners.
 - [x] Examples include a shared skin collection, a separate gallery window, grid mode, favorites, and adjustable gallery height.
 - [x] Visual addon cleanup visits its own descendants instead of scanning the whole theme registry.
 - [ ] Verify real rendering in Roblox at 480, 780, and 1100 pixel window widths, including odd widths, DPI changes, light and dark themes.
@@ -785,6 +845,15 @@ Run local checks with Luau's compiler and interpreter installed:
 ```
 
 ## Changelog
+
+### 0.0.1-release-11
+
+- Removed default engine borders from core GUI objects, moved strokes inside their bounds, and masked image addon corners.
+- Replaced outlined divider rectangles with optional single-pixel rules; disabled decorative shadows and the navigation accent line by default.
+- Added muted scrollbars, adjustable menu scrollbar width, live appearance controls, palette overrides, custom runtime themes, and composable theme bindings.
+- Separated theme colors from geometry. Fixed the old/new radius ordering during design changes and made bound radii update live.
+- Registered texture gradients with the theme system while retaining explicit item colors.
+- Added theme refresh diagnostics and regression coverage for repeated theme changes and appearance synchronization.
 
 ### 0.0.1-release-10
 

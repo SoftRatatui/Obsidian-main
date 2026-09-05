@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-10",
+    ReleaseVersion = "0.0.1-release-11",
 }
 
 TextureGallery.DefaultItems = {
@@ -93,8 +93,9 @@ function TextureGallery.Create(Library, Info)
         Style = Style,
     }
 
-    local Root = Instance.new("Frame")
+    local Root = Instance.new("CanvasGroup")
     Root.Name = "MonHubTextureGallery"
+    Root.BorderSizePixel = 0
     Root.BackgroundTransparency = 1
     Root.Size = UDim2.fromScale(1, 1)
     Root.Visible = Gallery.Visible
@@ -149,6 +150,15 @@ function TextureGallery.Create(Library, Info)
     local PreviewGradient = Instance.new("UIGradient")
     PreviewGradient.Color = ColorSequence.new(Color3.fromRGB(168, 181, 199), Color3.fromRGB(105, 116, 133))
     PreviewGradient.Parent = PreviewImage
+    local function PreviewColors()
+        local Item = Gallery.Selected or {}
+        return ColorSequence.new(
+            typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
+            typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
+        )
+    end
+    Library:AddToRegistry(PreviewGradient, { Color = PreviewColors })
+    Library:AddToRegistry(PreviewTrackGradient, { Color = PreviewColors })
 
     local PreviewName = Instance.new("TextLabel")
     PreviewName.AnchorPoint = Vector2.new(0.5, 1)
@@ -316,6 +326,14 @@ function TextureGallery.Create(Library, Info)
             typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
         )
         Gradient.Parent = Image
+        Library:AddToRegistry(Gradient, {
+            Color = function()
+                return ColorSequence.new(
+                    typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
+                    typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
+                )
+            end,
+        })
 
         local Name = Instance.new("TextLabel")
         Name.AnchorPoint = Vector2.new(0, 1)
@@ -343,6 +361,10 @@ function TextureGallery.Create(Library, Info)
             Scale = ImageScale,
             Name = Name,
         }
+
+        if type(Library.BindAddonStyle) == "function" then
+            Library:BindAddonStyle(Button, Style, Info)
+        end
 
         table.insert(Gallery.Connections, Button.MouseEnter:Connect(function()
             if Gallery.Destroyed then
@@ -533,6 +555,9 @@ function TextureGallery.Create(Library, Info)
         end)
     end
 
+    if Library and type(Library.BindAddonStyle) == "function" then
+        Library:BindAddonStyle(Root, Style, Info)
+    end
     return Gallery
 end
 

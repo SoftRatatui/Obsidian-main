@@ -134,7 +134,7 @@ function ImageGallery.Create(Library, Info)
     local TileSize = typeof(Info.TileSize) == "UDim2" and Info.TileSize or UDim2.fromOffset(64, 64)
     local Rotation = tonumber(Info.Rotation) or 0
 
-    local Root = Instance.new("Frame")
+    local Root = Instance.new("CanvasGroup")
     Root.Name = "MonHubImageGallery"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(18, 20, 24)
     Root.BackgroundTransparency = BackgroundTransparency
@@ -1053,8 +1053,14 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.CornerRadius = math.clamp(math.floor(tonumber(Value) or Gallery.CornerRadius), 0, 12)
+        Info.CornerRadius = Gallery.CornerRadius
+        if Library then Library:RemoveFromRegistry(RootCorner) end
         RootCorner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
         for _, Slot in Gallery.Slots do
+            if Library then
+                Library:RemoveFromRegistry(Slot.Corner)
+                Library:RemoveFromRegistry(Slot.ImageCorner)
+            end
             Slot.Corner.CornerRadius = UDim.new(0, Gallery.CornerRadius)
             Slot.ImageCorner.CornerRadius = UDim.new(0, math.max(0, Gallery.CornerRadius - 1))
         end
@@ -1216,6 +1222,9 @@ function ImageGallery.Create(Library, Info)
         end)
     end
 
+    if Library and type(Library.BindAddonStyle) == "function" then
+        Library:BindAddonStyle(Root, Style, Info)
+    end
     return Gallery
 end
 

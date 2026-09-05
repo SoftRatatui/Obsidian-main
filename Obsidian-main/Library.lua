@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-10",
+    ReleaseVersion = "0.0.1-release-11",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -356,6 +356,13 @@ local Library = {
     CornerRadius = 6,
     DesignRevision = 0,
     Design = {
+        Effects = {
+            Shadows = false,
+            Dividers = false,
+            NavigationIndicator = false,
+            AccentScrollbars = false,
+            ThemeGeometry = false,
+        },
         Spacing = {
             Tiny = 3,
             Small = 6,
@@ -417,6 +424,7 @@ local Library = {
             SearchHeight = 32,
             HeaderControl = 32,
             HeaderGap = 8,
+            ScrollbarThickness = 2,
         },
         Typography = {
             WindowTitle = 16,
@@ -631,7 +639,7 @@ function Library:SetThemeFont(FontFace): any
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-10-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-11-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -855,6 +863,8 @@ local Templates = {
     },
     UIStroke = {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        BorderStrokePosition = Enum.BorderStrokePosition.Inner,
+        LineJoinMode = Enum.LineJoinMode.Round,
     },
 
     
@@ -1253,10 +1263,11 @@ function Library:SetDesign(Overrides)
     local Radius = tonumber(Library:GetDesignToken("Radius.Window", Library.CornerRadius))
     if Radius then
         Radius = math.clamp(Radius, 0, 20)
-        Library.CornerRadius = Radius
         Templates.Window.CornerRadius = Radius
         if Library.Window and type(Library.Window.SetCornerRadius) == "function" then
             Library.Window:SetCornerRadius(Radius)
+        else
+            Library.CornerRadius = Radius
         end
     end
 
@@ -1273,6 +1284,7 @@ end
 
 function Library:GetAddonStyle(Overrides)
     local Style = CloneDesignValue(Library.Design.Addon)
+    Style._Overrides = Overrides and (Overrides._Overrides or Overrides) or {}
     Style.Spacing = CloneDesignValue(Library.Design.Spacing)
     Style.Radius = tonumber(Style.Radius) or Library:GetDesignToken("Radius.Card", 7)
     Style.ControlRadius = Library:GetDesignToken("Radius.Control", 4)
@@ -1926,11 +1938,60 @@ function Library:QueueSearch(SearchText: string)
 end
 
 function Library:AddToRegistry(Instance, Properties)
+    if Instance:IsA("ScrollingFrame") and Properties.ScrollBarImageColor3 == "AccentColor" then
+        Properties = table.clone(Properties)
+        Properties.ScrollBarImageColor3 = function()
+            return Library:GetDesignToken("Effects.AccentScrollbars", false) and Library.Scheme.AccentColor or Library.Scheme.MutedFontColor
+        end
+        Instance.ScrollBarImageColor3 = Properties.ScrollBarImageColor3()
+    end
     Library.Registry[Instance] = Properties
+    if Instance:IsA("UIStroke") then
+        Instance.BorderStrokePosition = Enum.BorderStrokePosition.Inner
+        Instance.LineJoinMode = Enum.LineJoinMode.Round
+    end
 end
 
 function Library:RemoveFromRegistry(Instance)
     Library.Registry[Instance] = nil
+end
+
+function Library:BindTheme(Object, Properties)
+    local Bindings = table.clone(Library.Registry[Object] or {})
+    for Property, Value in Properties do
+        Bindings[Property] = Value
+        if type(Value) == "function" then
+            Object[Property] = Value()
+        else
+            Object[Property] = GetSchemeValue(Value) or Value
+        end
+    end
+    Library:AddToRegistry(Object, Bindings)
+    return Object
+end
+
+function Library:BindAddonStyle(Root, Style, Info)
+    Info = Info or {}
+    local Overrides = Style._Overrides or Info.Style or {}
+    for _, Corner in Root:GetDescendants() do
+        if Corner:IsA("UICorner") and Corner.CornerRadius.Scale == 0 then
+            local Offset = Corner.CornerRadius.Offset
+            local Role
+            if Offset == Style.Radius or Offset == Style.CellRadius then
+                if Overrides.Radius == nil and Overrides.CellRadius == nil then Role = "Card" end
+            elseif Offset == Style.ControlRadius and Overrides.ControlRadius == nil then
+                Role = "Control"
+            end
+            if Role then
+                Library:BindTheme(Corner, {
+                    CornerRadius = function()
+                        local Radius = tonumber(Info.CornerRadius) or Library:GetDesignToken("Radius." .. Role, Offset)
+                        return UDim.new(0, math.max(0, math.floor(Radius)))
+                    end,
+                })
+            end
+        end
+    end
 end
 
 local function CancelThemeTweens(Instance: Instance, Properties)
@@ -1960,22 +2021,30 @@ end
 
 function Library:UpdateColorsUsingRegistry()
     Library.ColorRevision += 1
+    Library.ThemeErrors = {}
     for Instance, Properties in Library.Registry do
         pcall(function()
             CancelThemeTweens(Instance, Properties)
         end)
         for Property, Index in Properties do
-            pcall(function()
+            local Success, Message = pcall(function()
                 local SchemeValue = GetSchemeValue(Index)
                 local Value = SchemeValue
-                if Value == nil and typeof(Index) == "function" then
+                if typeof(Index) == "function" then
                     Value = Index()
+                elseif Value == nil and typeof(Index) ~= "string" then
+                    Value = Index
+                elseif Value == nil then
+                    error("Unknown theme token: " .. Index)
                 end
 
                 if Value ~= nil and Instance[Property] ~= Value then
                     Instance[Property] = Value
                 end
             end)
+            if not Success then
+                table.insert(Library.ThemeErrors, { Object = Instance, Property = Property, Message = tostring(Message) })
+            end
         end
     end
 end
@@ -2198,6 +2267,9 @@ local function FillInstance(Table: { [string]: any }, Instance: GuiObject)
             end
         end
 
+        if string.find(key, "Radius", 1, true) and typeof(value) == "UDim" and value.Scale == 0 then
+            value = UDim.new(0, math.max(0, math.floor(value.Offset + 0.5)))
+        end
         Instance[key] = value
     end
 
@@ -2208,11 +2280,25 @@ end
 
 local function New(ClassName: string, Properties: { [string]: any }): any
     local Instance = Instance.new(ClassName)
+    if Instance:IsA("GuiObject") then
+        Instance.BorderSizePixel = 0
+    end
 
     if Templates[ClassName] then
         FillInstance(Templates[ClassName], Instance)
     end
     FillInstance(Properties, Instance)
+
+    if ClassName == "ScrollingFrame" then
+        local Bindings = Library.Registry[Instance] or {}
+        if Properties.ScrollBarThickness and Properties.ScrollBarThickness > 0 then
+            Bindings.ScrollBarThickness = function()
+                return math.clamp(math.floor(Library:GetDesignToken("Shell.ScrollbarThickness", 2)), 0, 6)
+            end
+            Instance.ScrollBarThickness = Bindings.ScrollBarThickness()
+        end
+        Library:AddToRegistry(Instance, Bindings)
+    end
 
     if Properties["Parent"] and not Properties["ZIndex"] then
         pcall(function()
@@ -3826,7 +3912,15 @@ function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparen
 
     Library:AddToRegistry(Shadow, {
         Color = "ShadowColor",
+        Transparency = function()
+            return Library:GetDesignToken("Effects.Shadows", false)
+                and math.clamp(tonumber(Transparency) or Library:GetDesignToken("Opacity.Shadow", 0.48), 0, 1)
+                or 1
+        end,
     })
+    if not Library:GetDesignToken("Effects.Shadows", false) then
+        Shadow.Transparency = 1
+    end
     return Shadow
 end
 
@@ -3996,6 +4090,7 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
 
     local Indicator = Button:FindFirstChild("Indicator")
     if Indicator then
+        Indicator.Visible = Library:GetDesignToken("Effects.NavigationIndicator", false)
         local Row = Button.AbsoluteSize.Y
         if Row <= 0 then
             Row = Library:GetDesignToken("Shell.NavigationHeight", 38)
@@ -7368,7 +7463,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 6 + MarginTop + MarginBottom),
+            Size = UDim2.new(1, 0, 0, (Text and 20 or 6) + MarginTop + MarginBottom),
             Parent = Container,
         })
 
@@ -7384,55 +7479,54 @@ do
             Parent = Holder,
         })
 
+        local Lines = {}
+        local DividerConnections = {}
+        local TextLabel
         if Text then
-            local TextLabel = New("TextLabel", {
-                AutomaticSize = Enum.AutomaticSize.X,
+            TextLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 0),
+                Size = UDim2.fromScale(1, 1),
                 Text = Text,
-                TextSize = 14,
-                TextTransparency = 0.5,
+                TextSize = Library:GetDesignToken("Size.Caption", 12),
+                TextColor3 = "MutedFontColor",
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
-
-            local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
-            local SizeX = X // 2 + 10
-
-            New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
-                Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
-                Parent = InnerHolder,
-            })
-            New("Frame", {
-                AnchorPoint = Vector2.new(1, 0.5),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
-                Position = UDim2.fromScale(1, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
-                Parent = InnerHolder,
-            })
-        else
-            New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
-                Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.new(1, 0, 0, 2),
+        end
+        for Index = 1, Text and 2 or 1 do
+            Lines[Index] = New("Frame", {
+                BackgroundColor3 = "OutlineColor",
+                BackgroundTransparency = function()
+                    return Library:GetDesignToken("Effects.Dividers", false) and 0.6 or 1
+                end,
+                BorderSizePixel = 0,
                 Parent = InnerHolder,
             })
         end
-
+        local function LayoutLines()
+            local Width = math.max(0, math.floor(InnerHolder.AbsoluteSize.X))
+            local Top = math.floor(InnerHolder.AbsoluteSize.Y / 2)
+            local Length = Width
+            if TextLabel then
+                local TextWidth = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, Width)
+                Length = math.max(0, math.floor((Width - TextWidth) / 2) - 8)
+            end
+            Lines[1].Position = UDim2.fromOffset(0, Top)
+            Lines[1].Size = UDim2.fromOffset(Length, 1)
+            if Lines[2] then
+                Lines[2].Position = UDim2.fromOffset(Width - Length, Top)
+                Lines[2].Size = UDim2.fromOffset(Length, 1)
+            end
+        end
+        table.insert(DividerConnections, InnerHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(LayoutLines))
+        if TextLabel then
+            table.insert(DividerConnections, TextLabel:GetPropertyChangedSignal("FontFace"):Connect(LayoutLines))
+        end
+        LayoutLines()
         Groupbox:Resize()
 
         local Divider = {
-            Connections = {},
+            Connections = DividerConnections,
             Destroyed = false,
 
             Holder = Holder,
@@ -7785,7 +7879,7 @@ do
             table.insert(
                 Library.Corners,
                 New("UICorner", {
-                    CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
+                    CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))) end,
                     Parent = Base,
                 })
             )
@@ -8317,7 +8411,7 @@ do
             Parent = Button,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
+            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
             Parent = Checkbox,
         })
         local CheckboxStroke = New("UIStroke", {
@@ -9019,7 +9113,7 @@ do
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))),
+                CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Control", math.max(Library.CornerRadius / 2, 2))) end,
                 Parent = Box,
             })
         )
@@ -9268,7 +9362,7 @@ do
             Parent = Bar,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
+            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
             Parent = Track,
         })
         New("UIStroke", {
@@ -9324,7 +9418,7 @@ do
             Parent = Fill,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
+            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
             Parent = Fill,
         })
 
@@ -12116,8 +12210,51 @@ function Library:ResolveThemeName(Theme): string
         return Library.DefaultTheme
     end
 
+    if Library.Themes[Theme] then
+        return Theme
+    end
     local Normalized = string.lower(Theme):gsub("[%s_%-]", "")
     return ThemeAliases[Normalized] or Library.DefaultTheme
+end
+
+function Library:RegisterTheme(Name, Overrides, Base)
+    assert(type(Name) == "string" and Name ~= "", "Theme name must be a non-empty string")
+    assert(type(Overrides) == "table", "Theme overrides must be a table")
+    local Theme = table.clone(Library.Themes[Library:ResolveThemeName(Base or Library.DefaultTheme)])
+    for Key, Value in Overrides do
+        assert(Theme[Key] ~= nil, "Unknown theme property: " .. tostring(Key))
+        assert(typeof(Value) == typeof(Theme[Key]), "Invalid theme property: " .. tostring(Key))
+        Theme[Key] = Value
+    end
+    Library.Themes[Name] = Theme
+    if Library.ThemeManager and Library.ThemeManager.RefreshThemeList then
+        Library.ThemeManager:RefreshThemeList()
+    end
+    return Library
+end
+
+function Library:SetPalette(Overrides)
+    assert(type(Overrides) == "table", "Palette overrides must be a table")
+    for Key, Value in Overrides do
+        assert(typeof(Library.Scheme[Key]) == "Color3" and typeof(Value) == "Color3", "Invalid palette color: " .. tostring(Key))
+    end
+    for Key, Value in Overrides do
+        Library.Scheme[Key] = Value
+    end
+    if Overrides.ElementColor and not Overrides.MainColor then
+        Library.Scheme.MainColor = Overrides.ElementColor
+    elseif Overrides.MainColor and not Overrides.ElementColor then
+        Library.Scheme.ElementColor = Overrides.MainColor
+    end
+    if (Overrides.AccentColor or Overrides.ElementColor or Overrides.MainColor) and not Overrides.AccentSoftColor then
+        Library.Scheme.AccentSoftColor = Library.Scheme.ElementColor:Lerp(Library.Scheme.AccentColor, 0.18)
+    end
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
+    if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
+        Library.ThemeManager:SyncFromLibrary(Library.CurrentTheme)
+    end
+    return Library
 end
 
 function Library:SetTheme(Theme)
@@ -12154,18 +12291,18 @@ function Library:SetTheme(Theme)
     Library.IsLightTheme = ThemeData.IsLight == true
     Library.CurrentTheme = ThemeName
 
-    local Radius = ThemeData.CornerRadius
-    Library.CornerRadius = Radius
-    Library.Design.Radius.Window = Radius
-    Library.Design.Radius.Card = math.max(0, Radius - 1)
-    Library.Design.Radius.Popup = Radius
-    Library.Design.Radius.Control = math.max(0, Radius - 2)
-    Library.Design.Radius.Indicator = math.max(0, math.min(3, Radius - 2))
-    Library.Design.Addon.Radius = Library.Design.Radius.Card
-    Library.DesignRevision += 1
-    Templates.Window.CornerRadius = Radius
+    if Library:GetDesignToken("Effects.ThemeGeometry", false) then
+        Library:SetDesign({
+            Radius = {
+                Window = ThemeData.CornerRadius,
+                Card = math.max(0, ThemeData.CornerRadius - 1),
+                Popup = ThemeData.CornerRadius,
+                Control = math.max(0, ThemeData.CornerRadius - 2),
+                Indicator = math.max(0, math.min(3, ThemeData.CornerRadius - 2)),
+            },
+        })
+    end
     if Library.Window then
-        Library.Window:SetCornerRadius(Radius)
         Library.Window:SetBackgroundImage(Library.Scheme.BackgroundImage)
     end
 
@@ -12949,7 +13086,7 @@ function Library:CreateWindow(WindowInfo)
         table.insert(
             Library.Corners,
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Control", 4)),
+                CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Control", 4)) end,
                 Parent = SearchBox,
             })
         )
@@ -13734,7 +13871,7 @@ function Library:CreateWindow(WindowInfo)
         assert(typeof(Radius) == "number", "Expected number for Radius got: " .. typeof(Radius))
         Radius = math.clamp(Radius, 0, 20)
 
-        local RadiusHalf = UDim.new(0, Radius / 2)
+        local RadiusHalf = UDim.new(0, math.floor(Radius / 2))
         local RadiusUDim = UDim.new(0, Radius)
         local HalfCurrent = Library.CornerRadius / 2
 
@@ -14008,7 +14145,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 4)),
+                CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Card", 4)) end,
                 Parent = TabButton,
             })
             New("Frame", {
@@ -14016,6 +14153,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
                 Name = "Indicator",
+                Visible = function() return Library:GetDesignToken("Effects.NavigationIndicator", false) end,
                 Position = UDim2.new(0, 0, 0.5, 0),
                 Size = UDim2.fromOffset(2, 0),
                 Parent = TabButton,
@@ -14888,7 +15026,7 @@ function Library:CreateWindow(WindowInfo)
                 table.insert(
                     Library.Corners,
                     New("UICorner", {
-                        CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", math.max(WindowInfo.CornerRadius - 1, 2))),
+                        CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Card", math.max(WindowInfo.CornerRadius - 1, 2))) end,
                         Parent = GroupboxHolder,
                     })
                 )
@@ -17603,6 +17741,7 @@ function Library:Unload()
 
     
     table.clear(Library.Registry)
+    Library.ThemeErrors = {}
 
     table.clear(Options)
     table.clear(Toggles)

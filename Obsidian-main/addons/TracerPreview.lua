@@ -47,7 +47,7 @@ function TracerPreview.Create(Library, Info)
     local ColorA = typeof(Info.ColorA) == "Color3" and Info.ColorA or Color3.fromRGB(255, 218, 64)
     local ColorB = typeof(Info.ColorB) == "Color3" and Info.ColorB or Color3.fromRGB(255, 246, 168)
 
-    local Root = Instance.new("Frame")
+    local Root = Instance.new("CanvasGroup")
     Root.Name = "MonHubTracerPreview"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(14, 16, 19)
     Root.BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or Style.BackgroundTransparency or 0, 0, 1)

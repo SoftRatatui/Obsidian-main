@@ -1189,7 +1189,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-10",
+    ReleaseVersion: "0.0.1-release-11",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1306,6 +1306,11 @@ export type Library = {
     GetMotion: (self: Library, Name: string) -> TweenInfo,
     RefreshMotion: (self: Library) -> (),
     SetDesign: (self: Library, Overrides: { [string]: any }) -> Library,
+    BindTheme: (self: Library, Object: Instance, Properties: { [string]: any }) -> Instance,
+    BindAddonStyle: (self: Library, Root: Instance, Style: { [string]: any }, Info: { [string]: any }?) -> (),
+    SetPalette: (self: Library, Overrides: { [string]: Color3 }) -> Library,
+    RegisterTheme: (self: Library, Name: string, Overrides: { [string]: any }, Base: string?) -> Library,
+    ThemeErrors: { { Object: Instance, Property: string, Message: string } },
     SetReducedMotion: (self: Library, Enabled: boolean) -> Library,
     GetAddonStyle: (self: Library, Overrides: { [string]: any }?) -> AddonStyle,
     GiveSignal: (self: Library, Connection: RBXScriptConnection) -> RBXScriptConnection,

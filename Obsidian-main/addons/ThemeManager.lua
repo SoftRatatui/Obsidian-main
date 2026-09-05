@@ -141,7 +141,7 @@ local AshTheme = {
 }
 
 local ThemeManager = {
-    ReleaseVersion = "0.0.1-release-10",
+    ReleaseVersion = "0.0.1-release-11",
     Library = nil,
     FileSystemAvailable = false,
     Folder = "ObsidianLibSettings",
@@ -221,6 +221,13 @@ function ThemeManager:SyncFromLibrary(ThemeName)
         end)
         ThemeManager.SyncingSelector = false
     end
+    ThemeManager.SyncingAppearance = true
+    for Key, Picker in ThemeManager.PalettePickers or {} do
+        if Picker.Value ~= ThemeManager.Library.Scheme[Key] then
+            Picker:SetValueRGB(ThemeManager.Library.Scheme[Key])
+        end
+    end
+    ThemeManager.SyncingAppearance = false
 
     return true
 end
@@ -347,13 +354,26 @@ function ThemeManager:ApplyTheme(ThemeName)
     return true
 end
 
+function ThemeManager:RefreshThemeList()
+    local Names = table.clone(ThemeManager.ThemeNames)
+    for Name in ThemeManager.Library.Themes do
+        if not table.find(Names, Name) then
+            table.insert(Names, Name)
+        end
+    end
+    if ThemeManager.ThemeSelector then
+        ThemeManager.ThemeSelector:SetValues(Names)
+    end
+    return Names
+end
+
 function ThemeManager:CreateThemeManager(Groupbox)
     assert(ThemeManager.Library, "Library is not set, call ThemeManager:SetLibrary(Library) first.")
     assert(not ThemeManager.AppliedToTab, "ThemeManager is already applied to a tab")
-
+    local Names = ThemeManager:RefreshThemeList()
     ThemeManager.ThemeSelector = Groupbox:AddDropdown("ThemeManager_ThemeList", {
         Text = "Theme",
-        Values = table.clone(ThemeManager.ThemeNames),
+        Values = Names,
         Default = ThemeManager.CurrentTheme,
         Callback = function(Value)
             if not ThemeManager.SyncingSelector then
@@ -369,6 +389,88 @@ end
 
 function ThemeManager:CreateGroupBox(Tab, IconName)
     return Tab:AddLeftGroupbox("Themes", IconName or "palette")
+end
+
+function ThemeManager:CreateAppearanceManager(Groupbox)
+    local Library = ThemeManager.Library
+    assert(Library and Library.SetPalette, "Appearance controls require the current MonHub library")
+    assert(not ThemeManager.PalettePickers, "Appearance controls already exist")
+    ThemeManager.PalettePickers = {}
+    local Ready = false
+    for _, Field in {
+        { "AccentColor", "Accent" },
+        { "BackgroundColor", "Background" },
+        { "TopBarColor", "Header" },
+        { "SurfaceColor", "Panels" },
+        { "RaisedColor", "Raised panels" },
+        { "ElementColor", "Controls" },
+        { "HoverColor", "Hover" },
+        { "OutlineColor", "Borders" },
+        { "FontColor", "Text" },
+        { "MutedFontColor", "Secondary text" },
+    } do
+        local Key = Field[1]
+        Groupbox:AddLabel(Field[2]):AddColorPicker("ThemeManager_" .. Key, {
+            Default = Library.Scheme[Key],
+            Callback = function(Color)
+                if Ready and not ThemeManager.SyncingAppearance then
+                    Library:SetPalette({ [Key] = Color })
+                end
+            end,
+        })
+        ThemeManager.PalettePickers[Key] = Library.Options["ThemeManager_" .. Key]
+    end
+    for _, Field in { { "Window", "Window corners" }, { "Card", "Panel corners" }, { "Control", "Control corners" }, { "Indicator", "Checkbox corners" } } do
+        local Key = Field[1]
+        Groupbox:AddSlider("ThemeManager_Radius_" .. Key, {
+            Text = Field[2],
+            Default = Library:GetDesignToken("Radius." .. Key, 4),
+            Min = 0,
+            Max = Key == "Indicator" and 6 or 12,
+            Rounding = 0,
+            Suffix = "px",
+            Callback = function(Value)
+                if Ready then
+                    Library:SetDesign({ Radius = { [Key] = Value } })
+                end
+            end,
+        })
+    end
+    Groupbox:AddSlider("ThemeManager_ScrollbarThickness", {
+        Text = "Menu scrollbar width",
+        Default = Library:GetDesignToken("Shell.ScrollbarThickness", 2),
+        Min = 0,
+        Max = 6,
+        Rounding = 0,
+        Suffix = "px",
+        Callback = function(Value)
+            if Ready then Library:SetDesign({ Shell = { ScrollbarThickness = Value } }) end
+        end,
+    })
+    for _, Field in { { "Shadows", "Window shadows" }, { "Dividers", "Section dividers" }, { "NavigationIndicator", "Navigation accent line" }, { "AccentScrollbars", "Accent scrollbars" } } do
+        local Key = Field[1]
+        Groupbox:AddToggle("ThemeManager_Effect_" .. Key, {
+            Text = Field[2],
+            Default = Library:GetDesignToken("Effects." .. Key, false),
+            Callback = function(Value)
+                if Ready then
+                    Library:SetDesign({ Effects = { [Key] = Value } })
+                end
+            end,
+        })
+    end
+    Groupbox:AddToggle("ThemeManager_ReducedMotion", {
+        Text = "Reduced motion",
+        Default = Library:GetDesignToken("Motion.Reduced", false),
+        Callback = function(Value)
+            if Ready then Library:SetReducedMotion(Value) end
+        end,
+    })
+    Groupbox:AddButton("Reset palette to selected theme", function()
+        ThemeManager:ApplyTheme(Library.CurrentTheme)
+    end)
+    Ready = true
+    return Groupbox
 end
 
 function ThemeManager:ApplyToTab(Tab, IconName)

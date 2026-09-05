@@ -81,7 +81,7 @@ function ImagePreview.Create(Library, Info)
     local ShadeVisible = Info.Shade ~= false
     local ShadeTransparency = math.clamp(tonumber(Info.ShadeTransparency) or 0.32, 0, 1)
 
-    local Root = Instance.new("Frame")
+    local Root = Instance.new("CanvasGroup")
     Root.Name = "MonHubImagePreview"
     Root.BackgroundColor3 = Library and (Library.Scheme.SurfaceColor or Library.Scheme.BackgroundColor) or Color3.fromRGB(18, 20, 24)
     Root.BackgroundTransparency = BackgroundTransparency
@@ -524,6 +524,8 @@ function ImagePreview.Create(Library, Info)
             return
         end
         Preview.CornerRadius = math.clamp(tonumber(Value) or Preview.CornerRadius, 0, 12)
+        Info.CornerRadius = Preview.CornerRadius
+        if Library and Corner then Library:RemoveFromRegistry(Corner) end
         if Preview.CornerRadius > 0 then
             if not Corner then
                 Corner = Instance.new("UICorner")
@@ -648,6 +650,9 @@ function ImagePreview.Create(Library, Info)
         end)
     end
 
+    if Library and type(Library.BindAddonStyle) == "function" then
+        Library:BindAddonStyle(Root, Style, Info)
+    end
     return Preview
 end
 

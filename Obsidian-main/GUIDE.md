@@ -400,6 +400,35 @@ AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
 })
 ```
 
+### Module styles: minimal and highlight
+
+Every addon resolves its look through `Library:GetAddonStyle`, so two switches change any module without touching the module itself.
+
+```luau
+AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
+    Items = Items,
+    Style = { Minimal = true },
+})
+```
+
+`Minimal = true` strips the module back to its content. The border is removed (`StrokeThickness = 0`, `OutlineTransparency = 1`), padding and gap each lose two pixels, and the radii tighten by one or two. Use it when a module sits inside a groupbox that already provides a frame, so the interface does not draw two boxes around the same thing.
+
+`Highlight = true` does the opposite: it pulls the outline in to `0.12` transparency, forces at least one pixel of stroke, and recolors the border to the accent through `Style.HighlightColor`. Use it to mark the module the user is currently working in, or one that needs attention.
+
+| | `StrokeThickness` | `OutlineTransparency` | Border color |
+| --- | --- | --- | --- |
+| default | `1` | `0.5` | `OutlineColor` |
+| `Minimal` | `0` | `1` | none drawn |
+| `Highlight` | `1` | `0.12` | `AccentColor` |
+
+Both are plain style fields, so they compose with everything else and follow the active theme:
+
+```luau
+Style = { Highlight = true, Padding = 12, Motion = false }
+```
+
+The border color is registered against the accent token rather than a fixed value, so a highlighted module re-colors with the palette instead of keeping a stale accent.
+
 ### Reacting to theme changes
 
 `Library.Registry` binds instance properties to scheme tokens and is the mechanism behind every palette and font swap. A property bound to a string resolves that token; a property bound to a function is re-evaluated on each pass, which is how state-dependent colors stay correct:
@@ -459,7 +488,15 @@ Library:SetDesign({
 
 Every entry eases `Out`, so motion is fastest at the start and settles at the end. That is what makes a short duration still read as movement rather than a jump; easing `InOut` at these lengths just looks sluggish.
 
-Tab switching also has `Window.TabTransitionTime` (default `0.085`) and `TabSwipeOffset`, the few pixels the incoming tab travels. Keep the offset small: a long slide cannot be fast and legible at the same time.
+Tab switching also has `Window.TabTransitionTime` (default `0.085`) and `TabSwipeOffset` (default `10`), the pixels the incoming tab travels. Keep the offset modest: a long slide cannot be fast and legible at the same time.
+
+`TabSwipeFrom` chooses where the incoming tab enters from. Alongside `left`, `right`, `top` and `bottom` there is `auto`, the default, which picks the direction from the move itself. Selecting a tab further down the sidebar brings the new page up from the bottom; selecting one higher up brings it down from the top. The motion then agrees with the direction the user just moved, which is what makes switching read as one surface sliding rather than two pages crossfading.
+
+`auto` needs to know where each tab sits, so every tab receives a sequential `Order` at creation when one is not supplied. Passing `Order` yourself still wins:
+
+```luau
+Window:AddTab({ Name = "Combat", Icon = "crosshair", Order = 1 })
+```
 
 `Scale` multiplies every duration, so `0.5` halves the whole system and `0` removes motion. Tweens are pooled per instance and per slot, so duration does not affect cost: restarting a tween cancels the previous one on that slot instead of stacking. `Library:SetReducedMotion(true)` disables motion without changing any component's behavior.
 
@@ -1358,6 +1395,12 @@ After these changes a sweep of the full example reports zero fractional position
 - Added `Library:RevealText` and `Library:CancelReveal` for staggered text and image fade-ins, with a per-root token so overlapping calls cannot capture a mid-fade value as the resting one. The asset catalog reveals its grid on every refresh, controlled by `Reveal` and `RevealStagger`.
 - Added the bundled `Montserrat Bold` face and lazy downloaded font presets through `Library:LoadBundledFont`, cached per name so a failed fetch is not retried on every listing.
 - Raised the radius tokens one step to Window 8, Card 6, Control 5, Popup 6, Indicator 3.
+- Fixed two cursors appearing at once. The render step had been changed to skip redundant property writes by caching the last value it wrote, but the game can re-enable the system cursor on its own; the cache then still believed it was disabled and never corrected it. The step now compares against the live property, so it self-corrects on the next frame while still skipping writes that would change nothing.
+- Made the footer rule span the full window. It was inset eight pixels on each side while the top rule ran edge to edge, so the two did not agree and the bottom one stopped short of the sidebar divider. Both now use the same width, color, and opacity.
+- Rebuilt the watermark: an accent rule down its leading edge, tighter vertical padding, and the icon and rule both aligned on whole pixels through `AlignIcon`. Pass `Accent = false` to `AddDraggableLabel` for the previous plain look.
+- Gave keybind rows motion. A row scales and fades in when it appears (`AnimateIn`), and the indicator pulses when the bind activates (`Pulse`), so a bind firing is visible without watching the list.
+- Added `Minimal` and `Highlight` module styles.
+- Made the tab swipe directional through `TabSwipeFrom = "auto"`, and gave every tab a sequential `Order` so the direction can be resolved.
 
 ### 0.0.1-release-11
 

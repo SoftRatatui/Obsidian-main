@@ -1217,7 +1217,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-16",
+    ReleaseVersion: "0.0.1-release-3",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,

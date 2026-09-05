@@ -23,7 +23,7 @@ end
 
 
 local SaveManager = {
-    ReleaseVersion = "0.0.1-release-16",
+    ReleaseVersion = "0.0.1-release-3",
     Library = nil,
     FileSystemAvailable = FileSystemAvailable,
 

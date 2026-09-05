@@ -1,6 +1,8 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-16`
+Current release: `0.0.1-release-3`
+
+The release identifier is intentionally fixed. Library updates keep `0.0.1-release-3` unless the project owner explicitly requests another version.
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
@@ -16,7 +18,7 @@ MonHub is a compact Roblox Luau interface library built around a neutral dark pa
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-16"
+local RELEASE = "0.0.1-release-3"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -1669,7 +1671,7 @@ Run local checks with Luau's compiler and interpreter installed:
 
 ## Changelog
 
-### 0.0.1-release-16
+### 0.0.1-release-3
 
 - Reworked notifications into smaller 260px toasts with 12px titles, 11px descriptions, tighter spacing, shorter motion, four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.

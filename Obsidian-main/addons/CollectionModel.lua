@@ -1,5 +1,5 @@
 local CollectionModel = {
-    ReleaseVersion = "0.0.1-release-16",
+    ReleaseVersion = "0.0.1-release-3",
 }
 
 local function Copy(Value)

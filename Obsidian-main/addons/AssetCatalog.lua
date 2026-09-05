@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AssetCatalog = {
-    ReleaseVersion = "0.0.1-release-16",
+    ReleaseVersion = "0.0.1-release-3",
 }
 
 local function GetGuiScale(Object)

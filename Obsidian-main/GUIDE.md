@@ -1041,6 +1041,70 @@ If the container can become narrow, the catalog falls back from the split layout
 
 Give items a `Category` and the toolbar filter populates itself. Give them `Tags` and the search box matches those too.
 
+### A grid with no preview panel
+
+`Layout = "Grid"` hides the preview panel and gives the grid the whole body. Use it when the cards themselves are the interface and a detail pane would only take space away from them, which is the usual shape of a skin picker.
+
+```luau
+AssetCatalog.CreateEmbedded(Library, Gallery, "Skins", {
+    Items = Items,
+    Layout = "Grid",
+    Height = 470,
+    MinCellWidth = 96,
+})
+```
+
+`Split` and `Stack` both reserve room for the preview; `Grid` does not, so a narrow container fits noticeably more columns.
+
+### Rarity and per-item colors
+
+An item may carry `AccentColor`, and the card border uses it. Unselected cards draw that color at reduced opacity; the selected card draws it at full strength and selection thickness. Items without one fall back to the outline color, so a mixed collection stays readable.
+
+```luau
+local RarityColors = {
+    ["Mil-Spec"] = Color3.fromRGB(75, 105, 255),
+    ["Restricted"] = Color3.fromRGB(136, 71, 255),
+    ["Classified"] = Color3.fromRGB(211, 44, 230),
+    ["Covert"] = Color3.fromRGB(235, 75, 75),
+}
+
+for _, Item in Items do
+    Item.AccentColor = RarityColors[Item.Rarity]
+end
+```
+
+This is what lets a grid read at a glance: the border carries the tier, so the eye sorts the collection before reading a single label.
+
+### Two levels in one gallery
+
+A catalog holds one list, so a drill-down is a matter of swapping that list and giving the user a way back. Put a synthetic card first rather than adding a separate back button, and the whole surface stays a gallery:
+
+```luau
+local BackId = "__back__"
+
+local function showWeapons()
+    Suppress = true
+    Catalog:SetItems(WeaponCards())
+    Suppress = false
+end
+
+local function showSkins(Weapon)
+    local Cards = { { Id = BackId, Name = "All weapons", ActionText = "Back" } }
+    for _, Item in Items do
+        if Item.ModelName == Weapon then
+            table.insert(Cards, Item)
+        end
+    end
+    Suppress = true
+    Catalog:SetItems(Cards)
+    Suppress = false
+end
+```
+
+`OnSelected` receives `(Source, Item)` where `Source` is the exact table you supplied and `Item` is the normalized copy, so custom fields such as `IsWeaponCard` survive on `Source` and on `Item.Source`. Branch on those to decide between drilling in and acting on the item.
+
+The `Suppress` flag matters: swapping the list can re-emit a selection, and without the guard the handler would treat that as a click and immediately drill in again.
+
 ### Loading a large collection
 
 `SetItems` replaces the whole collection and resets to the first page. For incremental work use the collection helpers instead of rebuilding:
@@ -1401,6 +1465,8 @@ After these changes a sweep of the full example reports zero fractional position
 - Gave keybind rows motion. A row scales and fades in when it appears (`AnimateIn`), and the indicator pulses when the bind activates (`Pulse`), so a bind firing is visible without watching the list.
 - Added `Minimal` and `Highlight` module styles.
 - Made the tab swipe directional through `TabSwipeFrom = "auto"`, and gave every tab a sequential `Order` so the direction can be resolved.
+- Made an item's `AccentColor` color its card border at all times rather than only while selected, so a collection can carry rarity or tier on the card itself.
+- Made `Window:SetCornerRadius` survive a thread that cannot write to instances. Applying a saved config could raise a capability error and abort the load; the call now retries once on the scheduler and warns only if that also fails.
 
 ### 0.0.1-release-11
 

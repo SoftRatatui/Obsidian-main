@@ -14285,10 +14285,36 @@ function Library:CreateWindow(WindowInfo)
         SetAlwaysOnTop(Library.ScreenGui, WindowInfo.AlwaysOnTop)
     end
 
+    local CornerRadiusRetry = false
+
     function Window:SetCornerRadius(Radius: number)
         assert(typeof(Radius) == "number", "Expected number for Radius got: " .. typeof(Radius))
         Radius = math.clamp(Radius, 0, 20)
 
+        local Applied, Reason = pcall(function()
+            Window:ApplyCornerRadius(Radius)
+        end)
+
+        if Applied then
+            CornerRadiusRetry = false
+            return
+        end
+
+        if CornerRadiusRetry then
+            warn("MonHub: unable to apply corner radius (" .. tostring(Reason) .. ")")
+            CornerRadiusRetry = false
+            return
+        end
+
+        CornerRadiusRetry = true
+        task.defer(function()
+            if not Library.Unloaded then
+                Window:SetCornerRadius(Radius)
+            end
+        end)
+    end
+
+    function Window:ApplyCornerRadius(Radius: number)
         local RadiusHalf = UDim.new(0, math.floor(Radius / 2))
         local RadiusUDim = UDim.new(0, Radius)
         local HalfCurrent = Library.CornerRadius / 2

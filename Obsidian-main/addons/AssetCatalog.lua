@@ -804,9 +804,22 @@ function AssetCatalog.Create(Library, Info)
             end
             Slot.Button.BackgroundColor3 = Color
         end
-        Slot.Stroke.Color = Slot.Selected and (Slot.Item.AccentColor or (Library and Library.Scheme.AccentColor) or Color3.fromRGB(133, 141, 160)) or (Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66))
-        Slot.Stroke.Transparency = Slot.Selected and 0.08 or Style.OutlineTransparency
-        Slot.Stroke.Thickness = Slot.Selected and Style.SelectionThickness or Style.StrokeThickness
+        local ItemAccent = Slot.Item and Slot.Item.AccentColor
+        local Outline = (Library and Library.Scheme.OutlineColor) or Color3.fromRGB(52, 57, 66)
+
+        if Slot.Selected then
+            Slot.Stroke.Color = ItemAccent or (Library and Library.Scheme.AccentColor) or Color3.fromRGB(133, 141, 160)
+            Slot.Stroke.Transparency = 0.08
+            Slot.Stroke.Thickness = Style.SelectionThickness
+        elseif ItemAccent then
+            Slot.Stroke.Color = ItemAccent
+            Slot.Stroke.Transparency = math.min(Style.OutlineTransparency, 0.34)
+            Slot.Stroke.Thickness = math.max(1, Style.StrokeThickness)
+        else
+            Slot.Stroke.Color = Outline
+            Slot.Stroke.Transparency = Style.OutlineTransparency
+            Slot.Stroke.Thickness = Style.StrokeThickness
+        end
     end
 
     local function ClearBadges()
@@ -1005,7 +1018,15 @@ function AssetCatalog.Create(Library, Info)
         }
         Catalog.Slots[Index] = Slot
         AddRegistry(Library, Button, { BackgroundColor3 = function() return CardColor(Slot) end })
-        AddRegistry(Library, Stroke, { Color = function() return Slot.Selected and (Slot.Item.AccentColor or Library.Scheme.AccentColor) or Library.Scheme.OutlineColor end })
+        AddRegistry(Library, Stroke, {
+            Color = function()
+                local ItemAccent = Slot.Item and Slot.Item.AccentColor
+                if Slot.Selected then
+                    return ItemAccent or Library.Scheme.AccentColor
+                end
+                return ItemAccent or Library.Scheme.OutlineColor
+            end,
+        })
         AddRegistry(Library, Canvas, { BackgroundColor3 = "BackgroundColor" })
         AddRegistry(Library, Name, { FontFace = "Font", TextColor3 = "FontColor" })
         AddRegistry(Library, State, { BackgroundColor3 = "AccentSoftColor", FontFace = "Font", TextColor3 = "FontColor" })

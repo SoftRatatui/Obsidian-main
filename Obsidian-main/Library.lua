@@ -353,7 +353,7 @@ local Library = {
     OriginalMinSize = Vector2.new(480, 360),
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
-    CornerRadius = 6,
+    CornerRadius = 8,
     DesignRevision = 0,
     Design = {
         Effects = {
@@ -371,11 +371,11 @@ local Library = {
             Section = 12,
         },
         Radius = {
-            Window = 6,
-            Card = 4,
-            Control = 3,
-            Popup = 4,
-            Indicator = 2,
+            Window = 8,
+            Card = 6,
+            Control = 5,
+            Popup = 6,
+            Indicator = 3,
         },
         Size = {
             TopBar = 52,
@@ -436,29 +436,30 @@ local Library = {
         Motion = {
             Scale = 1,
             Reduced = false,
-            Hover = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            Control = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Fast = { 0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Popup = { 0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            Dialog = { 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            WindowOpen = { 0.21, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            WindowClose = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            TabEnter = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            TabExit = { 0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            Notify = { 0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            NotifyClose = { 0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Hover = { 0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Control = { 0.12, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Fast = { 0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Popup = { 0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            Dialog = { 0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowOpen = { 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            WindowClose = { 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            TabEnter = { 0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            TabExit = { 0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Notify = { 0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            NotifyClose = { 0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            TextReveal = { 0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
         },
         Addon = {
             HeaderHeight = 38,
             Padding = 10,
             Gap = 8,
-            Radius = 4,
+            Radius = 6,
             OutlineTransparency = 0.5,
             BackgroundTransparency = 0,
             ControlHeight = 28,
             WindowWidth = 420,
             WindowHeight = 480,
-            CellRadius = 4,
+            CellRadius = 5,
             CellPadding = 6,
             SelectionThickness = 1,
             PreviewRatio = 0.58,
@@ -645,17 +646,46 @@ Library.FontPresets = {
     { Name = "Builder Sans", Family = "rbxasset://fonts/families/BuilderSans.json", Weight = Enum.FontWeight.Medium },
     { Name = "Gotham", Family = "rbxasset://fonts/families/GothamSSm.json", Weight = Enum.FontWeight.Medium },
     { Name = "Montserrat", Family = "rbxasset://fonts/families/Montserrat.json", Weight = Enum.FontWeight.Medium },
+    { Name = "Montserrat Bold", Download = true },
     { Name = "Roboto", Family = "rbxasset://fonts/families/Roboto.json", Weight = Enum.FontWeight.Medium },
     { Name = "Source Sans", Family = "rbxasset://fonts/families/SourceSansPro.json", Weight = Enum.FontWeight.SemiBold },
     { Name = "Ubuntu", Family = "rbxasset://fonts/families/Ubuntu.json", Weight = Enum.FontWeight.Regular },
     { Name = "Roboto Mono", Family = "rbxasset://fonts/families/RobotoMono.json", Weight = Enum.FontWeight.Medium },
 }
 
+function Library:LoadBundledFont(Name: string): (Font?, string?)
+    local Cached = Library.BundledFontCache[Name]
+    if Cached ~= nil then
+        if Cached == false then
+            return nil, "Font previously failed to load"
+        end
+        return Cached
+    end
+
+    local Entry = Library.BundledFonts[Name]
+    if not Entry then
+        return nil, "Unknown bundled font: " .. tostring(Name)
+    end
+
+    local Face, Reason = Library:LoadCustomFont(
+        Entry.Name,
+        Library.BundledFontBaseURL .. Entry.File .. "?monhub=" .. tostring(Library.ReleaseVersion),
+        Entry.Weight
+    )
+
+    Library.BundledFontCache[Name] = Face or false
+    return Face, Reason
+end
+
 function Library:GetFontNames(): { string }
     local Names = {}
     for _, Preset in Library.FontPresets do
         if Preset.Bundled then
             if Library.DefaultFont and not Library.DefaultFontError then
+                table.insert(Names, Preset.Name)
+            end
+        elseif Preset.Download then
+            if Library.BundledFontCache[Preset.Name] ~= false then
                 table.insert(Names, Preset.Name)
             end
         else
@@ -676,6 +706,9 @@ function Library:GetFontPreset(Name: string): Font?
                     return nil
                 end
                 return Library.DefaultFont
+            end
+            if Preset.Download then
+                return (Library:LoadBundledFont(Preset.Name))
             end
             local Success, Value = pcall(Font.new, Preset.Family, Preset.Weight or Enum.FontWeight.Medium)
             if Success then
@@ -704,6 +737,12 @@ Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
 
+Library.BundledFontBaseURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/"
+Library.BundledFonts = {
+    ["Montserrat Bold"] = { File = "Montserrat-Bold.ttf", Name = "MonHubMontserratBold", Weight = 700 },
+}
+Library.BundledFontCache = {}
+
 Library.DefaultTheme = "Default"
 Library.CurrentTheme = "Default"
 Library.Themes = {
@@ -728,7 +767,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Metal = {
@@ -752,7 +791,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 248, 250),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Midnight = {
@@ -776,7 +815,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Steel = {
@@ -800,7 +839,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(246, 249, 251),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Sage = {
@@ -824,7 +863,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(247, 250, 248),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
     Ash = {
@@ -848,7 +887,7 @@ Library.Themes = {
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(249, 247, 243),
         BackgroundImage = "",
-        CornerRadius = 6,
+        CornerRadius = 8,
         IsLight = false,
     },
 }
@@ -945,7 +984,7 @@ local Templates = {
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
 
-        CornerRadius = 6,
+        CornerRadius = 8,
         NotifySide = "Right",
         ShowCustomCursor = true,
 
@@ -995,7 +1034,7 @@ local Templates = {
             KeyPicker = true
         },
 
-        TabTransitionTime = 0.16,
+        TabTransitionTime = 0.085,
         TabSwipeOffset = 6,
         TabSwipeFrom = "bottom"
     },
@@ -1572,6 +1611,125 @@ function Library:CancelTween(Instance: Instance, Slot: string)
 
     StopTween(TweenSlots[Slot].Tween, true)
     TweenSlots[Slot] = nil
+end
+
+local RevealProperty = {
+    TextLabel = "TextTransparency",
+    TextButton = "TextTransparency",
+    TextBox = "TextTransparency",
+    ImageLabel = "ImageTransparency",
+    ImageButton = "ImageTransparency",
+}
+
+local RevealTokens = {}
+local RevealTargets = {}
+
+local function CollectRevealTargets(Root: Instance, Out: { any })
+    local Property = RevealProperty[Root.ClassName]
+    if Property then
+        table.insert(Out, { Object = Root, Property = Property })
+    end
+
+    for _, Child in Root:GetDescendants() do
+        local ChildProperty = RevealProperty[Child.ClassName]
+        if ChildProperty then
+            table.insert(Out, { Object = Child, Property = ChildProperty })
+        end
+    end
+
+    return Out
+end
+
+function Library:CancelReveal(Root: Instance, Restore: boolean?)
+    if typeof(Root) ~= "Instance" then
+        return
+    end
+
+    RevealTokens[Root] = (RevealTokens[Root] or 0) + 1
+
+    local Targets = RevealTargets[Root]
+    if not Targets then
+        return
+    end
+
+    for _, Entry in Targets do
+        Library:CancelTween(Entry.Object, "Reveal")
+        if Restore ~= false and Entry.Object.Parent then
+            pcall(function()
+                Entry.Object[Entry.Property] = Entry.Target
+            end)
+        end
+    end
+
+    RevealTargets[Root] = nil
+end
+
+function Library:RevealText(Root: Instance, Info)
+    if typeof(Root) ~= "Instance" then
+        return
+    end
+
+    Info = Info or {}
+
+    if Library.Design.Motion.Reduced or Info.Motion == false then
+        Library:CancelReveal(Root, true)
+        return
+    end
+
+    Library:CancelReveal(Root, true)
+
+    local Targets = CollectRevealTargets(Root, {})
+    if #Targets == 0 then
+        return
+    end
+
+    local Stagger = math.clamp(tonumber(Info.Stagger) or 0.012, 0, 0.08)
+    local Rise = math.clamp(tonumber(Info.Rise) or 0, 0, 12)
+    local Motion = Library:GetMotion(Info.Motion or "TextReveal")
+
+    RevealTokens[Root] = (RevealTokens[Root] or 0) + 1
+    local Token = RevealTokens[Root]
+
+    for Index, Entry in Targets do
+        Entry.Target = Entry.Object[Entry.Property]
+        Entry.Object[Entry.Property] = 1
+    end
+
+    RevealTargets[Root] = Targets
+
+    local Span = math.min(#Targets * Stagger, 0.22)
+    local Step = #Targets > 1 and (Span / (#Targets - 1)) or 0
+
+    for Index, Entry in Targets do
+        local Offset = Step * (Index - 1)
+
+        local function Play()
+            if RevealTokens[Root] ~= Token or not Entry.Object.Parent then
+                return
+            end
+            Library:PlayTween(Entry.Object, "Reveal", Motion, {
+                [Entry.Property] = Entry.Target,
+            })
+        end
+
+        if Offset <= 0 then
+            Play()
+        else
+            task.delay(Offset, Play)
+        end
+    end
+
+    task.delay(Span + Motion.Time, function()
+        if RevealTokens[Root] == Token then
+            RevealTargets[Root] = nil
+        end
+    end)
+
+    if Rise > 0 and Root:IsA("GuiObject") then
+        local Resting = Root.Position
+        Root.Position = Resting + UDim2.fromOffset(0, Rise)
+        Library:PlayTween(Root, "RevealRise", Motion, { Position = Resting })
+    end
 end
 
 local function Trim(Text: string)
@@ -15176,7 +15334,7 @@ function Library:CreateWindow(WindowInfo)
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
-                Parent = Info.Side == 1 and TabLeft or TabRight,
+                Parent = (Tab.FullWidth or Info.Side == 1) and TabLeft or TabRight,
             })
 
             local GroupboxHolder
@@ -15494,15 +15652,45 @@ function Library:CreateWindow(WindowInfo)
             return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
         end
 
+        local function AbsorbRightColumn()
+            local Moved = {}
+            for _, Child in TabRight:GetChildren() do
+                if Child:IsA("GuiObject") then
+                    table.insert(Moved, Child)
+                end
+            end
+
+            table.sort(Moved, function(First, Second)
+                return First.LayoutOrder < Second.LayoutOrder
+            end)
+
+            for _, Child in Moved do
+                Child.Parent = TabLeft
+            end
+        end
+
         function Tab:SetFullWidth(Enabled)
-            Tab.FullWidth = Enabled ~= false
+            local Wanted = Enabled ~= false
+            if Tab.FullWidth == Wanted then
+                return Tab
+            end
+
+            Tab.FullWidth = Wanted
+            if Wanted then
+                AbsorbRightColumn()
+            end
+
             Tab:RefreshSides()
             Tab:Resize()
             return Tab
         end
 
         function Tab:AddFullGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
-            Tab.FullWidth = true
+            if not Tab.FullWidth then
+                Tab.FullWidth = true
+                AbsorbRightColumn()
+            end
+
             local Groupbox = Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
             Tab:RefreshSides()
             return Groupbox
@@ -17907,6 +18095,8 @@ function Library:Unload()
     table.clear(Library.ActiveTweens)
     table.clear(Library.Registry)
     table.clear(Library.ThemeListeners)
+    table.clear(RevealTokens)
+    table.clear(RevealTargets)
 
 
     for Index = #Library.Signals, 1, -1 do

@@ -337,12 +337,21 @@ Settings:AddDropdown("InterfaceFont", {
 | `Builder Sans` | Roblox's own interface face. Slightly wider than Inter. |
 | `Gotham` | The previous default. Geometric, a little softer. |
 | `Montserrat` | Wide and round. Suits large titles more than dense rows. |
+| `Montserrat Bold` | Bundled bold cut, downloaded on first use. Heavy for dense rows; best when the menu is meant to read as a display piece. |
 | `Roboto` | Neutral and compact. |
 | `Source Sans` | Humanist, taller x-height. |
 | `Ubuntu` | Distinctive, rounder terminals. |
 | `Roboto Mono` | Monospaced. Useful for value-heavy readouts. |
 
 `GetFontNames` builds each face behind `pcall` and omits any the client cannot construct, so the dropdown never offers a font that would fail. `SetFontByName` returns `false` for an unknown or unavailable name and leaves the current font untouched.
+
+Presets come in three kinds, and `GetFontNames` handles each so the dropdown only ever offers what this client can build:
+
+- **Bundled** (`Inter`) uses the face the library loads at startup. Listed only when that load succeeded, so a failed download does not leave a dead entry.
+- **Family** presets build a Roblox font family behind `pcall`. A client without that family simply omits it.
+- **Download** presets (`Montserrat Bold`) fetch a `.ttf` from the repository's `assets/` folder the first time they are selected, then cache the result. `Library:LoadBundledFont(Name)` performs that fetch and returns `(Font?, reason?)`; the outcome is cached in `Library.BundledFontCache`, so a face that fails once is dropped from later listings rather than retried on every open.
+
+Downloaded faces cost one HTTP request the first time and nothing afterwards, which is why they are resolved lazily instead of at startup.
 
 To supply your own face, load it once and set it directly:
 
@@ -356,6 +365,40 @@ end
 ```
 
 `SetThemeFont` also stores the face as a theme override, so switching palettes will not replace it.
+
+### Revealing text and images
+
+`Library:RevealText(Root, Info)` fades every text and image inside `Root` in from transparent, one shortly after the next. Use it when a panel's contents change wholesale, such as a gallery turning a page or a module loading a new record. It is the difference between values snapping into place and a panel that reads as filling in.
+
+```luau
+Library:RevealText(Panel, {
+    Stagger = 0.012,
+    Rise = 4,
+    Motion = "TextReveal",
+})
+```
+
+| Field | Meaning |
+| --- | --- |
+| `Stagger` | Seconds between successive elements, clamped to `0.08`. `0` reveals everything together. |
+| `Rise` | Pixels the root lifts from as it fades in, clamped to `12`. `0` disables the movement. |
+| `Motion` | Motion token to use. Defaults to `TextReveal`. |
+
+The function walks `Root` and every descendant, keeping any `TextLabel`, `TextButton`, `TextBox`, `ImageLabel`, and `ImageButton`. It records each one's current transparency as the target, sets it to fully transparent, then tweens back to what it recorded.
+
+That recording step is why the call is safe to make repeatedly. Each root carries a token, and starting a reveal cancels any run still in flight and restores its targets first. Without that, a second call landing mid-fade would record the half-faded value as the resting one and the panel would stay dim. `Library:CancelReveal(Root, Restore)` does the same on demand; pass `false` to leave elements where they are instead of snapping them to their targets.
+
+Reduced motion is respected: with `Library:SetReducedMotion(true)`, or `Motion = false` in the call, the function restores every target immediately and returns without animating.
+
+The asset catalog uses this on every refresh. Turn it off, or slow it down, per instance:
+
+```luau
+AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
+    Items = Items,
+    Reveal = true,
+    RevealStagger = 0.02,
+})
+```
 
 ### Reacting to theme changes
 
@@ -383,21 +426,42 @@ Two helpers exist for choosing readable foregrounds. `Library:GetLuminance(Color
 
 ### Motion
 
-`Library.Design.Motion` holds one entry per interaction, each `{ duration, EasingStyle, EasingDirection }`. Durations are short enough to feel immediate and long enough to read as movement rather than a jump:
+`Library.Design.Motion` holds one entry per interaction, each `{ duration, EasingStyle, EasingDirection }`.
+
+Duration is tuned to what the movement is for, not to a single house value. Anything the user drives directly has to answer immediately, or the interface feels like it is lagging behind them; anything that arrives on its own can afford to be seen:
+
+| Token | Duration | Used by |
+| --- | --- | --- |
+| `TabExit` | `0.05` | The outgoing tab. Nothing is gained by watching it leave. |
+| `Fast` | `0.07` | Small state flips. |
+| `WindowClose` | `0.08` | Hiding on the keybind. The user has already decided; get out of the way. |
+| `TabEnter` | `0.09` | The incoming tab. |
+| `Hover` | `0.09` | Pointer feedback. Slower than this reads as lag. |
+| `Control` | `0.12` | Toggles, sliders, checkboxes. |
+| `Popup` | `0.14` | Dropdowns and menus. |
+| `WindowOpen` | `0.15` | Showing the menu. |
+| `Dialog` | `0.16` | Modal dialogs. |
+| `TextReveal` | `0.16` | Content fading in through `RevealText`. |
+| `Notify` | `0.18` | Notifications arriving unprompted, so worth noticing. |
+| `NotifyClose` | `0.11` | Notifications leaving. |
 
 ```luau
 Library:SetDesign({
     Motion = {
         Scale = 1,
-        Hover = { 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-        Control = { 0.17, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-        Popup = { 0.19, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-        WindowOpen = { 0.21, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+        Hover = { 0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+        TabEnter = { 0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+        TabExit = { 0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+        WindowClose = { 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
     },
 })
 ```
 
-`Scale` multiplies every duration, so `0.5` halves the whole system and `0` removes motion. Tweens are pooled per instance and per slot, so a longer duration does not add work: restarting a tween cancels the previous one on that slot instead of stacking. `Library:SetReducedMotion(true)` disables motion without changing any component's behavior.
+Every entry eases `Out`, so motion is fastest at the start and settles at the end. That is what makes a short duration still read as movement rather than a jump; easing `InOut` at these lengths just looks sluggish.
+
+Tab switching also has `Window.TabTransitionTime` (default `0.085`) and `TabSwipeOffset`, the few pixels the incoming tab travels. Keep the offset small: a long slide cannot be fast and legible at the same time.
+
+`Scale` multiplies every duration, so `0.5` halves the whole system and `0` removes motion. Tweens are pooled per instance and per slot, so duration does not affect cost: restarting a tween cancels the previous one on that slot instead of stacking. `Library:SetReducedMotion(true)` disables motion without changing any component's behavior.
 
 ### Live palette and appearance controls
 
@@ -1289,6 +1353,11 @@ Run local checks with Luau's compiler and interpreter installed:
 - Stopped inactive tabs recomputing their column split on every resize frame.
 
 After these changes a sweep of the full example reports zero fractional positions or sizes across all ten tabs and 2,279 visible objects, with the only remaining entries belonging to the mouse cursor, which tracks the pointer by design.
+- Fixed `AddFullGroupbox` discarding a tab's right column. Switching a tab to full width hid that column, so any groupbox already placed on the right vanished and left an empty panel behind. Existing right-hand groupboxes are now moved into the single column in layout order, and `AddRightGroupbox` follows the same column while a tab is full width.
+- Retuned the motion profile around what each movement is for rather than one duration: tab changes and closing on the keybind are now the quickest things in the interface, while notifications and dialogs stay visible enough to read.
+- Added `Library:RevealText` and `Library:CancelReveal` for staggered text and image fade-ins, with a per-root token so overlapping calls cannot capture a mid-fade value as the resting one. The asset catalog reveals its grid on every refresh, controlled by `Reveal` and `RevealStagger`.
+- Added the bundled `Montserrat Bold` face and lazy downloaded font presets through `Library:LoadBundledFont`, cached per name so a failed fetch is not retried on every listing.
+- Raised the radius tokens one step to Window 8, Card 6, Control 5, Popup 6, Indicator 3.
 
 ### 0.0.1-release-11
 

@@ -573,6 +573,8 @@ function AssetCatalog.Create(Library, Info)
         Layout = LayoutMode,
         PreviewSide = PreviewSide,
         PreviewRatio = PreviewRatio,
+        Reveal = Info.Reveal ~= false,
+        RevealStagger = math.clamp(tonumber(Info.RevealStagger) or 0.012, 0, 0.08),
         Columns = Columns,
         Rows = Rows,
         PageSize = PageSize,
@@ -1103,6 +1105,10 @@ function AssetCatalog.Create(Library, Info)
         end
         Previous.TextTransparency = Catalog.Page > 1 and 0 or 0.6
         Next.TextTransparency = Catalog.Page < Catalog.PageCount and 0 or 0.6
+
+        if Catalog.Reveal and Library and type(Library.RevealText) == "function" and Style.Motion then
+            Library:RevealText(GridScroll, { Stagger = Catalog.RevealStagger })
+        end
     end
 
     function Catalog:Refresh()

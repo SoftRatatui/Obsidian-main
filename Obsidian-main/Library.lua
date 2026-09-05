@@ -299,7 +299,7 @@ local Library = {
     TabTransitionInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     TabExitTransitionInfo = TweenInfo.new(0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     TabSwipeOffset = 2,
-    TabSwipeFrom = "bottom",
+    TabSwipeFrom = "auto",
 
     WindowAnimationInfo = TweenInfo.new(0.06, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     WindowOpenAnimationInfo = TweenInfo.new(0.085, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -1035,8 +1035,8 @@ local Templates = {
         },
 
         TabTransitionTime = 0.085,
-        TabSwipeOffset = 6,
-        TabSwipeFrom = "bottom"
+        TabSwipeOffset = 10,
+        TabSwipeFrom = "auto"
     },
     Dialog = {
         Title = "Dialog",
@@ -14520,6 +14520,7 @@ function Library:CreateWindow(WindowInfo)
         TabInfoRequested = false
         Window:RefreshResponsiveLayout()
     end
+    local TabSequence = 0
 
     function Window:AddTab(...)
         local Name = nil
@@ -14539,6 +14540,9 @@ function Library:CreateWindow(WindowInfo)
             Description = select(3, ...)
             Order = select(4, ...)
         end
+
+        TabSequence += 1
+        Order = tonumber(Order) or TabSequence
 
         local TabButton: TextButton
         local TabLabel
@@ -15813,7 +15817,12 @@ function Library:CreateWindow(WindowInfo)
             end
 
             if Library.ActiveTab then
+                local From = tonumber(Library.ActiveTab.Order) or 0
+                local To = tonumber(Tab.Order) or 0
+                Library.TabSwipeDirection = To < From and -1 or 1
                 Library.ActiveTab:Hide()
+            else
+                Library.TabSwipeDirection = 1
             end
 
             Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, true)

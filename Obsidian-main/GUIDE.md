@@ -1,6 +1,6 @@
 # MonHub UI Guide
 
-Current release: `0.0.1-release-15`
+Current release: `0.0.1-release-16`
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
@@ -16,7 +16,7 @@ MonHub is a compact Roblox Luau interface library built around a neutral dark pa
 ## Quick start
 
 ```luau
-local RELEASE = "0.0.1-release-15"
+local RELEASE = "0.0.1-release-16"
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
 local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
@@ -1112,22 +1112,23 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 
 ## Notifications
 
-The default is a compact card with a quiet outline, 13px text, and a close button. Accent bars and progress bars are opt-in. Cards use a short fade and vertical movement without scaling the text.
+The default is a small toast with a quiet outline, 12px title, 11px description, and no permanent decoration. Accent bars, progress bars, icons, and close buttons are opt-in. Cards use a short fade and three-pixel vertical movement without scaling the text.
 
 ```luau
 Library:SetNotificationOptions({
     Side = "Right",
-    Width = 320,
+    Width = 260,
     Margin = 8,
-    Gap = 6,
-    Padding = 10,
-    CornerRadius = 5,
-    TextSize = 13,
-    MaxVisible = 5,
-    DefaultDuration = 5,
+    Gap = 5,
+    Padding = 7,
+    CornerRadius = 4,
+    TitleTextSize = 12,
+    DescriptionTextSize = 11,
+    MaxVisible = 4,
+    DefaultDuration = 3.5,
     Accent = false,
     ShowProgress = false,
-    Dismissible = true,
+    Dismissible = false,
 })
 
 Library:Notify({
@@ -1140,8 +1141,8 @@ Library:Notify({
 
 | Setting | Range and behavior |
 | --- | --- |
-| `Width` | 180 to 520 local pixels; reduced when necessary to fit the viewport and DPI. |
-| `TextSize` | 10 to 20 pixels. Text wraps within the card and is clipped to the available screen height. |
+| `Width` | 160 to 520 local pixels; reduced when necessary to fit the viewport and DPI. |
+| `TitleTextSize` / `DescriptionTextSize` | 9 to 20 pixels. `TextSize` remains a compatibility shortcut: it sets the title and makes the description one pixel smaller. |
 | `Padding` | 4 to 24 pixels inside the card. |
 | `CornerRadius` | 0 to 18 pixels. |
 | `Margin` / `Gap` | Screen margin 0 to 40; stack gap 0 to 24. |
@@ -1149,7 +1150,7 @@ Library:Notify({
 | `DefaultDuration` | Nonnegative seconds; `Time` overrides this per notification. |
 | `Accent` / `ShowProgress` / `Dismissible` | Enable the leading accent, progress track, or close button. |
 
-Changes to global appearance update open cards. A card's explicit `Width`, `TextSize`, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
+Changes to the library font or global appearance update open cards. Notification text binds directly to `Library.Scheme.Font`; RichText is disabled so content cannot silently replace its weight or styling. A card's explicit `Width`, text sizes, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
 
 `Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`. Warning and error variants choose a corresponding accent palette color; success uses a green accent; use `Icon` and `IconColor` to add an explicit status symbol. `AccentColor`, `TitleColor`, and `DescriptionColor` override colors. `BigIcon` uses a 24px icon instead of the compact 16px icon. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
 
@@ -1667,6 +1668,12 @@ Run local checks with Luau's compiler and interpreter installed:
 ```
 
 ## Changelog
+
+### 0.0.1-release-16
+
+- Reworked notifications into smaller 260px toasts with 12px titles, 11px descriptions, tighter spacing, shorter motion, four-card limit, and optional close controls.
+- Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
+- Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.
 
 ### 0.0.1-release-15
 

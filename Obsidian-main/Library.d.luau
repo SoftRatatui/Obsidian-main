@@ -137,6 +137,8 @@ export type Notification = {
     Width: number,
     Padding: number,
     TextSize: number,
+    TitleTextSize: number,
+    DescriptionTextSize: number,
     Height: number,
     Progress: number,
     Root: Frame,
@@ -1215,7 +1217,7 @@ export type App = {
 
 
 export type Library = {
-    ReleaseVersion: "0.0.1-release-15",
+    ReleaseVersion: "0.0.1-release-16",
     
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
@@ -1299,6 +1301,8 @@ export type Library = {
     NotificationStyle: {
         Width: number,
         TextSize: number,
+        TitleTextSize: number,
+        DescriptionTextSize: number,
         Margin: number,
         Gap: number,
         Padding: number,
@@ -1529,6 +1533,8 @@ export type Library = {
             Variant: "Default" | "Success" | "Warning" | "Error" | "Danger" | string?,
             Width: number?,
             TextSize: number?,
+            TitleTextSize: number?,
+            DescriptionTextSize: number?,
             Padding: number?,
             CornerRadius: number?,
             Accent: boolean?,

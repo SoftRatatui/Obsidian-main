@@ -1,5 +1,5 @@
 local TextureGallery = {
-    ReleaseVersion = "0.0.1-release-15",
+    ReleaseVersion = "0.0.1-release-16",
 }
 
 TextureGallery.DefaultItems = {

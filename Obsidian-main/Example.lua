@@ -14,7 +14,7 @@
 assert(type(loadstring) == "function", "This example requires an executor with loadstring support.")
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
-local RELEASE_VERSION = "0.0.1-release-15"
+local RELEASE_VERSION = "0.0.1-release-16"
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -2557,14 +2557,16 @@ local NotificationDuration = Library.NotificationStyle.DefaultDuration
 local NotificationProgress = Library.NotificationStyle.ShowProgress
 local NotificationAccent = Library.NotificationStyle.Accent
 local NotificationDismissible = Library.NotificationStyle.Dismissible
-local NotificationTextSize = Library.NotificationStyle.TextSize
+local NotificationTitleSize = Library.NotificationStyle.TitleTextSize
+local NotificationDescriptionSize = Library.NotificationStyle.DescriptionTextSize
 local function ApplyNotificationStyle()
 	Library:SetNotificationOptions({
 		Width = NotificationWidth,
 		Margin = NotificationMargin,
 		Gap = NotificationGap,
 		Padding = NotificationPadding,
-        TextSize = NotificationTextSize,
+		TitleTextSize = NotificationTitleSize,
+		DescriptionTextSize = NotificationDescriptionSize,
 		CornerRadius = NotificationRadius,
 		MaxVisible = NotificationMaxVisible,
 		DefaultDuration = NotificationDuration,
@@ -2573,23 +2575,35 @@ local function ApplyNotificationStyle()
 		Dismissible = NotificationDismissible,
 	})
 end
-NotificationGroup:AddSlider("NotificationTextSize", {
-    Text = "Text size",
-    Default = NotificationTextSize,
-    Min = 10,
-    Max = 20,
-    Rounding = 0,
-    Suffix = "px",
-    Callback = function(Value)
-        NotificationTextSize = Value
-        ApplyNotificationStyle()
-    end,
+NotificationGroup:AddSlider("NotificationTitleSize", {
+	Text = "Title size",
+	Default = NotificationTitleSize,
+	Min = 9,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationTitleSize = Value
+		ApplyNotificationStyle()
+	end,
+})
+NotificationGroup:AddSlider("NotificationDescriptionSize", {
+	Text = "Description size",
+	Default = NotificationDescriptionSize,
+	Min = 9,
+	Max = 20,
+	Rounding = 0,
+	Suffix = "px",
+	Callback = function(Value)
+		NotificationDescriptionSize = Value
+		ApplyNotificationStyle()
+	end,
 })
 NotificationGroup:AddSlider("NotificationWidth", {
 	Text = "Width",
 	Default = NotificationWidth,
-	Min = 240,
-	Max = 480,
+	Min = 160,
+	Max = 420,
 	Rounding = 0,
 	Suffix = "px",
 	Callback = function(Value)

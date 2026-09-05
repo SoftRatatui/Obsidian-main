@@ -237,7 +237,7 @@ do
 end
 
 local Library = {
-    ReleaseVersion = "0.0.1-release-15",
+    ReleaseVersion = "0.0.1-release-16",
     LocalPlayer = LocalPlayer,
     IsRobloxFocused = true,
 
@@ -278,20 +278,22 @@ local Library = {
     
     Notifications = {},
     NotifySide = "Right",
-    NotifyTweenInfo = TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    NotifyCloseTweenInfo = TweenInfo.new(0.085, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    NotifyTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    NotifyCloseTweenInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     NotificationStyle = {
-        Width = 320,
+        Width = 260,
         Margin = 8,
-        Gap = 6,
-        Padding = 10,
-        CornerRadius = 5,
-        TextSize = 13,
-        MaxVisible = 5,
-        DefaultDuration = 5,
+        Gap = 5,
+        Padding = 7,
+        CornerRadius = 4,
+        TextSize = 12,
+        TitleTextSize = 12,
+        DescriptionTextSize = 11,
+        MaxVisible = 4,
+        DefaultDuration = 3.5,
         Accent = false,
         ShowProgress = false,
-        Dismissible = true,
+        Dismissible = false,
     },
 
     
@@ -760,7 +762,7 @@ function Library:SetFontByName(Name: string): boolean
 end
 
 Library.DefaultFontName = "MonHubInterMedium"
-Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-15-font-default"
+Library.DefaultFontURL = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/assets/Inter-Medium.ttf?monhub=0.0.1-release-16-font-default"
 Library.DefaultFontWeight = 500
 Library.DefaultFont = nil
 Library.DefaultFontError = nil
@@ -13135,11 +13137,15 @@ function Library:SetNotificationOptions(Info)
         assert(Side == "left" or Side == "right", "Notification side must be Left or Right")
     end
     local Next = table.clone(Library.NotificationStyle)
-    for Key, Limits in { Width = { 180, 520 }, Margin = { 0, 40 }, Gap = { 0, 24 }, Padding = { 4, 24 }, CornerRadius = { 0, 18 }, MaxVisible = { 1, 20 }, TextSize = { 10, 20 } } do
+    for Key, Limits in { Width = { 160, 520 }, Margin = { 0, 40 }, Gap = { 0, 24 }, Padding = { 4, 24 }, CornerRadius = { 0, 18 }, MaxVisible = { 1, 20 }, TextSize = { 9, 20 }, TitleTextSize = { 9, 20 }, DescriptionTextSize = { 9, 20 } } do
         local Value = tonumber(Info[Key])
         if Value and Value == Value and math.abs(Value) < math.huge then
             Next[Key] = math.clamp(math.floor(Value), Limits[1], Limits[2])
         end
+    end
+    if Info.TextSize ~= nil then
+        Next.TitleTextSize = Next.TextSize
+        Next.DescriptionTextSize = math.max(9, Next.TextSize - 1)
     end
     local Duration = tonumber(Info.DefaultDuration)
     if Duration and Duration == Duration and Duration < math.huge then Next.DefaultDuration = math.max(0, Duration) end
@@ -13190,19 +13196,21 @@ function Library:Notify(...)
     local Root = New("Frame", { BackgroundTransparency = 1, Parent = NotificationArea })
     local Holder = New("CanvasGroup", {
         BackgroundColor3 = "MainColor", ClipsDescendants = true, GroupTransparency = 1,
-        Position = UDim2.fromOffset(0, -6), Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = Root,
+        Position = UDim2.fromOffset(0, -3), Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = Root,
     })
     local Corner = New("UICorner", { Parent = Holder })
     local Stroke = Library:AddOutline(Holder)
-    Stroke.Transparency = 0.55
+    Stroke.Transparency = 0.62
     local Accent = New("Frame", { BackgroundColor3 = AccentColor, Parent = Holder })
     local Title = New("TextLabel", {
-        BackgroundTransparency = 1, Text = Data.Title, TextColor3 = Info.TitleColor or "FontColor",
+        BackgroundTransparency = 1, FontFace = function() return Library.Scheme.Font end,
+        RichText = false, Text = Data.Title, TextColor3 = Info.TitleColor or "FontColor",
         TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = Holder,
     })
     local Desc = New("TextLabel", {
-        BackgroundTransparency = 1, Text = Data.Description, TextColor3 = Info.DescriptionColor or "MutedFontColor",
+        BackgroundTransparency = 1, FontFace = function() return Library.Scheme.Font end,
+        RichText = false, Text = Data.Description, TextColor3 = Info.DescriptionColor or "MutedFontColor",
         TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = Holder,
     })
@@ -13240,11 +13248,22 @@ function Library:Notify(...)
         if Data.Destroyed then return Data end
         if Resizing then Data.ResizePending = true; return Data end
         Resizing = true
-        for Key, Limits in { Width = { 180, 520 }, Padding = { 4, 24 }, CornerRadius = { 0, 18 }, TextSize = { 10, 20 } } do
+        for Key, Limits in { Width = { 160, 520 }, Padding = { 4, 24 }, CornerRadius = { 0, 18 } } do
             local Number = tonumber(Info[Key])
             if not Number or Number ~= Number or math.abs(Number) == math.huge then Number = Library.NotificationStyle[Key] end
             Data[Key] = math.clamp(math.floor(Number), Limits[1], Limits[2])
         end
+        local LegacySize = tonumber(Info.TextSize)
+        if not LegacySize or LegacySize ~= LegacySize or math.abs(LegacySize) == math.huge then LegacySize = nil end
+        local TitleSize = tonumber(Info.TitleTextSize)
+        if not TitleSize or TitleSize ~= TitleSize or math.abs(TitleSize) == math.huge then TitleSize = LegacySize or Library.NotificationStyle.TitleTextSize end
+        local DescriptionSize = tonumber(Info.DescriptionTextSize)
+        if not DescriptionSize or DescriptionSize ~= DescriptionSize or math.abs(DescriptionSize) == math.huge then
+            DescriptionSize = LegacySize and LegacySize - 1 or Library.NotificationStyle.DescriptionTextSize
+        end
+        Data.TitleTextSize = math.clamp(math.floor(TitleSize), 9, 20)
+        Data.DescriptionTextSize = math.clamp(math.floor(DescriptionSize), 9, 20)
+        Data.TextSize = Data.TitleTextSize
         for _, Key in { "Accent", "ShowProgress", "Dismissible" } do
             Data[Key] = if Info[Key] ~= nil then Info[Key] == true else Library.NotificationStyle[Key]
         end
@@ -13254,14 +13273,15 @@ function Library:Notify(...)
         local IconSize = Info.BigIcon and 24 or 16
         local Left = Padding + (IconData and IconSize + 8 or 0) + (Data.Accent and 4 or 0)
         local TextWidth = math.max(1, Width - Left - Padding - (Data.Dismissible and 28 or 0))
-        Title.TextSize, Desc.TextSize = Data.TextSize, Data.TextSize
+        Title.FontFace, Desc.FontFace = Library.Scheme.Font, Library.Scheme.Font
+        Title.TextSize, Desc.TextSize = Data.TitleTextSize, Data.DescriptionTextSize
         Title.Visible, Desc.Visible = Data.Title ~= "", Data.Description ~= ""
-        local _, TitleHeight = Library:GetTextBounds(Data.Title, Title.FontFace, Data.TextSize, TextWidth)
-        local _, DescHeight = Library:GetTextBounds(Data.Description, Desc.FontFace, Data.TextSize, TextWidth)
+        local _, TitleHeight = Library:GetTextBounds(Data.Title, Library.Scheme.Font, Data.TitleTextSize, TextWidth)
+        local _, DescHeight = Library:GetTextBounds(Data.Description, Library.Scheme.Font, Data.DescriptionTextSize, TextWidth)
         if Data.Destroyed then Resizing = false; return Data end
         TitleHeight = Title.Visible and math.ceil(TitleHeight) or 0
         DescHeight = Desc.Visible and math.ceil(DescHeight) or 0
-        local Gap = Title.Visible and Desc.Visible and 4 or 0
+        local Gap = Title.Visible and Desc.Visible and 2 or 0
         Timer.Visible = Data.ShowProgress and (Data.Steps ~= nil or (not Data.Persist and typeof(Data.Time) ~= "Instance"))
         if Timer.Visible and not Data.Steps and typeof(Data.Time) == "number" then
             if not TimerTween then

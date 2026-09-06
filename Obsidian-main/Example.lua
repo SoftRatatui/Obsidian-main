@@ -15,7 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-3"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-ui-1"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-configs-2"
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -2792,7 +2792,10 @@ if SaveManager then
 		})
 		local ConfigurationBox = SaveManager:BuildConfigSection(Tabs.Settings)
 		SetGroupOrder(ConfigurationBox, -100)
-		SaveManager:LoadAutoloadConfig()
+		local Loaded, AutoloadError = SaveManager:LoadAutoloadConfig()
+		if not Loaded then
+			warn("[MonHub Example] Autoload failed: " .. tostring(AutoloadError))
+		end
 	end)
 
 	if not SaveReady then

@@ -3363,6 +3363,11 @@ function Library:SafeCallback(Func: (...any) -> ...any, ...: any)
     end
 
     local Result = table.pack(xpcall(Func, function(Error)
+        local Context = Library.ConfigLoadContext
+        if Context and Context.Thread == coroutine.running() then
+            table.insert(Context.Errors, tostring(Error))
+            return Error
+        end
         task.defer(error, debug.traceback(Error, 2))
         if Library.NotifyOnError and Library.Notify then
             Library:Notify(Error)

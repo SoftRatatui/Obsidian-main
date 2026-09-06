@@ -2,6 +2,8 @@ return function(SaveManager, Environment)
     local function Control(Type, Value)
         local Item = { Type = Type, Value = Value, ChangedRuns = 0 }
         function Item:SetValue(NewValue)
+            if self.Disabled then return end
+            if self.Value == NewValue then return end
             if Type == "Slider" then
                 self.Value = tonumber(NewValue)
             elseif Type == "KeyPicker" then
@@ -44,6 +46,7 @@ return function(SaveManager, Environment)
         KeybindMenuRequested = true,
         Notifications = {},
     }
+    Environment.BindCallbacks(Library)
     function Library:SetKeybindMenuVisible(Value)
         self.KeybindMenuRequested = Value
         self.KeybindFrame.Visible = Value
@@ -140,5 +143,70 @@ return function(SaveManager, Environment)
     assert(Accent.Transparency == 0.4, "rollback transparency: " .. tostring(Accent.Transparency))
     assert(Profile.Value == "stable", "rollback input: " .. tostring(Profile.Value))
 
-    print("PASS config round-trip, rollback, verified writes, adapters, compatibility and autoload")
+    Profile.SetValue = OriginalSetValue
+    local A = { Collapsed = true, SetCollapsed = function(self, Value) self.Collapsed = Value end }
+    local B = { Collapsed = false, SetCollapsed = A.SetCollapsed }
+    Library.Tabs = { First = { Groupboxes = { Settings = A } }, Second = { Groupboxes = { Settings = B } } }
+    assert(SaveManager:Save("groups"))
+    A.Collapsed, B.Collapsed = false, true
+    assert(SaveManager:Load("groups"), "Same groupbox name in different tabs must load")
+    assert(A.Collapsed and not B.Collapsed)
+
+    Feature.Disabled, Strength.Disabled = true, true
+    Feature.Value, Strength.Value = false, 0
+    assert(SaveManager:Load("groups"))
+    assert(Feature.Value and Strength.Value == 72, "Disabled controls were not restored")
+    assert(Feature.Disabled and Strength.Disabled, "Loading changed disabled state")
+    Feature.Disabled, Strength.Disabled = false, false
+
+    local OriginalContent = Environment.files["MonHub/Tests/settings/place-1/groups.json"]
+    for _, Mode in { "throw", "corrupt" } do
+        Environment.faults.WritePath = "MonHub/Tests/settings/place-1/groups.json"
+        Environment.faults.Mode = Mode
+        local Wrote, ErrorMessage = SaveManager:Save("groups")
+        assert(not Wrote and ErrorMessage)
+        assert(Environment.files["MonHub/Tests/settings/place-1/groups.json"] == OriginalContent, "Failed write destroyed the previous config")
+        assert(Environment.files["MonHub/Tests/settings/place-1/groups.json.bak"] == OriginalContent)
+    end
+
+    assert(SaveManager:SaveAutoloadConfig("groups"))
+    local Restarted = Environment.CreateSaveManager()
+    Restarted:SetLibrary(Library):SetFolder("MonHub/Tests"):SetSubFolder("place-1")
+    Feature.Value = false
+    local RestartOK, RestartError, RestartReport = Restarted:LoadAutoloadConfig()
+    assert(RestartOK, RestartError)
+    assert(Feature.Value and RestartReport.Status == "Loaded" and RestartReport.ConfigName == "groups")
+    assert(type(Library.Notifications[#Library.Notifications]) == "table")
+    assert(Restarted:DeleteAutoLoadConfig())
+    local CountBefore = #Library.Notifications
+    local EmptyOK, _, EmptyReport = Restarted:LoadAutoloadConfig()
+    assert(EmptyOK and EmptyReport.Status == "NotConfigured" and #Library.Notifications == CountBefore)
+
+    local EmptyLibrary = { Options = {}, Toggles = {}, Tabs = {} }
+    Restarted:SetLibrary(EmptyLibrary)
+    local EarlyOK, _, EarlyReport = Restarted:Load("groups")
+    assert(not EarlyOK and EarlyReport.Missing > 0, "Loading before controls exist reported success")
+    Restarted:SetLibrary(Library)
+
+    Strength.Value = 31
+    local OriginalSliderSetter = Strength.SetValue
+    function Strength:SetValue(Value)
+        OriginalSliderSetter(self, Value)
+        Library:SafeCallback(function()
+            if tonumber(Value) == 72 then error("real SafeCallback failure") end
+        end)
+    end
+    local CallbackOK, CallbackError = Restarted:Load("groups")
+    assert(not CallbackOK and CallbackError:find("real SafeCallback failure", 1, true))
+    assert(Strength.Value == 31 and Library.ConfigLoadContext == nil, "Callback failure did not roll back or clear context")
+    Strength.SetValue = OriginalSliderSetter
+
+    local Invalid = Environment.storedJson[OriginalContent]
+    for _, Object in Invalid.objects do
+        if Object.type == "Slider" then Object.value = "not a number" end
+    end
+    assert(not Restarted:Load("groups"))
+    assert(Strength.Value == 31)
+
+    print("PASS config round-trip, cross-tab groups, disabled controls, failed-write recovery, restart autoload and real callback rollback")
 end

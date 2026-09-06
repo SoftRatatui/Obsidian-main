@@ -1882,6 +1882,8 @@ end
 
 local PreviewImage
 local PreviewGallery
+local PreviewModulesMinimal = false
+local PreviewModuleHighlighted = false
 do
 	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
 	PreviewControls:AddLabel("A compact interactive index of the library.", true)
@@ -1966,6 +1968,21 @@ do
 				end
 			end
 			AddonGallery:Select(GalleryItems[(CurrentIndex % #GalleryItems) + 1].Id)
+		end
+	end)
+	PreviewAddons:AddButton("Toggle minimal modules", function()
+		PreviewModulesMinimal = not PreviewModulesMinimal
+		if PreviewImage and PreviewImage.SetMinimal then
+			PreviewImage:SetMinimal(PreviewModulesMinimal)
+		end
+		if PreviewGallery and PreviewGallery.SetMinimal then
+			PreviewGallery:SetMinimal(PreviewModulesMinimal)
+		end
+	end)
+	PreviewAddons:AddButton("Highlight gallery module", function()
+		PreviewModuleHighlighted = not PreviewModuleHighlighted
+		if PreviewGallery and PreviewGallery.SetHighlighted then
+			PreviewGallery:SetHighlighted(PreviewModuleHighlighted)
 		end
 	end)
 	PreviewAddons:AddToggle("PreviewESPEnabled", {

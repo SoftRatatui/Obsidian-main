@@ -545,6 +545,10 @@ function TextureGallery.Create(Library, Info)
             return
         end
         Gallery.Destroyed = true
+        if Gallery.StyleController then
+            Gallery.StyleController:Destroy()
+            Gallery.StyleController = nil
+        end
         GridConnection:Disconnect()
         ScrollbarConnection:Disconnect()
         ClearCards()
@@ -574,7 +578,19 @@ function TextureGallery.Create(Library, Info)
     end
 
     if Library and type(Library.BindAddonStyle) == "function" then
-        Library:BindAddonStyle(Root, Style, Info)
+        Gallery.StyleController = Library:BindAddonStyle(Root, Style, Info, true)
+        function Gallery:SetStyle(Overrides)
+            Gallery.StyleController:Set(Overrides)
+            return Gallery
+        end
+        function Gallery:SetMinimal(Enabled)
+            Gallery.StyleController:SetMinimal(Enabled)
+            return Gallery
+        end
+        function Gallery:SetHighlighted(Enabled)
+            Gallery.StyleController:SetHighlighted(Enabled)
+            return Gallery
+        end
     end
     return Gallery
 end

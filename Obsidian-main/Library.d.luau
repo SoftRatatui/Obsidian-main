@@ -58,7 +58,22 @@ export type AddonStyle = {
     SelectionThickness: number,
     PreviewRatio: number,
     Motion: boolean,
+    Minimal: boolean,
+    Highlight: boolean,
+    ShowHeader: boolean,
+    ShowBackground: boolean,
+    ShowOutline: boolean,
+    ShowShadow: boolean,
     Spacing: { [string]: number },
+}
+
+export type AddonStyleController = {
+    Style: AddonStyle,
+    Set: (self: AddonStyleController, Overrides: { [string]: any }?) -> AddonStyleController,
+    SetMinimal: (self: AddonStyleController, Enabled: boolean) -> AddonStyleController,
+    SetHighlighted: (self: AddonStyleController, Enabled: boolean) -> AddonStyleController,
+    Get: (self: AddonStyleController) -> AddonStyle,
+    Destroy: (self: AddonStyleController) -> (),
 }
 
 export type AddonWindow = {
@@ -76,7 +91,7 @@ export type AddonWindow = {
     SetIcon: (self: AddonWindow, Value: string | number) -> AddonWindow,
     SetSize: (self: AddonWindow, Width: number, Height: number) -> AddonWindow,
     SetPosition: (self: AddonWindow, Position: UDim2) -> AddonWindow,
-    AddCustom: (self: AddonWindow, Idx: any, Object: GuiObject, Height: number?, Controller: any?) -> any,
+    AddCustom: (self: AddonWindow, Idx: any, Object: GuiObject, Height: number?, Controller: any?, Style: { [string]: any }?) -> any,
     AddAddon: (self: AddonWindow, Idx: any, Addon: any, Info: any?) -> any,
     GetModule: (self: AddonWindow, Idx: any) -> any?,
     GetModules: (self: AddonWindow) -> { [any]: any },
@@ -84,6 +99,10 @@ export type AddonWindow = {
     SetModuleVisible: (self: AddonWindow, Idx: any, Visible: boolean) -> boolean,
     SetModuleOrder: (self: AddonWindow, Idx: any, Order: number) -> boolean,
     SetModuleFitHeight: (self: AddonWindow, Idx: any, Enabled: boolean) -> boolean,
+    SetModuleStyle: (self: AddonWindow, Idx: any, Overrides: { [string]: any }) -> boolean,
+    GetModuleStyle: (self: AddonWindow, Idx: any) -> AddonStyle?,
+    SetModuleHighlighted: (self: AddonWindow, Idx: any, Enabled: boolean, Color: Color3?) -> boolean,
+    SetModuleMinimal: (self: AddonWindow, Idx: any, Enabled: boolean) -> boolean,
     SetContentSpacing: (self: AddonWindow, Padding: number?, Gap: number?) -> AddonWindow,
     RefreshLayout: (self: AddonWindow) -> AddonWindow,
     Remove: (self: AddonWindow, Idx: any) -> boolean,
@@ -1361,7 +1380,7 @@ export type Library = {
     RefreshMotion: (self: Library) -> (),
     SetDesign: (self: Library, Overrides: { [string]: any }) -> Library,
     BindTheme: (self: Library, Object: Instance, Properties: { [string]: any }) -> Instance,
-    BindAddonStyle: (self: Library, Root: Instance, Style: { [string]: any }, Info: { [string]: any }?) -> (),
+    BindAddonStyle: (self: Library, Root: Instance, Style: { [string]: any }, Info: { [string]: any }?, BindSurface: boolean?) -> AddonStyleController,
     SetPalette: (self: Library, Overrides: { [string]: Color3 }) -> Library,
     RegisterTheme: (self: Library, Name: string, Overrides: { [string]: any }, Base: string?) -> Library,
     ThemeErrors: { { Object: Instance, Property: string, Message: string } },

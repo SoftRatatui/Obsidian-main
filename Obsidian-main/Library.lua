@@ -435,6 +435,7 @@ local Library = {
             NavigationHeight = 38,
             NavigationGap = 5,
             NavigationPadding = 7,
+            NavigationInset = 0,
             ContentPadding = 12,
             SearchHeight = 32,
             HeaderControl = 32,
@@ -1453,10 +1454,16 @@ function Library:GetAddonStyle(Overrides)
     Style.Motion = Style.Motion ~= false
     Style.Minimal = Style.Minimal == true
     Style.Highlight = Style.Highlight == true
+    Style.ShowHeader = Style.ShowHeader ~= false
+    Style.ShowBackground = Style.ShowBackground ~= false
+    Style.ShowOutline = Style.ShowOutline ~= false
+    Style.ShowShadow = Style.ShowShadow ~= false
 
     if Style.Minimal then
         Style.OutlineTransparency = 1
         Style.StrokeThickness = 0
+        Style.ShowOutline = false
+        Style.ShowShadow = false
         Style.Padding = math.max(0, Style.Padding - 2)
         Style.Gap = math.max(0, Style.Gap - 2)
         Style.Radius = math.max(0, Style.Radius - 2)
@@ -1464,6 +1471,9 @@ function Library:GetAddonStyle(Overrides)
     end
 
     if Style.Highlight then
+        if Style._Overrides.ShowOutline ~= false then
+            Style.ShowOutline = true
+        end
         Style.OutlineTransparency = math.min(Style.OutlineTransparency, 0.12)
         Style.StrokeThickness = math.max(1, Style.StrokeThickness)
         Style.HighlightColor = function()
@@ -2277,9 +2287,16 @@ function Library:BindTheme(Object, Properties)
     return Object
 end
 
-function Library:BindAddonStyle(Root, Style, Info)
+function Library:BindAddonStyle(Root, Style, Info, BindSurface)
     Info = Info or {}
-    local Overrides = Style._Overrides or Info.Style or {}
+    local Overrides = table.clone(Style._Overrides or Info.Style or {})
+    local State = {
+        Destroyed = false,
+        Overrides = Overrides,
+        Style = Style,
+    }
+    local ManagedCorners = {}
+
     for _, Corner in Root:GetDescendants() do
         if Corner:IsA("UICorner") and Corner.CornerRadius.Scale == 0 then
             local Offset = Corner.CornerRadius.Offset
@@ -2290,15 +2307,98 @@ function Library:BindAddonStyle(Root, Style, Info)
                 Role = "Control"
             end
             if Role then
-                Library:BindTheme(Corner, {
-                    CornerRadius = function()
-                        local Radius = tonumber(Info.CornerRadius) or Library:GetDesignToken("Radius." .. Role, Offset)
-                        return UDim.new(0, math.max(0, math.floor(Radius)))
-                    end,
-                })
+                table.insert(ManagedCorners, { Corner = Corner, Role = Role, Fallback = Offset })
             end
         end
     end
+
+    local RootCorner = Root:FindFirstChildOfClass("UICorner")
+    local RootStroke = Root:FindFirstChildOfClass("UIStroke")
+
+    local function Apply()
+        local Current = State.Style
+        for _, Entry in ManagedCorners do
+            Library:BindTheme(Entry.Corner, {
+                CornerRadius = function()
+                    local Explicit = Entry.Role == "Control" and Current.ControlRadius or Current.Radius
+                    local Radius = tonumber(Info.CornerRadius)
+                    if Radius == nil then
+                        Radius = Library:GetDesignToken("Radius." .. Entry.Role, Explicit or Entry.Fallback)
+                    end
+                    return UDim.new(0, math.max(0, math.floor(Radius)))
+                end,
+            })
+        end
+
+        if not BindSurface then
+            return
+        end
+
+        if RootCorner then
+            Library:BindTheme(RootCorner, {
+                CornerRadius = function()
+                    return UDim.new(0, math.max(0, math.floor(State.Style.Radius)))
+                end,
+            })
+        end
+        if RootStroke then
+            Library:BindTheme(RootStroke, {
+                Color = function()
+                    return State.Style.Highlight and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+                end,
+                Thickness = function()
+                    return State.Style.ShowOutline and State.Style.StrokeThickness or 0
+                end,
+                Transparency = function()
+                    return State.Style.ShowOutline and State.Style.OutlineTransparency or 1
+                end,
+            })
+        end
+        if Root:IsA("GuiObject") then
+            Library:BindTheme(Root, {
+                BackgroundTransparency = function()
+                    return State.Style.ShowBackground and State.Style.BackgroundTransparency or 1
+                end,
+            })
+        end
+    end
+
+    local Controller = {}
+
+    function Controller:Set(NewOverrides)
+        if State.Destroyed then
+            return Controller
+        end
+        if type(NewOverrides) == "table" then
+            for Key, Value in NewOverrides do
+                State.Overrides[Key] = Value
+            end
+        end
+        State.Style = Library:GetAddonStyle(State.Overrides)
+        Apply()
+        Controller.Style = State.Style
+        return Controller
+    end
+
+    function Controller:SetMinimal(Enabled)
+        return Controller:Set({ Minimal = Enabled == true })
+    end
+
+    function Controller:SetHighlighted(Enabled)
+        return Controller:Set({ Highlight = Enabled == true })
+    end
+
+    function Controller:Get()
+        return table.clone(State.Style)
+    end
+
+    function Controller:Destroy()
+        State.Destroyed = true
+    end
+
+    Controller.Style = State.Style
+    Apply()
+    return Controller
 end
 
 local function CancelThemeTweens(Instance: Instance, Properties)
@@ -3653,7 +3753,8 @@ function Library:CreateAddonWindow(Info)
     local Style = Library:GetAddonStyle(Info.Style)
     local Width = math.floor(math.clamp(tonumber(Info.Width) or Style.WindowWidth, 240, 1100))
     local Height = math.floor(math.clamp(tonumber(Info.Height) or Style.WindowHeight, 180, 900))
-    local HeaderHeight = math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Info.Subtitle and 54 or 44), 38, 68))
+    local ShowHeader = Info.ShowHeader ~= false and Style.ShowHeader ~= false
+    local HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Info.Subtitle and 54 or 44), 38, 68)) or 0
     local Position = typeof(Info.Position) == "UDim2" and Info.Position or UDim2.fromScale(0.5, 0.5)
     local AnchorPoint = typeof(Info.AnchorPoint) == "Vector2" and Info.AnchorPoint or Vector2.new(0.5, 0.5)
     local Connections = {}
@@ -3673,6 +3774,7 @@ function Library:CreateAddonWindow(Info)
         Active = true,
         AnchorPoint = AnchorPoint,
         BackgroundColor3 = "BackgroundColor",
+        BackgroundTransparency = Style.ShowBackground and Style.BackgroundTransparency or 1,
         ClipsDescendants = true,
         GroupTransparency = RequestedVisible and not MenuSuppressed and 0 or 1,
         Name = tostring(Info.Name or "AddonWindow"),
@@ -3688,11 +3790,13 @@ function Library:CreateAddonWindow(Info)
     })
     local RootStroke = New("UIStroke", {
         Color = Style.HighlightColor or "OutlineColor",
-        Thickness = Style.StrokeThickness,
-        Transparency = Style.OutlineTransparency,
+        Thickness = Style.ShowOutline and Style.StrokeThickness or 0,
+        Transparency = Style.ShowOutline and Style.OutlineTransparency or 1,
         Parent = Root,
     })
-    Library:AddSoftShadow(Root, 22, Library:GetDesignToken("Opacity.Shadow", 0.44), UDim2.fromOffset(0, 5))
+    if Style.ShowShadow then
+        Library:AddSoftShadow(Root, 22, Library:GetDesignToken("Opacity.Shadow", 0.44), UDim2.fromOffset(0, 5))
+    end
 
     local Scale = New("UIScale", {
         Scale = 1,
@@ -3702,6 +3806,7 @@ function Library:CreateAddonWindow(Info)
     local Header = New("Frame", {
         BackgroundColor3 = "TopBarColor",
         Size = UDim2.new(1, 0, 0, HeaderHeight),
+        Visible = ShowHeader,
         Parent = Root,
     })
     Library:CreateDivider(Header, {
@@ -3773,7 +3878,7 @@ function Library:CreateAddonWindow(Info)
     })
 
     local CloseButton
-    if Info.Closable ~= false then
+    if ShowHeader and Info.Closable ~= false then
         CloseButton = New("TextButton", {
             AnchorPoint = Vector2.new(1, 0),
             BackgroundColor3 = "ElementColor",
@@ -3907,7 +4012,7 @@ function Library:CreateAddonWindow(Info)
     function Host:SetSubtitle(Value)
         Subtitle.Text = tostring(Value or "")
         Subtitle.Visible = Subtitle.Text ~= ""
-        HeaderHeight = math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Subtitle.Visible and 54 or 44), 38, 68))
+        HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Subtitle.Visible and 54 or 44), 38, 68)) or 0
         Header.Size = UDim2.new(1, 0, 0, HeaderHeight)
         Content.Position = UDim2.fromOffset(0, HeaderHeight)
         Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
@@ -3953,7 +4058,57 @@ function Library:CreateAddonWindow(Info)
         return Host
     end
 
-    function Host:AddCustom(Idx, Object, ModuleHeight, Controller)
+    local function PrepareModule(Module, ModuleStyle)
+        Module.StyleOverrides = table.clone(ModuleStyle or {})
+        Module.FrameCorner = New("UICorner", {
+            CornerRadius = UDim.new(0, 0),
+            Parent = Module.Holder,
+        })
+        Module.HighlightStroke = New("UIStroke", {
+            Color = "AccentColor",
+            Thickness = 1,
+            Transparency = 1,
+            Parent = Module.Holder,
+        })
+        if Module.Root then
+            Module.BaseBackgroundTransparency = Module.Root.BackgroundTransparency
+            Module.BaseStroke = Module.Root:FindFirstChildOfClass("UIStroke")
+            if Module.BaseStroke then
+                Module.BaseStrokeThickness = Module.BaseStroke.Thickness
+                Module.BaseStrokeTransparency = Module.BaseStroke.Transparency
+            end
+        end
+    end
+
+    local function ApplyModuleStyle(Module)
+        local ModuleStyle = Library:GetAddonStyle(Module.StyleOverrides)
+        Module.Style = ModuleStyle
+        Module.FrameCorner.CornerRadius = UDim.new(0, ModuleStyle.Radius)
+        local function ResolveHighlightColor()
+            local Color = Module.Style.HighlightColor
+            if type(Color) == "function" then
+                Color = Color()
+            end
+            return typeof(Color) == "Color3" and Color or Library.Scheme.AccentColor
+        end
+        Module.HighlightStroke.Color = ResolveHighlightColor()
+        Library:AddToRegistry(Module.HighlightStroke, { Color = ResolveHighlightColor })
+        Module.HighlightStroke.Thickness = math.max(1, tonumber(ModuleStyle.SelectionThickness) or 1)
+        local ControllerOwnsSurface = Module.Controller and type(Module.Controller.SetStyle) == "function"
+        Module.HighlightStroke.Transparency = ModuleStyle.Highlight and not ControllerOwnsSurface and 0.08 or 1
+
+        if ControllerOwnsSurface then
+            Module.Controller:SetStyle(Module.StyleOverrides)
+        elseif Module.Root then
+            Module.Root.BackgroundTransparency = ModuleStyle.ShowBackground ~= false and Module.BaseBackgroundTransparency or 1
+            if Module.BaseStroke then
+                Module.BaseStroke.Thickness = ModuleStyle.ShowOutline ~= false and Module.BaseStrokeThickness or 0
+                Module.BaseStroke.Transparency = ModuleStyle.ShowOutline ~= false and Module.BaseStrokeTransparency or 1
+            end
+        end
+    end
+
+    function Host:AddCustom(Idx, Object, ModuleHeight, Controller, ModuleStyle)
         assert(typeof(Object) == "Instance" and Object:IsA("GuiObject"), "Custom module must be a GuiObject")
         ModuleSequence += 1
         while Idx == nil and Modules[ModuleSequence] do
@@ -3980,6 +4135,8 @@ function Library:CreateAddonWindow(Info)
             FitHeight = false,
             Visible = true,
         }
+        PrepareModule(Modules[Key], ModuleStyle)
+        ApplyModuleStyle(Modules[Key])
         Host:RefreshLayout()
         return Modules[Key]
     end
@@ -4017,6 +4174,8 @@ function Library:CreateAddonWindow(Info)
             FitHeight = AddonInfo.FitHeight == true,
             Visible = true,
         }
+        PrepareModule(Modules[Key], AddonInfo.Style)
+        ApplyModuleStyle(Modules[Key])
         if not Modules[Key].FitHeight and type(Controller) == "table" and tonumber(Controller.Height) then
             Holder.Size = UDim2.new(1, 0, 0, Controller.Height)
         end
@@ -4120,6 +4279,35 @@ function Library:CreateAddonWindow(Info)
         return true
     end
 
+    function Host:SetModuleStyle(Idx, Overrides)
+        local Module = Modules[Idx]
+        if not Module or type(Overrides) ~= "table" then
+            return false
+        end
+        for Key, Value in Overrides do
+            Module.StyleOverrides[Key] = Value
+        end
+        ApplyModuleStyle(Module)
+        return true
+    end
+
+    function Host:GetModuleStyle(Idx)
+        local Module = Modules[Idx]
+        return Module and table.clone(Module.Style) or nil
+    end
+
+    function Host:SetModuleHighlighted(Idx, Enabled, Color)
+        local Overrides = { Highlight = Enabled == true }
+        if typeof(Color) == "Color3" then
+            Overrides.HighlightColor = Color
+        end
+        return Host:SetModuleStyle(Idx, Overrides)
+    end
+
+    function Host:SetModuleMinimal(Idx, Enabled)
+        return Host:SetModuleStyle(Idx, { Minimal = Enabled == true })
+    end
+
     function Host:SetContentSpacing(Padding, Gap)
         Style.Padding = math.clamp(math.floor(tonumber(Padding) or Style.Padding), 0, 32)
         Style.Gap = math.clamp(math.floor(tonumber(Gap) or Style.Gap), 0, 24)
@@ -4192,7 +4380,7 @@ function Library:CreateAddonWindow(Info)
         Host:RefreshLayout()
     end))
     if Info.Draggable ~= false then
-        Library:MakeDraggable(Root, Header, true, false)
+        Library:MakeDraggable(Root, ShowHeader and Header or Root, true, false)
     end
     if Info.Resizable ~= false then
         local ResizeButton = New("TextButton", {
@@ -13621,7 +13809,8 @@ function Library:CreateWindow(WindowInfo)
         TopBar = New("Frame", {
             BackgroundColor3 = "TopBarColor",
             BackgroundTransparency = 0,
-            Size = UDim2.new(1, 0, 0, TopBarHeight),
+            Position = UDim2.fromOffset(1, 1),
+            Size = UDim2.new(1, -2, 0, TopBarHeight - 1),
             Parent = MainFrame,
         })
 
@@ -13908,8 +14097,8 @@ function Library:CreateWindow(WindowInfo)
         BottomBackground = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "SurfaceColor",
-            Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, BottomBarHeight),
+            Position = UDim2.new(0, 1, 1, -1),
+            Size = UDim2.new(1, -2, 0, BottomBarHeight - 1),
             ZIndex = 3,
             Parent = MainFrame,
         })
@@ -13986,13 +14175,13 @@ function Library:CreateWindow(WindowInfo)
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             BackgroundColor3 = "SurfaceColor",
             CanvasSize = UDim2.fromScale(0, 0),
-            Position = UDim2.fromOffset(0, TopBarHeight + 1),
+            Position = UDim2.fromOffset(1, TopBarHeight + 1),
             ScrollBarImageColor3 = "AccentColor",
             ScrollBarImageTransparency = 1,
             ScrollBarThickness = 2,
             VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
             ScrollingDirection = Enum.ScrollingDirection.Y,
-            Size = UDim2.new(0, InitialLeftWidth, 1, -(TopBarHeight + 2 + BottomBarHeight)),
+            Size = UDim2.new(0, InitialLeftWidth - 1, 1, -(TopBarHeight + 2 + BottomBarHeight)),
             Parent = MainFrame,
         })
         New("UIListLayout", {
@@ -14002,8 +14191,8 @@ function Library:CreateWindow(WindowInfo)
         })
         New("UIPadding", {
             PaddingBottom = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
-            PaddingLeft = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
-            PaddingRight = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
+            PaddingLeft = UDim.new(0, Library:GetDesignToken("Shell.NavigationInset", 0)),
+            PaddingRight = UDim.new(0, Library:GetDesignToken("Shell.NavigationInset", 0)),
             PaddingTop = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
             Parent = Tabs,
         })
@@ -14590,7 +14779,8 @@ function Library:CreateWindow(WindowInfo)
         if ResizeButton then
             ResizeButton.Position = UDim2.new(1, -4, 0.5, 0)
         end
-        BottomBackground.Size = UDim2.new(1, 0, 0, BottomBarHeight)
+        BottomBackground.Position = UDim2.new(0, 1, 1, -1)
+        BottomBackground.Size = UDim2.new(1, -2, 0, BottomBarHeight - 1)
 
         for _, Tab in Library.Tabs do
             if Tab.IsKeyTab then
@@ -14674,14 +14864,14 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:GetSidebarWidth()
-        return Tabs.Size.X.Offset
+        return Tabs.Size.X.Offset + 1
     end
 
     function Window:SetSidebarWidth(Width)
         local MaxSidebarWidth = math.max(48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
         Width = math.floor(math.clamp(Width, 48, MaxSidebarWidth) + 0.5)
 
-        if Width == Tabs.Size.X.Offset then
+        if Width == Tabs.Size.X.Offset + 1 then
             return
         end
 
@@ -14689,7 +14879,7 @@ function Library:CreateWindow(WindowInfo)
 
         TitleHolder.Size = UDim2.new(0, Width, 1, 0)
         RightWrapper.Size = UDim2.new(1, -Width - HeaderControlWidth - 8, 1, -16)
-        Tabs.Size = UDim2.new(0, Width, 1, -(TopBarHeight + 2 + BottomBarHeight))
+        Tabs.Size = UDim2.new(0, Width - 1, 1, -(TopBarHeight + 2 + BottomBarHeight))
         Container.Size = UDim2.new(1, -Width - 1, 1, -(TopBarHeight + 2 + BottomBarHeight))
 
         if WindowInfo.EnableCompacting then
@@ -15740,16 +15930,16 @@ function Library:CreateWindow(WindowInfo)
                 GroupboxOutline.Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46)
 
                 GroupboxHeader = New("Frame", {
-                    BackgroundColor3 = "RaisedColor",
-                    BackgroundTransparency = 0.46,
+                    BackgroundColor3 = "SurfaceColor",
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, GroupboxHeaderHeight),
                     Parent = GroupboxHolder,
                 })
 
                 GroupboxLine = Library:MakeLine(GroupboxHolder, {
                     Color = "OutlineColor",
-                    Position = UDim2.fromOffset(0, GroupboxHeaderHeight - 1),
-                    Size = UDim2.new(1, 0, 0, 1),
+                    Position = UDim2.fromOffset(GroupboxHorizontalPadding, GroupboxHeaderHeight - 1),
+                    Size = UDim2.new(1, -GroupboxHorizontalPadding * 2, 0, 1),
                     Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
                     ZIndex = 2,
                 })
@@ -16249,7 +16439,7 @@ function Library:CreateWindow(WindowInfo)
                     return Library:GetAccentSurfaceColor(0.12)
                 end,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, -8, 0, 34),
+                Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Shell.NavigationHeight", 38)),
                 Text = "",
                 Parent = Tabs,
             })

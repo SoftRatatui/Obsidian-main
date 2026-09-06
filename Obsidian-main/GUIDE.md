@@ -85,6 +85,10 @@ Loading a config before controls or adapters exist is supported for compatibilit
 
 - Use `AddFullGroupbox` for catalogs, galleries, and other wide content. Half-width columns are intended for ordinary controls.
 - Size custom GUI in whole pixels. Avoid fractional offsets, strokes wider than the available padding, and negative bounds unless the direct parent clips descendants.
+- Let one instance own each visible corner. The window root owns the four window corners; a groupbox root owns its card corners; headers and footers stay inside those masks and must not add another full-size rounded layer.
+- Keep child surfaces one physical pixel inside a stroked window edge. This prevents two anti-aliased fills from competing for the same corner pixel.
+- Navigation rows use the full sidebar width. Put spacing inside the label and icon, not around the selected background. Change `Shell.NavigationInset` only when an intentionally inset navigation style is required.
+- Keep dividers away from rounded edges. A groupbox divider begins and ends at its horizontal content padding rather than touching the outline.
 - Mount custom content through `AddUIPassthrough`, `Groupbox:AddAddon`, or `Library:CreateAddonWindow`; these containers handle clipping and cleanup.
 - Use `MinCellWidth` instead of a fixed column count when a gallery must respond to different window widths.
 - Use `Library:SetPalette`, `SetTheme`, `SetDesign`, `BindTheme`, or `BindAddonStyle` for theme-dependent properties. Raw colors are suitable only for content-specific colors such as item rarity.
@@ -523,6 +527,61 @@ Style = { Highlight = true, Padding = 12, Motion = false }
 
 The border color is registered against the accent token rather than a fixed value, so a highlighted module re-colors with the palette instead of keeping a stale accent.
 
+Four independent chrome fields give precise control when `Minimal` is too broad:
+
+| Field | Default | Effect |
+| --- | --- | --- |
+| `ShowBackground` | `true` | Keeps or removes the module root fill. |
+| `ShowOutline` | `true` | Keeps or removes only the root stroke. |
+| `ShowShadow` | `true` | Controls the shadow of a standalone addon window. `Minimal` disables it. |
+| `ShowHeader` | `true` | Controls the shared standalone window header. Pass `false` for a content-only floating module. |
+
+Use a content-only module inside an existing surface like this:
+
+```luau
+local Gallery = ImageGallery.CreateEmbedded(Library, Groupbox, "Skins", {
+    Items = Items,
+    Style = {
+        Minimal = true,
+        ShowBackground = false,
+        Padding = 4,
+        Gap = 6,
+    },
+})
+```
+
+Visual addons expose `SetStyle`, `SetMinimal`, and `SetHighlighted`. These methods change the existing root and its registered theme bindings; they do not destroy the controller, reset selection, or rebuild image items.
+
+```luau
+Gallery:SetMinimal(true)
+Gallery:SetHighlighted(true)
+Gallery:SetStyle({
+    ShowBackground = true,
+    ShowOutline = true,
+    Radius = 4,
+    SelectionThickness = 2,
+})
+```
+
+`SetMinimal(false)` and `SetHighlighted(false)` restore the normal style derived from the instance's original overrides. A highlighted border always resolves its accent again during a theme update. Use highlighting for current selection, validation attention, a drag target, or the module that receives keyboard input. Do not use it on every module at once because then it stops communicating state.
+
+For modules mounted in a generic addon window, the host provides the same operation by ID:
+
+```luau
+Host:SetModuleMinimal("Gallery", true)
+Host:SetModuleHighlighted("Preview", true)
+Host:SetModuleHighlighted("Preview", true, Color3.fromRGB(108, 190, 255))
+Host:SetModuleStyle("Gallery", {
+    Minimal = false,
+    ShowOutline = true,
+    Radius = 5,
+})
+
+local EffectiveStyle = Host:GetModuleStyle("Gallery")
+```
+
+Packaged visual addons draw the highlight with their existing root stroke. Custom modules use one inner stroke on the transparent, clipped host holder. The two paths are exclusive, so enabling a highlight does not stack coincident borders or let a stroke escape the window. `SetModuleStyle` forwards the style to visual addon controllers that support live styling. Custom GUI modules still receive host-level background, outline, radius, minimal, and highlight behavior.
+
 ### Reacting to theme changes
 
 `Library.Registry` binds instance properties to scheme tokens and is the mechanism behind every palette and font swap. A property bound to a string resolves that token; a property bound to a function is re-evaluated on each pass, which is how state-dependent colors stay correct:
@@ -774,6 +833,8 @@ local Preview = Host:AddAddon("Preview", ImagePreview, {
 
 Host:AddCustom("Custom", CustomFrame, 120)
 Host:SetModuleHeight("Preview", 280)
+Host:SetModuleHighlighted("Preview", true)
+Host:SetModuleMinimal("Custom", true)
 Host:Remove("Custom")
 Host:SetSize(480, 600)
 Host:SetPosition(UDim2.fromScale(0.75, 0.5))
@@ -1440,6 +1501,7 @@ Item records accept `Id`, `Name`, `Category`, `Subtitle`, `Image`, `PreviewImage
 | `SetLayout(mode, side)`, `SetPreviewRatio(ratio)`, `SetPreviewSide(side)` | Changes catalog layout without recreating it. |
 | `SetScaleType(mode)`, `SetImagePadding(px)`, `SetPreviewPadding(px)` | Changes image fitting. |
 | `SetImageTransparency(value)`, `SetCardTransparency(value)`, `SetPreviewTransparency(value)` | Changes opacity live. |
+| `SetStyle(overrides)`, `SetMinimal(bool)`, `SetHighlighted(bool)` | Changes root chrome while preserving catalog state. |
 | `Select(id, silent)`, `GetSelected()` | Selects or reads an item. `silent` skips callbacks. |
 | `SetVisible(bool)`, `SetHeight(px)`, `Mount(parent)`, `Destroy()` | Controls lifecycle and mounting. |
 
@@ -1461,7 +1523,7 @@ Item records accept `Id`, `Name`, `Category`, `Subtitle`, `Image`, `PreviewImage
 | `ForwardItemStyle` | Forwards compatible per-item style fields to the bound preview. |
 | `OnSelected`, `Callback`, `Style`, `Visible` | Callback, style overrides, and initial visibility. |
 
-Methods: `Refresh`, `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`, `SetScaleType`, `SetImageTransparency`, `SetImageBackgroundTransparency`, `SetBackgroundTransparency`, `SetCellTransparency`, `SetOutlineTransparency`, `SetContainerOutlineTransparency`, `SetImagePadding`, `SetLabelHeight`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetCornerRadius`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`.
+Methods: `Refresh`, `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`, `SetScaleType`, `SetImageTransparency`, `SetImageBackgroundTransparency`, `SetBackgroundTransparency`, `SetCellTransparency`, `SetOutlineTransparency`, `SetContainerOutlineTransparency`, `SetImagePadding`, `SetLabelHeight`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetCornerRadius`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`.
 
 ### ImagePreview API
 
@@ -1476,7 +1538,7 @@ Methods: `Refresh`, `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCatego
 | `Shade`, `ShadeTransparency`, `Motion`, `Interactive` | Overlay, transitions, and interaction behavior. |
 | `Style`, `Visible` | Style overrides and initial visibility. |
 
-Methods: `SetImage(value, transition)`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetImagePadding`, `SetTileSize`, `SetRotation`, `SetBackgroundTransparency`, `SetCanvasTransparency`, `SetCaptionTransparency`, `SetOutlineTransparency`, `SetOutlineThickness`, `SetCornerRadius`, `SetShade(visible, transparency)`, `SetCaptionVisible`, `SetMotion`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
+Methods: `SetImage(value, transition)`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetImagePadding`, `SetTileSize`, `SetRotation`, `SetBackgroundTransparency`, `SetCanvasTransparency`, `SetCaptionTransparency`, `SetOutlineTransparency`, `SetOutlineThickness`, `SetCornerRadius`, `SetShade(visible, transparency)`, `SetCaptionVisible`, `SetMotion`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
 
 ### TextureGallery API
 
@@ -1491,7 +1553,7 @@ Methods: `SetImage(value, transition)`, `SetTitle`, `SetSubtitle`, `SetImageColo
 | `CardTransparency`, `PreviewTransparency`, `OutlineTransparency` | Surface opacity. |
 | `OnSelected`, `Style`, `Visible` | Selection callback, style overrides, and visibility. |
 
-Texture items accept `Id`, `Name`, `Texture`, `AssetId`, `Image`, `ColorA`, `ColorB`, `ScaleType`, `ImageScale`, `Zoom`, `ImageTransparency`, and `Transparency`. Methods: `SetItems`, `Select`, `GetSelected`, `SetVisible`, `SetColumns`, `SetImageTransparency`, `SetPreviewImageTransparency`, `SetCardTransparency`, `SetPreviewTransparency`, `SetOutlineTransparency`, `SetScaleType`, `SetImageScale`, `Mount`, `SetHeight`, and `Destroy`.
+Texture items accept `Id`, `Name`, `Texture`, `AssetId`, `Image`, `ColorA`, `ColorB`, `ScaleType`, `ImageScale`, `Zoom`, `ImageTransparency`, and `Transparency`. Methods: `SetItems`, `Select`, `GetSelected`, `SetVisible`, `SetColumns`, `SetImageTransparency`, `SetPreviewImageTransparency`, `SetCardTransparency`, `SetPreviewTransparency`, `SetOutlineTransparency`, `SetScaleType`, `SetImageScale`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `Mount`, `SetHeight`, and `Destroy`.
 
 ### DashboardWindow API
 
@@ -1610,7 +1672,26 @@ Call `SetFolder` before `SetLibrary` when custom persistence is used. `SaveCusto
 
 ### Addon window host API
 
-`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `GetModule`, `GetModules`, `Detach`, `Remove`, `SetModuleHeight`, `SetModuleVisible`, `SetModuleOrder`, `SetModuleFitHeight`, `SetContentSpacing`, `RefreshLayout`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu. Multiple `FitHeight` modules share the available height instead of each claiming the full viewport.
+`Library:CreateAddonWindow(Info)` returns a host used by all standalone visual addons. Its public methods are `SetVisible(visible, instant)`, `Toggle`, `SetTitle`, `SetSubtitle`, `SetIcon`, `SetSize`, `SetPosition`, `AddCustom`, `AddAddon`, `GetModule`, `GetModules`, `GetModuleStyle`, `Detach`, `Remove`, `SetModuleHeight`, `SetModuleVisible`, `SetModuleOrder`, `SetModuleFitHeight`, `SetModuleStyle`, `SetModuleHighlighted`, `SetModuleMinimal`, `SetContentSpacing`, `RefreshLayout`, and `Destroy`. The host clamps itself to the viewport, follows the active theme, clips addon content, and can hide together with the main menu. Multiple `FitHeight` modules share the available height instead of each claiming the full viewport.
+
+`AddCustom(id, object, height, controller, style)` accepts an optional fifth style argument. Use it to give custom content the same minimal and highlight contract as packaged addons. `AddAddon(id, addon, info)` reads the style from `info.Style`. Both paths store the effective style beside the module and keep its highlight inside the holder bounds.
+
+Pass `ShowHeader = false` to `CreateAddonWindow` for a compact content-only window. Its content starts at the first pixel, dragging uses the root, and no empty title-bar space remains. `Style.ShowBackground`, `Style.ShowOutline`, and `Style.ShowShadow` can then be combined independently. A fully minimal standalone host is:
+
+```luau
+local Host = Library:CreateAddonWindow({
+    Width = 360,
+    Height = 260,
+    ShowHeader = false,
+    Style = {
+        Minimal = true,
+        ShowBackground = true,
+        Padding = 4,
+        Gap = 4,
+        Radius = 4,
+    },
+})
+```
 
 `Host:Detach(id, parent)` transfers an existing module to a GUI container and returns its controller (or root for a custom module). It preserves the module state, removes the old holder, and stops the old host from owning its destruction. The new parent must be outside the old module holder. A missing module returns `nil`. To transfer it to another host:
 
@@ -1673,6 +1754,12 @@ Run local checks with Luau's compiler and interpreter installed:
 
 ### 0.0.1-release-3
 
+- Unified the window edge geometry so the root owns every outer corner and top, sidebar, and footer surfaces remain one pixel inside its stroke.
+- Made navigation selection fill the complete sidebar row and added `Shell.NavigationInset` for intentional inset variants.
+- Removed the second visible groupbox header fill and shortened its divider so neither layer touches the rounded outline.
+- Added live `SetStyle`, `SetMinimal`, and `SetHighlighted` controllers to visual addons.
+- Added per-module `SetModuleStyle`, `GetModuleStyle`, `SetModuleMinimal`, and `SetModuleHighlighted` controls to addon windows, including custom highlight colors.
+- Added `ShowHeader`, `ShowBackground`, `ShowOutline`, and `ShowShadow` style controls for content-only and minimal module layouts.
 - Reworked notifications into smaller 260px toasts with 12px titles, 11px descriptions, tighter spacing, shorter motion, four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
 - Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.

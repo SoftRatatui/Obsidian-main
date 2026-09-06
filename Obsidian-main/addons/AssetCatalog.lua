@@ -1431,6 +1431,10 @@ function AssetCatalog.Create(Library, Info)
             return
         end
         Catalog.Destroyed = true
+        if Catalog.StyleController then
+            Catalog.StyleController:Destroy()
+            Catalog.StyleController = nil
+        end
         for Key, Tween in LocalTweens do
             Tween:Cancel()
             LocalTweens[Key] = nil
@@ -1524,7 +1528,19 @@ function AssetCatalog.Create(Library, Info)
         end)
     end
     if Library and type(Library.BindAddonStyle) == "function" then
-        Library:BindAddonStyle(Root, Style, Info)
+        Catalog.StyleController = Library:BindAddonStyle(Root, Style, Info, true)
+        function Catalog:SetStyle(Overrides)
+            Catalog.StyleController:Set(Overrides)
+            return Catalog
+        end
+        function Catalog:SetMinimal(Enabled)
+            Catalog.StyleController:SetMinimal(Enabled)
+            return Catalog
+        end
+        function Catalog:SetHighlighted(Enabled)
+            Catalog.StyleController:SetHighlighted(Enabled)
+            return Catalog
+        end
     end
     return Catalog
 end

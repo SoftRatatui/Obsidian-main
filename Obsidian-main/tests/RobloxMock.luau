@@ -276,8 +276,8 @@ function Mock.HostLibrary()
     Library.ScreenGui = Mock.Instance.new("ScreenGui")
     Library.Toggled = true
     Library.Window = { VisibilityChanged = { Event = Mock.Signal() } }
-    function Library:GetAddonStyle()
-        return {
+    function Library:GetAddonStyle(Overrides)
+        local Style = {
             WindowWidth = 420,
             HeaderHeight = 38,
             ControlHeight = 28,
@@ -291,7 +291,22 @@ function Mock.HostLibrary()
             TextSize = 14,
             CaptionSize = 12,
             Motion = true,
+            SelectionThickness = 1,
+            ShowHeader = true,
+            ShowBackground = true,
+            ShowOutline = true,
+            ShowShadow = true,
+            Minimal = false,
+            Highlight = false,
         }
+        for Key, Value in Overrides or {} do
+            Style[Key] = Value
+        end
+        if Style.Minimal then
+            Style.ShowOutline = false
+            Style.ShowShadow = false
+        end
+        return Style
     end
     function Library:GetDesignToken(_, Fallback)
         return Fallback

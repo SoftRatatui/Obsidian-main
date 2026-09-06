@@ -617,6 +617,10 @@ function ImagePreview.Create(Library, Info)
             return
         end
         Preview.Destroyed = true
+        if Preview.StyleController then
+            Preview.StyleController:Destroy()
+            Preview.StyleController = nil
+        end
         for Key in Preview.Tweens do
             StopTween(Key)
         end
@@ -662,7 +666,19 @@ function ImagePreview.Create(Library, Info)
     end
 
     if Library and type(Library.BindAddonStyle) == "function" then
-        Library:BindAddonStyle(Root, Style, Info)
+        Preview.StyleController = Library:BindAddonStyle(Root, Style, Info, true)
+        function Preview:SetStyle(Overrides)
+            Preview.StyleController:Set(Overrides)
+            return Preview
+        end
+        function Preview:SetMinimal(Enabled)
+            Preview.StyleController:SetMinimal(Enabled)
+            return Preview
+        end
+        function Preview:SetHighlighted(Enabled)
+            Preview.StyleController:SetHighlighted(Enabled)
+            return Preview
+        end
     end
     return Preview
 end

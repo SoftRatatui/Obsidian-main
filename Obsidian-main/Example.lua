@@ -15,7 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-3"
-local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-configs-2"
+local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-configs-2-" .. tostring(os.time())
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
 local SynRequest = if type(SynEnvironment) == "table" then rawget(SynEnvironment, "request") else nil
@@ -44,7 +44,7 @@ local function DownloadSource(Url)
 		end
 	end
 
-	local Success, Response = pcall(game.HttpGet, game, Url)
+	local Success, Response = pcall(game.HttpGet, game, Url, false)
 	if Success and type(Response) == "string" and #Response > 0 then
 		return true, Response
 	end
@@ -82,6 +82,10 @@ local function TryModule(BaseUrl, Path)
 	local Executed, Module = pcall(Chunk)
 	if not Executed then
 		return nil, string.format("%s: module execution failed (%s)", Url, tostring(Module))
+	end
+
+	if type(Module) ~= "table" then
+		return nil, string.format("%s: expected a module table, received %s. Update Library, Example and addons together.", Url, typeof(Module))
 	end
 
 	return Module, nil, BaseUrl

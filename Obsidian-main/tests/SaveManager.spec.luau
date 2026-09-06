@@ -77,7 +77,7 @@ return function(SaveManager, Environment)
     local Saved, SaveError = SaveManager:Save("zeta")
     assert(Saved, SaveError)
     assert(Environment.files["MonHub/Tests/settings/place-1/zeta.json"] ~= nil)
-    assert(Environment.files["MonHub/Tests/settings/place-1/zeta.json.tmp"] == nil)
+    assert(Environment.files["MonHub/Tests/settings/place-1/zeta.pending.json"] == nil)
 
     Feature.Value = false
     Strength.Value = 4
@@ -138,7 +138,7 @@ return function(SaveManager, Environment)
         if Object.type == "Input" and Object.idx == "Profile" then Object.text = "explode" end
     end
     local FailedLoad, FailedError = SaveManager:Load("zeta")
-    assert(not FailedLoad)
+    assert(not FailedLoad, "Throwing input restore returned success: " .. tostring(Profile.Value) .. "; " .. tostring(FailedError))
     assert(Accent.Value:ToHex() == "ABCDEF", "rollback color: " .. tostring(Accent.Value:ToHex()) .. "; " .. tostring(FailedError))
     assert(Accent.Transparency == 0.4, "rollback transparency: " .. tostring(Accent.Transparency))
     assert(Profile.Value == "stable", "rollback input: " .. tostring(Profile.Value))
@@ -166,7 +166,7 @@ return function(SaveManager, Environment)
         local Wrote, ErrorMessage = SaveManager:Save("groups")
         assert(not Wrote and ErrorMessage)
         assert(Environment.files["MonHub/Tests/settings/place-1/groups.json"] == OriginalContent, "Failed write destroyed the previous config")
-        assert(Environment.files["MonHub/Tests/settings/place-1/groups.json.bak"] == OriginalContent)
+        assert(Environment.files["MonHub/Tests/settings/place-1/groups.backup.json"] == OriginalContent)
     end
 
     assert(SaveManager:SaveAutoloadConfig("groups"))
@@ -200,6 +200,61 @@ return function(SaveManager, Environment)
     assert(not CallbackOK and CallbackError:find("real SafeCallback failure", 1, true))
     assert(Strength.Value == 31 and Library.ConfigLoadContext == nil, "Callback failure did not roll back or clear context")
     Strength.SetValue = OriginalSliderSetter
+
+    local Multi = Control("Dropdown", { [2] = true, [17] = true })
+    Multi.Multi = true
+    function Multi:SetValue(Values)
+        self.Value = {}
+        for Key, Value in Values do
+            self.Value[type(Value) == "boolean" and Key or Value] = true
+        end
+    end
+    Library.Options.Multi = Multi
+    assert(Restarted:Save("multi"))
+    local MultiJSON = Environment.storedJson[Environment.files["MonHub/Tests/settings/place-1/multi.json"]]
+    for _, Object in MultiJSON.objects do
+        if Object.idx == "Multi" then assert(#Object.value == 2 and Object.value[1] ~= true) end
+    end
+    Multi.Value = {}
+    assert(Restarted:Load("multi") and Multi.Value[2] and Multi.Value[17])
+
+    local Buttons = {}
+    local Box = {}
+    function Box:AddInput(Id, Info)
+        local Input = Control("Input", "")
+        Library.Options[Id] = Input
+        return Input
+    end
+    function Box:AddDropdown(Id, Info)
+        local Dropdown = Control("Dropdown", nil)
+        Dropdown.Values = Info.Values
+        function Dropdown:SetValues(Values) self.Values = Values end
+        Library.Options[Id] = Dropdown
+        return Dropdown
+    end
+    function Box:AddButton(Info, Callback)
+        Buttons[type(Info) == "string" and Info or Info.Text] = Callback or Info.Func
+    end
+    function Box:AddDivider() end
+    function Box:AddLabel()
+        return { SetText = function(self, Text) self.Text = Text end }
+    end
+    Library.Window = { AddDialog = function(_, _, Info)
+        Info.FooterButtons.DestructiveAction.Callback({ Dismiss = function() end })
+    end }
+    Restarted:BuildConfigSection({ AddRightGroupbox = function() return Box end })
+    Library.Options.SaveManager_ConfigName:SetValue(" from-ui ")
+    Buttons["Create config"]()
+    assert(Library.Options.SaveManager_ConfigList.Value == "from-ui", "New config was not selected")
+    Buttons["Set as autoload"]()
+    assert(Restarted:GetAutoloadConfig() == "from-ui")
+    Feature.Value = false
+    Buttons["Load config"]()
+    assert(Feature.Value)
+    Buttons["Reset autoload"]()
+    assert(select(2, Restarted:GetAutoloadConfig()) == false)
+    Buttons["Delete config"]()
+    assert(Environment.files["MonHub/Tests/settings/place-1/from-ui.json"] == nil)
 
     local Invalid = Environment.storedJson[OriginalContent]
     for _, Object in Invalid.objects do

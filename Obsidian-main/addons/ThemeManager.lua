@@ -241,35 +241,73 @@ local function DefaultThemePath()
     return ThemeFolder() .. "/" .. ThemeManager.DefaultThemeFileName
 end
 
-local function WriteVerified(Path, Content)
-    local Temporary = Path .. ".tmp"
+local function WriteVerified(Path: string, Content: string): (boolean, string?)
+    local Base, Extension = Path:match("^(.*)%.([^./]+)$")
+    Base, Extension = Base or Path, Extension or "txt"
+    local TemporaryPath = Base .. ".pending." .. Extension
+    local BackupPath = Base .. ".backup." .. Extension
     local HadPrevious = IsFile(Path)
-    local Previous
+    local PreviousContent = nil
     if HadPrevious then
-        local ReadPrevious, PreviousContent = pcall(readfile, Path)
-        if ReadPrevious then Previous = PreviousContent end
+        local ReadOld, OldContent = pcall(readfile, Path)
+        if ReadOld and typeof(OldContent) == "string" then
+            PreviousContent = OldContent
+        else
+            return false, "Cannot read the existing file; it has not been overwritten"
+        end
     end
-    local Wrote, ErrorMessage = pcall(writefile, Temporary, Content)
-    if not Wrote then return false, tostring(ErrorMessage) end
-    local Read, Value = pcall(readfile, Temporary)
-    if not Read or Value ~= Content then
-        pcall(delfile, Temporary)
-        return false, "Temporary theme file verification failed"
-    end
-    local Final, FinalError = pcall(writefile, Path, Content)
-    pcall(delfile, Temporary)
-    if not Final then return false, tostring(FinalError) end
-    local Verified, FinalValue = pcall(readfile, Path)
-    if not Verified or FinalValue ~= Content then
-        if Previous ~= nil then
-            pcall(writefile, Path, Previous)
-        elseif not HadPrevious and IsFile(Path) then
+
+    local function RestorePrevious()
+        if PreviousContent ~= nil then
+            local Restored = pcall(writefile, Path, PreviousContent)
+            local ReadBack, RestoredContent = pcall(readfile, Path)
+            if not Restored or not ReadBack or RestoredContent ~= PreviousContent then
+                return "; could not restore the previous file (backup: " .. BackupPath .. ")"
+            end
+        elseif IsFile(Path) then
             pcall(delfile, Path)
         end
-        return false, "Theme file verification failed"
+        return ""
     end
+
+    local WroteTemporary, TemporaryError = pcall(writefile, TemporaryPath, Content)
+    if not WroteTemporary then
+        return false, "Failed to write temporary file " .. TemporaryPath .. ": " .. tostring(TemporaryError)
+    end
+
+    local ReadTemporary, TemporaryContent = pcall(readfile, TemporaryPath)
+    if not ReadTemporary or TemporaryContent ~= Content then
+        pcall(delfile, TemporaryPath)
+        return false, "Temporary file verification failed"
+    end
+
+    if PreviousContent ~= nil then
+        local WroteBackup = pcall(writefile, BackupPath, PreviousContent)
+        local ReadBackup, BackupContent = pcall(readfile, BackupPath)
+        if not WroteBackup or not ReadBackup or BackupContent ~= PreviousContent then
+            pcall(delfile, TemporaryPath)
+            return false, "Cannot verify backup; the existing file has not been overwritten"
+        end
+    end
+
+    local WroteFinal, FinalError = pcall(writefile, Path, Content)
+    if not WroteFinal then
+        local Recovery = RestorePrevious()
+        pcall(delfile, TemporaryPath)
+        return false, "Failed to write file: " .. tostring(FinalError) .. Recovery
+    end
+
+    local ReadFinal, FinalContent = pcall(readfile, Path)
+    if not ReadFinal or FinalContent ~= Content then
+        local Recovery = RestorePrevious()
+        pcall(delfile, TemporaryPath)
+        return false, "File verification failed" .. Recovery
+    end
+
+    pcall(delfile, TemporaryPath)
     return true
 end
+
 
 local function ResolveThemeName(Value)
     if ThemeManager.Library and ThemeManager.Library.ResolveThemeName then
@@ -435,6 +473,7 @@ function ThemeManager:ReloadCustomThemes()
     for _, FilePath in ListFiles(ThemeFolder()) do
         local Normalized = tostring(FilePath):gsub("\\", "/")
         local Name = Normalized:match("([^/]+)%.json$")
+        if Name and (Name:lower():match("%.pending$") or Name:lower():match("%.backup$")) then continue end
         if not IsValidThemeName(Name) or IsBuiltInTheme(Name) then continue end
         local Theme = ThemeManager:GetCustomTheme(Name)
         if Theme then table.insert(Names, Name) end

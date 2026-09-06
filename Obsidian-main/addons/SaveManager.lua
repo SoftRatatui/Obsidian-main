@@ -51,7 +51,7 @@ end
 function SaveManager:Notify(Message, Title, Variant)
     if not SaveManager.Library or type(SaveManager.Library.Notify) ~= "function" then return end
     Message = tostring(Message)
-    local IsError = Message:match("^Failed") or Message:match("^Invalid")
+    local IsError = Variant == "Error" or Message:match("^Failed") or Message:match("^Invalid")
     SaveManager.Library:Notify({
         Title = Title or (IsError and "Config error" or "Configuration"),
         Description = Message,
@@ -179,6 +179,16 @@ local ElementParser = {}; do
     CreateParser(
         "Dropdown", "Options",
         function(Index: string, Dropdown: any)
+            if Dropdown.Multi then
+                local Selected = {}
+                for Value, Active in Dropdown.Value do
+                    if Active then table.insert(Selected, Value) end
+                end
+                table.sort(Selected, function(a, b)
+                    return typeof(a) .. ":" .. tostring(a) < typeof(b) .. ":" .. tostring(b)
+                end)
+                return { value = Selected, multi = true }
+            end
             return { value = Dropdown.Value, multi = Dropdown.Multi }
         end,
         function(Element: any?, Data: any)
@@ -297,7 +307,9 @@ local function IsValidLeafName(Name: any): boolean
 end
 
 local function IsValidConfigName(Name: any): boolean
-    return IsValidLeafName(Name) and string.lower(Name) ~= "autoload"
+    if not IsValidLeafName(Name) then return false end
+    local Lower = string.lower(Name)
+    return Lower ~= "autoload" and not Lower:match("%.pending$") and not Lower:match("%.backup$")
 end
 
 local function IsValidFolderPath(Name: string): boolean
@@ -375,7 +387,10 @@ local function GetAutoloadPath(): false | string
 end
 
 local function WriteVerified(Path: string, Content: string): (boolean, string?)
-    local TemporaryPath = Path .. ".tmp"
+    local Base, Extension = Path:match("^(.*)%.([^./]+)$")
+    Base, Extension = Base or Path, Extension or "txt"
+    local TemporaryPath = Base .. ".pending." .. Extension
+    local BackupPath = Base .. ".backup." .. Extension
     local HadPrevious = isfile(Path)
     local PreviousContent = nil
     if HadPrevious then
@@ -392,7 +407,7 @@ local function WriteVerified(Path: string, Content: string): (boolean, string?)
             local Restored = pcall(writefile, Path, PreviousContent)
             local ReadBack, RestoredContent = pcall(readfile, Path)
             if not Restored or not ReadBack or RestoredContent ~= PreviousContent then
-                return "; could not restore the previous file (backup: " .. Path .. ".bak)"
+                return "; could not restore the previous file (backup: " .. BackupPath .. ")"
             end
         elseif isfile(Path) then
             pcall(delfile, Path)
@@ -402,7 +417,7 @@ local function WriteVerified(Path: string, Content: string): (boolean, string?)
 
     local WroteTemporary, TemporaryError = pcall(writefile, TemporaryPath, Content)
     if not WroteTemporary then
-        return false, "Failed to write temporary file: " .. tostring(TemporaryError)
+        return false, "Failed to write temporary file " .. TemporaryPath .. ": " .. tostring(TemporaryError)
     end
 
     local ReadTemporary, TemporaryContent = pcall(readfile, TemporaryPath)
@@ -412,7 +427,6 @@ local function WriteVerified(Path: string, Content: string): (boolean, string?)
     end
 
     if PreviousContent ~= nil then
-        local BackupPath = Path .. ".bak"
         local WroteBackup = pcall(writefile, BackupPath, PreviousContent)
         local ReadBackup, BackupContent = pcall(readfile, BackupPath)
         if not WroteBackup or not ReadBackup or BackupContent ~= PreviousContent then
@@ -783,6 +797,9 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
             if Option.multi ~= nil and typeof(Option.multi) ~= "boolean" then
                 return false, string.format("Dropdown %q: expected boolean multi value", tostring(Option.idx))
             end
+            if Option.multi == true and typeof(Option.value) ~= "table" then
+                return false, string.format("Dropdown %q: expected selected values", tostring(Option.idx))
+            end
         elseif Option.type == "ColorPicker" then
             local IsColorValid = typeof(Option.value) == "string" and pcall(Color3.fromHex, Option.value)
             if not IsColorValid or Option.transparency ~= nil and typeof(Option.transparency) ~= "number" then
@@ -940,7 +957,8 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
 
         local TargetExists = false
         if Option.type == "Toggle" then
-            TargetExists = Library.Toggles and Library.Toggles[Option.idx] ~= nil
+            local Target = Library.Toggles and Library.Toggles[Option.idx]
+            TargetExists = Target ~= nil and Target.Type == "Toggle"
         elseif Option.type == "Groupbox" then
             local Tab = Library.Tabs and Library.Tabs[Option.tabIdx]
             TargetExists = Tab and Tab.Groupboxes and Tab.Groupboxes[Option.idx] ~= nil
@@ -949,6 +967,9 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
         else
             local Target = Library.Options and Library.Options[Option.idx]
             TargetExists = Target ~= nil and Target.Type == Option.type
+            if TargetExists and Option.type == "Dropdown" and Option.multi ~= nil then
+                TargetExists = (Target.Multi == true) == Option.multi
+            end
         end
         if not TargetExists then
             LoadReport.Skipped += 1
@@ -1000,16 +1021,6 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
         return true, nil, LoadReport
     end
 
-    if LoadReport.Applied > 0 then
-        SaveManager:Notify(string.format(
-            "Loaded %d of %d settings. %d could not be applied.",
-            LoadReport.Applied,
-            LoadReport.Total,
-            #LoadErrors
-        ))
-        return true, nil, LoadReport
-    end
-
     if RollbackJSON then
         local RolledBack, RollbackError = SaveManager:LoadJSON(RollbackJSON, true)
         if not RolledBack then
@@ -1017,10 +1028,12 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
         end
     end
 
+    SaveManager.LastLoadReport = LoadReport
+
     return false, "Failed to load config data: " .. table.concat(LoadErrors, "; "), LoadReport
 end
 
-function SaveManager:Load(ConfigName: string): (boolean, string?)
+function SaveManager:Load(ConfigName: string): (boolean, string?, { [string]: any }?)
     if IsStringEmpty(ConfigName) then
         return false, "No config is selected"
     end
@@ -1042,7 +1055,7 @@ function SaveManager:Load(ConfigName: string): (boolean, string?)
     return SaveManager:LoadJSON(Content)
 end
 
-function SaveManager:Delete(ConfigName: string): (boolean | string?)
+function SaveManager:Delete(ConfigName: string): (boolean, string?)
     if IsStringEmpty(ConfigName) then
         return false, "No config is selected"
     end
@@ -1063,7 +1076,7 @@ function SaveManager:Delete(ConfigName: string): (boolean | string?)
     end
 
     local SuccessDelete, ErrorMessage = pcall(delfile, ConfigPath)
-    if not SuccessDelete then
+    if not SuccessDelete or isfile(ConfigPath) then
         return false, "Failed to delete config file: " .. tostring(ErrorMessage)
     end
 
@@ -1265,12 +1278,12 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
     ConfigurationBox:AddButton("Create config", function()
         local ConfigName = Trim(ConfigNameInput.Value)
         if IsStringEmpty(ConfigName) then
-            SaveManager.Library:Notify("Configuration name cannot be empty.")
+            SaveManager:Notify("Configuration name cannot be empty.")
             return
         end
 
         if string.lower(ConfigName) == "autoload" then
-            SaveManager.Library:Notify("Invalid config name provided.")
+            SaveManager:Notify("Invalid config name provided.")
             return
         end
         
@@ -1287,11 +1300,11 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
             function()
                 local Success, ErrorMessage = SaveManager:Save(ConfigName)
                 if not Success then
-                    SaveManager.Library:Notify(string.format("Failed to create config %q: %s", ConfigName, ErrorMessage))
+                    SaveManager:Notify(string.format("Failed to create config %q: %s", ConfigName, ErrorMessage))
                     return
                 end
 
-                SaveManager.Library:Notify(string.format("Successfully created config %q", ConfigName))
+                SaveManager:Notify(string.format("Successfully created config %q", ConfigName))
                 RefreshList(ConfigName)
             end
         )
@@ -1330,7 +1343,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         Func = function()
             local ConfigName = ConfigList.Value
             if IsStringEmpty(ConfigName) then
-                SaveManager.Library:Notify("Please select a config first.")
+                SaveManager:Notify("Please select a config first.")
                 return
             end
 
@@ -1345,13 +1358,15 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
 
                 "Load",
                 function()
-                    local Success, ErrorMessage = SaveManager:Load(ConfigName)
+                    local Success, ErrorMessage, Report = SaveManager:Load(ConfigName)
                     if not Success then
-                        SaveManager.Library:Notify(string.format("Failed to load config %q: %s", ConfigName, ErrorMessage))
+                        SaveManager:Notify(string.format("Failed to load config %q: %s", ConfigName, ErrorMessage))
                         return
                     end
 
-                    SaveManager.Library:Notify(string.format("Successfully loaded config %q", ConfigName))
+                    SaveManager:Notify(string.format("%s: %d restored, %d skipped.%s", ConfigName, Report.Applied, Report.Skipped,
+                        Report.Missing > 0 and " Check control IDs and update Library and addons together." or ""),
+                        Report.Missing > 0 and "Config loaded partially" or "Config loaded", Report.Missing > 0 and "Warning" or "Success")
                 end
             )
         end
@@ -1364,7 +1379,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         Func = function()
             local ConfigName = ConfigList.Value
             if IsStringEmpty(ConfigName) then
-                SaveManager.Library:Notify("Please select a config first.")
+                SaveManager:Notify("Please select a config first.")
                 return
             end
 
@@ -1381,11 +1396,11 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
                 function()
                     local Success, ErrorMessage = SaveManager:Save(ConfigName)
                     if not Success then
-                        SaveManager.Library:Notify(string.format("Failed to overwrite config %q: %s", ConfigName, ErrorMessage))
+                        SaveManager:Notify(string.format("Failed to overwrite config %q: %s", ConfigName, ErrorMessage))
                         return
                     end
 
-                    SaveManager.Library:Notify(string.format("Successfully overwrote config %q", ConfigName))
+                    SaveManager:Notify(string.format("Successfully overwrote config %q", ConfigName))
                 end
             )
         end
@@ -1398,7 +1413,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         Func = function()
             local ConfigName = ConfigList.Value
             if IsStringEmpty(ConfigName) then
-                SaveManager.Library:Notify("Please select a config first.")
+                SaveManager:Notify("Please select a config first.")
                 return
             end
 
@@ -1415,11 +1430,11 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
                 function()
                     local Success, ErrorMessage = SaveManager:Delete(ConfigName)
                     if not Success then
-                        SaveManager.Library:Notify(string.format("Failed to delete config %q: %s", ConfigName, ErrorMessage))
+                        SaveManager:Notify(string.format("Failed to delete config %q: %s", ConfigName, ErrorMessage))
                         return
                     end
 
-                    SaveManager.Library:Notify(string.format("Successfully deleted config %q", ConfigName))
+                    SaveManager:Notify(string.format("Successfully deleted config %q", ConfigName))
                     RefreshAutoloadConfigLabel()
                 end
             )
@@ -1436,17 +1451,17 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         Func = function()
             local ConfigName = ConfigList.Value
             if IsStringEmpty(ConfigName) then
-                SaveManager.Library:Notify("Please select a config first.")
+                SaveManager:Notify("Please select a config first.")
                 return
             end
 
             local Success, ErrorMessage = SaveManager:SaveAutoloadConfig(ConfigName)
             if not Success then
-                SaveManager.Library:Notify(string.format("Failed to set autoload config %q: %s", ConfigName, ErrorMessage))
+                SaveManager:Notify(string.format("Failed to set autoload config %q: %s", ConfigName, ErrorMessage))
                 return
             end
 
-            SaveManager.Library:Notify(string.format("Successfully set autoload config to %q", ConfigName))
+            SaveManager:Notify(string.format("Successfully set autoload config to %q", ConfigName))
             RefreshAutoloadConfigLabel()
         end
     })
@@ -1469,11 +1484,11 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
                 function()
                     local Success, ErrorMessage = SaveManager:DeleteAutoLoadConfig()
                     if not Success then
-                        SaveManager.Library:Notify(string.format("Failed to reset autoload config: %s", ErrorMessage))
+                        SaveManager:Notify(string.format("Failed to reset autoload config: %s", ErrorMessage))
                         return
                     end
 
-                    SaveManager.Library:Notify("Successfully reset autoload config.")
+                    SaveManager:Notify("Successfully reset autoload config.")
                     RefreshAutoloadConfigLabel()
                 end
             )
@@ -1492,7 +1507,7 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
     ConfigurationBox:AddButton("Import config", function()
         local ConfigJSON = ConfigJSONInput.Value
         if IsStringEmpty(ConfigJSON) then
-            SaveManager.Library:Notify("Configuration JSON cannot be empty")
+            SaveManager:Notify("Configuration JSON cannot be empty")
             return
         end
 
@@ -1509,11 +1524,11 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
             function()
                 local Success, ErrorMessage = SaveManager:LoadJSON(ConfigJSON)
                 if not Success then
-                    SaveManager.Library:Notify(string.format("Failed to import config: %s", ErrorMessage))
+                    SaveManager:Notify(string.format("Failed to import config: %s", ErrorMessage))
                     return
                 end
 
-                SaveManager.Library:Notify("Successfully imported config")
+                SaveManager:Notify("Successfully imported config")
             end
         )
     end)
@@ -1521,16 +1536,16 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
     ConfigurationBox:AddButton("Export current config", function()
         local EncodedData, Success, ErrorMessage = SaveManager:SaveJSON()
         if not Success  then
-            SaveManager.Library:Notify(ErrorMessage)
+            SaveManager:Notify(ErrorMessage)
             return
         end
 
         ConfigJSONInput:SetValue(EncodedData)
         if setclipboard then
             setclipboard(EncodedData)
-            SaveManager.Library:Notify("Copied config to your clipboard")
+            SaveManager:Notify("Copied config to your clipboard")
         else
-            SaveManager.Library:Notify("Config JSON is ready to copy")
+            SaveManager:Notify("Config JSON is ready to copy")
         end
     end)
 

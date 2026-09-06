@@ -4,6 +4,8 @@ Current release: `0.0.1-release-3`
 
 The release identifier is intentionally fixed. Library updates keep `0.0.1-release-3` unless the project owner explicitly requests another version.
 
+Always update Library, Example, SaveManager, ThemeManager, and the addons you use together to the latest repository revision. Patches can share this release identifier. Restart the script after updating. See [README.md](README.md) for the current fixes, config setup, recovery instructions, and troubleshooting.
+
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
 ## Contents
@@ -19,9 +21,10 @@ MonHub is a compact Roblox Luau interface library built around a neutral dark pa
 
 ```luau
 local RELEASE = "0.0.1-release-3"
+local CACHE = RELEASE .. "-configs-2-" .. tostring(os.time())
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 
-local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE))()
+local Library = loadstring(game:HttpGet(BASE .. "Library.lua?monhub=" .. CACHE, false))()
 
 if Library.ReleaseVersion ~= RELEASE then
     warn(string.format("MonHub version notice: expected %s, received %s", RELEASE, tostring(Library.ReleaseVersion)))
@@ -71,7 +74,7 @@ These rules form the supported way to build a reliable MonHub interface.
 6. Build the config section after every saved control exists.
 7. Call `LoadAutoloadConfig()` last.
 
-Loading a config before controls or adapters exist is supported for compatibility, but those missing entries are skipped. The returned load report tells you how many values were applied and skipped.
+Missing controls or adapters are skipped for compatibility when other entries can be restored. If none of the saved entries match the current UI, loading fails with an initialization error. The load report includes `Applied`, `Skipped`, `Missing`, and `MissingIds`; autoload also returns `Status` and, when loaded, `ConfigName`.
 
 ### Stable IDs and state
 
@@ -129,6 +132,9 @@ Loading a config before controls or adapters exist is supported for compatibilit
 - Call `IgnoreThemeSettings()` when theme choice belongs to the user rather than to each gameplay config.
 - Do not edit the generated `schema` field. Newer unsupported schema versions are rejected before any state changes.
 - Config writes are staged and read back before replacement. Failed loads restore the pre-load snapshot when possible.
+- Temporary and backup files retain supported extensions: `Main.pending.json`, `Main.backup.json`, `autoload.pending.txt`, and `autoload.backup.txt`. They are excluded from the config list. Names ending in `.pending` or `.backup` are reserved.
+- `Set as autoload` chooses an existing saved config. Use `Overwrite config` to persist later UI changes; assigning autoload does not enable continuous autosave.
+- Callback errors return failure and trigger rollback. Removed controls are a separate compatibility case and appear in the report. A callback that starts external asynchronous work must handle its own cleanup.
 
 ### Cleanup
 
@@ -1138,7 +1144,7 @@ Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, and `Ash`. 
 
 ```luau
 local SaveManager = loadstring(game:HttpGet(
-    BASE .. "addons/SaveManager.lua?monhub=" .. RELEASE
+    BASE .. "addons/SaveManager.lua?monhub=" .. CACHE, false
 ))()
 
 SaveManager:SetLibrary(Library)
@@ -1660,6 +1666,10 @@ Call `SetLibrary` first. Use `SetFolder` and optionally `SetSubFolder` before bu
 
 Methods: `SetLibrary`, `SetLoadingOrder`, `SetIgnoreIndexes`, `IgnoreThemeSettings`, `RegisterAdapter`, `UnregisterAdapter`, `GetPaths`, `BuildFolderTree`, `CheckFolderTree`, `CheckSubFolder`, `SetFolder`, `SetSubFolder`, `RefreshConfigList`, `SaveJSON`, `Save`, `LoadJSON`, `Load`, `Delete`, `GetAutoloadConfig`, `SaveAutoloadConfig`, `LoadAutoloadConfig`, `DeleteAutoLoadConfig`, and `BuildConfigSection`.
 
+`SaveJSON` returns `json, success, error`. `Load`, `LoadJSON`, and `LoadAutoloadConfig` return `success, error, report`. Other file mutations return `success, error`. Check these results instead of treating a completed call as success. `LastLoadReport` retains the last application report. `SaveManager:Notify(message, title, variant)` creates a structured library notification.
+
+Default restoration order is Input, Dropdown, Slider, ColorPicker, Toggle, KeyPicker, Groupbox, Custom. Explicit IDs or types supplied to `SetLoadingOrder` run first. Multi-select values use a JSON array of selected values; legacy selection maps are also accepted. Groupbox identity includes its tab, and numeric and string IDs remain distinct.
+
 `Save` and `Load` operate on named files. `SaveJSON` and `LoadJSON` operate on serialized text. `SetIgnoreIndexes(ids, true)` replaces the ignore set; omitting the second argument extends it. `SetLoadingOrder(true, idsOrTypes)` controls callback restore order. `RegisterAdapter` adds serializable state that is independent of a built-in control. `BuildConfigSection(tab, icon)` creates the complete config interface.
 
 ### ThemeManager API
@@ -1753,6 +1763,11 @@ Run local checks with Luau's compiler and interpreter installed:
 ## Changelog
 
 ### 0.0.1-release-3
+
+- Fixed filesystem compatibility by keeping supported extensions on temporary and backup config/theme files; verified backups and recovery now cover partially failing writes.
+- Fixed cross-tab groupbox identity, disabled control restore, numeric multi-select persistence, finite slider validation, and callback error propagation to rollback.
+- Added explicit autoload reports, missing-control diagnostics, structured config messages, immediate selection after config creation, and a fresh request key for script loaders.
+- Added README setup and troubleshooting, config UI workflow tests, simulated process reinitialization, and filesystem fault coverage.
 
 - Unified the window edge geometry so the root owns every outer corner and top, sidebar, and footer surfaces remain one pixel inside its stroke.
 - Made navigation selection fill the complete sidebar row and added `Shell.NavigationInset` for intentional inset variants.

@@ -138,6 +138,7 @@ local storedJson = {}
 local jsonSequence = 0
 local files = {}
 local folders = {}
+local faults = {}
 local function typeof(Value)
     return type(Value) == "table" and Value._type or type(Value)
 end
@@ -154,15 +155,22 @@ function Color3.fromHex(Hex)
     return Color
 end
 local HttpService = {}
+local function CopyJSON(Value)
+    if type(Value) ~= "table" then return Value end
+    assert(Value._type == nil, "unsupported JSON value")
+    local Copy = {}
+    for Key, Item in Value do Copy[Key] = CopyJSON(Item) end
+    return Copy
+end
 function HttpService:JSONEncode(Value)
     jsonSequence += 1
     local Key = "json:" .. tostring(jsonSequence)
-    storedJson[Key] = Value
+    storedJson[Key] = CopyJSON(Value)
     return Key
 end
 function HttpService:JSONDecode(Value)
     assert(storedJson[Value], "invalid json")
-    return storedJson[Value]
+    return CopyJSON(storedJson[Value])
 end
 local game = { GetService = function(_, Name) assert(Name == "HttpService"); return HttpService end }
 local function cloneref(Value) return Value end
@@ -180,17 +188,37 @@ local function listfiles(Path)
 end
 local function makefolder(Path) folders[Path] = true end
 local function readfile(Path) assert(files[Path] ~= nil, "missing file"); return files[Path] end
-local function writefile(Path, Content) files[Path] = Content end
+local function writefile(Path, Content)
+    assert(Path:match("%.json$") or Path:match("%.txt$"), "invalid argument #1 to 'writefile' (illegal path)")
+    if faults.WritePath == Path then
+        local Mode = faults.Mode
+        faults.WritePath = nil
+        files[Path] = "partial write"
+        if Mode == "throw" then error("disk write failed after truncation") end
+        return
+    end
+    files[Path] = Content
+end
 local function delfile(Path) assert(files[Path] ~= nil, "missing file"); files[Path] = nil end
 local globalEnvironment = {}
 local function getgenv() return globalEnvironment end
 '@
-$taskSaveSource += "`nlocal SaveManager = (function()`n$taskSaveManagerSource`nend)()`n"
-$taskSaveSource += "local Run = (function()`n$taskSaveManagerSpec`nend)()`nRun(SaveManager, { files = files, folders = folders, storedJson = storedJson, UDim2 = UDim2, Color3 = Color3 })`n"
+$taskSaveSource += "`nlocal function CreateSaveManager()`n$taskSaveManagerSource`nend`nlocal SaveManager = CreateSaveManager()`n"
+$taskCallbackStart = $taskLibrarySource.IndexOf('function Library:SafeCallback(')
+$taskCallbackEnd = $taskLibrarySource.IndexOf('function GetOverlappingDraggable', $taskCallbackStart)
+$taskCallbackSource = $taskLibrarySource.Substring($taskCallbackStart, $taskCallbackEnd - $taskCallbackStart)
+$taskSaveSource += "local function BindCallbacks(Library)`n$taskCallbackSource`nend`n"
+$taskSaveSource += "local Run = (function()`n$taskSaveManagerSpec`nend)()`nRun(SaveManager, { files = files, folders = folders, storedJson = storedJson, UDim2 = UDim2, Color3 = Color3, faults = faults, CreateSaveManager = CreateSaveManager, BindCallbacks = BindCallbacks })`n"
 $taskThemeManagerSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'addons/ThemeManager.lua'))
 $taskThemeManagerSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'ThemeManagerPersistence.spec.luau'))
 $taskSaveSource += "local ThemeManager = (function()`n$taskThemeManagerSource`nend)()`n"
 $taskSaveSource += "local RunThemes = (function()`n$taskThemeManagerSpec`nend)()`nRunThemes(ThemeManager, { files = files, folders = folders, Color3 = Color3 })`n"
+$taskExampleSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'Example.lua'))
+$taskLoaderStart = $taskExampleSource.IndexOf('local PRIMARY_REPOSITORY')
+$taskLoaderEnd = $taskExampleSource.IndexOf('local Library, ActiveRepository', $taskLoaderStart)
+$taskLoaderSource = $taskExampleSource.Substring($taskLoaderStart, $taskLoaderEnd - $taskLoaderStart)
+$taskLoaderSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Loader.spec.luau'))
+$taskSaveSource += "local function CreateLoader(Request, HttpGet)`nlocal function getfenv() return { request = Request } end`nlocal game = { HttpGet = HttpGet }`n$taskLoaderSource`nreturn TryModule`nend`nlocal TestLoader = (function()`n$taskLoaderSpec`nend)()`nTestLoader(CreateLoader)`n"
 $taskSaveGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-save-manager-" + [guid]::NewGuid().ToString() + '.luau')
 try {
     [IO.File]::WriteAllText($taskSaveGenerated, $taskSaveSource)

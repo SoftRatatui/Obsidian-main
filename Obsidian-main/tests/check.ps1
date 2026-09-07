@@ -27,6 +27,68 @@ foreach ($taskModule in @('AssetCatalog', 'ImageGallery', 'ImagePreview', 'Textu
     $taskSource += "Modules.$taskModule = (function()`n$taskModuleSource`nend)()`n"
 }
 $taskLibrarySource = [IO.File]::ReadAllText((Join-Path $taskRoot 'Library.lua'))
+$taskBoundsStart = $taskLibrarySource.IndexOf('local TextBoundsCache = {}')
+$taskBoundsEnd = $taskLibrarySource.IndexOf('function Library:MouseIsOverFrame', $taskBoundsStart)
+$taskBoundsSource = $taskLibrarySource.Substring($taskBoundsStart, $taskBoundsEnd - $taskBoundsStart)
+$taskSource += @'
+local function CreateTextBounds()
+    local State = { Calls = 0, Destroyed = 0, Time = 0 }
+    local Library = { Scheme = { Font = {} } }
+    local os = { clock = function() return State.Time end }
+    local function GetViewportSize() return Vector2.new(400, 800) end
+    local Instance = { new = function()
+        if State.FailCreate then error("params unavailable") end
+        return { Destroy = function() State.Destroyed += 1 end }
+    end }
+    local TextService = {}
+    function TextService:GetTextBoundsAsync(Params)
+        State.Calls += 1
+        if State.Fail then error("Temp read failed.") end
+        return Vector2.new(40, 18)
+    end
+    function TextService:GetTextSize(Text)
+        State.PlainText = Text
+        if State.FailFallback then error("text service unavailable") end
+        return Vector2.new(55, 20)
+    end
+'@
+$taskSource += "`n$taskBoundsSource`nreturn Library, State`nend`n"
+$taskBoundsSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'TextBounds.spec.luau'))
+$taskFontStart = $taskLibrarySource.IndexOf('local function EnsureFontFolder(')
+$taskFontEnd = $taskLibrarySource.IndexOf('function Library:SetThemeFont(', $taskFontStart)
+$taskFontSource = $taskLibrarySource.Substring($taskFontStart, $taskFontEnd - $taskFontStart)
+$taskSource += @'
+local function CreateFontLoader()
+    local State = { Destroyed = 0 }
+    local Library = {}
+    local function IsFunction(Value) return type(Value) == "function" end
+    local function NativeIsFolder()
+        if State.FolderError then error("filesystem denied") end
+        return true
+    end
+    local function NativeMakeFolder() end
+    local function NativeIsFile()
+        if State.FileError then error("file access denied") end
+        return false
+    end
+    local function NativeWriteFile() end
+    local function NativeGetCustomAsset(Path) return Path end
+    local function IsFontData() return true end
+    local function RequestGet() return true, "font binary" end
+    local function ResolveFontWeight() return 500, Enum.FontWeight.Medium end
+    local HttpService = { JSONEncode = function()
+        if State.JSONError then error("cannot encode") end
+        return "metadata"
+    end }
+    local Font = { new = function() return { _type = "Font" } end }
+    local Instance = { new = function() return { Destroy = function() State.Destroyed += 1 end } end }
+    local TextService = { GetTextBoundsAsync = function()
+        if State.FontError then error("Temp read failed.") end
+        return Vector2.new(18, 16)
+    end }
+'@
+$taskSource += "`n$taskFontSource`nreturn Library, State`nend`n"
+$taskSource += "local RunBounds = (function()`n$taskBoundsSpec`nend)()`nRunBounds(CreateTextBounds, CreateFontLoader)`n"
 $taskHostStart = $taskLibrarySource.IndexOf('function Library:CreateAddonWindow(Info)')
 $taskHostEnd = $taskLibrarySource.IndexOf('function Library:MakeCover', $taskHostStart)
 $taskHostSource = $taskLibrarySource.Substring($taskHostStart, $taskHostEnd - $taskHostStart)

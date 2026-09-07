@@ -566,9 +566,12 @@ local function EnsureFontFolder(Path)
     local Current = ""
     for Segment in string.gmatch(Path, "[^/]+") do
         Current = Current == "" and Segment or Current .. "/" .. Segment
-        if not NativeIsFolder(Current) then
-            local Created = pcall(NativeMakeFolder, Current)
-            if not Created and not NativeIsFolder(Current) then
+        local Checked, Exists = pcall(NativeIsFolder, Current)
+        if not Checked then return false end
+        if not Exists then
+            pcall(NativeMakeFolder, Current)
+            local Verified, Ready = pcall(NativeIsFolder, Current)
+            if not Verified or not Ready then
                 return false
             end
         end
@@ -594,7 +597,9 @@ function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Fo
     local SafeName = Name:gsub("[^%w_%-]", "_")
     local FontPath = "MonHub/assets/" .. SafeName .. ".ttf"
     local MetadataPath = "MonHub/assets/" .. SafeName .. ".json"
-    local ShouldDownload = not NativeIsFile(FontPath)
+    local CheckedFile, FileExists = pcall(NativeIsFile, FontPath)
+    if not CheckedFile then return nil, "Unable to inspect the font cache" end
+    local ShouldDownload = not FileExists
 
     if not ShouldDownload and IsFunction(NativeReadFile) then
         local Read, CachedData = pcall(NativeReadFile, FontPath)
@@ -618,7 +623,7 @@ function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Fo
     end
 
     local FaceWeight, FontWeight = ResolveFontWeight(Weight)
-    local Metadata = HttpService:JSONEncode({
+    local Encoded, Metadata = pcall(HttpService.JSONEncode, HttpService, {
         name = Name,
         faces = {
             {
@@ -629,6 +634,7 @@ function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Fo
             },
         },
     })
+    if not Encoded then return nil, tostring(Metadata) end
     local MetadataWritten, MetadataError = pcall(NativeWriteFile, MetadataPath, Metadata)
     if not MetadataWritten then
         return nil, tostring(MetadataError)
@@ -642,6 +648,20 @@ function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Fo
     local Created, FontFace = pcall(Font.new, MetadataAsset, FontWeight, Enum.FontStyle.Normal)
     if not Created or typeof(FontFace) ~= "Font" then
         return nil, tostring(FontFace)
+    end
+
+    local Params
+    local Readable, Bounds = pcall(function()
+        Params = Instance.new("GetTextBoundsParams")
+        Params.Text = "Ag"
+        Params.Font = FontFace
+        Params.Size = 14
+        Params.Width = 200
+        return TextService:GetTextBoundsAsync(Params)
+    end)
+    if Params then Params:Destroy() end
+    if not Readable or typeof(Bounds) ~= "Vector2" or Bounds.Y <= 0 then
+        return nil, "Custom font cannot be read by this device"
     end
 
     return FontFace
@@ -698,11 +718,12 @@ function Library:LoadBundledFont(Name: string): (Font?, string?)
     end
     URL ..= (string.find(URL, "?", 1, true) and "&monhub=" or "?monhub=") .. tostring(Library.ReleaseVersion)
 
-    local Face, Reason = Library:LoadCustomFont(
+    local Loaded, Face, Reason = pcall(Library.LoadCustomFont, Library,
         Entry.Name,
         URL,
         Entry.Weight
     )
+    if not Loaded then Face, Reason = nil, tostring(Face) end
 
     Library.BundledFontCache[Name] = Face or false
     return Face, Reason
@@ -3280,14 +3301,23 @@ end
 local TextBoundsCache = {}
 local TextBoundsCacheSize = 0
 local MaxTextBoundsCacheSize = 512
+local TextBoundsRetry = {}
 
 function Library:ClearTextBoundsCache()
     table.clear(TextBoundsCache)
     TextBoundsCacheSize = 0
+    table.clear(TextBoundsRetry)
 end
 
 function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: number?): (number, number)
-    local FinalWidth = math.max(1, Width or GetViewportSize().X - 32)
+    Text = tostring(Text or "")
+    Font = Font or Library.Scheme.Font
+    Size = tonumber(Size) or 14
+    if Size ~= Size or math.abs(Size) == math.huge then Size = 14 end
+    Size = math.clamp(Size, 1, 200)
+    local FinalWidth = tonumber(Width) or GetViewportSize().X - 32
+    if FinalWidth ~= FinalWidth or FinalWidth == math.huge then FinalWidth = 10000 end
+    FinalWidth = math.clamp(FinalWidth, 1, 1000000)
     local FontCache = TextBoundsCache[Font]
     if not FontCache then
         FontCache = {}
@@ -3307,19 +3337,54 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
     end
 
     local Cached = WidthCache[Text]
-    if Cached then
+    local Now = os.clock()
+    if Cached and (not Cached.ExpiresAt or Now < Cached.ExpiresAt) then
         return Cached.X, Cached.Y
     end
 
-    local Params = Instance.new("GetTextBoundsParams")
-    Params.Text = Text
-    Params.RichText = true
-    Params.Font = Font
-    Params.Size = Size
-    Params.Width = FinalWidth
-
-    local Bounds = TextService:GetTextBoundsAsync(Params)
-    Params:Destroy()
+    local Bounds
+    local RetryAt = TextBoundsRetry[Font] or 0
+    local Fallback = Now < RetryAt
+    if not Fallback then
+        local Params
+        local Success, Result = pcall(function()
+            Params = Instance.new("GetTextBoundsParams")
+            Params.Text = Text
+            Params.RichText = true
+            Params.Font = Font
+            Params.Size = Size
+            Params.Width = FinalWidth
+            return TextService:GetTextBoundsAsync(Params)
+        end)
+        if Params then Params:Destroy() end
+        if Success and typeof(Result) == "Vector2" and Result.X >= 0 and Result.Y >= 0
+            and Result.X < math.huge and Result.Y < math.huge then
+            Bounds = Result
+            TextBoundsRetry[Font] = nil
+        else
+            Fallback = true
+            RetryAt = os.clock() + 5
+            TextBoundsRetry[Font] = RetryAt
+        end
+    end
+    if Fallback then
+        local PlainText = Text:gsub("<br%s*/?>", "\n"):gsub("<[^>]->", "")
+            :gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&apos;", "'"):gsub("&amp;", "&")
+        local Measured, Result = pcall(TextService.GetTextSize, TextService, PlainText, Size, Enum.Font.SourceSans, Vector2.new(FinalWidth, 1000000))
+        if Measured and typeof(Result) == "Vector2" and Result.X >= 0 and Result.Y > 0
+            and Result.X < math.huge and Result.Y < math.huge then
+            Bounds = Result
+        else
+            local Lines, MaxWidth = 0, 0
+            for Line in (PlainText .. "\n"):gmatch("(.-)\n") do
+                local Characters = utf8.len(Line) or #Line
+                local LineWidth = Characters * Size
+                Lines += math.max(1, math.ceil(LineWidth / FinalWidth))
+                MaxWidth = math.max(MaxWidth, math.min(FinalWidth, LineWidth))
+            end
+            Bounds = Vector2.new(MaxWidth, math.max(1, Lines) * math.ceil(Size * 1.4))
+        end
+    end
 
     if TextBoundsCacheSize >= MaxTextBoundsCacheSize then
         Library:ClearTextBoundsCache()
@@ -3331,7 +3396,7 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
         SizeCache[FinalWidth] = WidthCache
     end
 
-    WidthCache[Text] = Bounds
+    WidthCache[Text] = { X = Bounds.X, Y = Bounds.Y, ExpiresAt = Fallback and RetryAt or nil }
     TextBoundsCacheSize += 1
     return Bounds.X, Bounds.Y
 end
@@ -18755,11 +18820,12 @@ function Library:Unload()
     end
 end
 
-local DefaultFont, DefaultFontError = Library:LoadCustomFont(
+local FontLoaded, DefaultFont, DefaultFontError = pcall(Library.LoadCustomFont, Library,
     Library.DefaultFontName,
     Library.DefaultFontURL,
     Library.DefaultFontWeight
 )
+if not FontLoaded then DefaultFont, DefaultFontError = nil, tostring(DefaultFont) end
 Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.GothamMedium)
 Library.DefaultFontError = DefaultFontError
 Library.CurrentFontName = DefaultFontError and "Gotham" or "Inter"

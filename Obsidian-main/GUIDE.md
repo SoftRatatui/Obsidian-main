@@ -86,6 +86,8 @@ Missing controls or adapters are skipped for compatibility when other entries ca
 
 ### Layout and visual quality
 
+Text measurement failures, including mobile `Temp read failed` errors, fall back to built-in font metrics and then a conservative UTF-8 estimate. Temporary measurements expire after five seconds, allowing the next request to retry the original font. Custom font loading verifies that the text service can read the face before assigning it; failed startup font loading keeps the built-in Gotham face. These fallbacks preserve layout availability but approximate metrics can differ from the selected font. Update all components together and test the result on the target device.
+
 - Use `AddFullGroupbox` for catalogs, galleries, and other wide content. Half-width columns are intended for ordinary controls.
 - Size custom GUI in whole pixels. Avoid fractional offsets, strokes wider than the available padding, and negative bounds unless the direct parent clips descendants.
 - Let one instance own each visible corner. The window root owns the four window corners; a groupbox root owns its card corners; headers and footers stay inside those masks and must not add another full-size rounded layer.

@@ -8340,6 +8340,108 @@ do
     end
 end
 
+function Library:RegisterImageGrid(Addon)
+    assert(type(Addon) == "table" and type(Addon.CreateEmbedded) == "function", "Expected ImageGallery module")
+    self.ImageGridAddon = Addon
+    return self
+end
+
+function Library:IsDropTargetVisible(Object, Point)
+    if not Object or not Object.Parent or not self:MouseIsOverFrame(Object, Point) then return false end
+    if self.ActiveDialog and self.ActiveDialog.Overlay and not Object:IsDescendantOf(self.ActiveDialog.Overlay) then return false end
+    local Parent = Object
+    while Parent do
+        if Parent:IsA("GuiObject") then
+            if not Parent.Visible then return false end
+            if Parent.ClipsDescendants and not self:MouseIsOverFrame(Parent, Point) then return false end
+        end
+        Parent = Parent.Parent
+    end
+    return true
+end
+
+function Library:BindItemDragSource(Button, GetPayload, Kind)
+    local Binding = { Connections = {}, SuppressClick = false }
+    local Cancel
+    local function Stop()
+        if Cancel then Cancel() end
+    end
+    table.insert(Binding.Connections, Button.InputBegan:Connect(function(Input)
+        if Input.UserInputType ~= Enum.UserInputType.MouseButton1 and Input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if Library.Unloaded or not Library:IsDropTargetVisible(Button, Input.Position) then return end
+        local Payload = GetPayload()
+        if not Payload then return end
+        if Library.CancelItemDrag then Library.CancelItemDrag() end
+        Binding.SuppressClick = false
+        local Origin = Vector2.new(Input.Position.X, Input.Position.Y)
+        local Point = Origin
+        local Ghost, Move, Ended, FocusLost
+        local ScrollStates = {}
+        local Running = true
+        Cancel = function()
+            if not Running then return end
+            Running = false
+            if Move then Move:Disconnect() end
+            if Ended then Ended:Disconnect() end
+            if FocusLost then FocusLost:Disconnect() end
+            if Ghost then Library:RemoveFromRegistry(Ghost); Ghost:Destroy() end
+            for Scroller, Enabled in ScrollStates do
+                if Scroller.Parent then Scroller.ScrollingEnabled = Enabled end
+            end
+            if Library.CancelItemDrag == Cancel then Library.CancelItemDrag = nil end
+        end
+        Library.CancelItemDrag = Cancel
+        local function Update(Position)
+            Point = Vector2.new(Position.X, Position.Y)
+            if not Button.Parent then Cancel(); return end
+            if not Ghost and (Point - Origin).Magnitude >= 8 then
+                Binding.SuppressClick = true
+                Ghost = New("TextLabel", {
+                    Text = tostring(Payload.Name or Payload.Id or "Item"), TextSize = 12,
+                    BackgroundColor3 = "RaisedColor", TextColor3 = "FontColor",
+                    Size = UDim2.fromOffset(140, 30), TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 30000, Parent = ScreenGui,
+                })
+                local Parent = Button.Parent
+                while Parent do
+                    if Parent:IsA("ScrollingFrame") then
+                        ScrollStates[Parent] = Parent.ScrollingEnabled
+                        Parent.ScrollingEnabled = false
+                    end
+                    Parent = Parent.Parent
+                end
+            end
+            if Ghost then Ghost.Position = UDim2.fromOffset(Point.X + 12, Point.Y + 12) end
+        end
+        Move = UserInputService.InputChanged:Connect(function(Changed)
+            if Changed == Input or (Input.UserInputType == Enum.UserInputType.MouseButton1 and Changed.UserInputType == Enum.UserInputType.MouseMovement) then
+                Update(Changed.Position)
+            end
+        end)
+        Ended = UserInputService.InputEnded:Connect(function(Released)
+            if Released ~= Input and not (Input.UserInputType == Enum.UserInputType.MouseButton1 and Released.UserInputType == Enum.UserInputType.MouseButton1) then return end
+            local Target
+            if Ghost then
+                for _, Candidate in Library.ItemDropTargets or {} do
+                    if Candidate.Kind == Kind and Library:IsDropTargetVisible(Candidate.Button, Point) then
+                        Target = Candidate
+                    end
+                end
+            end
+            Cancel()
+            if Target then Library:SafeCallback(Target.Drop, Payload) end
+        end)
+        FocusLost = UserInputService.WindowFocusReleased:Connect(Cancel)
+    end))
+    table.insert(Binding.Connections, Button.Destroying:Connect(Stop))
+    function Binding:Disconnect()
+        Stop()
+        for _, Connection in self.Connections do Connection:Disconnect() end
+        table.clear(self.Connections)
+    end
+    return Binding
+end
+
 local function CopyOptionValue(Value)
     if typeof(Value) ~= "table" then return Value end
     local Copy = {}
@@ -11975,6 +12077,8 @@ do
     function Funcs:AddViewport(Idx, Info)
         if self.Destroyed then return nil end
 
+        Info = table.clone(Info or {})
+        Info.Object = Info.Object or Info.Model
         Info = Library:Validate(Info, Templates.Viewport)
 
         local Groupbox = self
@@ -12015,12 +12119,24 @@ do
             Type = "Viewport",
         }
 
+        local ScrollStates = {}
         local function SetTabScrollingEnabled(Enabled)
-            for _, Side in Groupbox.Tab.Sides do
-                Side.ScrollingEnabled = Enabled
+            if Enabled then
+                for Side, WasEnabled in ScrollStates do
+                    if Side.Parent then Side.ScrollingEnabled = WasEnabled end
+                end
+                table.clear(ScrollStates)
+            else
+                local Parent = Container
+                while Parent do
+                    if Parent:IsA("ScrollingFrame") and ScrollStates[Parent] == nil then
+                        ScrollStates[Parent] = Parent.ScrollingEnabled
+                        Parent.ScrollingEnabled = false
+                    end
+                    Parent = Parent.Parent
+                end
             end
         end
-
         assert(
             typeof(Viewport.Object) == "Instance" and (Viewport.Object:IsA("BasePart") or Viewport.Object:IsA("Model")),
             "Instance must be a BasePart or Model."
@@ -12046,8 +12162,8 @@ do
             local ModelPosition = (Viewport.Object :: PVInstance):GetPivot().Position
             local FocusOffset = Vector3.new(0, MaxExtent * 0.08, 0)
 
-            MinZoomDistance = math.max(MaxExtent * 0.8, 1.5)
-            MaxZoomDistance = math.max(MaxExtent * 4, MinZoomDistance + 1)
+            MinZoomDistance = math.max(0.01, tonumber(Info.MinZoom) or math.max(MaxExtent * 0.8, 1.5))
+            MaxZoomDistance = math.max(tonumber(Info.MaxZoom) or MaxExtent * 4, MinZoomDistance + 0.01)
             Viewport.Camera.CFrame = CFrame.lookAt(
                 ModelPosition + FocusOffset + Vector3.new(0, 0, CameraDistance),
                 ModelPosition + FocusOffset
@@ -12118,7 +12234,7 @@ do
         })
 
         table.insert(Viewport.Connections, ViewportFrame.MouseEnter:Connect(function()
-            if not Viewport.Interactive then
+            if not Viewport.Interactive or not Viewport.Visible then
                 return
             end
 
@@ -12126,7 +12242,7 @@ do
         end))
 
         table.insert(Viewport.Connections, ViewportFrame.MouseLeave:Connect(function()
-            if not Viewport.Interactive then
+            if not Viewport.Interactive or not Viewport.Visible then
                 return
             end
 
@@ -12134,7 +12250,7 @@ do
         end))
 
         table.insert(Viewport.Connections, ViewportFrame.InputBegan:Connect(function(input)
-            if not Viewport.Interactive then
+            if not Viewport.Interactive or not Viewport.Visible then
                 return
             end
 
@@ -12155,7 +12271,7 @@ do
                 return
             end
 
-            if not Viewport.Interactive then
+            if not Viewport.Interactive or not Viewport.Visible then
                 return
             end
 
@@ -12201,7 +12317,7 @@ do
         end))
 
         table.insert(Viewport.Connections, ViewportFrame.InputChanged:Connect(function(input)
-            if not Viewport.Interactive then
+            if not Viewport.Interactive or not Viewport.Visible then
                 return
             end
 
@@ -12215,7 +12331,12 @@ do
                 return
             end
 
-            if not Viewport.Interactive or not Library:MouseIsOverFrame(ViewportFrame, touchPositions[1]) then
+            if state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
+                Pinching, Dragging = false, false
+                SetTabScrollingEnabled(true)
+                return
+            end
+            if #touchPositions < 2 or not Viewport.Interactive or not Viewport.Visible or not Library:MouseIsOverFrame(ViewportFrame, touchPositions[1]) then
                 return
             end
 
@@ -12308,7 +12429,16 @@ do
             end
         end
 
+        function Viewport:Zoom(Amount)
+            if not Viewport.Destroyed then ZoomCamera(Amount) end
+            return Viewport
+        end
+
         function Viewport:SetVisible(Visible: boolean)
+            if not Visible then
+                Dragging, Pinching = false, false
+                SetTabScrollingEnabled(true)
+            end
             Viewport.Visible = Visible
 
             Holder.Visible = Viewport.Visible
@@ -12947,6 +13077,238 @@ do
         end
         assert(type(Result) == "table", "Addon mount must return a controller table")
         return Result
+    end
+
+    function Funcs:AddImageGrid(Idx, Info)
+        if self.Destroyed then return nil end
+        local Addon = Info and Info.Addon or Library.ImageGridAddon
+        assert(Addon, "Call Library:RegisterImageGrid(ImageGallery) before AddImageGrid")
+        assert(not Options[Idx] and not Toggles[Idx], "Duplicate image grid ID")
+        local Gallery = self:AddAddon(Idx, Addon, Info)
+        if Gallery.Element then
+            local Element = Gallery.Element
+            local DestroyElement = Element.Destroy
+            function Element:Destroy()
+                if not Gallery.Destroyed then Gallery:Destroy() else DestroyElement(Element) end
+            end
+        end
+        return Gallery
+    end
+
+    function Funcs:AddItemSlots(Idx, Info)
+        if self.Destroyed then return nil end
+        Info = Info or {}
+        local Groupbox = self
+        local Definitions = Info.Slots or { "Sticker1", "Sticker2", "Sticker3", "Sticker4", "Sticker5" }
+        local SlotIds = {}
+        for _, Id in ipairs(Definitions) do
+            assert(type(Id) == "string" and not SlotIds[Id], "Slot IDs must be unique strings")
+            SlotIds[Id] = true
+        end
+        assert(#Definitions > 0, "At least one slot is required")
+        assert(type(Info.Default or {}) == "table", "Slot default must be a table")
+        for Id, Value in Info.Default or {} do
+            assert(SlotIds[Id] and (type(Value) == "string" or type(Value) == "number"), "Invalid slot default")
+        end
+        local Slots = Library:AddHidden(Idx, Info.Default or {}, Info)
+        local HiddenDestroy = Slots.Destroy
+        local Holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 72), Parent = self.Container })
+        local Layout = New("UIGridLayout", { CellPadding = UDim2.fromOffset(6, 6), CellSize = UDim2.fromOffset(70, 66), SortOrder = Enum.SortOrder.LayoutOrder, Parent = Holder })
+        Slots.Holder, Slots.Cells, Slots.Items = Holder, {}, {}
+        Slots.Visible = Info.Visible ~= false
+        Holder.Visible = Slots.Visible
+        local Connections, Targets = {}, {}
+        Library.ItemDropTargets = Library.ItemDropTargets or {}
+        local function Refresh()
+            for Id, Cell in Slots.Cells do
+                local Value = Slots.Value[Id]
+                local Item = Slots.Items[Value]
+                local Asset = Item and tostring(Item.Image or "") or ""
+                Cell.Image.Image = Asset:match("^%d+$") and "rbxassetid://" .. Asset or Asset
+                Cell.Label.Text = Item and tostring(Item.Name or Value) or tostring(Value or Id)
+            end
+        end
+        local SetHidden = Slots.SetValue
+        function Slots:SetValue(Value)
+            assert(type(Value) == "table", "Slot values must be a table of slot IDs to item IDs")
+            local Clean = {}
+            for Id, ItemId in Value do
+                assert(SlotIds[Id] and (type(ItemId) == "string" or type(ItemId) == "number"), "Invalid slot or item ID")
+                Clean[Id] = ItemId
+            end
+            SetHidden(Slots, Clean)
+            if not Slots.Destroyed then Refresh() end
+            return Slots
+        end
+        function Slots:Assign(Id, Item)
+            if Slots.Destroyed or Slots.Disabled then return false end
+            assert(SlotIds[Id], "Unknown slot ID")
+            if Item and Info.Accept and not Info.Accept(Item, Id) then return false end
+            local Value = Slots:GetValue()
+            if Item then
+                assert(type(Item.Id) == "string" or type(Item.Id) == "number", "Item requires an ID")
+                Slots.Items[Item.Id] = Item
+                Value[Id] = Item.Id
+            else
+                Value[Id] = nil
+            end
+            Slots:SetValue(Value)
+            Library:SafeCallback(Info.OnDrop, Id, Item)
+            return true
+        end
+        function Slots:SetItems(Items)
+            table.clear(Slots.Items)
+            for _, Item in ipairs(Items) do Slots.Items[Item.Id] = Item end
+            Refresh()
+            return Slots
+        end
+        function Slots:SetDisabled(Value) Slots.Disabled = Value == true; return Slots end
+        function Slots:SetVisible(Value)
+            Slots.Visible = Value == true
+            Holder.Visible = Slots.Visible
+            Groupbox:Resize()
+            return Slots
+        end
+        for Index, Id in ipairs(Definitions) do
+            local Button = New("TextButton", { Text = "", AutoButtonColor = false, BackgroundColor3 = "ElementColor", LayoutOrder = Index, ClipsDescendants = true, Parent = Holder })
+            Library:AddOutline(Button)
+            New("UICorner", { CornerRadius = UDim.new(0, tonumber(Info.CornerRadius) or Library:GetDesignToken("Radius.Control", 3)), Parent = Button })
+            local Image = New("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, -8, 1, -24), Position = UDim2.fromOffset(4, 4), ScaleType = Enum.ScaleType.Fit, Parent = Button })
+            local Label = New("TextLabel", { BackgroundTransparency = 1, Text = Id, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -4, 0, 20), Position = UDim2.new(0, 2, 1, -20), Parent = Button })
+            Slots.Cells[Id] = { Button = Button, Image = Image, Label = Label }
+            local Target = { Button = Button, Kind = Info.DragType or "Item", Drop = function(Item) Slots:Assign(Id, Item) end }
+            table.insert(Targets, Target)
+            table.insert(Library.ItemDropTargets, Target)
+            table.insert(Connections, Button.Activated:Connect(function()
+                if Slots.Disabled then return end
+                Library:SafeCallback(Info.OnSelect, Id, Slots.Value[Id])
+            end))
+        end
+        local function Resize()
+            if Slots.Destroyed then return end
+            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / Library.DPIScale))
+            local Columns = math.max(1, math.min(#Definitions, math.floor((Width + 6) / 76)))
+            Layout.CellSize = UDim2.fromOffset(math.floor((Width - (Columns - 1) * 6) / Columns), 66)
+            Holder.Size = UDim2.new(1, 0, 0, math.ceil(#Definitions / Columns) * 72 - 6)
+            Groupbox:Resize()
+        end
+        table.insert(Connections, Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(Resize))
+        function Slots:Destroy()
+            if Slots.Destroyed then return end
+            HiddenDestroy(Slots)
+            for _, Connection in Connections do Connection:Disconnect() end
+            for _, Target in Targets do
+                local Index = table.find(Library.ItemDropTargets, Target)
+                if Index then table.remove(Library.ItemDropTargets, Index) end
+            end
+            Library:ReleaseRegistryTree(Holder)
+            Holder:Destroy()
+            local Index = table.find(Groupbox.Elements, Slots)
+            if Index then table.remove(Groupbox.Elements, Index) end
+            Groupbox:Resize()
+        end
+        table.insert(self.Elements, Slots)
+        Slots:SetItems(Info.Items or {})
+        Refresh()
+        Resize()
+        return Slots
+    end
+
+    function Funcs:AddSliderGroup(Idx, Info)
+        if self.Destroyed then return nil end
+        Info = Info or {}
+        local Owner = self
+        local Fields = Info.Sliders or {
+            { Id = "X", Min = -1, Max = 1, Default = 0, Rounding = 2 },
+            { Id = "Y", Min = -1, Max = 1, Default = 0, Rounding = 2 },
+            { Id = "Rotation", Min = -180, Max = 180, Default = 0, Rounding = 0 },
+            { Id = "Scale", Min = 0.1, Max = 3, Default = 1, Rounding = 2 },
+            { Id = "Wear", Min = 0, Max = 1, Default = 0, Rounding = 2 },
+        }
+        assert(#Fields > 0, "Slider group requires fields")
+        local Seen = {}
+        for _, Field in ipairs(Fields) do
+            assert(type(Field.Id) == "string" and not Seen[Field.Id], "Field IDs must be unique strings")
+            local Key = tostring(Idx) .. "/" .. Field.Id
+            assert(not Options[Key] and not Toggles[Key], "Duplicate slider ID: " .. Key)
+            Seen[Field.Id] = true
+        end
+        local Holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 52), Parent = self.Container })
+        local Group = { Holder = Holder, Sliders = {}, Cells = {}, Destroyed = false, Visible = Info.Visible ~= false, Type = "SliderGroup" }
+        Holder.Visible = Group.Visible
+        function Group:GetValue()
+            local Value = {}
+            for Id, Slider in Group.Sliders do Value[Id] = Slider.Value end
+            return Value
+        end
+        local Updating = true
+        local function Changed()
+            if not Updating then Library:SafeCallback(Info.Callback, Group:GetValue()) end
+        end
+        for Index, Field in ipairs(Fields) do
+            local Cell = New("Frame", { BackgroundTransparency = 1, Parent = Holder })
+            local Label = New("TextLabel", { BackgroundTransparency = 1, Text = Field.Text or Field.Id, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, 0, 0, 16), Parent = Cell })
+            local Content = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 17), Size = UDim2.new(1, 0, 0, 32), Parent = Cell })
+            local Child = setmetatable({ Container = Content, Elements = {}, Tab = self.Tab, Resize = function() end }, BaseGroupbox)
+            local Settings = table.clone(Field)
+            Settings.Text, Settings.Compact, Settings.HideMax = Field.Text or Field.Id, true, true
+            Settings.ConfigVersion = Settings.ConfigVersion or Info.ConfigVersion
+            Settings.Callback = function(Value)
+                Library:SafeCallback(Field.Callback, Value)
+                Changed()
+            end
+            Group.Sliders[Field.Id] = Child:AddSlider(tostring(Idx) .. "/" .. Field.Id, Settings)
+            Group.Cells[Index] = Cell
+        end
+        Updating = false
+        function Group:SetValue(Values)
+            if Group.Destroyed then return Group end
+            for Id, Value in Values do
+                assert(Group.Sliders[Id] and type(Value) == "number" and Value == Value and math.abs(Value) < math.huge, "Invalid slider group value")
+            end
+            Updating = true
+            for Id, Value in Values do Group.Sliders[Id]:SetValue(Value) end
+            Updating = false
+            Changed()
+            return Group
+        end
+        function Group:SetDisabled(Value)
+            for _, Slider in Group.Sliders do Slider:SetDisabled(Value) end
+            return Group
+        end
+        function Group:SetVisible(Value)
+            Group.Visible = Value == true
+            Holder.Visible = Group.Visible
+            Owner:Resize()
+            return Group
+        end
+        local function Resize()
+            if Group.Destroyed then return end
+            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / Library.DPIScale))
+            local Columns = math.max(1, math.min(#Fields, math.floor((Width + 8) / math.max(64, tonumber(Info.MinCellWidth) or 96))))
+            local CellWidth = math.floor((Width - (Columns - 1) * 8) / Columns)
+            for Index, Cell in ipairs(Group.Cells) do
+                Cell.Position = UDim2.fromOffset(((Index - 1) % Columns) * (CellWidth + 8), math.floor((Index - 1) / Columns) * 56)
+                Cell.Size = UDim2.fromOffset(CellWidth, 50)
+            end
+            Holder.Size = UDim2.new(1, 0, 0, math.ceil(#Fields / Columns) * 56 - 6)
+            Owner:Resize()
+        end
+        local Connection = Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(Resize)
+        function Group:Destroy()
+            if Group.Destroyed then return end
+            Group.Destroyed = true
+            Connection:Disconnect()
+            for _, Slider in Group.Sliders do Slider:Destroy() end
+            Library:ReleaseRegistryTree(Holder)
+            Holder:Destroy()
+            local Index = table.find(Owner.Elements, Group)
+            if Index then table.remove(Owner.Elements, Index) end
+            Owner:Resize()
+        end
+        table.insert(self.Elements, Group)
+        Resize()
+        return Group
     end
 
     function Funcs:AddDependencyBox()
@@ -16954,8 +17316,14 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:AddDialog(Idx, Info)
+        if Library.CancelItemDrag then Library.CancelItemDrag() end
         Info = Library:Validate(Info, Templates.Dialog)
 
+        if Library.Dialogues[Idx] then Library.Dialogues[Idx]:Dismiss() end
+        Library.DialogStack = Library.DialogStack or {}
+        local ParentDialog = Info.ParentDialog or Library.ActiveDialog
+        assert(not ParentDialog or not ParentDialog.Destroyed, "Parent popup is closed")
+        local DialogLayer = 9000 + #Library.DialogStack * 100
         local DialogFrame
         local DialogOverlay
         local DialogContainer
@@ -16968,8 +17336,8 @@ function Library:CreateWindow(WindowInfo)
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
-            Active = false,
-            ZIndex = 9000,
+            Active = true,
+            ZIndex = DialogLayer,
             Visible = true,
             Parent = MainFrame,
         })
@@ -16985,7 +17353,7 @@ function Library:CreateWindow(WindowInfo)
             AutomaticSize = Enum.AutomaticSize.Y,
             Text = "",
             AutoButtonColor = false,
-            ZIndex = 9001,
+            ZIndex = DialogLayer + 1,
             Parent = DialogOverlay,
         })
         table.insert(
@@ -16999,13 +17367,20 @@ function Library:CreateWindow(WindowInfo)
         Library:AddSoftShadow(DialogFrame, 18, 0.4, UDim2.fromOffset(0, 4))
         DialogOutline.Transparency = 0.16
 
-        local InnerContainer = New("Frame", {
+        local InnerContainer = New("ScrollingFrame", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = DialogFrame,
         })
+        InnerContainer.AutomaticSize = Enum.AutomaticSize.None
+        InnerContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        InnerContainer.CanvasSize = UDim2.fromOffset(0, 0)
+        InnerContainer.Size = UDim2.fromScale(1, 1)
+        InnerContainer.ScrollBarThickness = 3
+        InnerContainer.ClipsDescendants = true
+        DialogFrame.AutomaticSize = Enum.AutomaticSize.None
         local DialogScale = New("UIScale", {
             Scale = 0.975,
             Parent = DialogFrame,
@@ -17031,7 +17406,7 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.fromScale(1, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             LayoutOrder = 1,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = InnerContainer,
         })
         New("UIListLayout", {
@@ -17049,7 +17424,7 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 20),
             AutomaticSize = Enum.AutomaticSize.Y,
             LayoutOrder = 1,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = HeaderContainer,
         })
         New("UIListLayout", {
@@ -17071,7 +17446,7 @@ function Library:CreateWindow(WindowInfo)
                     ImageRectOffset = ParsedIcon.ImageRectOffset,
                     ImageRectSize = ParsedIcon.ImageRectSize,
                     LayoutOrder = 1,
-                    ZIndex = 9002,
+                    ZIndex = DialogLayer + 2,
                     Parent = TitleRow,
                 })
             end
@@ -17086,7 +17461,7 @@ function Library:CreateWindow(WindowInfo)
             TextColor3 = Info.TitleColor or "FontColor",
             TextXAlignment = Enum.TextXAlignment.Left,
             LayoutOrder = 2,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = TitleRow,
         })
 
@@ -17101,7 +17476,7 @@ function Library:CreateWindow(WindowInfo)
             TextColor3 = Info.DescriptionColor or "FontColor",
             TextWrapped = true,
             LayoutOrder = 2,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = HeaderContainer,
         })
 
@@ -17110,7 +17485,7 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.fromScale(1, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             LayoutOrder = 4,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = InnerContainer,
         })
         local _DialogContainerLayout = New("UIListLayout", {
@@ -17129,7 +17504,7 @@ function Library:CreateWindow(WindowInfo)
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 1),
             LayoutOrder = 5,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = InnerContainer,
         })
 
@@ -17138,7 +17513,7 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             LayoutOrder = 6,
-            ZIndex = 9002,
+            ZIndex = DialogLayer + 2,
             Parent = InnerContainer,
         })
         New("UIListLayout", {
@@ -17158,6 +17533,10 @@ function Library:CreateWindow(WindowInfo)
             Destroyed = false,
             Elements = {},
             Container = DialogContainer,
+            Overlay = DialogOverlay,
+            Frame = DialogFrame,
+            ParentDialog = ParentDialog,
+            Tab = { Sides = { InnerContainer } },
         }
 
         function Dialog:Resize()
@@ -17165,8 +17544,8 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            local MaxWidth = math.max(220, MainFrame.AbsoluteSize.X - 24)
-            local MinWidth = math.min(400, MaxWidth)
+            local MaxWidth = math.max(120, MainFrame.AbsoluteSize.X / Library.DPIScale - 24)
+            local MinWidth = math.min(tonumber(Info.Width) or 400, MaxWidth)
 
             local TotalButtonWidth = 0
             local ButtonCount = 0
@@ -17184,7 +17563,8 @@ function Library:CreateWindow(WindowInfo)
                 TargetWidth = math.max(MinWidth, math.min(RequiredWidth, MaxWidth))
             end
 
-            DialogFrame.Size = UDim2.fromOffset(TargetWidth, 0)
+            local Height = math.min(_InnerLayout.AbsoluteContentSize.Y / Library.DPIScale + 30, math.max(80, MainFrame.AbsoluteSize.Y / Library.DPIScale - 24))
+            DialogFrame.Size = UDim2.fromOffset(TargetWidth, Height)
 
             local _DescX, DescY = Library:GetTextBounds(DescriptionLabel.Text, Library.Scheme.Font, 14, TargetWidth - 30)
             DescriptionLabel.Size = UDim2.new(1, 0, 0, DescY)
@@ -17226,11 +17606,19 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Dialog.Destroyed = true
+            for Index = #Library.DialogStack, 1, -1 do
+                local Child = Library.DialogStack[Index]
+                if Child.ParentDialog == Dialog and not Child.Destroyed then Child:Dismiss() end
+            end
+            local StackIndex = table.find(Library.DialogStack, Dialog)
+            if StackIndex then table.remove(Library.DialogStack, StackIndex) end
+            DialogOverlay.Visible = false
 
             if Library.ActiveDialog == Dialog then
-                Library.ActiveDialog = nil
+                Library.ActiveDialog = Library.DialogStack[#Library.DialogStack]
             end
 
+            if Library.Dialogues[Idx] == Dialog then Library.Dialogues[Idx] = nil end
             Library:SafeCallback(Info.OnDismiss, Dialog)
 
             for Index = #Dialog.Elements, 1, -1 do
@@ -17250,14 +17638,15 @@ function Library:CreateWindow(WindowInfo)
             
             task.delay(Library.DialogCloseAnimationInfo.Time, function()
                 if DialogOverlay and DialogOverlay.Parent then
+                    Library:ReleaseRegistryTree(DialogOverlay)
                     DialogOverlay:Destroy()
                 end
             end)
-            Library.Dialogues[Idx] = nil
+            if Library.Dialogues[Idx] == Dialog then Library.Dialogues[Idx] = nil end
         end
 
         DialogOverlay.MouseButton1Click:Connect(function()
-            if Info.OutsideClickDismiss then
+            if Library.ActiveDialog == Dialog and Info.OutsideClickDismiss then
                 Dialog:Dismiss()
             end
         end)
@@ -17307,7 +17696,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.fromOffset(0, 26),
                 LayoutOrder = ButtonInfo.Order or 0,
-                ZIndex = 9002,
+                ZIndex = DialogLayer + 2,
                 Parent = ButtonsHolder,
             })
             
@@ -17321,7 +17710,7 @@ function Library:CreateWindow(WindowInfo)
                 Size = UDim2.fromOffset(0, 26),
                 Text = "",
                 AutoButtonColor = false,
-                ZIndex = 9002,
+                ZIndex = DialogLayer + 2,
                 Parent = ButtonContainer,
             })
             local OutlineStroke = Library:AddOutline(TextBtn)
@@ -17346,7 +17735,7 @@ function Library:CreateWindow(WindowInfo)
                 TextColor3 = InitialStyle.TextColor,
                 TextTransparency = InitialStyle.TextTransparency,
                 TextSize = 14,
-                ZIndex = 9002,
+                ZIndex = DialogLayer + 2,
                 Parent = TextBtn,
             })
             
@@ -17484,9 +17873,27 @@ function Library:CreateWindow(WindowInfo)
 
         Dialog:Resize()
         
+        table.insert(Library.DialogStack, Dialog)
         Library.ActiveDialog = Dialog
+        function Dialog:AddPopup(ChildId, ChildInfo)
+            ChildInfo = table.clone(ChildInfo or {})
+            ChildInfo.ParentDialog = Dialog
+            return Window:AddDialog(ChildId, ChildInfo)
+        end
+        Dialog.Destroy = Dialog.Dismiss
+        local ResizeConnection = _InnerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() Dialog:Resize() end)
+        local WindowConnection = MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() Dialog:Resize() end)
+        DialogOverlay.Destroying:Connect(function() ResizeConnection:Disconnect(); WindowConnection:Disconnect() end)
+        if not Library.DialogEscapeConnection then
+            Library.DialogEscapeConnection = UserInputService.InputBegan:Connect(function(Input, Processed)
+                if not Processed and Input.KeyCode == Enum.KeyCode.Escape and Library.ActiveDialog then Library.ActiveDialog:Dismiss() end
+            end)
+            Library:GiveSignal(Library.DialogEscapeConnection)
+        end
         return Dialog
     end
+
+    Window.AddPopup = Window.AddDialog
 
     function Window:Toggle(Value: boolean?, Source: string?)
         if typeof(Value) == "boolean" and Value == Library.Toggled then
@@ -18534,6 +18941,9 @@ local DeclarativeElementMethods = {
     uipassthrough = "AddUIPassthrough",
     video = "AddVideo",
     viewport = "AddViewport",
+    imagegrid = "AddImageGrid",
+    itemslots = "AddItemSlots",
+    slidergroup = "AddSliderGroup",
 }
 
 local DeclarativeTypeAliases = {
@@ -18896,6 +19306,10 @@ function Library:Unload()
     end
 
     
+    for _, Dialog in table.clone(Library.DialogStack or {}) do
+        if not Dialog.Destroyed then Dialog:Dismiss() end
+    end
+
     for _, Tab in table.clone(Library.Tabs) do
         if Tab and Tab.Destroy then
             Library:SafeCallback(Tab.Destroy, Tab)
@@ -18939,6 +19353,9 @@ function Library:Unload()
     table.clear(Library.SpecificCorners)
 
     table.clear(Library.Notifications)
+    if Library.CancelItemDrag then Library.CancelItemDrag() end
+    table.clear(Library.ItemDropTargets or {})
+    table.clear(Library.DialogStack or {})
     table.clear(Library.Dialogues)
     table.clear(Library.DraggableElements)
     table.clear(Library.KeybindToggles)

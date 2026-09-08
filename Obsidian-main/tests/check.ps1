@@ -181,6 +181,88 @@ local function CreateDropdown(Info)
 $taskSource += "`n$taskDropdownMethods`nreturn Dropdown, View`nend`n"
 $taskTypographySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Typography.spec.luau'))
 $taskSource += "local RunTypography = (function()`n$taskTypographySpec`nend)()`nRunTypography(CreateDropdown, Mock)`n"
+$taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddImageGrid(')
+$taskDragStart = $taskLibrarySource.IndexOf('function Library:RegisterImageGrid(')
+$taskDragEnd = $taskLibrarySource.IndexOf('local function CopyOptionValue(', $taskDragStart)
+$taskDragMethods = $taskLibrarySource.Substring($taskDragStart, $taskDragEnd - $taskDragStart)
+$taskEditorEnd = $taskLibrarySource.IndexOf('    function Funcs:AddDependencyBox()', $taskEditorStart)
+$taskEditorMethods = $taskLibrarySource.Substring($taskEditorStart, $taskEditorEnd - $taskEditorStart)
+$taskHiddenStart = $taskLibrarySource.IndexOf('local function CopyOptionValue(')
+$taskHiddenEnd = $taskLibrarySource.IndexOf('local BaseGroupbox = {}', $taskHiddenStart)
+$taskHiddenMethods = $taskLibrarySource.Substring($taskHiddenStart, $taskHiddenEnd - $taskHiddenStart)
+$taskPopupStart = $taskLibrarySource.IndexOf('    function Window:AddDialog(')
+$taskPopupEnd = $taskLibrarySource.IndexOf('    function Window:Toggle(', $taskPopupStart)
+$taskPopupMethods = $taskLibrarySource.Substring($taskPopupStart, $taskPopupEnd - $taskPopupStart)
+$taskSource += @'
+local function CreateEditor()
+    local Vector2 = {}
+    function Vector2.new(X, Y)
+        return setmetatable({ X = X, Y = Y, Magnitude = math.sqrt(X * X + Y * Y) }, {
+            __sub = function(A, B) return Vector2.new(A.X - B.X, A.Y - B.Y) end,
+        })
+    end
+    local Library = Mock.HostLibrary()
+    local ScreenGui = Library.ScreenGui
+    local Options, Toggles = {}, {}
+    Library.Options, Library.Toggles = Options, Toggles
+    Library.DPIScale, Library.Corners, Library.Dialogues = 1, {}, {}
+    local function New(Class, Properties)
+        local Object = Mock.New(Library, Class, Properties)
+        if Class == "UIListLayout" then Object.AbsoluteContentSize = Vector2.new(300, 100) end
+        return Object
+    end
+    function Library:SafeCallback(Callback, ...) if Callback then return Callback(...) end end
+    function Library:AddOutline(Root) return New("UIStroke", { Parent = Root }) end
+    function Library:GiveSignal(Connection) return Connection end
+    function Library:GetTextBounds() return 100, 16 end
+    function Library:ReleaseRegistryTree(Root)
+        self:RemoveFromRegistry(Root)
+        for _, Child in Root:GetDescendants() do self:RemoveFromRegistry(Child) end
+    end
+    local Funcs = {}
+    local BaseGroupbox = { __index = Funcs }
+    function Funcs:AddAddon(Id, Addon, Info) return Addon.CreateEmbedded(Library, self, Id, Info) end
+    function Funcs:AddUIPassthrough(Id, Info)
+        Info.Instance.Parent = self.Container
+        local Element = {}
+        function Element:Destroy() Info.Instance:Destroy(); Options[Id] = nil end
+        function Element:SetVisible(Value) Info.Instance.Visible = Value end
+        function Element:SetHeight() end
+        Options[Id] = Element
+        return Element
+    end
+    function Funcs:AddSlider(Id, Info)
+        local Slider = { Value = Info.Default, Disabled = false }
+        function Slider:SetValue(Value) self.Value = math.clamp(Value, Info.Min, Info.Max); Info.Callback(self.Value) end
+        function Slider:SetDisabled(Value) self.Disabled = Value end
+        function Slider:Destroy() Options[Id] = nil end
+        Options[Id] = Slider
+        return Slider
+    end
+    local Window, WindowInfo = {}, { CornerRadius = 4 }
+    local MainFrame = New("Frame", { Parent = Library.ScreenGui })
+    local UserInputService = { InputBegan = Mock.Signal(), InputChanged = Mock.Signal(), InputEnded = Mock.Signal(), WindowFocusReleased = Mock.Signal() }
+    function Library:MouseIsOverFrame(Object, Point)
+        local Pos, Size = Object.AbsolutePosition, Object.AbsoluteSize
+        return Point.X >= Pos.X and Point.Y >= Pos.Y and Point.X <= Pos.X + Size.X and Point.Y <= Pos.Y + Size.Y
+    end
+    local Templates = { Dialog = { Title = "Dialog", Description = "", FooterButtons = {} } }
+    function Library:Validate(Info, Template)
+        local Result = table.clone(Template)
+        for Key, Value in Info or {} do Result[Key] = Value end
+        return Result
+    end
+    Library.DialogOpenAnimationInfo, Library.DialogCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
+    Library.DialogOverlayOpenAnimationInfo, Library.DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
+'@
+$taskSource += "`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskPopupMethods`n"
+$taskSource += @'
+    local Groupbox = setmetatable({ Elements = {}, Container = New("Frame", { Parent = MainFrame }), Resize = function() end }, BaseGroupbox)
+    return Library, Groupbox, Window, UserInputService
+end
+'@
+$taskEditorSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'EditorControls.spec.luau'))
+$taskSource += "`nlocal RunEditor = (function()`n$taskEditorSpec`nend)()`nRunEditor(CreateEditor, Mock, Modules)`n"
 $taskSpecs = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Addons.spec.luau'))
 $taskSource += "local Run = (function()`n$taskSpecs`nend)()`nRun(Modules, Mock)`n"
 $taskGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-addons-" + [guid]::NewGuid().ToString() + '.luau')

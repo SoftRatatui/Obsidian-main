@@ -63,3 +63,32 @@ The release label remains release-3, so check revision changes as well as the
 label. Keep control IDs stable and create controls and adapters before loading.
 See GUIDE.md for the full setup. Device rendering still needs a Roblox check;
 local regression tests cover config behavior and existing layout contracts.
+2026-09-08 - CATALOG AND EDITOR CONTROLS
+Version remains 0.0.1-release-3.
+
+Added AddImageGrid(id, info), backed by ImageGallery. Register the loaded module
+with Library:RegisterImageGrid(ImageGallery). Existing search, paging and styling
+remain available. Set DraggableItems=true and DragType="Sticker" for sticker cards.
+
+Added AddItemSlots(id, info). Five sticker slots are provided by default; pass
+Slots={"Charm1","Charm2","Charm3","Charm4"} for charms. A matching DragType accepts
+items from a grid. Assign(slotId, item) also supports tap-based workflows;
+Assign(slotId, nil) clears a slot. Configs store IDs, not images or model Instances.
+
+Added AddSliderGroup(id, info). X, Y, Rotation, Scale and Wear share a compact row
+and wrap on narrow screens. Sliders can be replaced with custom fields. SetValue
+accepts a partial field map. Config IDs use groupId/fieldId. Use a hidden map for
+per-slot transforms when one row edits several slots.
+
+AddViewport now accepts Model as an alias for Object and exposes Zoom(amount).
+It works inside popups, preserves previous scrolling state and releases pinch
+scroll locks on cancellation. Interactive=true enables rotation and zoom.
+
+Added Window:AddPopup and dialog:AddPopup. Editors can open above a catalog.
+Escape closes the top popup; closing a parent also closes its children. Long
+content scrolls inside the available window area. Existing AddDialog calls work.
+
+The Preview tab demonstrates the controls. GUIDE.md includes setup, callback
+arguments, persistence rules and short examples for each API. Local tests cover
+slot validation, drops, cancellation, narrow slider rows and popup lifetimes.
+Real device gesture and rendering checks still need Roblox.

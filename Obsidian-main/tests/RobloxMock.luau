@@ -143,6 +143,13 @@ function Mock.Instance.new(ClassName)
         Signals[Name] = Signals[Name] or Mock.Signal()
         return Signals[Name]
     end
+    function Methods:GetChildren()
+        local Children = {}
+        for _, Child in Mock.Objects do
+            if Child.Parent == Object then table.insert(Children, Child) end
+        end
+        return Children
+    end
     function Methods:IsDescendantOf(Ancestor)
         local Parent = Properties.Parent
         while Parent do
@@ -193,6 +200,7 @@ function Mock.Instance.new(ClassName)
             end
             if
                 Key == "Activated"
+                or Key == "MouseButton1Click"
                 or Key == "MouseEnter"
                 or Key == "MouseLeave"
                 or Key == "Destroying"

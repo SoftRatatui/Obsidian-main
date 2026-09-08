@@ -161,3 +161,8 @@ Library:Notify({
 ### Обновление release-3: конфиги и API
 
 Добавлены скрытые опции, версии значений конфигов, колбэк завершения загрузки и массив выбранных значений dropdown. Исправлено изменение внешнего радиуса окна. [Краткий журнал на английском с примерами](UPDATE_LOG.txt), [полный гайд](GUIDE.md#config-completion-hidden-state-and-option-versions). Обновляйте Library.lua, типы и аддоны вместе до последней ревизии. Номер 0.0.1-release-3 сохранён.
+
+
+### Catalog and editor controls
+
+Release-3 adds AddImageGrid, AddItemSlots, AddSliderGroup and nested AddPopup windows. AddViewport supports model previews inside popups. See the Preview tab in Example.lua and the Catalog and item editor controls section in GUIDE.md. UPDATE_LOG.txt includes short setup notes. Update the library, type definitions and ImageGallery addon together to the latest revision; the release label is unchanged.

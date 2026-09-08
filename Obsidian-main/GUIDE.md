@@ -1942,3 +1942,210 @@ Store model state in hidden options or custom adapters, not invisible text contr
 Update the library, types and addons together to the latest revision even while the
 release label is unchanged. Keep a config backup before intentionally raising option
 versions. Disconnect view callbacks when their consumer is destroyed.
+## Catalog and item editor controls
+
+The release label stays `0.0.1-release-3`. Update `Library.lua`, `Library.d.luau`,
+`addons/ImageGallery.lua` and `Example.lua` together. The Preview tab includes an
+item editor demo. The library manages UI and state; your script applies sticker
+textures, attachment transforms and game-specific model changes.
+
+### AddImageGrid(id, info)
+
+Register the loaded gallery module once. No extra HTTP request is made by this API.
+It returns the existing ImageGallery controller with search, categories, pagination,
+responsive columns and reusable cards. `info.Addon = ImageGallery` can supply the
+module for a single grid instead of registration.
+
+```lua
+Library:RegisterImageGrid(ImageGallery)
+local Grid = Groupbox:AddImageGrid("StickerCatalog", {
+    Items = {
+        { Id = "blue", Name = "Blue", Image = "rbxassetid://123", Category = "Stickers" },
+        { Id = "red", Name = "Red", Image = "rbxassetid://456", Category = "Stickers" },
+    },
+    Height = 280,
+    PageSize = 12,
+    MinCellWidth = 100,
+    CellHeight = 90,
+    DraggableItems = true,
+    DragType = "Sticker",
+    Callback = function(source, item)
+        selectedSticker = item
+    end,
+})
+```
+
+Items use stable `Id` values and support `Name`, `Image`, `Thumbnail`, `Category`,
+`Subtitle`, `Tags` and `Disabled`. Callback receives the original source followed
+by the normalized item. Selection and drag payloads use the same normalized item.
+`DraggableItems` defaults to false; `DragType` defaults to `Item` and must match
+its target. A drag starts after eight screen pixels of movement; an ordinary tap
+still selects a card. Scrolling pauses during a drag and resumes when it ends.
+
+Layout options include `Height`, `Columns` (omit for automatic fitting),
+`MinCellWidth`, `PageSize`, `CellHeight`, `Gap`, `ImagePadding`, `LabelHeight`,
+`ScaleType`, `Visible`, and `Style`. `Preview` connects an ImagePreview controller;
+`Model` connects a CollectionModel. The existing ImageGallery style and image
+options remain available. PageSize is chosen at creation.
+
+Use `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`,
+`NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`,
+`SetHeight`, `Select(id, silent?)`, `GetSelected`, `SetVisible`, `SetStyle`,
+`SetMinimal`, `SetHighlighted`, or `Destroy` on the returned controller. Destroying
+its group also releases gallery handlers. Selection itself is not a saved option;
+store a selected ID in AddHidden or use a config adapter if it must survive reloads.
+
+### AddItemSlots(id, info)
+
+Slots store a map from slot ID to item ID. They save through SaveManager as a hidden
+option without serializing image data or Instances. The default slots are Sticker1
+through Sticker5. Supply another array for charms or other attachment points.
+
+```lua
+local Slots = Groupbox:AddItemSlots("WeaponStickers", {
+    Slots = { "Sticker1", "Sticker2", "Sticker3", "Sticker4", "Sticker5" },
+    Items = stickerItems,
+    Default = {},
+    DragType = "Sticker",
+    Accept = function(item, slotId)
+        return not item.Disabled
+    end,
+    Callback = function(values)
+        applyStickerIds(values)
+    end,
+    OnSelect = function(slotId, itemId)
+        openStickerEditor(slotId, itemId)
+    end,
+})
+local Charms = Groupbox:AddItemSlots("WeaponCharms", {
+    Slots = { "Charm1", "Charm2", "Charm3", "Charm4" },
+    DragType = "Charm",
+})
+```
+
+`Slots` must be a nonempty array of unique strings. `Items` supplies display data
+indexed by each item's Id. `Default` is a slot-to-ID map. Other settings are
+`ConfigVersion`, `Visible`, `CornerRadius`, `DragType`, `Accept`, `Callback`,
+`OnDrop` and `OnSelect`. Callback receives the complete value map after a change.
+OnDrop receives `(slotId, item)` after Assign or a drop; clearing passes nil.
+OnSelect receives `(slotId, itemId)` when a cell is activated. Accept runs before
+assigning an item, including programmatic Assign, but not when restoring a config.
+Keep config validation separate from transient catalog availability.
+
+- `Assign(slotId, item)` assigns an item with Id, Name and Image; returns false if
+  disabled or rejected by Accept. `Assign(slotId, nil)` clears the cell.
+- `GetValue()` returns a copy. `SetValue(map)` restores/replaces the whole map.
+  Unknown slots and non-string/non-number item IDs are rejected before assignment.
+- `SetItems(items)` refreshes captions/images without changing selected IDs.
+- `SetDisabled`, `SetVisible`, `SetConfigVersion`, `OnChanged` and `Destroy` follow
+  other controls. Config loading can restore values while a control is disabled.
+
+Unknown item IDs remain saved and appear as text until SetItems supplies metadata.
+This lets a config load before an asynchronous catalog finishes downloading.
+Slots wrap to additional rows on narrow screens. Hidden or clipped targets reject
+drops. Opening a popup, losing focus or destroying the source cancels a pending drag.
+Dragging assigns a copy of the item ID; it does not remove the source card.
+
+For a tap-based alternative, retain the normalized item from the grid callback
+and call `Slots:Assign(slotId, selectedItem)` from OnSelect. Preview demonstrates
+both selection and dragging. Use a matching DragType for a separate charm grid.
+
+### AddSliderGroup(id, info)
+
+Creates a compact row of sliders. Narrow containers wrap the row without shrinking
+controls below the configured minimum. Defaults are X and Y (-1 to 1), Rotation
+(-180 to 180), Scale (0.1 to 3) and Wear (0 to 1). Values default to 0, 0, 0, 1, 0.
+
+```lua
+local Transform = Groupbox:AddSliderGroup("StickerTransform", {
+    MinCellWidth = 96,
+    Callback = function(value)
+        updateSticker(value.X, value.Y, value.Rotation, value.Scale, value.Wear)
+    end,
+})
+Transform:SetValue({ X = 0.25, Rotation = 45 })
+```
+
+Supply `Sliders = { { Id = "X", Text = "Offset X", Min = -2, Max = 2,
+Default = 0, Rounding = 2 }, ... }` to define fields. Each entry supports normal
+Slider options, including its own Callback and ConfigVersion. The group forces
+compact display. Group settings are `Sliders`, `MinCellWidth`, `Visible`,
+`ConfigVersion` and `Callback`; field versions override the group version.
+
+`GetValue` returns all field values. `SetValue` updates only supplied fields and
+emits the group callback once. Unknown fields and non-finite values are rejected
+before updates. `SetDisabled` affects all fields. `SetVisible` hides the row;
+`Destroy` releases its children. `Sliders.X` exposes an individual slider.
+Config IDs use `groupId/fieldId`, for example `StickerTransform/Rotation`. Keep
+both IDs stable and avoid using those IDs for unrelated controls. During config
+load each child can notify; use OnConfigLoaded for one final model refresh.
+
+One group can edit the active slot: keep per-slot transforms in an AddHidden map,
+load that slot's values with SetValue when selecting it, and write the group callback
+back to the map. Ignore the group's temporary field IDs with SetIgnoreIndexes if
+only the per-slot map should be persisted. Load the active slot after OnConfigLoaded.
+
+### AddViewport(id, info)
+
+The existing control accepts `Object` or its new alias `Model`. Supply a BasePart
+or Model. `Clone` defaults to true: edits affect the preview copy in `.Object`.
+With Clone=false the control owns the supplied object, reparents it, and destroys
+it on replacement or teardown. Do not pass a live game object with Clone=false.
+
+```lua
+local Preview = Groupbox:AddViewport("StickerModel", {
+    Model = displayModel,
+    Clone = true,
+    Interactive = true,
+    AutoFocus = true,
+    Height = 240,
+    MinZoom = 1,
+    MaxZoom = 20,
+})
+```
+
+Interactive defaults to false for compatibility. Enable it for mouse/touch rotation,
+mouse-wheel zoom and pinch zoom. MinZoom and MaxZoom are camera distances used by
+Focus; omitted values scale to the model bounds. Height and Visible control layout;
+Camera can provide an external camera. External cameras are not destroyed.
+
+Use `SetObject(object, clone?)`, `SetCamera`, `SetInteractive`, `SetHeight`,
+`SetVisible`, `Focus`, `Zoom(amount)` or `Destroy`. Positive Zoom moves toward the
+model; negative moves away. `.Frame`, `.Camera` and `.Object` expose the preview
+objects so your renderer can update decals and attachments directly. Viewports now
+work inside dialogs and restore the previous scrolling state after interaction.
+Pinch end/cancel also restores scrolling when fingers leave the preview area.
+
+### Nested popups
+
+`Window:AddPopup(id, info)` uses the dialog system with stacking. `AddDialog`
+remains supported. Open a child using `parent:AddPopup(id, info)`; closing it
+reveals the parent with its state intact. Popups support normal groupbox controls,
+including grids, slots, sliders and viewports.
+
+```lua
+local Catalog = Window:AddPopup("Catalog", { Title = "Stickers", Width = 560 })
+Catalog:AddButton("Edit", function()
+    local Editor = Catalog:AddPopup("StickerEditor", {
+        Title = "Sticker position",
+        Width = 560,
+        FooterButtons = {
+            { Text = "Done", Callback = function(dialog) dialog:Dismiss() end },
+        },
+    })
+    Editor:AddSliderGroup("PopupTransform", {})
+end)
+```
+
+Info supports Title, Description, Icon, Width, AutoDismiss, OutsideClickDismiss,
+OnDismiss, FooterButtons and optional ParentDialog. With no explicit parent, the
+currently active dialog becomes the parent. IDs are library-wide; reopening an ID
+closes its previous instance. Escape dismisses only the top popup when input is not
+already consumed. OutsideClickDismiss also affects only the top popup. Closing a
+parent closes its descendants. `Dismiss` and `Destroy` are equivalent.
+
+Height is limited to the window and long content scrolls inside the popup. Width
+is clamped to available space and updates with window size. OnDismiss receives the
+closing dialog. Build persistent models outside transient popups; destroy popup
+controls without discarding the user's model data. Popup controls with temporary
+IDs should be ignored by SaveManager, or recreated before loading saved values.

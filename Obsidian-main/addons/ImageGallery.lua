@@ -704,7 +704,16 @@ function ImageGallery.Create(Library, Info)
             Slot.Hovered = false
             UpdateSlotState(Slot, true)
         end))
+        local DragBinding
+        if Info.DraggableItems and Library and type(Library.BindItemDragSource) == "function" then
+            DragBinding = Library:BindItemDragSource(Button, function()
+                if Gallery.Destroyed or not Slot.Item or Slot.Item.Disabled then return nil end
+                return Slot.Item
+            end, Info.DragType or "Item")
+            table.insert(Gallery.Connections, DragBinding)
+        end
         table.insert(Gallery.Connections, Button.Activated:Connect(function()
+            if DragBinding and DragBinding.SuppressClick then DragBinding.SuppressClick = false; return end
             if Gallery.Destroyed or not Slot.Item or Slot.Item.Disabled then
                 return
             end

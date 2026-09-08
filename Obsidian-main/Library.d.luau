@@ -316,7 +316,10 @@ export type DropdownInfo = {
 }
 
 export type ViewportInfo = {
-    Object: BasePart | Model,
+    Object: (BasePart | Model)?,
+    Model: (BasePart | Model)?,
+    MinZoom: number?,
+    MaxZoom: number?,
     Camera: Camera?,
     Clone: boolean?,
     AutoFocus: boolean?,
@@ -792,6 +795,7 @@ export type Dropdown = {
 }
 
 export type Viewport = {
+    Zoom: (self: Viewport, Amount: number) -> Viewport,
     Object: BasePart | Model,
     Camera: Camera,
     Interactive: boolean,
@@ -944,7 +948,85 @@ export type Option = Hidden |
     | ColorPicker
 
 
+export type ImageGridInfo = {
+    Items: { any }?,
+    Addon: any?,
+    Model: any?,
+    Height: number?,
+    Columns: number?,
+    MinCellWidth: number?,
+    PageSize: number?,
+    CellHeight: number?,
+    ImagePadding: number?,
+    Preview: any?,
+    DraggableItems: boolean?,
+    DragType: string?,
+    Callback: ((any, any) -> ())?,
+    OnSelected: ((any, any) -> ())?,
+    Style: any?,
+    Visible: boolean?,
+}
+
+export type ItemSlotsInfo = {
+    Slots: { string }?,
+    Items: { any }?,
+    Default: { [string]: string | number }?,
+    ConfigVersion: number?,
+    DragType: string?,
+    Visible: boolean?,
+    CornerRadius: number?,
+    Accept: ((any, string) -> boolean)?,
+    Callback: (({ [string]: string | number }) -> ())?,
+    OnDrop: ((string, any?) -> ())?,
+    OnSelect: ((string, (string | number)?) -> ())?,
+}
+
+export type ItemSlots = {
+    Value: { [string]: string | number },
+    Assign: (self: ItemSlots, Id: string, Item: any?) -> boolean,
+    GetValue: (self: ItemSlots) -> { [string]: string | number },
+    SetValue: (self: ItemSlots, Value: { [string]: string | number }) -> ItemSlots,
+    SetItems: (self: ItemSlots, Items: { any }) -> ItemSlots,
+    SetDisabled: (self: ItemSlots, Disabled: boolean) -> ItemSlots,
+    SetVisible: (self: ItemSlots, Visible: boolean) -> ItemSlots,
+    OnChanged: (self: ItemSlots, Callback: (any) -> ()) -> ItemSlots,
+    SetConfigVersion: (self: ItemSlots, Version: number) -> ItemSlots,
+    Destroy: (self: ItemSlots) -> (),
+}
+
+export type SliderGroupInfo = {
+    Sliders: { SliderInfo & { Id: string } }?,
+    Callback: (({ [string]: number }) -> ())?,
+    ConfigVersion: number?,
+    MinCellWidth: number?,
+    Visible: boolean?,
+}
+
+export type SliderGroup = {
+    Sliders: { [string]: Slider },
+    GetValue: (self: SliderGroup) -> { [string]: number },
+    SetValue: (self: SliderGroup, Value: { [string]: number }) -> SliderGroup,
+    SetDisabled: (self: SliderGroup, Disabled: boolean) -> SliderGroup,
+    SetVisible: (self: SliderGroup, Visible: boolean) -> SliderGroup,
+    Destroy: (self: SliderGroup) -> (),
+}
+
+export type PopupInfo = {
+    Title: string?,
+    Description: string?,
+    Width: number?,
+    Icon: string?,
+    ParentDialog: Dialog?,
+    AutoDismiss: boolean?,
+    OutsideClickDismiss: boolean?,
+    OnDismiss: ((Dialog) -> ())?,
+    FooterButtons: { [any]: DialogButtonInfo }?,
+}
+
 export type BaseGroupbox = {
+    AddImageGrid: (self: BaseGroupbox, Id: string, Info: ImageGridInfo) -> any,
+    AddItemSlots: (self: BaseGroupbox, Id: string, Info: ItemSlotsInfo?) -> ItemSlots,
+    AddSliderGroup: (self: BaseGroupbox, Id: string, Info: SliderGroupInfo?) -> SliderGroup,
     AddHidden: (self: BaseGroupbox, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
     AddDivider: (self: Groupbox, MarginTop: number?, MarginBottom: number?) -> (),
     AddLabel: (
@@ -1178,7 +1260,9 @@ export type DialogButtonInfo = {
     Callback: ((Dialog) -> ())?,
 }
 
-export type Dialog = {
+export type Dialog = BaseGroupbox & {
+    AddPopup: (self: Dialog, Id: string, Info: PopupInfo?) -> Dialog,
+    Destroy: (self: Dialog) -> (),
     SetTitle: (self: Dialog, Title: string) -> (),
     SetDescription: (self: Dialog, Description: string) -> (),
     AddFooterButton: (self: Dialog, ButtonIdx: string, ButtonInfo: DialogButtonInfo) -> (),
@@ -1190,6 +1274,7 @@ export type Dialog = {
 
 
 export type Window = {
+    AddPopup: (self: Window, Id: string, Info: PopupInfo?) -> Dialog,
     AlwaysOnTop: boolean,
     Frame: CanvasGroup,
     CompactLauncher: TextButton?,
@@ -1272,6 +1357,7 @@ export type App = {
 
 
 export type Library = {
+    RegisterImageGrid: (self: Library, Addon: any) -> Library,
     AddHidden: (self: Library, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
     ReleaseVersion: "0.0.1-release-3",
     

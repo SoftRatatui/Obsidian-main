@@ -133,6 +133,7 @@ local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveReposito
 local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
 local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
 local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
+if ImageGallery then Library:RegisterImageGrid(ImageGallery) end
 local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
 local AssetCatalog = LoadModule("addons/AssetCatalog.lua", false, ActiveRepository)
 local CollectionModel = LoadModule("addons/CollectionModel.lua", false, ActiveRepository)
@@ -2031,7 +2032,7 @@ do
 	if ImageGallery then
 		local PreviewGalleryBox = Tabs.Preview:AddFullGroupbox("Gallery preview", "layout-grid")
 		local Created, Result = pcall(function()
-			return PreviewGalleryBox:AddAddon("PreviewGallery", ImageGallery, {
+			return PreviewGalleryBox:AddImageGrid("PreviewGallery", {
 				Height = 250,
 				MinCellWidth = 108,
 				PageSize = 9,
@@ -2047,7 +2048,67 @@ do
 		end
 	end
 
-	local PreviewPages = Tabs.Preview:AddFullGroupbox("Complete examples", "panels-top-left")
+	local EditorDemo = Tabs.Preview:AddFullGroupbox("Item editor", "layers")
+    local ActiveSlot = "Sticker1"
+    local SelectedItem
+    local DemoSlots = EditorDemo:AddItemSlots("PreviewStickerSlots", {
+        Items = GalleryItems,
+        DragType = "Sticker",
+        OnSelect = function(Id)
+            ActiveSlot = Id
+            if SelectedItem then Options.PreviewStickerSlots:Assign(Id, SelectedItem) end
+        end,
+    })
+    EditorDemo:AddItemSlots("PreviewCharmSlots", {
+        Slots = { "Charm1", "Charm2", "Charm3", "Charm4" },
+        Items = GalleryItems,
+        DragType = "Sticker",
+    })
+    EditorDemo:AddSliderGroup("PreviewStickerTransform", {
+        Callback = function(Values)
+            if Options.PreviewEditorViewport then
+                local Object = Options.PreviewEditorViewport.Object
+                Object:PivotTo(CFrame.Angles(0, math.rad(Values.Rotation), 0))
+            end
+        end,
+    })
+    if ImageGallery then
+        EditorDemo:AddImageGrid("PreviewStickerGrid", {
+            Items = GalleryItems, Height = 230, PageSize = 9,
+            DraggableItems = true, DragType = "Sticker",
+            Callback = function(_, Item) SelectedItem = Item end,
+        })
+    end
+    EditorDemo:AddButton("Open nested editor", function()
+        local CatalogPopup = Window:AddPopup("PreviewCatalogPopup", {
+            Title = "Catalog", Description = "Open an editor above this catalog.", Width = 580,
+        })
+        if ImageGallery then
+            CatalogPopup:AddImageGrid("PreviewPopupGrid", { Items = GalleryItems, Height = 220 })
+        end
+        CatalogPopup:AddButton("Edit selected slot", function()
+            local EditorPopup = CatalogPopup:AddPopup("PreviewStickerPopup", {
+                Title = ActiveSlot, Description = "Drag to rotate. Scroll or pinch to zoom.", Width = 580,
+                FooterButtons = { { Text = "Close", Callback = function(Dialog) Dialog:Dismiss() end } },
+            })
+            local Sample = Instance.new("Part")
+            Sample.Name = "Preview block"
+            Sample.Size = Vector3.new(4, 2, 1)
+            Sample.Anchored = true
+            Sample.Color = Color3.fromRGB(100, 105, 115)
+            EditorPopup:AddViewport("PreviewEditorViewport", { Model = Sample, Clone = false, Interactive = true, Height = 180 })
+            EditorPopup:AddSliderGroup("PreviewPopupTransform", {
+                Callback = function(Value)
+                    Sample:PivotTo(CFrame.new(Value.X, Value.Y, 0) * CFrame.Angles(0, 0, math.rad(Value.Rotation)))
+                    Sample.Size = Vector3.new(4, 2, 1) * Value.Scale
+                    Sample.Transparency = Value.Wear
+                end,
+            })
+        end)
+    end)
+    EditorDemo:AddButton("Clear selected slot", function() DemoSlots:Assign(ActiveSlot, nil) end)
+
+    local PreviewPages = Tabs.Preview:AddFullGroupbox("Complete examples", "panels-top-left")
 	PreviewPages:AddLabel("Each page contains the full API example for that area.", true)
 	for _, Entry in {
 		{ "Controls", Tabs.Controls },

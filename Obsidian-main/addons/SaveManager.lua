@@ -123,6 +123,7 @@ local ElementParser = {}; do
                 local Data = Save(Index, Element, ...)
                 Data.type = ElementType
                 Data.idx = Index
+                Data.version = Element.ConfigVersion
 
                 return Data
             end, 
@@ -175,6 +176,12 @@ local ElementParser = {}; do
             Element:SetValue(Data.value)
         end
     )
+
+    CreateParser("Hidden", "Options", function(_, Element)
+        return { value = Element.Value }
+    end, function(Element, Data)
+        Element:SetValue(Data.value)
+    end)
 
     CreateParser(
         "Dropdown", "Options",
@@ -743,7 +750,29 @@ function SaveManager:Save(ConfigName: string): (boolean, string?)
     return WriteVerified(ConfigPath, EncodedData)
 end
 
-function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
+function SaveManager:OnConfigLoaded(Callback)
+    assert(type(Callback) == "function", "Expected a callback")
+    self.LoadListeners = self.LoadListeners or {}
+    local Connection = { Callback = Callback, Connected = true }
+    table.insert(self.LoadListeners, Connection)
+    return function()
+        Connection.Connected = false
+        local Index = table.find(self.LoadListeners, Connection)
+        if Index then table.remove(self.LoadListeners, Index) end
+    end
+end
+
+function SaveManager:EmitConfigLoaded(Report)
+    Report.ListenerErrors = {}
+    for _, Connection in table.clone(self.LoadListeners or {}) do
+        if Connection.Connected then
+            local Success, Message = pcall(Connection.Callback, Report)
+            if not Success then table.insert(Report.ListenerErrors, tostring(Message)) end
+        end
+    end
+end
+
+function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadContext: any?)
     if not SaveManager.Library then
         return false, "Library is not set"
     end
@@ -764,6 +793,11 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
     local function ValidateObject(ObjectIndex: any, Option: any): (boolean, string?)
         if typeof(Option) ~= "table" then
             return false, string.format("object %s: expected table", tostring(ObjectIndex))
+        end
+
+        if Option.version ~= nil and (type(Option.version) ~= "number" or Option.version < 1
+            or Option.version >= math.huge or Option.version % 1 ~= 0) then
+            return false, "Invalid option version"
         end
 
         if Option.type == nil then
@@ -978,6 +1012,19 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
             continue
         end
 
+        local Target = (Option.type == "Toggle" and Library.Toggles or Library.Options)[Option.idx]
+        if not SkipRollback and Option.type ~= "Custom" and Option.type ~= "Groupbox" and Target and Target.ConfigVersion and Target.ConfigDefault
+            and Target.ConfigVersion > (Option.version or 0) then
+            local SuccessDefault, DefaultData = pcall(Parser.Save, Option.idx, Target.ConfigDefault)
+            if not SuccessDefault then
+                table.insert(LoadErrors, tostring(DefaultData))
+                continue
+            end
+            Option = DefaultData
+        end
+
+
+
         local PreviousContext = Library.ConfigLoadContext
         local Context = { Thread = coroutine.running(), Errors = {} }
         Library.ConfigLoadContext = Context
@@ -1018,6 +1065,10 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
     SaveManager.LastLoadReport = LoadReport
 
     if #LoadErrors == 0 then
+        LoadReport.Status = LoadReport.Missing > 0 and "Partial" or "Loaded"
+        LoadReport.ConfigName = LoadContext and LoadContext.ConfigName or Decoded.name
+        LoadReport.Source = LoadContext and LoadContext.Source or "JSON"
+        if not SkipRollback then SaveManager:EmitConfigLoaded(LoadReport) end
         return true, nil, LoadReport
     end
 
@@ -1033,7 +1084,7 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?)
     return false, "Failed to load config data: " .. table.concat(LoadErrors, "; "), LoadReport
 end
 
-function SaveManager:Load(ConfigName: string): (boolean, string?, { [string]: any }?)
+function SaveManager:Load(ConfigName: string, Source: string?): (boolean, string?, { [string]: any }?)
     if IsStringEmpty(ConfigName) then
         return false, "No config is selected"
     end
@@ -1052,7 +1103,7 @@ function SaveManager:Load(ConfigName: string): (boolean, string?, { [string]: an
         return false, "Failed to read config file"
     end
 
-    return SaveManager:LoadJSON(Content)
+    return SaveManager:LoadJSON(Content, false, { ConfigName = ConfigName, Source = Source or "Load" })
 end
 
 function SaveManager:Delete(ConfigName: string): (boolean, string?)
@@ -1168,7 +1219,7 @@ function SaveManager:LoadAutoloadConfig()
         return false, FetchErrorMessage
     end
 
-    local SuccessLoad, LoadErrorMessage, Report = SaveManager:Load(ConfigName)
+    local SuccessLoad, LoadErrorMessage, Report = SaveManager:Load(ConfigName, "Autoload")
     if not SuccessLoad then
         SaveManager:Notify(string.format("%s: %s", ConfigName, tostring(LoadErrorMessage)), "Autoload failed", "Error")
         return false, LoadErrorMessage, Report

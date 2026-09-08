@@ -7388,6 +7388,13 @@ do
         KeyPicker.Default = KeyPicker.Value
         KeyPicker.DefaultModifiers = table.clone(KeyPicker.Modifiers or {})
 
+        function KeyPicker:SetVisible(Visible)
+            KeyPicker.Visible = Visible == true
+            Picker.Visible = KeyPicker.Visible
+            if not KeyPicker.Visible then MenuTable:Close() end
+            return KeyPicker
+        end
+
         function KeyPicker:Destroy()
             if KeyPicker.Destroyed then
                 return
@@ -7441,6 +7448,7 @@ do
             Options[Idx] = nil
         end
 
+        Library:RegisterConfigOption(KeyPicker, Info)
         Options[Idx] = KeyPicker
 
         return self
@@ -8270,6 +8278,16 @@ do
         ColorPicker.Default = ColorPicker.Value
         ColorPicker.DefaultTransparency = ColorPicker.Transparency
 
+        function ColorPicker:SetVisible(Visible)
+            ColorPicker.Visible = Visible == true
+            Holder.Visible = ColorPicker.Visible
+            if not ColorPicker.Visible then
+                ColorMenu:Close()
+                ContextMenu:Close()
+            end
+            return ColorPicker
+        end
+
         function ColorPicker:Destroy()
             if ColorPicker.Destroyed then
                 return
@@ -8310,6 +8328,7 @@ do
             Options[Idx] = nil
         end
 
+        Library:RegisterConfigOption(ColorPicker, Info)
         Options[Idx] = ColorPicker
 
         return self
@@ -8321,9 +8340,73 @@ do
     end
 end
 
+local function CopyOptionValue(Value)
+    if typeof(Value) ~= "table" then return Value end
+    local Copy = {}
+    for Key, Item in Value do Copy[Key] = CopyOptionValue(Item) end
+    return Copy
+end
+
+function Library:RegisterConfigOption(Option, Info)
+    function Option:SetConfigVersion(Version)
+        assert(type(Version) == "number" and Version >= 1 and Version < math.huge and Version % 1 == 0, "ConfigVersion must be a positive integer")
+        Option.ConfigVersion = Version
+        return Option
+    end
+    Option.ConfigDefault = CopyOptionValue({
+        Value = Option.Value, Transparency = Option.Transparency, Mode = Option.Mode,
+        Modifiers = Option.Modifiers, Toggled = Option.Toggled, Multi = Option.Multi,
+    })
+    if Info and Info.ConfigVersion ~= nil then Option:SetConfigVersion(Info.ConfigVersion) end
+    return Option
+end
+
+function Library:AddHidden(Idx, Default, Info)
+    assert(type(Idx) == "string" or type(Idx) == "number", "Hidden option requires a string or number ID")
+    assert(Options[Idx] == nil and Toggles[Idx] == nil, "Option ID is already registered: " .. tostring(Idx))
+    Info = Info or {}
+    local Hidden = {
+        Type = "Hidden", Value = CopyOptionValue(Default), Default = CopyOptionValue(Default),
+        Visible = false, Destroyed = false, Callback = Info.Callback,
+    }
+    function Hidden:GetValue() return CopyOptionValue(Hidden.Value) end
+    function Hidden:RunChanged()
+        Library:SafeCallback(Hidden.Callback, Hidden:GetValue())
+        Library:SafeCallback(Hidden.Changed, Hidden:GetValue())
+    end
+    function Hidden:SetValue(Value)
+        if Hidden.Destroyed then return Hidden end
+        Hidden.Value = CopyOptionValue(Value)
+        Hidden:RunChanged()
+        return Hidden
+    end
+    function Hidden:OnChanged(Callback)
+        assert(type(Callback) == "function", "Expected callback")
+        Hidden.Changed = Callback
+        return Hidden
+    end
+    function Hidden:SetVisible() return Hidden end
+    function Hidden:Destroy()
+        if Hidden.Destroyed then return end
+        Hidden.Destroyed = true
+        Hidden.Callback, Hidden.Changed = nil, nil
+        if Options[Idx] == Hidden then Options[Idx] = nil end
+    end
+    Library:RegisterConfigOption(Hidden, Info)
+    Options[Idx] = Hidden
+    return Hidden
+end
+
 local BaseGroupbox = {}
 do
     local Funcs = {}
+
+    function Funcs:AddHidden(Idx, Default, Info)
+        if self.Destroyed then return nil end
+        local Hidden = Library:AddHidden(Idx, Default, Info)
+        table.insert(self.Elements, Hidden)
+        return Hidden
+    end
 
     local function CancelToggleConfirmation(Toggle)
         local Dialog = Toggle.ConfirmationDialog
@@ -9593,6 +9676,7 @@ do
 
         Toggle.Default = Toggle.Value
 
+        Library:RegisterConfigOption(Toggle, Info)
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
@@ -9932,6 +10016,7 @@ do
 
         Toggle.Default = Toggle.Value
 
+        Library:RegisterConfigOption(Toggle, Info)
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
@@ -10206,6 +10291,7 @@ do
             Input.Default = Input.EmptyReset
         end
         
+        Library:RegisterConfigOption(Input, Info)
         Options[Idx] = Input
 
         function Input:Destroy()
@@ -10699,6 +10785,7 @@ do
 
         Slider.Default = Slider.Value
 
+        Library:RegisterConfigOption(Slider, Info)
         Options[Idx] = Slider
 
         function Slider:Destroy()
@@ -11049,6 +11136,26 @@ do
 
         function Dropdown:OnChanged(Func)
             Dropdown.Changed = Func
+        end
+
+        function Dropdown:GetSelected()
+            if not Dropdown.Multi then
+                return Dropdown.Value ~= nil and { Dropdown.Value } or {}
+            end
+            local Selected = {}
+            if IsSequentialArray(Dropdown.Values) then
+                for _, Value in ipairs(Dropdown.Values) do
+                    if Dropdown.Value[Value] then table.insert(Selected, Value) end
+                end
+            else
+                for Value, Enabled in Dropdown.Value do
+                    if Enabled then table.insert(Selected, Value) end
+                end
+                table.sort(Selected, function(A, B)
+                    return type(A) .. tostring(A) < type(B) .. tostring(B)
+                end)
+            end
+            return Selected
         end
 
         function Dropdown:GetActiveValues(ReturnCount)
@@ -11712,6 +11819,7 @@ do
         end
 
         function Dropdown:SetVisible(Visible: boolean)
+            if not Visible then MenuTable:Close() end
             Dropdown.Visible = Visible
 
             Holder.Visible = Dropdown.Visible
@@ -11822,6 +11930,7 @@ do
         Dropdown.DefaultValues = Dropdown.Values
 
         Dropdown:RefreshTypography()
+        Library:RegisterConfigOption(Dropdown, Info)
         Options[Idx] = Dropdown
 
         function Dropdown:Destroy()
@@ -12886,7 +12995,19 @@ do
             Groupbox:Resize()
         end
 
+        function Depbox:SetVisible(Visible)
+            Depbox.RequestedVisible = Visible == true
+            Depbox:Update()
+            Depbox:Resize()
+            return Depbox
+        end
+
         function Depbox:Update(CancelSearch)
+            if Depbox.RequestedVisible == false then
+                Depbox.Visible = false
+                DepboxContainer.Visible = false
+                return
+            end
             for _, Dependency in Depbox.Dependencies do
                 local Element = Dependency[1]
                 local Value = Dependency[2]
@@ -13060,7 +13181,19 @@ do
             DepGroupboxContainer.Size = UDim2.new(1, 0, 0, (DepGroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 18)
         end
 
+        function DepGroupbox:SetVisible(Visible)
+            DepGroupbox.RequestedVisible = Visible == true
+            DepGroupbox:Update()
+            DepGroupbox:Resize()
+            return DepGroupbox
+        end
+
         function DepGroupbox:Update(CancelSearch)
+            if DepGroupbox.RequestedVisible == false then
+                DepGroupbox.Visible = false
+                DepGroupboxContainer.Visible = false
+                return
+            end
             for _, Dependency in DepGroupbox.Dependencies do
                 local Element = Dependency[1]
                 local Value = Dependency[2]
@@ -13400,6 +13533,8 @@ function Library:SetNotificationOptions(Info)
         if Value and Value == Value and math.abs(Value) < math.huge then
             Next[Key] = math.clamp(math.floor(Value), Limits[1], Limits[2])
         end
+
+
     end
     if Info.TextSize ~= nil then
         Next.TitleTextSize = Next.TextSize
@@ -14816,6 +14951,7 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:ApplyCornerRadius(Radius: number)
+        Radius = math.max(0, math.round(Radius))
         local RadiusHalf = UDim.new(0, math.floor(Radius / 2))
         local RadiusUDim = UDim.new(0, Radius)
         local HalfCurrent = Library.CornerRadius / 2
@@ -14824,6 +14960,8 @@ function Library:CreateWindow(WindowInfo)
             local UICorner = Library.Corners[Index]
             if not UICorner or not UICorner.Parent then
                 table.remove(Library.Corners, Index)
+            elseif UICorner.Parent == MainFrame or UICorner.Parent == BackgroundImage then
+                UICorner.CornerRadius = RadiusUDim
             elseif math.abs(UICorner.CornerRadius.Offset - HalfCurrent) <= 1 then
                 UICorner.CornerRadius = RadiusHalf
             else
@@ -15654,6 +15792,12 @@ function Library:CreateWindow(WindowInfo)
                 Holder = TabboxHolder,
                 Tabs = {}
             }
+
+            function Tabbox:SetVisible(Visible)
+                Tabbox.Visible = Visible == true
+                BoxHolder.Visible = Tabbox.Visible
+                return Tabbox
+            end
 
             function Tabbox:UpdateCorners()
                 for _, Tab in Tabbox.Tabs do

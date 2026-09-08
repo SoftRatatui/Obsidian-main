@@ -234,6 +234,7 @@ export type ButtonInfo = {
 }
 
 export type ToggleInfo = {
+    ConfigVersion: number?,
     Text: string,
     Default: boolean?,
     Variant: ToggleVariant?,
@@ -250,6 +251,7 @@ export type ToggleInfo = {
 }
 
 export type InputInfo = {
+    ConfigVersion: number?,
     Text: string,
     Default: string?,
     Finished: boolean?,
@@ -268,6 +270,7 @@ export type InputInfo = {
 }
 
 export type SliderInfo = {
+    ConfigVersion: number?,
     Text: string,
     Default: number?,
     Min: number?,
@@ -288,6 +291,7 @@ export type SliderInfo = {
 }
 
 export type DropdownInfo = {
+    ConfigVersion: number?,
     Text: string?,
     Values: { [any]: any },
     Default: any,
@@ -362,6 +366,7 @@ export type UIPassthroughInfo = {
 }
 
 export type KeyPickerInfo = {
+    ConfigVersion: number?,
     Text: string,
     Default: string?,
     Mode: "Toggle" | "Hold" | "Press"?,
@@ -376,6 +381,7 @@ export type KeyPickerInfo = {
 }
 
 export type ColorPickerInfo = {
+    ConfigVersion: number?,
     Default: Color3?,
     Transparency: number?,
     Title: string?,
@@ -485,6 +491,9 @@ export type AppInfo = {
 
 
 export type KeyPicker = {
+    SetVisible: (self: KeyPicker, Visible: boolean) -> KeyPicker,
+    ConfigVersion: number?,
+    SetConfigVersion: (self: KeyPicker, Version: number) -> KeyPicker,
     Text: string,
     Value: string,
     Toggled: boolean,
@@ -510,6 +519,9 @@ export type KeyPicker = {
 }
 
 export type ColorPicker = {
+    SetVisible: (self: ColorPicker, Visible: boolean) -> ColorPicker,
+    ConfigVersion: number?,
+    SetConfigVersion: (self: ColorPicker, Version: number) -> ColorPicker,
     Value: Color3,
     Transparency: number,
     DefaultTransparency: number,
@@ -618,6 +630,8 @@ export type SubButton = {
 }
 
 export type Toggle = {
+    ConfigVersion: number?,
+    SetConfigVersion: (self: Toggle, Version: number) -> Toggle,
     Text: string,
     Value: boolean,
     Tooltip: string?,
@@ -658,6 +672,8 @@ export type Toggle = {
 }
 
 export type Input = {
+    ConfigVersion: number?,
+    SetConfigVersion: (self: Input, Version: number) -> Input,
     Text: string,
     Value: string,
     Finished: boolean,
@@ -686,6 +702,8 @@ export type Input = {
 }
 
 export type Slider = {
+    ConfigVersion: number?,
+    SetConfigVersion: (self: Slider, Version: number) -> Slider,
     Text: string,
     Value: number,
     Min: number,
@@ -721,6 +739,9 @@ export type Slider = {
 }
 
 export type Dropdown = {
+    GetSelected: (self: Dropdown) -> { any },
+    ConfigVersion: number?,
+    SetConfigVersion: (self: Dropdown, Version: number) -> Dropdown,
     Connections: { RBXScriptConnection },
     Destroyed: boolean,
 
@@ -897,7 +918,20 @@ export type Element =
     | Video
     | UIPassthrough
     | Divider
-export type Option =
+export type Hidden = {
+    Type: string,
+    Value: any,
+    Default: any,
+    ConfigVersion: number?,
+    GetValue: (self: Hidden) -> any,
+    SetValue: (self: Hidden, Value: any) -> Hidden,
+    SetConfigVersion: (self: Hidden, Version: number) -> Hidden,
+    OnChanged: (self: Hidden, Callback: (any) -> ()) -> Hidden,
+    SetVisible: (self: Hidden, Visible: boolean) -> Hidden,
+    Destroy: (self: Hidden) -> (),
+}
+
+export type Option = Hidden |
     Toggle
     | Input
     | Slider
@@ -911,6 +945,7 @@ export type Option =
 
 
 export type BaseGroupbox = {
+    AddHidden: (self: BaseGroupbox, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
     AddDivider: (self: Groupbox, MarginTop: number?, MarginBottom: number?) -> (),
     AddLabel: (
         self: Groupbox,
@@ -992,6 +1027,7 @@ export type SubTab = BaseGroupbox & {
 }
 
 export type Tabbox = {
+    SetVisible: (self: Tabbox, Visible: boolean) -> Tabbox,
     ActiveTab: SubTab?,
     BoxHolder: Frame,
     Holder: Frame,
@@ -1236,6 +1272,7 @@ export type App = {
 
 
 export type Library = {
+    AddHidden: (self: Library, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
     ReleaseVersion: "0.0.1-release-3",
     
     LocalPlayer: Player,

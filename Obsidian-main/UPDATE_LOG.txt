@@ -1,0 +1,65 @@
+RELEASE 3 UPDATE NOTES
+2026-09-08
+Version: 0.0.1-release-3 (unchanged)
+
+CONFIG LOAD COMPLETION
+SaveManager:OnConfigLoaded(callback) runs once after a successful load, including
+options, adapters and theme finalization. It also covers LoadJSON and autoload.
+Register it before calling LoadAutoloadConfig. The callback receives the report:
+ConfigName, Source (JSON, Load or Autoload), Status, Applied, Skipped and Missing.
+A failed load or internal rollback does not fire it. No configured autoload also
+does not fire it: initialize your view with defaults before requesting autoload.
+Callback errors are collected in report.ListenerErrors; they do not undo a load.
+The registration returns a function that disconnects the callback.
+
+    local disconnect = SaveManager:OnConfigLoaded(function(report)
+        refreshCatalog()
+    end)
+    SaveManager:LoadAutoloadConfig()
+    -- Call disconnect() when the consuming view is destroyed.
+
+HIDDEN VALUES
+Library:AddHidden(id, default, info) stores state without creating a GUI object.
+Groupbox:AddHidden has the same arguments. Read Options[id].Value or GetValue().
+Use SetValue(value) to change it and OnChanged(callback) to observe changes.
+Strings, booleans, numbers and JSON-compatible tables can be saved. Keep IDs
+unique across controls and hidden values. Do not store Instances or functions.
+
+    local skin = Library:AddHidden("SelectedSkinId", "default")
+    skin:SetValue("blue")
+
+OPTION VERSIONS
+Set ConfigVersion in control info, or call option:SetConfigVersion(2).
+An older saved option, including one without a version, uses the default captured
+when the control was created. A subsequent save stores the new version.
+Equal or newer saved versions preserve the saved value. Options without an
+explicit ConfigVersion keep their previous behavior. Increment only when a
+specific option must reset. This is not a global config reset or file migration.
+
+    local skin = Library:AddHidden("SkinId", "default", { ConfigVersion = 2 })
+
+SELECTION AND VISIBILITY
+Dropdown:GetSelected() returns a fresh array. Multi selection follows Values
+order for array-backed dropdowns; dictionary-backed selections are sorted by
+key type and text. Single selection returns one entry, or an empty array.
+
+    local selected = Options.Hitboxes:GetSelected()
+    Options.Thickness:SetVisible(false)
+    Options.Accent:SetVisible(false)
+
+Key pickers, color pickers and tabboxes now expose SetVisible. Hiding a picker
+closes its popup. Hiding a dropdown also closes its popup. Dependency containers
+remember manual hiding when dependencies refresh; showing one still respects
+its dependencies. Hidden options remain invisible regardless of SetVisible.
+
+WINDOW CORNERS
+The outer window and background image retain the full corner radius when the
+radius changes from 0 or 1. Previously they could receive a half-radius value.
+Radius updates now use whole, non-negative pixels.
+
+UPDATING
+Update Library.lua, Library.d.luau and addons together from the latest revision.
+The release label remains release-3, so check revision changes as well as the
+label. Keep control IDs stable and create controls and adapters before loading.
+See GUIDE.md for the full setup. Device rendering still needs a Roblox check;
+local regression tests cover config behavior and existing layout contracts.

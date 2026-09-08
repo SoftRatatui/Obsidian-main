@@ -1880,3 +1880,65 @@ After these changes a sweep of the full example reports zero fractional position
 - Kept all addons opt-in and preserved existing direct creation paths.
 - Updated the complete example and type declarations.
 - Replaced the old documentation set with this current release guide.
+
+## Config completion, hidden state and option versions
+
+See [UPDATE_LOG.txt](UPDATE_LOG.txt) for the release-3 update notes and short examples.
+
+Create all controls and register all adapters before loading. Subscribe with
+`SaveManager:OnConfigLoaded(function(report) ... end)` before `LoadAutoloadConfig()`.
+This callback runs after options, adapters and theme finalization, once per successful
+load. It covers `Load`, `LoadJSON` and autoload. The returned function disconnects it.
+Failed loads and rollback do not emit it. An absent autoload does not emit it either;
+render defaults first. `report.Source` identifies `Load`, `JSON` or `Autoload`.
+`report.Status` is `Loaded` or `Partial`. Check `Missing` and `MissingIds` for outdated
+control IDs. Consumer callback failures are returned in `ListenerErrors` and do not
+roll back a successful config. Avoid starting another load from this callback.
+
+```lua
+local SkinId = Library:AddHidden("SkinId", "default", { ConfigVersion = 1 })
+local disconnect = SaveManager:OnConfigLoaded(function(report)
+    refreshCatalog(SkinId:GetValue())
+end)
+refreshCatalog(SkinId:GetValue())
+SaveManager:LoadAutoloadConfig()
+```
+
+`AddHidden(id, default, info?)` is available on Library and groupboxes. It creates
+no GUI and participates in SaveManager like other options. `info` accepts `Callback`
+and `ConfigVersion`. Methods: `GetValue`, `SetValue`, `OnChanged`, `SetConfigVersion`,
+`SetVisible` (always stays hidden), `Destroy`. Table defaults, assigned values and
+GetValue results are copied. Use JSON-compatible values and unique string or numeric
+IDs. Nil, false and empty strings are deliberate values, not missing defaults.
+OnChanged registers a callback without calling it immediately. Destroy unregisters
+the option. Replace a formerly hidden Input with a new ID or explicitly migrate its
+old text value; different saved control types are not implicitly converted.
+
+Saved controls accept `ConfigVersion = positiveInteger` in their creation info.
+`option:SetConfigVersion(version)` enables the same policy after creation. If the
+saved version is lower, the loader restores that option's creation-time default.
+Unversioned saved entries count as version zero. Saving writes the current version;
+equal and newer saved versions keep their saved values. Without ConfigVersion,
+existing behavior is unchanged. Defaults include picker transparency and key mode.
+Use a version increment for changed semantics, not each script launch. ConfigVersion
+does not reset absent entries or migrate custom adapters; adapters own their schema.
+
+`Dropdown:GetSelected()` always returns an array, including single selection. An
+empty selection returns `{}`. Multi Values arrays preserve their original order;
+dictionaries use a deterministic key order. Existing `.Value` stays compatible.
+
+Use `SetVisible(boolean)` directly on controls, groupboxes, dependency containers,
+key/color pickers and tabboxes. Dependency containers combine manual visibility
+with their dependency conditions. Hidden values never create visible controls.
+Hiding picker and dropdown controls closes their active popups. Hiding a group
+preserves its values; destroying it releases its owned controls.
+
+### Standards for persistent state
+
+Keep IDs stable and unique. Load only after constructing the UI and registering
+adapters. Refresh dependent views through the completion callback instead of a
+scheduled guess. Check the returned success and error from every save/load action.
+Store model state in hidden options or custom adapters, not invisible text controls.
+Update the library, types and addons together to the latest revision even while the
+release label is unchanged. Keep a config backup before intentionally raising option
+versions. Disconnect view callbacks when their consumer is destroyed.

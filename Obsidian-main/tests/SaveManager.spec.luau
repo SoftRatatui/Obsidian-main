@@ -256,6 +256,36 @@ return function(SaveManager, Environment)
     Buttons["Delete config"]()
     assert(Environment.files["MonHub/Tests/settings/place-1/from-ui.json"] == nil)
 
+    local Hidden = Control("Hidden", "knife-default")
+    Library.Options.HiddenSkin = Hidden
+    assert(Restarted:Save("hidden-state"))
+    Hidden.Value = "changed"
+    local Calls = 0
+    local Disconnect = Restarted:OnConfigLoaded(function(Report)
+        Calls += 1
+        assert(Hidden.Value == "knife-default", "Listener ran before hidden state was applied")
+        assert(Report.ConfigName == "hidden-state" and Report.Status == "Loaded")
+    end)
+    assert(Restarted:Load("hidden-state"))
+    assert(Calls == 1)
+    Disconnect()
+    assert(Restarted:Load("hidden-state"))
+    assert(Calls == 1)
+    Hidden.ConfigVersion = 2
+    Hidden.ConfigDefault = { Value = "new-default" }
+    assert(Restarted:Load("hidden-state"))
+    assert(Hidden.Value == "new-default", "Older unversioned option did not reset")
+    Hidden.Value = "user-choice"
+    assert(Restarted:Save("hidden-state"))
+    Hidden.Value = "other"
+    assert(Restarted:Load("hidden-state"))
+    assert(Hidden.Value == "user-choice", "Same-version user choice was overwritten")
+    local StopFailure = Restarted:OnConfigLoaded(function() error("consumer failed") end)
+    local Loaded, _, Report = Restarted:Load("hidden-state")
+    assert(Loaded and #Report.ListenerErrors == 1)
+    StopFailure()
+    print("PASS hidden config values, option versions and completion listeners")
+
     local Invalid = Environment.storedJson[OriginalContent]
     for _, Object in Invalid.objects do
         if Object.type == "Slider" then Object.value = "not a number" end

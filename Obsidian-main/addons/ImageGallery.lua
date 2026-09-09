@@ -802,10 +802,12 @@ function ImageGallery.Create(Library, Info)
         if Gallery.Destroyed then
             return
         end
+        local ReuseNormalized = Items == Gallery.Items
+        if ReuseNormalized then Items = table.clone(Items) end
         table.clear(Gallery.Items)
         if type(Items) == "table" then
             for Index, Item in Items do
-                local Normalized = NormalizeItem(Item, Index)
+                local Normalized = ReuseNormalized and Item or NormalizeItem(Item, Index)
                 if Normalized then
                     table.insert(Gallery.Items, Normalized)
                 end

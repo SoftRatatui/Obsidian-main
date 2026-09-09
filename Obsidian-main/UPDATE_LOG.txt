@@ -92,3 +92,31 @@ The Preview tab demonstrates the controls. GUIDE.md includes setup, callback
 arguments, persistence rules and short examples for each API. Local tests cover
 slot validation, drops, cancellation, narrow slider rows and popup lifetimes.
 Real device gesture and rendering checks still need Roblox.
+2026-09-09 - WISHLIST FOLLOW-UP
+Version: 0.0.1-release-3, unchanged.
+
+Fixed late catalog replacement, including SetItems(Gallery.Items), without replacing
+card frames. Hiding groups closes child context menus. Search now includes tooltips
+and dropdown choices and safely skips hidden options with no GUI.
+
+Stale dropdown selections recover to a valid default. Load reports list replacements
+in AdjustedIds and version resets in ResetIds. Hidden ConfigVersion behavior is
+covered by regression tests. Save=false and option:SetSave(false) exclude individual
+options from saving and loading. SaveManager:GetConfigs() lists available names.
+
+Added AddSection, Library:SetValues and Library:OnConfigChanged. Presets defer
+related dependency updates to one pass. The change listener receives one batch
+report; it is separate from successful config-load completion.
+
+Added CallbackOnRelease for expensive slider callbacks, touch-hold tooltips,
+attachment-point viewport markers, AddLazyTab and AddKeybindProfile. See GUIDE.md
+for signatures, error behavior and short usage examples. Preview includes demos.
+
+Live notifications recalculate after a font change. Existing registry-based theme
+updates, bounded text measurement caching, reusable gallery cards and custom slider
+group fields were checked rather than replaced. Save/load builds cold lazy tabs
+before persistence so values cannot disappear from a config.
+
+Update Library.lua, Library.d.luau, SaveManager and ImageGallery together to the latest
+revision. Local tests pass; mobile gesture/rendering and performance measurements
+still require a Roblox session on the intended device.

@@ -1891,7 +1891,21 @@ local PreviewModulesMinimal = false
 local PreviewModuleHighlighted = false
 do
 	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
-	PreviewControls:AddLabel("A compact interactive index of the library.", true)
+	PreviewControls:AddSection("Controls and presets")
+    local ChangeLabel = PreviewControls:AddLabel("Options unchanged")
+    local DisconnectChanges = Library:OnConfigChanged(function(Event)
+        ChangeLabel:SetText("Last change: " .. (Event.Id and tostring(Event.Id) or Event.Source))
+    end)
+    Library:OnUnload(DisconnectChanges)
+    PreviewControls:AddButton("Apply compact preset", function()
+        Library:SetValues({ PreviewStrength = 40, PreviewMode = "Smooth", PreviewFeatureToggle = true })
+    end)
+    PreviewControls:AddSlider("PreviewReleaseOnly", {
+        Text = "Commit on release", Min = 0, Max = 100, Default = 50, Rounding = 0,
+        CallbackOnRelease = true, Save = false,
+        Tooltip = "Hold on mobile to read this tooltip. This value is not saved.",
+        Callback = function(Value) ChangeLabel:SetText("Committed: " .. tostring(Value)) end,
+    })
 	PreviewControls:AddButton("Show notification", function()
 		Notify("Saved", "Your changes are ready.", 3)
 	end)
@@ -1949,7 +1963,24 @@ do
 		Text = "Preview action",
 	})
 
-	local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
+	local BindProfiles = Library:AddKeybindProfile("PreviewProfiles", {
+        Profiles = {
+            Primary = { PreviewAccentKey = { "P", "Toggle", {} } },
+            Secondary = { PreviewAccentKey = { "O", "Hold", {} } },
+        },
+    })
+    PreviewControls:AddButton("Next keybind profile", function() BindProfiles:Next() end)
+    local LazyPreview = Window:AddLazyTab("Deferred example", {
+        Icon = "clock",
+        Build = function(Tab)
+            local Group = Tab:AddLeftGroupbox("Created on demand")
+            Group:AddSection("Lazy content")
+            Group:AddLabel("This page builds once, when shown or before config persistence.", true)
+        end,
+    })
+    PreviewControls:AddButton("Open deferred page", function() LazyPreview:Show() end)
+
+    local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
 	PreviewAddons:AddLabel("Open or trigger every large module from one place.", true)
 	PreviewAddons:AddButton("Toggle skin catalog", function()
 		if CatalogHost then
@@ -2096,12 +2127,17 @@ do
             Sample.Size = Vector3.new(4, 2, 1)
             Sample.Anchored = true
             Sample.Color = Color3.fromRGB(100, 105, 115)
-            EditorPopup:AddViewport("PreviewEditorViewport", { Model = Sample, Clone = false, Interactive = true, Height = 180 })
+            local Point = Instance.new("Attachment")
+            Point.Name = "Charm1"
+            Point.Position = Vector3.new(1.5, 0.5, 0.5)
+            Point.Parent = Sample
+            EditorPopup:AddViewport("PreviewEditorViewport", { Model = Sample, Clone = false, Interactive = true, Height = 180, ShowAttachments = true })
             EditorPopup:AddSliderGroup("PreviewPopupTransform", {
                 Callback = function(Value)
                     Sample:PivotTo(CFrame.new(Value.X, Value.Y, 0) * CFrame.Angles(0, 0, math.rad(Value.Rotation)))
                     Sample.Size = Vector3.new(4, 2, 1) * Value.Scale
                     Sample.Transparency = Value.Wear
+                    Options.PreviewEditorViewport:RefreshAttachmentPoints()
                 end,
             })
         end)

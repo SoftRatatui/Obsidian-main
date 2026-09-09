@@ -234,6 +234,7 @@ export type ButtonInfo = {
 }
 
 export type ToggleInfo = {
+    Save: boolean?,
     ConfigVersion: number?,
     Text: string,
     Default: boolean?,
@@ -251,6 +252,7 @@ export type ToggleInfo = {
 }
 
 export type InputInfo = {
+    Save: boolean?,
     ConfigVersion: number?,
     Text: string,
     Default: string?,
@@ -270,6 +272,8 @@ export type InputInfo = {
 }
 
 export type SliderInfo = {
+    CallbackOnRelease: boolean?,
+    Save: boolean?,
     ConfigVersion: number?,
     Text: string,
     Default: number?,
@@ -291,6 +295,7 @@ export type SliderInfo = {
 }
 
 export type DropdownInfo = {
+    Save: boolean?,
     ConfigVersion: number?,
     Text: string?,
     Values: { [any]: any },
@@ -316,6 +321,10 @@ export type DropdownInfo = {
 }
 
 export type ViewportInfo = {
+    ShowAttachments: boolean?,
+    AttachmentNames: { string }?,
+    AttachmentRadius: number?,
+    AttachmentColor: Color3?,
     Object: (BasePart | Model)?,
     Model: (BasePart | Model)?,
     MinZoom: number?,
@@ -369,6 +378,7 @@ export type UIPassthroughInfo = {
 }
 
 export type KeyPickerInfo = {
+    Save: boolean?,
     ConfigVersion: number?,
     Text: string,
     Default: string?,
@@ -384,6 +394,7 @@ export type KeyPickerInfo = {
 }
 
 export type ColorPickerInfo = {
+    Save: boolean?,
     ConfigVersion: number?,
     Default: Color3?,
     Transparency: number?,
@@ -494,6 +505,7 @@ export type AppInfo = {
 
 
 export type KeyPicker = {
+    SetSave: (self: KeyPicker, Enabled: boolean) -> KeyPicker,
     SetVisible: (self: KeyPicker, Visible: boolean) -> KeyPicker,
     ConfigVersion: number?,
     SetConfigVersion: (self: KeyPicker, Version: number) -> KeyPicker,
@@ -522,6 +534,7 @@ export type KeyPicker = {
 }
 
 export type ColorPicker = {
+    SetSave: (self: ColorPicker, Enabled: boolean) -> ColorPicker,
     SetVisible: (self: ColorPicker, Visible: boolean) -> ColorPicker,
     ConfigVersion: number?,
     SetConfigVersion: (self: ColorPicker, Version: number) -> ColorPicker,
@@ -633,6 +646,7 @@ export type SubButton = {
 }
 
 export type Toggle = {
+    SetSave: (self: Toggle, Enabled: boolean) -> Toggle,
     ConfigVersion: number?,
     SetConfigVersion: (self: Toggle, Version: number) -> Toggle,
     Text: string,
@@ -675,6 +689,7 @@ export type Toggle = {
 }
 
 export type Input = {
+    SetSave: (self: Input, Enabled: boolean) -> Input,
     ConfigVersion: number?,
     SetConfigVersion: (self: Input, Version: number) -> Input,
     Text: string,
@@ -705,6 +720,7 @@ export type Input = {
 }
 
 export type Slider = {
+    SetSave: (self: Slider, Enabled: boolean) -> Slider,
     ConfigVersion: number?,
     SetConfigVersion: (self: Slider, Version: number) -> Slider,
     Text: string,
@@ -742,6 +758,7 @@ export type Slider = {
 }
 
 export type Dropdown = {
+    SetSave: (self: Dropdown, Enabled: boolean) -> Dropdown,
     GetSelected: (self: Dropdown) -> { any },
     ConfigVersion: number?,
     SetConfigVersion: (self: Dropdown, Version: number) -> Dropdown,
@@ -795,6 +812,9 @@ export type Dropdown = {
 }
 
 export type Viewport = {
+    GetAttachments: (self: Viewport) -> { Attachment },
+    RefreshAttachmentPoints: (self: Viewport) -> (),
+    SetAttachmentPointsEnabled: (self: Viewport, Enabled: boolean) -> Viewport,
     Zoom: (self: Viewport, Amount: number) -> Viewport,
     Object: BasePart | Model,
     Camera: Camera,
@@ -923,6 +943,7 @@ export type Element =
     | UIPassthrough
     | Divider
 export type Hidden = {
+    SetSave: (self: Hidden, Enabled: boolean) -> Hidden,
     Type: string,
     Value: any,
     Default: any,
@@ -968,6 +989,7 @@ export type ImageGridInfo = {
 }
 
 export type ItemSlotsInfo = {
+    Save: boolean?,
     Slots: { string }?,
     Items: { any }?,
     Default: { [string]: string | number }?,
@@ -982,6 +1004,7 @@ export type ItemSlotsInfo = {
 }
 
 export type ItemSlots = {
+    SetSave: (self: ItemSlots, Enabled: boolean) -> ItemSlots,
     Value: { [string]: string | number },
     Assign: (self: ItemSlots, Id: string, Item: any?) -> boolean,
     GetValue: (self: ItemSlots) -> { [string]: string | number },
@@ -995,6 +1018,7 @@ export type ItemSlots = {
 }
 
 export type SliderGroupInfo = {
+    Save: boolean?,
     Sliders: { SliderInfo & { Id: string } }?,
     Callback: (({ [string]: number }) -> ())?,
     ConfigVersion: number?,
@@ -1024,10 +1048,11 @@ export type PopupInfo = {
 }
 
 export type BaseGroupbox = {
+    AddSection: (self: BaseGroupbox, Title: string) -> Label,
     AddImageGrid: (self: BaseGroupbox, Id: string, Info: ImageGridInfo) -> any,
     AddItemSlots: (self: BaseGroupbox, Id: string, Info: ItemSlotsInfo?) -> ItemSlots,
     AddSliderGroup: (self: BaseGroupbox, Id: string, Info: SliderGroupInfo?) -> SliderGroup,
-    AddHidden: (self: BaseGroupbox, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
+    AddHidden: (self: BaseGroupbox, Id: string | number, Default: any, Info: { ConfigVersion: number?, Save: boolean?, Callback: ((any) -> ())? }?) -> Hidden,
     AddDivider: (self: Groupbox, MarginTop: number?, MarginBottom: number?) -> (),
     AddLabel: (
         self: Groupbox,
@@ -1274,6 +1299,7 @@ export type Dialog = BaseGroupbox & {
 
 
 export type Window = {
+    AddLazyTab: (self: Window, Name: string, Info: { Icon: string?, Build: (Tab) -> () }) -> Tab,
     AddPopup: (self: Window, Id: string, Info: PopupInfo?) -> Dialog,
     AlwaysOnTop: boolean,
     Frame: CanvasGroup,
@@ -1357,8 +1383,12 @@ export type App = {
 
 
 export type Library = {
+    SetValues: (self: Library, Values: { [any]: any }) -> (boolean, string?),
+    OnConfigChanged: (self: Library, Callback: (any) -> ()) -> (() -> ()),
+    BuildLazyTabs: (self: Library) -> (boolean, string?),
+    AddKeybindProfile: (self: Library, Id: any, Info: any?) -> any,
     RegisterImageGrid: (self: Library, Addon: any) -> Library,
-    AddHidden: (self: Library, Id: string | number, Default: any, Info: { ConfigVersion: number?, Callback: ((any) -> ())? }?) -> Hidden,
+    AddHidden: (self: Library, Id: string | number, Default: any, Info: { ConfigVersion: number?, Save: boolean?, Callback: ((any) -> ())? }?) -> Hidden,
     ReleaseVersion: "0.0.1-release-3",
     
     LocalPlayer: Player,

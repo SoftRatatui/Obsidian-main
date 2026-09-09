@@ -185,6 +185,9 @@ $taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddImageGrid('
 $taskDragStart = $taskLibrarySource.IndexOf('function Library:RegisterImageGrid(')
 $taskDragEnd = $taskLibrarySource.IndexOf('local function CopyOptionValue(', $taskDragStart)
 $taskDragMethods = $taskLibrarySource.Substring($taskDragStart, $taskDragEnd - $taskDragStart)
+$taskDependencyStart = $taskLibrarySource.IndexOf('function Library:UpdateDependencyBoxes()')
+$taskDependencyEnd = $taskLibrarySource.IndexOf('local function MatchesSearch(', $taskDependencyStart)
+$taskDependencyCode = $taskLibrarySource.Substring($taskDependencyStart, $taskDependencyEnd - $taskDependencyStart)
 $taskEditorEnd = $taskLibrarySource.IndexOf('    function Funcs:AddDependencyBox()', $taskEditorStart)
 $taskEditorMethods = $taskLibrarySource.Substring($taskEditorStart, $taskEditorEnd - $taskEditorStart)
 $taskHiddenStart = $taskLibrarySource.IndexOf('local function CopyOptionValue(')
@@ -205,6 +208,9 @@ local function CreateEditor()
     local ScreenGui = Library.ScreenGui
     local Options, Toggles = {}, {}
     Library.Options, Library.Toggles = Options, Toggles
+    local DependencyUpdateQueued = false
+    Library.DependencyPasses = 0
+    Library.DependencyBoxes = { { Update = function() Library.DependencyPasses += 1 end } }
     Library.DPIScale, Library.Corners, Library.Dialogues = 1, {}, {}
     local function New(Class, Properties)
         local Object = Mock.New(Library, Class, Properties)
@@ -240,6 +246,12 @@ local function CreateEditor()
         return Slider
     end
     local Window, WindowInfo = {}, { CornerRadius = 4 }
+    Library.Tabs = {}
+    function Window:AddTab(Name)
+        local Tab = { Groupboxes = {}, Tabboxes = {}, Show = function() end }
+        Library.Tabs[Name] = Tab
+        return Tab
+    end
     local MainFrame = New("Frame", { Parent = Library.ScreenGui })
     local UserInputService = { InputBegan = Mock.Signal(), InputChanged = Mock.Signal(), InputEnded = Mock.Signal(), WindowFocusReleased = Mock.Signal() }
     function Library:MouseIsOverFrame(Object, Point)
@@ -255,7 +267,7 @@ local function CreateEditor()
     Library.DialogOpenAnimationInfo, Library.DialogCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
     Library.DialogOverlayOpenAnimationInfo, Library.DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
 '@
-$taskSource += "`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskPopupMethods`n"
+$taskSource += "`n$taskDependencyCode`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskPopupMethods`n"
 $taskSource += @'
     local Groupbox = setmetatable({ Elements = {}, Container = New("Frame", { Parent = MainFrame }), Resize = function() end }, BaseGroupbox)
     return Library, Groupbox, Window, UserInputService
@@ -263,6 +275,59 @@ end
 '@
 $taskEditorSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'EditorControls.spec.luau'))
 $taskSource += "`nlocal RunEditor = (function()`n$taskEditorSpec`nend)()`nRunEditor(CreateEditor, Mock, Modules)`n"
+$taskSearchStart = $taskLibrarySource.IndexOf('local function MatchesSearch(')
+$taskSearchEnd = $taskLibrarySource.IndexOf('local function CheckDepbox(', $taskSearchStart)
+$taskSearchCode = $taskLibrarySource.Substring($taskSearchStart, $taskSearchEnd - $taskSearchStart)
+$taskReleaseStart = $taskLibrarySource.IndexOf('        Slider.CallbackOnRelease =')
+$taskReleaseEnd = $taskLibrarySource.IndexOf('        function Slider:SetValue(', $taskReleaseStart)
+$taskReleaseCode = $taskLibrarySource.Substring($taskReleaseStart, $taskReleaseEnd - $taskReleaseStart)
+$taskPointStart = $taskLibrarySource.IndexOf('        Viewport.ShowAttachments =')
+$taskPointEnd = $taskLibrarySource.IndexOf('        function Viewport:SetObject(', $taskPointStart)
+$taskPointCode = $taskLibrarySource.Substring($taskPointStart, $taskPointEnd - $taskPointStart)
+$taskSource += "`ndo`n$taskSearchCode`n"
+$taskSource += @'
+    assert(MatchesSearch({ Text = "Weapon", Tooltip = "Knife selection" }, "knife"))
+    assert(MatchesSearch({ Type = "Dropdown", Values = { "Karambit" } }, "karambit"))
+    assert(not MatchesSearch({ Text = "Weapon" }, "karambit"))
+    local Library = Mock.HostLibrary()
+    function Library:SafeCallback(Callback, ...) if Callback then Callback(...) end end
+    local Calls = 0
+    local Slider = { Value = 1, Callback = function() Calls += 1 end }
+    local Info = { CallbackOnRelease = true }
+'@
+$taskSource += "`n$taskReleaseCode`n"
+$taskSource += @'
+    Slider.Dragging = true
+    Slider:RunChanged()
+    Slider.Value = 2
+    Slider:RunChanged()
+    assert(Calls == 0 and Slider.PendingChange)
+    Slider.Dragging = false
+    Slider:RunChanged()
+    assert(Calls == 1)
+    Slider:RunChanged()
+    assert(Calls == 2)
+    local Vector3 = { new = function(X, Y, Z) return { X = X, Y = Y, Z = Z } end }
+    local Model = Instance.new("Model")
+    local Point = Instance.new("Attachment")
+    Point.Name, Point.WorldCFrame, Point.Parent = "Charm1", {}, Model
+    local ViewportFrame = Instance.new("ViewportFrame")
+    local Viewport = { Object = Model }
+    Info = { ShowAttachments = true }
+'@
+$taskSource += "`n$taskPointCode`n"
+$taskSource += @'
+    assert(#Viewport:GetAttachments() == 1 and #ViewportFrame:GetChildren() == 1)
+    local Marker = ViewportFrame:GetChildren()[1]
+    Point.WorldCFrame = {}
+    Viewport:RefreshAttachmentPoints()
+    assert(ViewportFrame:GetChildren()[1] == Marker and Marker.CFrame == Point.WorldCFrame)
+    Viewport:SetAttachmentPointsEnabled(false)
+    assert(#ViewportFrame:GetChildren() == 0)
+    print("PASS tooltip/value search, release-only slider callbacks and attachment marker reuse")
+end
+'@
+$taskSource += "`n"
 $taskSpecs = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Addons.spec.luau'))
 $taskSource += "local Run = (function()`n$taskSpecs`nend)()`nRun(Modules, Mock)`n"
 $taskGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-addons-" + [guid]::NewGuid().ToString() + '.luau')

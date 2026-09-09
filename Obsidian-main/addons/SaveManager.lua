@@ -603,6 +603,10 @@ function SaveManager:SetSubFolder(SubFolder: string)
 end
 
 
+function SaveManager:GetConfigs()
+    return self:RefreshConfigList()
+end
+
 function SaveManager:RefreshConfigList()
     if not SaveManager.FileSystemAvailable then
         return {}
@@ -643,6 +647,10 @@ function SaveManager:RefreshConfigList()
 end
 
 function SaveManager:SaveJSON(ConfigName)
+    if self.Library and self.Library.BuildLazyTabs then
+        local Built, Message = self.Library:BuildLazyTabs()
+        if not Built then return "", false, Message end
+    end
     local Library = SaveManager.Library
     if not Library then
         return "", false, "Library is not set"
@@ -672,7 +680,7 @@ function SaveManager:SaveJSON(ConfigName)
     end
 
     for Index, Toggle in Library.Toggles do
-        if not Toggle.Type then continue end
+        if not Toggle.Type or Toggle.Save == false then continue end
         if IgnoreIndexes[Index] then continue end
 
         local Parser = ElementParser[Toggle.Type]
@@ -684,7 +692,7 @@ function SaveManager:SaveJSON(ConfigName)
 
     
     for Index, Option in Library.Options do
-        if not Option.Type then continue end
+        if not Option.Type or Option.Save == false then continue end
         if IgnoreIndexes[Index] then continue end
 
         local Parser = ElementParser[Option.Type]
@@ -773,6 +781,10 @@ function SaveManager:EmitConfigLoaded(Report)
 end
 
 function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadContext: any?)
+    if self.Library and self.Library.BuildLazyTabs then
+        local Built, Message = self.Library:BuildLazyTabs()
+        if not Built then return false, Message end
+    end
     if not SaveManager.Library then
         return false, "Library is not set"
     end
@@ -1013,6 +1025,7 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
         end
 
         local Target = (Option.type == "Toggle" and Library.Toggles or Library.Options)[Option.idx]
+        if Target and Target.Save == false and not SkipRollback then LoadReport.Skipped += 1; continue end
         if not SkipRollback and Option.type ~= "Custom" and Option.type ~= "Groupbox" and Target and Target.ConfigVersion and Target.ConfigDefault
             and Target.ConfigVersion > (Option.version or 0) then
             local SuccessDefault, DefaultData = pcall(Parser.Save, Option.idx, Target.ConfigDefault)
@@ -1021,9 +1034,52 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
                 continue
             end
             Option = DefaultData
+            LoadReport.ResetIds = LoadReport.ResetIds or {}
+            table.insert(LoadReport.ResetIds, Option.idx)
         end
 
 
+
+        if not SkipRollback and Option.type == "Dropdown" and Target and type(Target.Values) == "table" then
+            local function Exists(Value)
+                if #Target.Values > 0 then return table.find(Target.Values, Value) ~= nil end
+                return Value ~= nil and Target.Values[Value] ~= nil
+            end
+            local Invalid = false
+            if Target.Multi then
+                for Key, Value in Option.value or {} do
+                    local Selected = type(Value) == "boolean" and Key or Value
+                    if Value ~= false and not Exists(Selected) then Invalid = true; break end
+                end
+            else
+                Invalid = Option.value ~= nil and not Exists(Option.value)
+            end
+            if Invalid then
+                local Default = Target.ConfigDefault and Target.ConfigDefault.Value or Target.Default
+                local Replacement
+                if Target.Multi then
+                    Replacement = {}
+                    for Key, Value in Default or {} do
+                        local Selected = type(Value) == "boolean" and Key or Value
+                        if Value ~= false and Exists(Selected) then table.insert(Replacement, Selected) end
+                    end
+                elseif Exists(Default) then Replacement = Default
+                elseif not Target.AllowNull then
+                    if #Target.Values > 0 then Replacement = Target.Values[1]
+                    else
+                        local Keys = {}
+                        for Key in Target.Values do table.insert(Keys, Key) end
+                        table.sort(Keys, function(A, B) return tostring(A) < tostring(B) end)
+                        Replacement = Keys[1]
+                    end
+                end
+                Option = table.clone(Option)
+                Option.value = Replacement
+                LoadReport.Adjusted = (LoadReport.Adjusted or 0) + 1
+                LoadReport.AdjustedIds = LoadReport.AdjustedIds or {}
+                table.insert(LoadReport.AdjustedIds, Option.idx)
+            end
+        end
 
         local PreviousContext = Library.ConfigLoadContext
         local Context = { Thread = coroutine.running(), Errors = {} }

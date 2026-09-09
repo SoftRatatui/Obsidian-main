@@ -2149,3 +2149,189 @@ is clamped to available space and updates with window size. OnDismiss receives t
 closing dialog. Build persistent models outside transient popups; destroy popup
 controls without discarding the user's model data. Popup controls with temporary
 IDs should be ignored by SaveManager, or recreated before loading saved values.
+## September 9 wishlist update
+
+The release remains `0.0.1-release-3`. Update Library.lua, Library.d.luau,
+ImageGallery and SaveManager together. Mixed revisions can omit option versions,
+hidden values or new report fields. The Preview tab demonstrates presets, release-only
+sliders, keybind profiles, deferred pages and attachment markers.
+
+### Sections, presets and change events
+
+`Groupbox:AddSection(title)` creates one labeled separator control. It returns a
+Label controller with SetText, SetVisible and Destroy, without adding a second
+entry to the group's controls.
+
+```lua
+Groupbox:AddSection("Appearance")
+local ok, message = Library:SetValues({ Thickness = 2, Enabled = true })
+local disconnect = Library:OnConfigChanged(function(event)
+    dirty = true
+end)
+```
+
+SetValues validates option IDs before applying anything. It temporarily enables
+disabled controls, restores their disabled state, and defers dependency updates to
+one pass. Setters and individual control callbacks still run. Unknown IDs return
+false and an error without applying the batch. Setter errors are collected; already
+applied values are not rolled back. Do not use it as an atomic config transaction.
+Use SaveManager.Load for config rollback behavior. The returned boolean reports
+setter success, not completion of arbitrary asynchronous work started by callbacks.
+
+Color picker values accept Color3 or `{ Value = color, Transparency = 0.5 }`.
+Key pickers accept their usual `{ key, mode, modifiers }` tuple. Other controls use
+their normal SetValue representation. Slider groups expose individual option IDs
+as `groupId/fieldId`.
+
+OnConfigChanged reports `{ Id, Values, Source }`: ordinary changes include Id;
+batches include the changed values and Source="Batch". Source="Config" identifies
+changes inside config application; ordinary control changes use "Control". The
+signal includes Save=false options and rollback changes. It is not proof that a
+config loaded successfully; use OnConfigLoaded for that. Values are snapshots;
+read a key picker's Mode/Modifiers directly if needed. A nil value may be absent
+from Values, while Id still identifies the changed control. Disconnect the returned
+function when the observer is destroyed. Callback errors do not interrupt setters.
+
+### Dropdown recovery and hidden option versions
+
+Dropdown selections are checked against current Values. Unknown saved selections
+fall back to the creation default if it is still valid, then to an available value
+(or an empty selection when allowed). For multi selection, invalid saved entries
+cause restoration of the valid default subset. The load report includes `Adjusted`
+and `AdjustedIds` when a replacement occurs. Invalid multi values are also filtered
+by the runtime setter. Required single dropdowns get an available initial value
+when the requested default cannot be resolved.
+
+Hidden options already support ConfigVersion; regression tests now exercise their
+captured defaults alongside actual hidden controllers. A version is opt-in and must
+increase to replace a saved value. Missing saved versions count as zero; equal
+versions preserve the user value. `report.ResetIds` identifies version-driven resets.
+Create the hidden option before loading. Do not confuse a config file's schema with
+an individual option's ConfigVersion.
+
+`SaveManager:GetConfigs()` returns the same sorted names used by the config selector.
+Pending/backup files stay filtered out. Folder and filesystem rules match
+RefreshConfigList, which remains available.
+
+Set `Save = false` in an option's creation info, or call `option:SetSave(false)`.
+SaveManager omits it when saving and skips old persisted entries when loading.
+SetSave(true) enables persistence again. Hidden values and item slots support this
+flag too. A slider group's Save setting is inherited by fields that do not override
+it. Excluding a control does not disable its UI or callbacks.
+
+### Search, group visibility and mobile tooltips
+
+Global search includes Text, Tooltip, DisabledTooltip and dropdown keys/values.
+Hidden options have no GUI and are skipped safely. Group and tab hiding closes
+context menus belonging to descendant controls and dismisses their tooltip.
+
+Holding a touch on a control for 0.55 seconds opens its tooltip. Moving more than
+ten pixels cancels the hold so a scroll does not show it. Releasing the touch hides
+it. Disabled tooltip text is supported. The source must still be visible and inside
+the active popup. Tooltips remain conditional on TooltipsEnabled.
+
+Changing the library font updates live notification faces and recalculates their
+size and stack positions. Theme and font application use the existing property
+registry; they do not require a whole-ScreenGui GetDescendants traversal. Subtree
+scans are still used where needed for addon setup, cleanup and explicit model scans.
+
+### Release-only slider callbacks and custom groups
+
+```lua
+Groupbox:AddSlider("Wear", {
+    Text = "Wear", Default = 0, Min = 0, Max = 1, Rounding = 2,
+    CallbackOnRelease = true,
+    Callback = function(value) rebuildPreview(value) end,
+})
+```
+
+The thumb and displayed value update during dragging. Callback and OnChanged run
+once when dragging ends if a value changed. Programmatic SetValue remains immediate;
+destroying the slider cancels a pending drag callback. The default remains live
+callbacks. Individual fields of AddSliderGroup can set CallbackOnRelease too.
+
+AddSliderGroup already accepts arbitrary `Sliders` entries. Supply unique Id values
+and each field's normal Slider settings; the built-in X/Y/Rotation/Scale/Wear list
+is only the default. See the item editor section above for layout and config IDs.
+
+### Lazy tabs
+
+```lua
+local Tab = Window:AddLazyTab("Catalog", {
+    Icon = "images",
+    Build = function(tab)
+        local group = tab:AddLeftGroupbox("Items")
+        group:AddLabel("Created when first needed")
+    end,
+})
+```
+
+Build runs once on the first Show. The first visible tab builds immediately.
+`Tab:Build()` can prepare a tab explicitly and returns success/error. A failed build
+is reported and its created groupboxes/tabboxes are destroyed; it is not retried
+silently. Build should only construct that tab, not start another config load.
+
+SaveManager builds remaining lazy tabs before saving or loading so cold controls
+are not omitted. `Library:BuildLazyTabs()` provides the same explicit preparation.
+Lazy tabs reduce startup construction when those tabs are not needed immediately;
+a startup autoload that restores all controls will still build them. Search does
+not construct cold tabs just to inspect content that does not exist yet.
+
+### Keybind profiles
+
+```lua
+local Profiles = Library:AddKeybindProfile("Combat", {
+    Profiles = {
+        Normal = { ActionKey = { "P", "Toggle", {} } },
+        Alternate = { ActionKey = { "O", "Hold", { "LeftControl" } } },
+    },
+    Default = "Normal",
+    CycleKey = "F6",
+    Callback = function(name) currentProfileName = name end,
+})
+Profiles:Apply("Alternate")
+```
+
+Apply returns success/error and only accepts existing KeyPicker IDs. Next cycles
+profile names in sorted order. Current contains the last successfully applied
+name. CycleKey is optional; it is ignored while typing or when input is consumed.
+Destroy disconnects the cycle key; library unload also destroys the profile.
+Profiles and their active name are not automatically persisted. The underlying
+key pickers save normally; use a hidden value if the profile name must be saved.
+The info table can also be passed as the only argument.
+
+### Attachment points in a viewport
+
+```lua
+local Preview = Groupbox:AddViewport("CharmPreview", {
+    Model = model, Clone = true, Interactive = true,
+    ShowAttachments = true,
+    AttachmentNames = { "Charm1", "Charm2", "Charm3", "Charm4" },
+    AttachmentRadius = 0.08,
+})
+```
+
+ShowAttachments displays small spheres at Attachment.WorldCFrame. Omit
+AttachmentNames to show all attachments. AttachmentRadius is in model units;
+AttachmentColor overrides the theme accent. GetAttachments returns Attachment
+instances from the preview model. SetAttachmentPointsEnabled toggles markers.
+Call RefreshAttachmentPoints after changing the preview model's transforms or
+attachments. Replacement refreshes automatically. Existing marker parts are reused
+and removed when a point disappears. Scanning is explicit, not per rendered frame.
+
+### Verified existing performance paths
+
+Empty ImageGallery instances accept later SetItems calls and reuse their allocated
+cards. Passing Gallery.Items back into SetItems is now safe. Search, category and
+page state are refreshed on replacement. CollectionModel-backed galleries should
+receive model changes through the model API so all bound views remain consistent.
+
+GetTextBounds already uses a bounded cache keyed by text, font, text size and
+available width. Width must remain part of the key because wrapping affects height.
+Font changes invalidate the cache. Mobile fallback measurements have a retry
+cooldown so a temporary font-service failure can recover.
+
+Local regression tests cover batching, lazy builds, hidden option versions, stale
+dropdowns, persistence exclusion, late catalog population, card reuse, search,
+release-only callbacks and attachment marker reuse. Device rendering, gesture timing
+and frame-time improvements still require checking in Roblox on target hardware.

@@ -1870,6 +1870,7 @@ end
 local DependencyUpdateQueued = false
 
 function Library:UpdateDependencyBoxes()
+    if self.ValueBatchDepth and self.ValueBatchDepth > 0 then self.DependenciesDirty = true; return end
     for _, Depbox in Library.DependencyBoxes do
         Depbox:Update(true)
     end
@@ -1880,6 +1881,7 @@ function Library:UpdateDependencyBoxes()
 end
 
 function Library:QueueDependencyUpdate()
+    if self.ValueBatchDepth and self.ValueBatchDepth > 0 then self.DependenciesDirty = true; return end
     if DependencyUpdateQueued or Library.Unloaded then
         return
     end
@@ -1893,10 +1895,22 @@ function Library:QueueDependencyUpdate()
     end)
 end
 
+local function MatchesSearch(Element, Search)
+    local Parts = { tostring(Element.Text or ""), tostring(Element.Tooltip or ""), tostring(Element.DisabledTooltip or "") }
+    if Element.Type == "Dropdown" then
+        for Key, Value in Element.Values or {} do
+            table.insert(Parts, tostring(Key))
+            table.insert(Parts, tostring(Value))
+        end
+    end
+    return table.concat(Parts, " "):lower():find(Search, 1, true) ~= nil
+end
+
 local function CheckDepbox(Box, Search)
     local VisibleElements = 0
 
     for _, ElementInfo in Box.Elements do
+            if not ElementInfo.Holder then continue end
         if ElementInfo.Type == "Divider" then
             ElementInfo.Holder.Visible = false
             continue
@@ -1905,12 +1919,12 @@ local function CheckDepbox(Box, Search)
             local Visible = false
 
             
-            if ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+            if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
                 Visible = true
             else
                 ElementInfo.Base.Visible = false
             end
-            if ElementInfo.SubButton.Text:lower():find(Search, 1, true) and ElementInfo.SubButton.Visible then
+            if MatchesSearch(ElementInfo.SubButton, Search) and ElementInfo.SubButton.Visible then
                 Visible = true
             else
                 ElementInfo.SubButton.Base.Visible = false
@@ -1924,7 +1938,7 @@ local function CheckDepbox(Box, Search)
         end
 
         
-        if ElementInfo.Text and ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+        if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
             ElementInfo.Holder.Visible = true
             VisibleElements += 1
         else
@@ -1945,6 +1959,7 @@ local function CheckDepbox(Box, Search)
 end
 local function RestoreDepbox(Box)
     for _, ElementInfo in Box.Elements do
+            if not ElementInfo.Holder then continue end
         ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
         if ElementInfo.SubButton then
@@ -1980,6 +1995,7 @@ local function ApplySearchToTab(Tab, Search)
 
         local VisibleElements = 0
         for _, ElementInfo in Groupbox.Elements do
+            if not ElementInfo.Holder then continue end
             if ElementInfo.Type == "Divider" then
                 ElementInfo.Holder.Visible = false
                 continue
@@ -1988,12 +2004,12 @@ local function ApplySearchToTab(Tab, Search)
                 local Visible = false
 
                 
-                if ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+                if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
                     Visible = true
                 else
                     ElementInfo.Base.Visible = false
                 end
-                if ElementInfo.SubButton.Text:lower():find(Search, 1, true) and ElementInfo.SubButton.Visible then
+                if MatchesSearch(ElementInfo.SubButton, Search) and ElementInfo.SubButton.Visible then
                     Visible = true
                 else
                     ElementInfo.SubButton.Base.Visible = false
@@ -2008,7 +2024,7 @@ local function ApplySearchToTab(Tab, Search)
             end
 
             
-            if ElementInfo.Text and ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+            if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
                 ElementInfo.Holder.Visible = true
                 VisibleElements += 1
             else
@@ -2040,6 +2056,7 @@ local function ApplySearchToTab(Tab, Search)
             VisibleElements[SubTab] = 0
 
             for _, ElementInfo in SubTab.Elements do
+            if not ElementInfo.Holder then continue end
                 if ElementInfo.Type == "Divider" then
                     ElementInfo.Holder.Visible = false
                     continue
@@ -2048,12 +2065,12 @@ local function ApplySearchToTab(Tab, Search)
                     local Visible = false
 
                     
-                    if ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+                    if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
                         Visible = true
                     else
                         ElementInfo.Base.Visible = false
                     end
-                    if ElementInfo.SubButton.Text:lower():find(Search, 1, true) and ElementInfo.SubButton.Visible then
+                    if MatchesSearch(ElementInfo.SubButton, Search) and ElementInfo.SubButton.Visible then
                         Visible = true
                     else
                         ElementInfo.SubButton.Base.Visible = false
@@ -2067,7 +2084,7 @@ local function ApplySearchToTab(Tab, Search)
                 end
 
                 
-                if ElementInfo.Text and ElementInfo.Text:lower():find(Search, 1, true) and ElementInfo.Visible then
+                if MatchesSearch(ElementInfo, Search) and ElementInfo.Visible then
                     ElementInfo.Holder.Visible = true
                     VisibleElements[SubTab] += 1
                 else
@@ -2111,6 +2128,7 @@ local function ResetTab(Tab)
 
     for _, Groupbox in Tab.Groupboxes do
         for _, ElementInfo in Groupbox.Elements do
+            if not ElementInfo.Holder then continue end
             ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
             if ElementInfo.SubButton then
@@ -2134,6 +2152,7 @@ local function ResetTab(Tab)
     for _, Tabbox in Tab.Tabboxes do
         for _, SubTab in Tabbox.Tabs do
             for _, ElementInfo in SubTab.Elements do
+            if not ElementInfo.Holder then continue end
                 ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                 if ElementInfo.SubButton then
@@ -6108,6 +6127,15 @@ TooltipLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
 end)
 
 local CurrentHoverInstance
+function Library:ClosePopupsUnder(Root)
+    if not Root then return end
+    if CurrentMenu and CurrentMenu.Holder and (CurrentMenu.Holder == Root or CurrentMenu.Holder:IsDescendantOf(Root)) then CurrentMenu:Close() end
+    if CurrentHoverInstance and (CurrentHoverInstance == Root or CurrentHoverInstance:IsDescendantOf(Root)) then
+        TooltipLabel.Visible = false
+        CurrentHoverInstance = nil
+    end
+end
+
 function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInstance: GuiObject)
     local TooltipTable = {
         Disabled = false,
@@ -6168,6 +6196,35 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
         return Connection
     end
 
+    local Touch, TouchOrigin, TouchVersion = nil, nil, 0
+    local function CancelTouch()
+        TouchVersion += 1
+        Touch = nil
+        if CurrentHoverInstance == HoverInstance then TooltipLabel.Visible = false; CurrentHoverInstance = nil end
+    end
+    GiveSignal(HoverInstance.InputBegan:Connect(function(Input)
+        if Input.UserInputType ~= Enum.UserInputType.Touch then return end
+        Touch, TouchOrigin = Input, Input.Position
+        TouchVersion += 1
+        local Version = TouchVersion
+        task.delay(0.55, function()
+            if TooltipTable.Destroyed or Version ~= TouchVersion or not Touch then return end
+            if not Library:IsDropTargetVisible(HoverInstance, Touch.Position) then return end
+            local Text = TooltipTable.Disabled and DisabledInfoStr or InfoStr
+            if type(Text) ~= "string" then return end
+            CurrentHoverInstance = HoverInstance
+            TooltipLabel.Parent = HoverInstance:FindFirstAncestorOfClass("ScreenGui") or ScreenGui
+            TooltipLabel.Text = Text
+            TooltipLabel.Position = UDim2.fromOffset(Touch.Position.X + 12, Touch.Position.Y - 40)
+            TooltipLabel.Visible = true
+            ClampGuiToViewport(TooltipLabel, 8)
+        end)
+    end))
+    GiveSignal(UserInputService.InputChanged:Connect(function(Input)
+        if Input == Touch and (Input.Position - TouchOrigin).Magnitude > 10 then CancelTouch() end
+    end))
+    GiveSignal(UserInputService.InputEnded:Connect(function(Input) if Input == Touch then CancelTouch() end end))
+    GiveSignal(HoverInstance.Destroying:Connect(CancelTouch))
     GiveSignal(HoverInstance.MouseEnter:Connect(DoHover))
     GiveSignal(HoverInstance.MouseMoved:Connect(DoHover))
     GiveSignal(HoverInstance.MouseLeave:Connect(function()
@@ -7448,7 +7505,7 @@ do
             Options[Idx] = nil
         end
 
-        Library:RegisterConfigOption(KeyPicker, Info)
+        Library:RegisterConfigOption(KeyPicker, Info, Idx)
         Options[Idx] = KeyPicker
 
         return self
@@ -8328,7 +8385,7 @@ do
             Options[Idx] = nil
         end
 
-        Library:RegisterConfigOption(ColorPicker, Info)
+        Library:RegisterConfigOption(ColorPicker, Info, Idx)
         Options[Idx] = ColorPicker
 
         return self
@@ -8449,7 +8506,131 @@ local function CopyOptionValue(Value)
     return Copy
 end
 
-function Library:RegisterConfigOption(Option, Info)
+function Library:OnConfigChanged(Callback)
+    assert(type(Callback) == "function", "Expected callback")
+    self.ConfigChangedListeners = self.ConfigChangedListeners or {}
+    local Listener = { Callback = Callback }
+    table.insert(self.ConfigChangedListeners, Listener)
+    return function()
+        Listener.Callback = nil
+        local Index = table.find(self.ConfigChangedListeners, Listener)
+        if Index then table.remove(self.ConfigChangedListeners, Index) end
+    end
+end
+
+function Library:EmitConfigChanged(Option)
+    local Id = Option.ConfigId
+    for Key, Candidate in (not Id and (Option.Type == "Toggle" and self.Toggles or self.Options) or {}) do
+        if Candidate == Option then Id = Key; break end
+    end
+    if Id == nil then return end
+    self.PendingOptionChanges = self.PendingOptionChanges or {}
+    self.PendingOptionChanges[Id] = CopyOptionValue(Option.Value)
+    if (self.ValueBatchDepth or 0) > 0 then return end
+    local Changes = self.PendingOptionChanges
+    self.PendingOptionChanges = {}
+    for _, Listener in table.clone(self.ConfigChangedListeners or {}) do
+        if Listener.Callback then pcall(Listener.Callback, { Values = CopyOptionValue(Changes), Id = Id, Source = self.ConfigLoadContext and "Config" or "Control" }) end
+    end
+end
+
+function Library:SetValues(Values)
+    assert(type(Values) == "table", "Expected option values")
+    local Targets = {}
+    for Id in Values do
+        local Option = self.Options[Id] or self.Toggles[Id]
+        if not Option or type(Option.SetValue) ~= "function" and type(Option.SetValueRGB) ~= "function" then return false, "Unknown option: " .. tostring(Id) end
+        Targets[Id] = Option
+    end
+    self.ValueBatchDepth = (self.ValueBatchDepth or 0) + 1
+    local Errors = {}
+    for Id, Value in Values do
+        local Option = Targets[Id]
+        local Disabled = Option.Disabled
+        Option.Disabled = false
+        local Success, Message = pcall(function()
+            if Option.Type == "ColorPicker" then
+                if typeof(Value) == "Color3" then Option:SetValueRGB(Value) else Option:SetValueRGB(Value.Value, Value.Transparency) end
+            else Option:SetValue(Value) end
+        end)
+        Option.Disabled = Disabled
+        if not Success then table.insert(Errors, tostring(Id) .. ": " .. tostring(Message)) end
+        Targets[Id] = Option
+    end
+    self.ValueBatchDepth -= 1
+    if self.ValueBatchDepth == 0 then
+        if self.DependenciesDirty then self.DependenciesDirty = false; self:QueueDependencyUpdate() end
+        local Changes = self.PendingOptionChanges or {}
+        self.PendingOptionChanges = {}
+        if next(Changes) then
+            for _, Listener in table.clone(self.ConfigChangedListeners or {}) do
+                if Listener.Callback then pcall(Listener.Callback, { Values = CopyOptionValue(Changes), Source = "Batch" }) end
+            end
+        end
+    end
+    return #Errors == 0, #Errors > 0 and table.concat(Errors, "; ") or nil
+end
+
+function Library:BuildLazyTabs()
+    for _, Tab in self.Tabs do
+        if Tab.Build and not Tab.Built then
+            local Success, Message = Tab:Build()
+            if not Success then return false, tostring(Message) end
+        end
+    end
+    return true
+end
+
+function Library:AddKeybindProfile(Id, Info)
+    if type(Id) == "table" and Info == nil then Info, Id = Id, nil end
+    Info = Info or {}
+    local Profile = { Profiles = Info.Profiles or {}, Current = nil, Destroyed = false }
+    function Profile:Apply(Name)
+        if Profile.Destroyed then return false, "Profile is destroyed" end
+        local Values = Profile.Profiles[Name]
+        if type(Values) ~= "table" then return false, "Unknown profile" end
+        for Key in Values do
+            if not Library.Options[Key] or Library.Options[Key].Type ~= "KeyPicker" then return false, "Unknown key picker: " .. tostring(Key) end
+        end
+        local Success, Message = Library:SetValues(Values)
+        if Success then Profile.Current = Name; Library:SafeCallback(Info.Callback, Name) end
+        return Success, Message
+    end
+    function Profile:Next()
+        local Names = {}
+        for Name in Profile.Profiles do table.insert(Names, Name) end
+        table.sort(Names)
+        if #Names == 0 then return false, "No profiles" end
+        return Profile:Apply(Names[(table.find(Names, Profile.Current) or 0) % #Names + 1])
+    end
+    local Connection
+    if Info.CycleKey then
+        local Key = typeof(Info.CycleKey) == "EnumItem" and Info.CycleKey or Enum.KeyCode[Info.CycleKey]
+        assert(Key, "Invalid CycleKey")
+        Connection = UserInputService.InputBegan:Connect(function(Input, Processed)
+            if not Processed and not UserInputService:GetFocusedTextBox() and Input.KeyCode == Key then Profile:Next() end
+        end)
+    end
+    function Profile:Destroy()
+        Profile.Destroyed = true
+        if Connection then Connection:Disconnect() end
+    end
+    Library:OnUnload(function() Profile:Destroy() end)
+    if Info.Default then Profile:Apply(Info.Default) end
+    return Profile
+end
+
+function Library:RegisterConfigOption(Option, Info, Idx)
+    Option.ConfigId = Idx
+    Option.Save = not Info or Info.Save ~= false
+    function Option:SetSave(Enabled) Option.Save = Enabled ~= false; return Option end
+    if Option.RunChanged then
+        local RunChanged = Option.RunChanged
+        function Option:RunChanged(...)
+            RunChanged(Option, ...)
+            if Library.EmitConfigChanged and not (Option.Dragging and Option.CallbackOnRelease) then Library:EmitConfigChanged(Option) end
+        end
+    end
     function Option:SetConfigVersion(Version)
         assert(type(Version) == "number" and Version >= 1 and Version < math.huge and Version % 1 == 0, "ConfigVersion must be a positive integer")
         Option.ConfigVersion = Version
@@ -8494,7 +8675,7 @@ function Library:AddHidden(Idx, Default, Info)
         Hidden.Callback, Hidden.Changed = nil, nil
         if Options[Idx] == Hidden then Options[Idx] = nil end
     end
-    Library:RegisterConfigOption(Hidden, Info)
+    Library:RegisterConfigOption(Hidden, Info, Idx)
     Options[Idx] = Hidden
     return Hidden
 end
@@ -8707,6 +8888,13 @@ do
 
         table.insert(Groupbox.Elements, Divider)
         return Divider
+    end
+
+    function Funcs:AddSection(Title)
+        local Section = self:AddLabel({ Text = tostring(Title), Size = 12 })
+        New("Frame", { BackgroundColor3 = "OutlineColor", BackgroundTransparency = 0.45,
+            Position = UDim2.new(0, 0, 1, -1), Size = UDim2.new(1, 0, 0, 1), Parent = Section.Holder })
+        return Section
     end
 
     function Funcs:AddLabel(...)
@@ -9778,7 +9966,7 @@ do
 
         Toggle.Default = Toggle.Value
 
-        Library:RegisterConfigOption(Toggle, Info)
+        Library:RegisterConfigOption(Toggle, Info, Idx)
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
@@ -10118,7 +10306,7 @@ do
 
         Toggle.Default = Toggle.Value
 
-        Library:RegisterConfigOption(Toggle, Info)
+        Library:RegisterConfigOption(Toggle, Info, Idx)
         Toggles[Idx] = Toggle
 
         function Toggle:Destroy()
@@ -10393,7 +10581,7 @@ do
             Input.Default = Input.EmptyReset
         end
         
-        Library:RegisterConfigOption(Input, Info)
+        Library:RegisterConfigOption(Input, Info, Idx)
         Options[Idx] = Input
 
         function Input:Destroy()
@@ -10692,7 +10880,9 @@ do
             Slider:Display()
         end
 
+        Slider.CallbackOnRelease = Info.CallbackOnRelease == true
         function Slider:RunChanged()
+            if Slider.Dragging and Slider.CallbackOnRelease then Slider.PendingChange = true; return end
             Library:SafeCallback(Slider.Callback, Slider.Value)
             Library:SafeCallback(Slider.Changed, Slider.Value)
         end
@@ -10847,6 +11037,7 @@ do
                 Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = false
             end
 
+            Slider.Dragging = true
             while IsDragInput(Input) and not Slider.Destroyed do
                 local Location = Input.UserInputType == Enum.UserInputType.Touch and Input.Position.X or Mouse.X
                 local Scale = math.clamp((Location - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
@@ -10861,6 +11052,9 @@ do
 
                 RunService.RenderStepped:Wait()
             end
+
+            Slider.Dragging = false
+            if Slider.PendingChange and not Slider.Destroyed then Slider.PendingChange = false; Slider:RunChanged() end
 
             if Library.ActiveTab then
                 for _, Side in Library.ActiveTab.Sides do
@@ -10887,7 +11081,7 @@ do
 
         Slider.Default = Slider.Value
 
-        Library:RegisterConfigOption(Slider, Info)
+        Library:RegisterConfigOption(Slider, Info, Idx)
         Options[Idx] = Slider
 
         function Slider:Destroy()
@@ -10951,6 +11145,7 @@ do
             ValueImages = Info.ValueImages,
 
             Multi = Info.Multi,
+            AllowNull = Info.AllowNull,
             DragSelect = Info.Multi and not Library.IsMobile and Info.DragSelect == true,
 
             SpecialType = Info.SpecialType,
@@ -11750,6 +11945,17 @@ do
             return Dropdown.Values[Val] ~= nil
         end
 
+        local function FallbackValue()
+            local Default = Dropdown.ConfigDefault and Dropdown.ConfigDefault.Value
+            if Default ~= nil and ValueExists(Default) then return Default end
+            if Info.AllowNull then return nil end
+            if IsSequentialArray(Dropdown.Values) then return Dropdown.Values[1] end
+            local Keys = {}
+            for Key in Dropdown.Values do table.insert(Keys, Key) end
+            table.sort(Keys, function(A, B) return tostring(A) < tostring(B) end)
+            return Keys[1]
+        end
+
         local function AreSelectedValuesEqual(First, Second)
             for Value in First do
                 if not Second[Value] then
@@ -11771,9 +11977,9 @@ do
                 local Table = {}
 				
                 for Val, Active in Value or {} do
-                    if typeof(Active) ~= "boolean" then
+                    if typeof(Active) ~= "boolean" and ValueExists(Active) then
                         Table[Active] = true
-                    elseif Active and ValueExists(Val) then
+                    elseif typeof(Active) == "boolean" and Active and ValueExists(Val) then
                         Table[Val] = true
                     end
                 end
@@ -11787,8 +11993,10 @@ do
                 local NextValue = Dropdown.Value
                 if ValueExists(Value) then
                     NextValue = Value
-                elseif not Value then
+                elseif Value == nil and Info.AllowNull then
                     NextValue = nil
+                else
+                    NextValue = FallbackValue()
                 end
 
                 if Dropdown.Value == NextValue then
@@ -12028,11 +12236,12 @@ do
         Dropdown.Holder = Holder
         table.insert(Groupbox.Elements, Dropdown)
 
+        if not Info.Multi and Dropdown.Value == nil then Dropdown.Value = FallbackValue(); Dropdown:Display() end
         Dropdown.Default = Defaults
         Dropdown.DefaultValues = Dropdown.Values
 
         Dropdown:RefreshTypography()
-        Library:RegisterConfigOption(Dropdown, Info)
+        Library:RegisterConfigOption(Dropdown, Info, Idx)
         Options[Idx] = Dropdown
 
         function Dropdown:Destroy()
@@ -12361,6 +12570,50 @@ do
             FocusCamera()
         end
 
+        Viewport.ShowAttachments = Info.ShowAttachments == true
+        local AttachmentMarkers = {}
+        function Viewport:GetAttachments()
+            local Points = {}
+            for _, Object in Viewport.Object:GetDescendants() do
+                if Object:IsA("Attachment") then table.insert(Points, Object) end
+            end
+            return Points
+        end
+        function Viewport:RefreshAttachmentPoints()
+            if Viewport.Destroyed then return end
+            local Present = {}
+            if Viewport.ShowAttachments then
+                for _, Point in Viewport:GetAttachments() do
+                    if Info.AttachmentNames and not table.find(Info.AttachmentNames, Point.Name) then continue end
+                    Present[Point] = true
+                    local Marker = AttachmentMarkers[Point]
+                    if not Marker then
+                        Marker = Instance.new("Part")
+                        Marker.Name = "AttachmentPoint_" .. Point.Name
+                        Marker.Shape = Enum.PartType.Ball
+                        Marker.Anchored, Marker.CanCollide, Marker.CastShadow = true, false, false
+                        Marker.Material = Enum.Material.Neon
+                        Marker.Parent = ViewportFrame
+                        AttachmentMarkers[Point] = Marker
+                        Library:AddToRegistry(Marker, { Color = Info.AttachmentColor or "AccentColor" })
+                    end
+                    local Radius = math.clamp(tonumber(Info.AttachmentRadius) or 0.08, 0.005, 2)
+                    Marker.Size = Vector3.new(Radius * 2, Radius * 2, Radius * 2)
+                    Marker.CFrame = Point.WorldCFrame
+                    Marker.Color = Info.AttachmentColor or Library.Scheme.AccentColor
+                end
+            end
+            for Point, Marker in AttachmentMarkers do
+                if not Present[Point] then Library:RemoveFromRegistry(Marker); Marker:Destroy(); AttachmentMarkers[Point] = nil end
+            end
+        end
+        function Viewport:SetAttachmentPointsEnabled(Enabled)
+            Viewport.ShowAttachments = Enabled == true
+            Viewport:RefreshAttachmentPoints()
+            return Viewport
+        end
+        Viewport:RefreshAttachmentPoints()
+
         function Viewport:SetObject(Object: Instance, Clone: boolean?)
             assert(
                 typeof(Object) == "Instance" and (Object:IsA("BasePart") or Object:IsA("Model")),
@@ -12386,6 +12639,7 @@ do
                 FocusCamera()
             end
 
+            Viewport:RefreshAttachmentPoints()
             Groupbox:Resize()
         end
 
@@ -12459,6 +12713,7 @@ do
                 return
             end
 
+            Viewport:SetAttachmentPointsEnabled(false)
             Viewport.Destroyed = true
             SetTabScrollingEnabled(true)
 
@@ -13253,6 +13508,7 @@ do
             local Settings = table.clone(Field)
             Settings.Text, Settings.Compact, Settings.HideMax = Field.Text or Field.Id, true, true
             Settings.ConfigVersion = Settings.ConfigVersion or Info.ConfigVersion
+            if Settings.Save == nil then Settings.Save = Info.Save end
             Settings.Callback = function(Value)
                 Library:SafeCallback(Field.Callback, Value)
                 Changed()
@@ -13358,6 +13614,7 @@ do
         end
 
         function Depbox:SetVisible(Visible)
+                if not Visible then Library:ClosePopupsUnder(Depbox.BoxHolder or Depbox.Holder) end
             Depbox.RequestedVisible = Visible == true
             Depbox:Update()
             Depbox:Resize()
@@ -13544,6 +13801,7 @@ do
         end
 
         function DepGroupbox:SetVisible(Visible)
+                if not Visible then Library:ClosePopupsUnder(DepGroupbox.BoxHolder or DepGroupbox.Holder) end
             DepGroupbox.RequestedVisible = Visible == true
             DepGroupbox:Update()
             DepGroupbox:Resize()
@@ -13807,6 +14065,8 @@ function Library:SetFont(FontFace, SkipRegistryUpdate: boolean?)
     Library:ClearTextBoundsCache()
     if not SkipRegistryUpdate then
         Library:UpdateColorsUsingRegistry()
+        for _, Data in Library.Notifications do if Data.Resize then Data:Resize() end end
+        if Library.UpdateNotificationPositions then Library:UpdateNotificationPositions(true) end
         for _, Option in Options do
             if type(Option.RefreshTypography) == "function" then Option:RefreshTypography() end
         end
@@ -16156,6 +16416,7 @@ function Library:CreateWindow(WindowInfo)
             }
 
             function Tabbox:SetVisible(Visible)
+                if not Visible then Library:ClosePopupsUnder(Tabbox.BoxHolder or Tabbox.Holder) end
                 Tabbox.Visible = Visible == true
                 BoxHolder.Visible = Tabbox.Visible
                 return Tabbox
@@ -16341,6 +16602,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:Hide()
+            for _, Group in Tab.Groupboxes or {} do Library:ClosePopupsUnder(Group.BoxHolder or Group.Holder) end
                     ApplyTabboxVisual(false, true)
                     Container.Visible = false
 
@@ -16733,6 +16995,7 @@ function Library:CreateWindow(WindowInfo)
             end
 
             function Groupbox:SetVisible(Visible: boolean)
+                if not Visible then Library:ClosePopupsUnder(Groupbox.BoxHolder or Groupbox.Holder) end
                 if Groupbox.Visible == Visible then
                     return
                 end
@@ -16876,6 +17139,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            for _, Group in Tab.Groupboxes or {} do Library:ClosePopupsUnder(Group.BoxHolder or Group.Holder) end
             if Tab.Destroyed then
                 return
             end
@@ -17270,6 +17534,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            for _, Group in Tab.Groupboxes or {} do Library:ClosePopupsUnder(Group.BoxHolder or Group.Holder) end
             if Tab.Destroyed then
                 return
             end
@@ -17891,6 +18156,38 @@ function Library:CreateWindow(WindowInfo)
             Library:GiveSignal(Library.DialogEscapeConnection)
         end
         return Dialog
+    end
+
+    function Window:AddLazyTab(Name, Info)
+        assert(type(Info) == "table" and type(Info.Build) == "function", "Lazy tab requires Build callback")
+        local Tab = Window:AddTab(Name, Info.Icon)
+        Tab.Built = false
+        function Tab:Build()
+            if Tab.Built then return true end
+            if Tab.Building then return false, "Tab build is already running" end
+            if Tab.BuildError then return false, Tab.BuildError end
+            Tab.Building = true
+            local Success, Message = pcall(Info.Build, Tab)
+            Tab.Building = false
+            Tab.Built = Success
+            if not Success then
+                Tab.BuildError = tostring(Message)
+                for _, Group in table.clone(Tab.Groupboxes) do Group:Destroy() end
+                for _, Box in table.clone(Tab.Tabboxes) do Box:Destroy() end
+            end
+            return Success, Message
+        end
+        local Show = Tab.Show
+        function Tab:Show()
+            local Success, Message = Tab:Build()
+            if not Success then error(Message, 2) end
+            return Show(Tab)
+        end
+        if Library.ActiveTab == Tab then
+            local Success, Message = Tab:Build()
+            if not Success then error(Message, 2) end
+        end
+        return Tab
     end
 
     Window.AddPopup = Window.AddDialog
@@ -19283,6 +19580,8 @@ function Library:Unload()
     table.clear(Library.ActiveTweens)
     table.clear(Library.Registry)
     table.clear(Library.ThemeListeners)
+    table.clear(Library.ConfigChangedListeners or {})
+    table.clear(Library.PendingOptionChanges or {})
     table.clear(RevealTokens)
     table.clear(RevealTargets)
 

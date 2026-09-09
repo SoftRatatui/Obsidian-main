@@ -286,6 +286,24 @@ return function(SaveManager, Environment)
     StopFailure()
     print("PASS hidden config values, option versions and completion listeners")
 
+    local Catalog = Control("Dropdown", "retired")
+    Catalog.Values = { "default", "other" }
+    Catalog.ConfigDefault = { Value = "default" }
+    Catalog.Multi = false
+    Library.Options.Catalog = Catalog
+    assert(Restarted:Save("stale-dropdown"))
+    Catalog.Value = "other"
+    local Restored, _, ReplacementReport = Restarted:Load("stale-dropdown")
+    assert(Restored and Catalog.Value == "default" and ReplacementReport.Adjusted == 1)
+    assert(ReplacementReport.AdjustedIds[1] == "Catalog")
+    Catalog.Save = false
+    assert(Restarted:Save("ignored-control"))
+    for _, Object in Environment.storedJson[Environment.files["MonHub/Tests/settings/place-1/ignored-control.json"]].objects do
+        assert(Object.idx ~= "Catalog")
+    end
+    assert(table.find(Restarted:GetConfigs(), "ignored-control"))
+    print("PASS stale dropdown fallback reporting and per-control persistence")
+
     local Invalid = Environment.storedJson[OriginalContent]
     for _, Object in Invalid.objects do
         if Object.type == "Slider" then Object.value = "not a number" end

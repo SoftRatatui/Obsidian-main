@@ -171,3 +171,8 @@ Release-3 adds AddImageGrid, AddItemSlots, AddSliderGroup and nested AddPopup wi
 ### September 9: wishlist follow-up
 
 Added batch presets, config-change events, section headers, lazy tabs, keybind profiles, attachment markers, touch-hold tooltips and release-only slider callbacks. Configs now report stale dropdown replacements and support per-option Save=false. See GUIDE.md for API details and UPDATE_LOG.txt for update notes. Update the library, types, SaveManager and ImageGallery together to the latest revision. The release label remains release-3.
+
+
+### Compact overlay update
+
+Addon windows and watermarks now use tighter spacing. Dashboard auto height removes empty space from short lists while explicit window sizes remain supported. See GUIDE.md for Compact, AutoHeight and watermark presets, and Preview for examples. Update Library.lua, DashboardWindow.lua and types together to the latest revision. Release-3 is unchanged.

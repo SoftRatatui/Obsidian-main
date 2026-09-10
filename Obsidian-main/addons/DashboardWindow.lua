@@ -39,6 +39,7 @@ end
 function DashboardWindow.Create(Library, Info)
     assert(Library and Library.ScreenGui and Library.AddToRegistry, "DashboardWindow requires an active MonHub window")
     Info = Info or {}
+    local Compact = Info.Compact ~= false
     local Style = type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
         HeaderHeight = 38,
         Padding = 10,
@@ -59,7 +60,7 @@ function DashboardWindow.Create(Library, Info)
         Visible = Info.Visible ~= false,
         Draggable = Info.Draggable ~= false,
         Width = math.clamp(math.floor(tonumber(Info.Width) or 320), 240, 620),
-        Height = math.clamp(math.floor(tonumber(Info.Height) or 360), 180, 760),
+        Height = math.clamp(math.floor(tonumber(Info.Height) or 360), Compact and 24 or 180, 760),
         Sections = {},
         Dynamic = {},
         Connections = {},
@@ -224,16 +225,17 @@ function DashboardWindow.Create(Library, Info)
     end
 
     local ContentPadding = Instance.new("UIPadding")
-    ContentPadding.PaddingBottom = UDim.new(0, Style.Padding)
-    ContentPadding.PaddingLeft = UDim.new(0, Style.Padding)
-    ContentPadding.PaddingRight = UDim.new(0, Style.Padding + 2)
-    ContentPadding.PaddingTop = UDim.new(0, Style.Padding)
+    ContentPadding.PaddingBottom = UDim.new(0, Compact and 0 or Style.Padding)
+    ContentPadding.PaddingLeft = UDim.new(0, Compact and 0 or Style.Padding)
+    ContentPadding.PaddingRight = UDim.new(0, Compact and 2 or Style.Padding + 2)
+    ContentPadding.PaddingTop = UDim.new(0, Compact and 0 or Style.Padding)
     ContentPadding.Parent = Content
 
     local ContentLayout = Instance.new("UIListLayout")
     ContentLayout.Padding = UDim.new(0, Style.Gap)
     ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ContentLayout.Parent = Content
+    Dashboard.ContentLayout = ContentLayout
 
     local function AddConnection(Connection)
         table.insert(Dashboard.Connections, Connection)
@@ -391,6 +393,15 @@ function DashboardWindow.Create(Library, Info)
         return Widget
     end
 
+    local function UpdateSectionHeaders()
+        for _, Section in Dashboard.Sections do
+            if Section.Header then
+                Section.Header.Visible = Section.HeaderRequested and Info.HideSectionHeaders ~= true
+                    and not (Info.HideSingleSectionHeader and #Dashboard.Sections == 1)
+            end
+        end
+    end
+
     function Dashboard:AddSection(Name, SectionInfo)
         assert(not Dashboard.Destroyed, "Dashboard is destroyed")
         if type(Name) == "table" then
@@ -411,6 +422,7 @@ function DashboardWindow.Create(Library, Info)
         local Root = Instance.new("Frame")
         Root.AutomaticSize = Enum.AutomaticSize.Y
         Root.BackgroundColor3 = Library.Scheme.SurfaceColor
+        Root.BackgroundTransparency = Compact and 1 or 0
         Root.BorderSizePixel = 0
         Root.LayoutOrder = tonumber(SectionInfo.Order) or Dashboard.SectionOrder
         Root.Size = UDim2.new(1, 0, 0, 0)
@@ -424,7 +436,7 @@ function DashboardWindow.Create(Library, Info)
         Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         Stroke.Color = Library.Scheme.OutlineColor
         Stroke.Thickness = Style.StrokeThickness
-        Stroke.Transparency = Style.OutlineTransparency
+        Stroke.Transparency = Compact and 1 or Style.OutlineTransparency
         Stroke.Parent = Root
         Library:AddToRegistry(Stroke, { Color = "OutlineColor" })
 
@@ -435,12 +447,15 @@ function DashboardWindow.Create(Library, Info)
 
         local SectionHeader = Instance.new("Frame")
         SectionHeader.BackgroundColor3 = Library.Scheme.RaisedColor
-        SectionHeader.BackgroundTransparency = 0.46
+        SectionHeader.BackgroundTransparency = Compact and 1 or 0.46
         SectionHeader.LayoutOrder = 0
         SectionHeader.Size = UDim2.new(1, 0, 0, SectionInfo.ShowTitle == false and 0 or 32)
         SectionHeader.Visible = SectionInfo.ShowTitle ~= false
         SectionHeader.ZIndex = 43
         SectionHeader.Parent = Root
+        Section.Header = SectionHeader
+        Section.HeaderRequested = SectionInfo.ShowTitle ~= false and SectionInfo.ShowHeader ~= false
+        SectionHeader.Visible = Section.HeaderRequested and Info.HideSectionHeaders ~= true
         Library:AddToRegistry(SectionHeader, { BackgroundColor3 = "RaisedColor" })
 
         local SectionIconData = Library:GetCustomIcon(SectionInfo.Icon or SectionInfo.IconName)
@@ -493,10 +508,10 @@ function DashboardWindow.Create(Library, Info)
         Body.Parent = Root
 
         local BodyPadding = Instance.new("UIPadding")
-        BodyPadding.PaddingBottom = UDim.new(0, Style.Padding)
-        BodyPadding.PaddingLeft = UDim.new(0, Style.Padding + 1)
-        BodyPadding.PaddingRight = UDim.new(0, Style.Padding + 1)
-        BodyPadding.PaddingTop = UDim.new(0, Style.Padding)
+        BodyPadding.PaddingBottom = UDim.new(0, Compact and 3 or Style.Padding)
+        BodyPadding.PaddingLeft = UDim.new(0, Compact and 0 or Style.Padding + 1)
+        BodyPadding.PaddingRight = UDim.new(0, Compact and 0 or Style.Padding + 1)
+        BodyPadding.PaddingTop = UDim.new(0, Compact and 3 or Style.Padding)
         BodyPadding.Parent = Body
 
         local BodyLayout = Instance.new("UIListLayout")
@@ -803,6 +818,7 @@ function DashboardWindow.Create(Library, Info)
             local Index = table.find(Dashboard.Sections, Section)
             if Index then
                 table.remove(Dashboard.Sections, Index)
+                UpdateSectionHeaders()
             end
             if Dashboard.DefaultSection == Section then
                 Dashboard.DefaultSection = nil
@@ -812,6 +828,7 @@ function DashboardWindow.Create(Library, Info)
         end
 
         table.insert(Dashboard.Sections, Section)
+        UpdateSectionHeaders()
         return Section
     end
 
@@ -936,7 +953,7 @@ function DashboardWindow.Create(Library, Info)
             return Dashboard
         end
         Dashboard.Width = math.clamp(math.floor(tonumber(Width) or Dashboard.Width), 240, 620)
-        Dashboard.Height = math.clamp(math.floor(tonumber(Height) or Dashboard.Height), 180, 760)
+        Dashboard.Height = math.clamp(math.floor(tonumber(Height) or Dashboard.Height), Compact and 24 or 180, 760)
         Holder.Size = Dashboard.Embedded and UDim2.new(1, 0, 0, Dashboard.Height) or UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
         if Dashboard.Element then
             Dashboard.Element:SetHeight(Dashboard.Height)
@@ -954,6 +971,10 @@ function DashboardWindow.Create(Library, Info)
             ApplyDynamic(Widget, State, true)
         end
         return Dashboard
+    end
+
+    function Dashboard:GetContentHeight()
+        return math.max(24, math.ceil((ContentLayout.AbsoluteContentSize and ContentLayout.AbsoluteContentSize.Y or 0) + (Compact and 0 or Style.Padding * 2)))
     end
 
     function Dashboard:SetHeight(Value)
@@ -1078,6 +1099,11 @@ end
 function DashboardWindow.CreateStandalone(Library, Info)
     assert(Library and type(Library.CreateAddonWindow) == "function", "DashboardWindow standalone mode requires Library:CreateAddonWindow")
     Info = table.clone(Info or {})
+    local Compact = Info.Compact ~= false
+    local AutoHeight = Info.AutoHeight == true or (Info.AutoHeight == nil and Info.WindowHeight == nil and Info.Height == nil)
+    local HostStyle = table.clone(type(Info.Style) == "table" and Info.Style or {})
+    if Compact and HostStyle.Padding == nil then HostStyle.Padding = 6 end
+    if Compact and HostStyle.Radius == nil then HostStyle.Radius = 1 end
     local WindowHeight = math.clamp(math.floor(tonumber(Info.WindowHeight) or 460), 220, 900)
     local Host = Library:CreateAddonWindow({
         Title = Info.WindowTitle or Info.Title or "Dashboard",
@@ -1092,7 +1118,10 @@ function DashboardWindow.CreateStandalone(Library, Info)
         Closable = Info.Closable,
         HideWithMenu = Info.HideWithMenu,
         Visible = Info.Visible,
-        Style = Info.Style,
+        Style = HostStyle,
+        Compact = Compact,
+        ShowIcon = Info.ShowIcon,
+        ShowSubtitle = Info.ShowSubtitle,
     })
 
     Info.Title = nil
@@ -1102,9 +1131,24 @@ function DashboardWindow.CreateStandalone(Library, Info)
     end
     Info.Height = Info.Height or math.max(180, WindowHeight - 74)
     Info.ShowHeader = false
+    if Info.HideSectionHeaders == nil then Info.HideSingleSectionHeader = Compact end
+    if AutoHeight then Info.FitHeight = false end
 
     local Dashboard = Host:AddAddon("Dashboard", DashboardWindow, Info)
     Dashboard.Host = Host
+    if AutoHeight then
+        local Resizing = false
+        local function FitContent()
+            if Resizing or Dashboard.Destroyed or Host.Destroyed then return end
+            Resizing = true
+            local Height = math.min(Dashboard:GetContentHeight(), math.max(24, tonumber(Info.MaxContentHeight) or 400))
+            Host:SetModuleHeight("Dashboard", Height)
+            Host:SetSize(Info.WindowWidth or 380, Height + Host.Content.Position.Y.Offset + (HostStyle.Padding or 10) * 2)
+            Resizing = false
+        end
+        table.insert(Dashboard.Connections, Dashboard.ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(FitContent))
+        FitContent()
+    end
     return Dashboard, Host
 end
 

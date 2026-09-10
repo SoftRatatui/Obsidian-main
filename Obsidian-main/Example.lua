@@ -1891,7 +1891,21 @@ local PreviewModulesMinimal = false
 local PreviewModuleHighlighted = false
 do
 	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
-	PreviewControls:AddSection("Controls and presets")
+	PreviewControls:AddSection("Controls and presets")    local WatermarkPresetIndex = 1
+    PreviewControls:AddButton("Next watermark style", function()
+        local Presets = { "Compact", "Minimal", "Classic" }
+        WatermarkPresetIndex = WatermarkPresetIndex % #Presets + 1
+        Library:SetWatermarkPreset(Presets[WatermarkPresetIndex])
+    end)
+    PreviewControls:AddButton("Compact spectator list", function()
+        if not DashboardWindow then return end
+        local List = DashboardWindow.CreateStandalone(Library, {
+            Title = "Spectators", WindowWidth = 240, AutoHeight = true,
+            Compact = true, Closable = true, Resizable = false,
+        })
+        List:AddMetric({ Label = "player_one", Value = "spectating" })
+        List:AddMetric({ Label = "player_two", Value = "spectating" })
+    end)
     local ChangeLabel = PreviewControls:AddLabel("Options unchanged")
     local DisconnectChanges = Library:OnConfigChanged(function(Event)
         ChangeLabel:SetText("Last change: " .. (Event.Id and tostring(Event.Id) or Event.Source))

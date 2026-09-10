@@ -120,3 +120,22 @@ before persistence so values cannot disappear from a config.
 Update Library.lua, Library.d.luau, SaveManager and ImageGallery together to the latest
 revision. Local tests pass; mobile gesture/rendering and performance measurements
 still require a Roblox session on the intended device.
+2026-09-10 - COMPACT OVERLAYS
+Version stays 0.0.1-release-3.
+
+Addon headers now use a compact 28-pixel layout. Icon badges and subtitles are
+optional; Compact=false retains the larger header. Flat dashboard sections remove
+the extra border and repeated padding. A single section no longer repeats a title;
+multiple sections keep their headings.
+
+Standalone dashboards can fit their height to the displayed rows. Use AutoHeight=true
+for spectator lists, with MaxContentHeight to cap long lists. Explicit window heights
+remain fixed unless auto height is requested. GUIDE.md includes a short setup example.
+
+Watermarks use smaller type and tighter padding with a thin outline. Added Compact,
+Minimal and Classic presets through SetWatermarkPreset. Text and font inheritance
+remain unchanged. Preview includes a spectator-list demo and preset switching.
+
+Tests cover compact and classic headers, content resizing, section headings and
+fixed-size compatibility. Update Library.lua and DashboardWindow.lua together with
+the latest types and examples. Real Roblox rendering still needs an in-game check.

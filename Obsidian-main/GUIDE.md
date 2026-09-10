@@ -2335,3 +2335,49 @@ Local regression tests cover batching, lazy builds, hidden option versions, stal
 dropdowns, persistence exclusion, late catalog population, card reuse, search,
 release-only callbacks and attachment marker reuse. Device rendering, gesture timing
 and frame-time improvements still require checking in Roblox on target hardware.
+## Compact addon windows and watermarks
+
+Addon windows now default to a 28-pixel header without an icon badge or subtitle.
+Titles are centered when there is no icon. `Compact = false` restores the larger
+header. Set `ShowIcon = true` or `ShowSubtitle = true` to retain those elements in
+compact windows. Explicit HeaderHeight is respected. Calling SetSubtitle explicitly
+shows the text and uses a 44-pixel compact header. Compact hosts can be sized down
+to 160 by 48 pixels; MinWidth and MinHeight can raise those limits.
+
+Dashboard sections use a flat background without a second border by default.
+Standalone dashboards hide the redundant section header when there is only one
+section; headings return when more sections are added. Set HideSectionHeaders=true
+to hide all headings, or false to show them. Compact=false retains the framed style.
+Existing ShowTitle=false and ShowHeader=false section settings remain supported.
+
+```lua
+local List, Host = DashboardWindow.CreateStandalone(Library, {
+    Title = "Spectators",
+    WindowWidth = 240,
+    Compact = true,
+    AutoHeight = true,
+    MaxContentHeight = 300,
+    Resizable = false,
+})
+List:AddMetric({ Label = "player_one", Value = "spectating" })
+```
+
+AutoHeight follows actual content and caps it at MaxContentHeight (default 400).
+It is enabled automatically only when neither Height nor WindowHeight is supplied.
+Explicit dimensions keep their previous behavior unless AutoHeight=true is requested.
+Rows beyond the cap remain scrollable. GetContentHeight returns the content height.
+Supply actual spectator rows from your script; a Count metric alone cannot display
+names that were never passed to the library.
+
+The watermark now uses 12-pixel library text, three-pixel vertical padding, small
+horizontal margins and a thin outline. It keeps the active library font and existing
+text, positioning and DPI behavior. Choose a preset or override its style afterward:
+
+```lua
+Library:SetWatermarkPreset("Compact")
+Library:SetWatermarkStyle({ TextSize = 12, HorizontalPadding = 8 })
+```
+
+Compact is the default. Minimal removes the outline and rounds no corners. Classic
+restores the previous size and padding. Presets do not replace watermark text or move
+it. Preview contains buttons to compare presets and open a small spectator-list demo.

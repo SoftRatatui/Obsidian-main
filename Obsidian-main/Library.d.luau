@@ -1652,6 +1652,7 @@ export type Library = {
     SetWatermarkDraggable: (self: Library, Draggable: boolean) -> Library,
     SetWatermarkOptions: (self: Library, Info: { [string]: any }) -> Library,
     SetWatermarkStyle: (self: Library, Info: { [string]: any }) -> Library,
+    SetWatermarkPreset: (self: Library, Name: "Compact" | "Minimal" | "Classic") -> Library,
     AddContextMenu: (
         self: Library,
         Holder: GuiObject,

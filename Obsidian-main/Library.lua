@@ -3840,10 +3840,13 @@ end
 function Library:CreateAddonWindow(Info)
     Info = Info or {}
     local Style = Library:GetAddonStyle(Info.Style)
-    local Width = math.floor(math.clamp(tonumber(Info.Width) or Style.WindowWidth, 240, 1100))
-    local Height = math.floor(math.clamp(tonumber(Info.Height) or Style.WindowHeight, 180, 900))
+    local Compact = Info.Compact ~= false
+    local MinWidth = math.clamp(tonumber(Info.MinWidth) or (Compact and 160 or 240), 160, 1100)
+    local MinHeight = math.clamp(tonumber(Info.MinHeight) or (Compact and 48 or 180), 48, 900)
+    local Width = math.floor(math.clamp(tonumber(Info.Width) or Style.WindowWidth, MinWidth, 1100))
+    local Height = math.floor(math.clamp(tonumber(Info.Height) or Style.WindowHeight, MinHeight, 900))
     local ShowHeader = Info.ShowHeader ~= false and Style.ShowHeader ~= false
-    local HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Info.Subtitle and 54 or 44), 38, 68)) or 0
+    local HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Compact and (Info.ShowSubtitle == true and 44 or 28) or (Info.Subtitle and 54 or 44)), 24, 68)) or 0
     local Position = typeof(Info.Position) == "UDim2" and Info.Position or UDim2.fromScale(0.5, 0.5)
     local AnchorPoint = typeof(Info.AnchorPoint) == "Vector2" and Info.AnchorPoint or Vector2.new(0.5, 0.5)
     local Connections = {}
@@ -3931,14 +3934,16 @@ function Library:CreateAddonWindow(Info)
         Parent = IconHolder,
     })
 
-    local HeaderTextInset = Style.Padding + IconBadge + IconGap
+    local ShowIcon = Info.ShowIcon == true or (not Compact and Info.ShowIcon ~= false)
+    IconHolder.Visible = ShowIcon
+    local HeaderTextInset = Style.Padding + (ShowIcon and IconBadge + IconGap or (Compact and Info.Closable ~= false and HeaderControl + IconGap or 0))
     local HeaderText = New("Frame", {
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(HeaderTextInset, 0),
         Size = UDim2.new(1, -(HeaderTextInset + Style.Padding + (Info.Closable ~= false and HeaderControl + IconGap or 0)), 1, 0),
         Parent = Header,
     })
-    local HasSubtitle = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= ""
+    local HasSubtitle = Info.Subtitle ~= nil and tostring(Info.Subtitle) ~= "" and (not Compact or Info.ShowSubtitle == true)
     local TitleRow = 20
     local SubtitleRow = 16
     local TitleTop = Library:CenterOffset(HeaderHeight, TitleRow + SubtitleRow)
@@ -3948,9 +3953,9 @@ function Library:CreateAddonWindow(Info)
         Position = UDim2.fromOffset(0, HasSubtitle and TitleTop or 0),
         Size = UDim2.new(1, 0, 0, HasSubtitle and TitleRow or HeaderHeight),
         Text = tostring(Info.Title or "Module"),
-        TextSize = Style.TextSize,
+        TextSize = Compact and 12 or Style.TextSize,
         TextTruncate = Enum.TextTruncate.AtEnd,
-        TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Compact and not ShowIcon and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left,
         Parent = HeaderText,
     })
     local Subtitle = New("TextLabel", {
@@ -3961,7 +3966,7 @@ function Library:CreateAddonWindow(Info)
         TextColor3 = "MutedFontColor",
         TextSize = Style.CaptionSize,
         TextTruncate = Enum.TextTruncate.AtEnd,
-        TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Compact and not ShowIcon and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left,
         Visible = HasSubtitle,
         Parent = HeaderText,
     })
@@ -4101,7 +4106,7 @@ function Library:CreateAddonWindow(Info)
     function Host:SetSubtitle(Value)
         Subtitle.Text = tostring(Value or "")
         Subtitle.Visible = Subtitle.Text ~= ""
-        HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Subtitle.Visible and 54 or 44), 38, 68)) or 0
+        HeaderHeight = ShowHeader and math.floor(math.clamp(tonumber(Info.HeaderHeight) or (Compact and (Subtitle.Visible and 44 or 28) or (Subtitle.Visible and 54 or 44)), 24, 68)) or 0
         Header.Size = UDim2.new(1, 0, 0, HeaderHeight)
         Content.Position = UDim2.fromOffset(0, HeaderHeight)
         Content.Size = UDim2.new(1, 0, 1, -HeaderHeight)
@@ -4130,8 +4135,8 @@ function Library:CreateAddonWindow(Info)
     end
 
     function Host:SetSize(NewWidth, NewHeight)
-        Width = math.floor(math.clamp(tonumber(NewWidth) or Width, 240, 1100))
-        Height = math.floor(math.clamp(tonumber(NewHeight) or Height, 180, 900))
+        Width = math.floor(math.clamp(tonumber(NewWidth) or Width, MinWidth, 1100))
+        Height = math.floor(math.clamp(tonumber(NewHeight) or Height, MinHeight, 900))
         local Viewport = GetViewportSize()
         Root.Size = UDim2.fromOffset(math.min(Width, math.max(1, Viewport.X - 16)), math.min(Height, math.max(1, Viewport.Y - 16)))
         ClampGuiToViewport(Root, 8)
@@ -4495,7 +4500,7 @@ function Library:CreateAddonWindow(Info)
         })
         Library:MakeResizable(Root, ResizeButton, function()
             Width, Height = Root.Size.X.Offset, Root.Size.Y.Offset
-        end, { MinSize = Vector2.new(240, 180), MaxSize = Vector2.new(1100, 900), Scale = 1 })
+        end, { MinSize = Vector2.new(MinWidth, MinHeight), MaxSize = Vector2.new(1100, 900), Scale = 1 })
     end
     local CameraConnection
     local function BindViewport()
@@ -5572,12 +5577,12 @@ do
     local WatermarkSide = "Left"
     local WatermarkDraggable = true
     local WatermarkStyle = {
-        TextSize = 13,
+        TextSize = 12,
         BackgroundTransparency = 0,
-        OutlineTransparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
-        CornerRadius = 5,
-        Padding = 6,
-        HorizontalPadding = 10,
+        OutlineTransparency = 0.18,
+        CornerRadius = 1,
+        Padding = 3,
+        HorizontalPadding = 7,
         Margin = 8,
         Accent = false,
         AccentWidth = 2,
@@ -5705,6 +5710,16 @@ do
     end
 
     Library.SetWatermarkStyle = Library.SetWatermarkOptions
+    function Library:SetWatermarkPreset(Name)
+        local Presets = {
+            Compact = { TextSize = 12, Padding = 3, HorizontalPadding = 7, CornerRadius = 1, OutlineTransparency = 0.18, BackgroundTransparency = 0, Accent = false },
+            Minimal = { TextSize = 12, Padding = 3, HorizontalPadding = 6, CornerRadius = 0, OutlineTransparency = 1, BackgroundTransparency = 0.12, Accent = false },
+            Classic = { TextSize = 13, Padding = 6, HorizontalPadding = 10, CornerRadius = 5, OutlineTransparency = 0.46, BackgroundTransparency = 0, Accent = false },
+        }
+        assert(Presets[Name], "Unknown watermark preset")
+        Library:SetWatermarkStyle(Presets[Name])
+        return Library
+    end
 
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))

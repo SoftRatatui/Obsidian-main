@@ -118,6 +118,7 @@ local function NormalizeItem(Item, Index)
 end
 
 function AssetCatalog.Create(Library, Info)
+    assert(not (Info and Info.MultiSelect and Info.Model), "MultiSelect uses catalog selection; CollectionModel supports single selection")
     Info = Info or {}
     local Style = Library and type(Library.GetAddonStyle) == "function" and Library:GetAddonStyle(Info.Style) or {
         HeaderHeight = 38,
@@ -598,6 +599,10 @@ function AssetCatalog.Create(Library, Info)
         PageCount = 1,
         Search = "",
         Category = "All",
+        MultiSelect = Info.MultiSelect == true,
+        SelectedIds = {},
+        ShowPager = Info.ShowPager,
+        Pager = Footer,
         SelectedId = nil,
         SelectedItem = nil,
         ImageTransparency = ImageTransparency,
@@ -800,7 +805,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     local function UpdateSlotState(Slot, Animated)
-        Slot.Selected = Slot.Item ~= nil and Slot.Item.Id == Catalog.SelectedId
+        Slot.Selected = Slot.Item ~= nil and (Catalog.MultiSelect and Catalog.SelectedIds[Slot.Item.Id] == true or not Catalog.MultiSelect and Slot.Item.Id == Catalog.SelectedId)
         local Color = CardColor(Slot)
         if Animated then
             Play(Slot.Button, "Card" .. Slot.Index, { BackgroundColor3 = Color })
@@ -931,7 +936,11 @@ function AssetCatalog.Create(Library, Info)
 
     local function EmitSelection(Item)
         SetPreview(Item, true)
-        Call(Catalog.OnSelected, Item and Item.Source or nil, Item)
+        if Catalog.MultiSelect then
+            Call(Catalog.OnSelected, Catalog:GetSelected())
+        else
+            Call(Catalog.OnSelected, Item and Item.Source or nil, Item)
+        end
     end
 
     local function CreateSlot(Index)
@@ -1085,6 +1094,32 @@ function AssetCatalog.Create(Library, Info)
         Category.Text = Catalog.Category
     end
 
+    local function RenderSlot(Slot, Item)
+        Slot.Item = Item
+        Slot.Hovered = false
+        Slot.Button.Visible = Item ~= nil
+        if Item then
+            Slot.Button.Active = not Item.Disabled
+            Slot.Image.Image = NormalizeAsset(Item.Thumbnail)
+            Slot.Image.ImageColor3 = Item.Color
+            local ItemTransparency = math.clamp(Item.ImageTransparency or Catalog.ImageTransparency, 0, 1)
+            Slot.Image.ImageTransparency = Item.Disabled and math.max(ItemTransparency, 0.58) or ItemTransparency
+            Slot.Image.ScaleType = Item.ScaleType and ResolveScaleType(Item.ScaleType) or ImageScaleType
+            Slot.Image.Position = Item.ImagePosition or UDim2.fromScale(0.5, 0.5)
+            Slot.Image.AnchorPoint = Item.ImageAnchorPoint or Vector2.new(0.5, 0.5)
+            Slot.Image.Rotation = Item.Rotation or 0
+            Slot.Image.ImageRectOffset = Item.RectOffset
+            Slot.Image.ImageRectSize = Item.RectSize
+            Slot.ImageScale.Scale = math.clamp(Item.ImageScale or 1, 0.2, 4)
+            Slot.Canvas.BackgroundTransparency = math.clamp(Item.BackgroundTransparency or 0.18, 0, 1)
+            Slot.Name.Text = Item.Name
+            Slot.Name.TextTransparency = Item.Disabled and 0.58 or 0
+            Slot.State.Text = Item.Locked and "Locked" or Item.Favorite and "Saved" or tostring(Item.Status or "")
+            Slot.State.Visible = Slot.State.Text ~= ""
+        end
+        UpdateSlotState(Slot, false)
+    end
+
     local function Refresh()
         if Catalog.Destroyed then
             return
@@ -1111,34 +1146,16 @@ function AssetCatalog.Create(Library, Info)
         Catalog.PageCount = math.max(1, math.ceil(#Catalog.Filtered / Catalog.PageSize))
         Catalog.Page = math.clamp(Catalog.Page, 1, Catalog.PageCount)
         PageLabel.Text = string.format("%d / %d  ·  %d", Catalog.Page, Catalog.PageCount, #Catalog.Filtered)
+        Footer.Visible = Catalog.ShowPager == true or Catalog.ShowPager ~= false and Catalog.PageCount > 1
+        local PagerSpace = Footer.Visible and FooterHeight or 0
+        GridScroll.Size = UDim2.new(1, -Padding * 2, 1, -(Padding * 2 + PagerSpace))
+        Empty.Size = GridScroll.Size
         Empty.Visible = #Catalog.Filtered == 0
         GridScroll.Visible = #Catalog.Filtered > 0
         local Start = (Catalog.Page - 1) * Catalog.PageSize
         for SlotIndex, Slot in Catalog.Slots do
             local Item = Catalog.Filtered[Start + SlotIndex]
-            Slot.Item = Item
-            Slot.Hovered = false
-            Slot.Button.Visible = Item ~= nil
-            if Item then
-                Slot.Button.Active = not Item.Disabled
-                Slot.Image.Image = NormalizeAsset(Item.Thumbnail)
-                Slot.Image.ImageColor3 = Item.Color
-                local ItemTransparency = math.clamp(Item.ImageTransparency or Catalog.ImageTransparency, 0, 1)
-                Slot.Image.ImageTransparency = Item.Disabled and math.max(ItemTransparency, 0.58) or ItemTransparency
-                Slot.Image.ScaleType = Item.ScaleType and ResolveScaleType(Item.ScaleType) or ImageScaleType
-                Slot.Image.Position = Item.ImagePosition or UDim2.fromScale(0.5, 0.5)
-                Slot.Image.AnchorPoint = Item.ImageAnchorPoint or Vector2.new(0.5, 0.5)
-                Slot.Image.Rotation = Item.Rotation or 0
-                Slot.Image.ImageRectOffset = Item.RectOffset
-                Slot.Image.ImageRectSize = Item.RectSize
-                Slot.ImageScale.Scale = math.clamp(Item.ImageScale or 1, 0.2, 4)
-                Slot.Canvas.BackgroundTransparency = math.clamp(Item.BackgroundTransparency or 0.18, 0, 1)
-                Slot.Name.Text = Item.Name
-                Slot.Name.TextTransparency = Item.Disabled and 0.58 or 0
-                Slot.State.Text = Item.Locked and "Locked" or Item.Favorite and "Saved" or tostring(Item.Status or "")
-                Slot.State.Visible = Slot.State.Text ~= ""
-            end
-            UpdateSlotState(Slot, false)
+            RenderSlot(Slot, Item)
         end
         Previous.TextTransparency = Catalog.Page > 1 and 0 or 0.6
         Next.TextTransparency = Catalog.Page < Catalog.PageCount and 0 or 0.6
@@ -1154,6 +1171,11 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:SetItems(Items)
+        if Items == Catalog.Items then
+            local Sources = {}
+            for _, Item in Items do table.insert(Sources, Item.Source) end
+            Items = Sources
+        end
         table.clear(Catalog.Items)
         if type(Items) == "table" then
             for Index, Item in Items do
@@ -1163,6 +1185,9 @@ function AssetCatalog.Create(Library, Info)
                 end
             end
         end
+        local Present = {}
+        for _, Item in Catalog.Items do if not Item.Disabled then Present[Item.Id] = true end end
+        for Id in Catalog.SelectedIds do if not Present[Id] then Catalog.SelectedIds[Id] = nil end end
         RebuildCategories()
         Catalog.Page = 1
         if Catalog.SelectedId ~= nil then
@@ -1206,6 +1231,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:RemoveItem(Id)
+        Catalog.SelectedIds[Id] = nil
         for Index, Item in Catalog.Items do
             if Item.Id == Id then
                 table.remove(Catalog.Items, Index)
@@ -1238,6 +1264,14 @@ function AssetCatalog.Create(Library, Info)
         Catalog.Page = 1
         Refresh()
         return Catalog
+    end
+
+    function Catalog:NextPage()
+        return self:SetPage(self.Page + 1)
+    end
+
+    function Catalog:PreviousPage()
+        return self:SetPage(self.Page - 1)
     end
 
     function Catalog:SetPage(Value)
@@ -1382,6 +1416,14 @@ function AssetCatalog.Create(Library, Info)
                 break
             end
         end
+        if Selected and Selected.Disabled then return nil end
+        if Catalog.MultiSelect then
+            if Selected then
+                Catalog.SelectedIds[Selected.Id] = not Catalog.SelectedIds[Selected.Id] or nil
+            else
+                table.clear(Catalog.SelectedIds)
+            end
+        end
         Catalog.SelectedId = Selected and Selected.Id or nil
         for _, Slot in Catalog.Slots do
             UpdateSlotState(Slot, true)
@@ -1394,8 +1436,72 @@ function AssetCatalog.Create(Library, Info)
         return Selected and Selected.Source or nil
     end
 
+    function Catalog:SetSelected(Ids, Silent)
+        assert(Catalog.MultiSelect, "SetSelected requires MultiSelect")
+        assert(type(Ids) == "table", "Selection must be an array of IDs")
+        local Wanted = {}
+        for _, Id in Ids do Wanted[Id] = true end
+        table.clear(Catalog.SelectedIds)
+        local Last
+        for _, Item in Catalog.Items do
+            if Wanted[Item.Id] and not Item.Disabled then
+                Catalog.SelectedIds[Item.Id] = true
+                Last = Item
+            end
+        end
+        Catalog.SelectedId = Last and Last.Id or nil
+        SetPreview(Last, false)
+        for _, Slot in Catalog.Slots do UpdateSlotState(Slot, false) end
+        if not Silent then Call(Catalog.OnSelected, Catalog:GetSelected()) end
+        return Catalog
+    end
+
     function Catalog:GetSelected()
+        if Catalog.MultiSelect then
+            local Sources, Items = {}, {}
+            for _, Item in Catalog.Items do
+                if Catalog.SelectedIds[Item.Id] then
+                    table.insert(Sources, Item.Source)
+                    table.insert(Items, Item)
+                end
+            end
+            return Sources, Items
+        end
         return Catalog.SelectedItem and Catalog.SelectedItem.Source or nil, Catalog.SelectedItem
+    end
+
+    function Catalog:SetShowPager(Value)
+        Catalog.ShowPager = Value
+        Refresh()
+        return Catalog
+    end
+
+    function Catalog:SetItemState(Id, Patch)
+        assert(type(Patch) == "table", "Item state must be a table")
+        if Catalog.Destroyed then return false end
+        for _, Item in Catalog.Items do
+            if Item.Id == Id then
+                local Source = table.clone(Item.Source)
+                for Key, Value in Patch do if Key ~= "Id" then Source[Key] = Value end end
+                Source.Id = Id
+                local Updated = NormalizeItem(Source, Id)
+                for Key in Item do Item[Key] = nil end
+                for Key, Value in Updated do Item[Key] = Value end
+                if Item.Disabled then Catalog.SelectedIds[Id] = nil end
+                if Catalog.SelectedId == Id then SetPreview(Item, false) end
+                if Patch.Name ~= nil or Patch.Title ~= nil or Patch.Category ~= nil or Patch.Group ~= nil
+                    or Patch.Tags ~= nil or Catalog.Search ~= "" or Catalog.FavoritesOnly then
+                    RebuildCategories()
+                    Refresh()
+                else
+                    for _, Slot in Catalog.Slots do
+                        if Slot.Item == Item then RenderSlot(Slot, Item) end
+                    end
+                end
+                return true
+            end
+        end
+        return false
     end
 
     function Catalog:SetVisible(Value)

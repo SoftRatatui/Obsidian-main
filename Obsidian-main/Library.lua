@@ -3446,6 +3446,23 @@ function Library:SafeCallback(Func: (...any) -> ...any, ...: any)
         return
     end
 
+    local Context = Library.ConfigLoadContext
+    if Context and Context.Thread == coroutine.running() and Context.BackgroundJobs then
+        local Args = table.pack(...)
+        local Job = { Id = Context.Id, Status = "Pending" }
+        Job.Run = function()
+            if Library.Unloaded then Job.Status = "Cancelled"; return end
+            Job.Status = "Running"
+            local Started = os.clock()
+            local Success, Message = pcall(Func, table.unpack(Args, 1, Args.n))
+            Job.Seconds = os.clock() - Started
+            Job.Status = Success and "Completed" or "Failed"
+            Job.Error = not Success and tostring(Message) or nil
+        end
+        table.insert(Context.BackgroundJobs, Job)
+        return
+    end
+    local Started = os.clock()
     local Result = table.pack(xpcall(Func, function(Error)
         local Context = Library.ConfigLoadContext
         if Context and Context.Thread == coroutine.running() then
@@ -3460,6 +3477,9 @@ function Library:SafeCallback(Func: (...any) -> ...any, ...: any)
         return Error
     end, ...))
 
+    if Context and Context.Timings and Context.Thread == coroutine.running() then
+        table.insert(Context.Timings, { Id = Context.Id, Seconds = os.clock() - Started, Success = Result[1] })
+    end
     if not Result[1] then
         return nil
     end
@@ -8636,6 +8656,8 @@ function Library:AddKeybindProfile(Id, Info)
 end
 
 function Library:RegisterConfigOption(Option, Info, Idx)
+    assert(not Info or Info.ConfigCallbackMode == nil or Info.ConfigCallbackMode == "Sync" or Info.ConfigCallbackMode == "Background", "ConfigCallbackMode must be Sync or Background")
+    Option.ConfigCallbackMode = Info and Info.ConfigCallbackMode
     Option.ConfigId = Idx
     Option.Save = not Info or Info.Save ~= false
     function Option:SetSave(Enabled) Option.Save = Enabled ~= false; return Option end
@@ -10386,6 +10408,12 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
+        for _, Bound in { "Min", "Max" } do
+            local Value = Info[Bound]
+            assert(Value == nil or type(Value) == "number" and Value == Value and math.abs(Value) < math.huge, "Input bounds must be finite numbers")
+        end
+        assert(not Info.Min or not Info.Max or Info.Min <= Info.Max, "Input Min must not exceed Max")
+        local UpdatingText = false
         local Input = {
             Connections = {},
             Destroyed = false,
@@ -10395,6 +10423,9 @@ do
 
             Finished = Info.Finished,
             Numeric = Info.Numeric,
+            Min = Info.Min,
+            Max = Info.Max,
+            ThousandsSeparator = Info.ThousandsSeparator == true,
             ClearTextOnFocus = Info.ClearTextOnFocus,
             ClearTextOnBlur = Info.ClearTextOnBlur,
             Placeholder = Info.Placeholder,
@@ -10487,9 +10518,26 @@ do
             Library:SafeCallback(Input.Changed, Input.Value)
         end
 
+        local function DisplayValue()
+            local Text = tostring(Input.Value or "")
+            if Input.Numeric and Input.ThousandsSeparator and not Box:IsFocused() then
+                local Sign, Digits, Rest = Text:match("^([+-]?)(%d+)(.*)$")
+                if Digits then Text = Sign .. Digits:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. Rest end
+            end
+            UpdatingText = true
+            Box.Text = Text
+            UpdatingText = false
+        end
+
+        function Input:GetNumber()
+            return tonumber(Input.Value)
+        end
+
         function Input:SetValue(Text)
+            Text = tostring(Text == nil and "" or Text)
+            if Input.Numeric and Input.ThousandsSeparator then Text = Text:gsub(",", "") end
             if not Input.AllowEmpty and Trim(Text) == "" then
-                Text = Input.EmptyReset
+                Text = Input.Numeric and tostring(tonumber(Input.EmptyReset) or Input.Min or 0) or Input.EmptyReset
             end
 
             if Info.MaxLength and #Text > Info.MaxLength then
@@ -10497,8 +10545,17 @@ do
             end
 
             if Input.Numeric then
-                if #tostring(Text) > 0 and not tonumber(Text) then
-                    Text = Input.Value
+                if #Text > 0 then
+                    local Number = tonumber(Text)
+                    if not Number or Number ~= Number or math.abs(Number) == math.huge then
+                        Text = tostring(Input.Value or "")
+                        local Previous = tonumber(Text)
+                        if Text ~= "" and (not Previous or Previous ~= Previous or math.abs(Previous) == math.huge) then
+                            Text = tostring(math.clamp(0, Input.Min or -math.huge, Input.Max or math.huge))
+                        end
+                    elseif Input.Min ~= nil or Input.Max ~= nil then
+                        Text = tostring(math.clamp(Number, Input.Min or -math.huge, Input.Max or math.huge))
+                    end
                 end
             end
 
@@ -10507,11 +10564,12 @@ do
             end
 
             if Input.Value == Text then
+                DisplayValue()
                 return
             end
 
             Input.Value = Text
-            Box.Text = Text
+            DisplayValue()
 
             if not Input.Disabled then
                 Input:RunChanged()
@@ -10542,9 +10600,9 @@ do
             Label.Text = Text
         end
 
-        if Input.Finished then
+        if Input.Finished or Input.Numeric and (Input.Min ~= nil or Input.Max ~= nil or Input.ThousandsSeparator) then
             table.insert(Input.Connections, Box.FocusLost:Connect(function(Enter)
-                if not Enter then
+                if not Enter and not Input.Numeric then
                     if Input.ClearTextOnBlur then
                         Box.Text = Input.Value
                     end
@@ -10556,7 +10614,7 @@ do
             end))
         else
             table.insert(Input.Connections, Box:GetPropertyChangedSignal("Text"):Connect(function()
-                if Box.Text == Input.Value then return end
+                if UpdatingText or Box.Text == Input.Value then return end
                 
                 Input:SetValue(Box.Text)
             end))
@@ -10567,6 +10625,7 @@ do
                 return
             end
 
+            if Input.Numeric and Input.ThousandsSeparator then DisplayValue() end
             Library.Registry[BoxStroke].Color = "AccentColor"
             Library:PlayTween(BoxStroke, "InputFocus", Library.TweenInfo, {
                 Color = Library.Scheme.AccentColor,
@@ -10574,6 +10633,7 @@ do
         end))
 
         table.insert(Input.Connections, Box.FocusLost:Connect(function()
+            DisplayValue()
             Library.Registry[BoxStroke].Color = "OutlineColor"
             Library:PlayTween(BoxStroke, "InputFocus", Library.TweenInfo, {
                 Color = Library.Scheme.OutlineColor,
@@ -10590,6 +10650,10 @@ do
         Input.Holder = Holder
         table.insert(Groupbox.Elements, Input)
 
+        local WasDisabled = Input.Disabled
+        Input.Disabled = true
+        Input:SetValue(Input.Value)
+        Input.Disabled = WasDisabled
         Input.Default = Input.Value
         if typeof(Info.VerifyValue) == "function" and (Input.Default ~= Input.EmptyReset and Info.VerifyValue(Input.Default) ~= true) then
             Input:SetValue(Input.EmptyReset)
@@ -11142,6 +11206,9 @@ do
 
         if Info.SpecialType == "Player" then
             Info.Values = GetPlayers(Info.ExcludeLocalPlayer)
+            if Info.PlayerValue == "Name" then
+                for Index, Player in Info.Values do Info.Values[Index] = Player.Name end
+            end
             Info.AllowNull = true
         elseif Info.SpecialType == "Team" then
             Info.Values = GetTeams()
@@ -11164,6 +11231,7 @@ do
             DragSelect = Info.Multi and not Library.IsMobile and Info.DragSelect == true,
 
             SpecialType = Info.SpecialType,
+            PlayerValue = Info.PlayerValue,
             ExcludeLocalPlayer = Info.ExcludeLocalPlayer,
             EnablePlayerImages = Info.EnablePlayerImages,
 
@@ -11294,6 +11362,7 @@ do
             local ValueImage = nil
             if Dropdown.SpecialType == "Player" and Dropdown.EnablePlayerImages == true then
                 local PlayerValue = Value
+                if Dropdown.PlayerValue == "Name" and type(Value) == "string" then PlayerValue = Players:FindFirstChild(Value) end
                 if typeof(PlayerValue) ~= "Instance" and RawValue ~= nil then
                     PlayerValue = RawValue
                 end
@@ -13331,6 +13400,65 @@ do
         return Passthrough
     end
 
+    function Funcs:AddStatRow(Idx, Info)
+        if self.Destroyed then return nil end
+        Info = Info or {}
+        local Root = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true })
+        local Split = math.clamp(tonumber(Info.LabelRatio) or 0.55, 0.1, 0.9)
+        local Label = New("TextLabel", {
+            BackgroundTransparency = 1, Size = UDim2.new(Split, -6, 1, 0),
+            Text = tostring(Info.Text or Idx), TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, TextSize = Library:GetDesignToken("Size.Text", 14), Parent = Root,
+        })
+        local ValueLabel = New("TextLabel", {
+            BackgroundTransparency = 1, Position = UDim2.fromScale(Split, 0), Size = UDim2.fromScale(1 - Split, 1),
+            Text = Info.Value == nil and "" or tostring(Info.Value), TextXAlignment = Enum.TextXAlignment.Right,
+            TextTruncate = Enum.TextTruncate.AtEnd, TextSize = Library:GetDesignToken("Size.Text", 14), Parent = Root,
+        })
+        local Row = self:AddUIPassthrough(Idx, { Instance = Root, Height = Info.Height or 22, Visible = Info.Visible ~= false })
+        Row.Type = "StatRow"
+        Row.Text, Row.Value = tostring(Info.Text or Idx), Info.Value
+        Row.Label, Row.ValueLabel = Label, ValueLabel
+        function Row:SetText(Value) self.Text = tostring(Value); Label.Text = self.Text; return self end
+        function Row:SetValue(Value) self.Value = Value; ValueLabel.Text = tostring(Value); return self end
+        return Row
+    end
+
+    function Funcs:AddProgressBar(Idx, Info)
+        if self.Destroyed then return nil end
+        Info = Info or {}
+        local Min, Max = tonumber(Info.Min) or 0, tonumber(Info.Max) or 100
+        local Value = tonumber(Info.Value) or Min
+        assert(Max > Min and math.abs(Min) < math.huge and math.abs(Max) < math.huge, "Invalid progress range")
+        assert(Value == Value and math.abs(Value) < math.huge, "Progress value must be finite")
+        local Row = self:AddStatRow(Idx, { Text = Info.Text, Value = "", Height = Info.Height or 30, Visible = Info.Visible, LabelRatio = Info.LabelRatio })
+        Row.Type = "ProgressBar"
+        Row.Min, Row.Max = Min, Max
+        Row.Label.Size = UDim2.new(Row.Label.Size.X.Scale, Row.Label.Size.X.Offset, 0, 20)
+        Row.ValueLabel.Size = UDim2.new(Row.ValueLabel.Size.X.Scale, 0, 0, 20)
+        Row.ValueLabel.Visible = Info.ShowValue ~= false
+        local Track = New("Frame", { BackgroundColor3 = "MainColor", BorderSizePixel = 0,
+            Position = UDim2.new(0, 0, 1, -5), Size = UDim2.new(1, 0, 0, 4), ClipsDescendants = true, Parent = Row.Instance })
+        local Fill = New("Frame", { BackgroundColor3 = Info.Color or "AccentColor", BorderSizePixel = 0,
+            Size = UDim2.fromScale(0, 1), Parent = Track })
+        Row.Fill = Fill
+        function Row:SetValue(Value)
+            local Number = tonumber(Value)
+            assert(Number and Number == Number and math.abs(Number) < math.huge, "Progress value must be finite")
+            self.Value = math.clamp(Number, self.Min, self.Max)
+            Fill.Size = UDim2.fromScale((self.Value - self.Min) / (self.Max - self.Min), 1)
+            self.ValueLabel.Text = string.format("%s / %s", tostring(self.Value), tostring(self.Max))
+            return self
+        end
+        function Row:SetRange(Min, Max)
+            assert(type(Min) == "number" and type(Max) == "number" and Max > Min and math.abs(Min) < math.huge and math.abs(Max) < math.huge, "Invalid progress range")
+            self.Min, self.Max = Min, Max
+            return self:SetValue(self.Value)
+        end
+        Row:SetValue(Value)
+        return Row
+    end
+
     function Funcs:AddAddon(Idx, Addon, Info)
         if self.Destroyed then return nil end
         assert(type(Addon) == "table", "Addon module must be a table")
@@ -14431,6 +14559,16 @@ do
     Library:GiveSignal(ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(RefreshNotifications))
 end
 
+
+function Library:IsMenuOpen()
+    return self.Toggled == true and not self.Unloaded
+end
+
+function Library:TryCreateWindow(Info)
+    local Success, Result = pcall(self.CreateWindow, self, Info)
+    if Success then return Result end
+    return nil, tostring(Result)
+end
 
 function Library:CreateWindow(WindowInfo)
     assert(not Library.Unloaded, "Cannot create a window after unloading the library.")
@@ -17120,7 +17258,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Show()
-            if Tab.Destroyed then
+            if Tab.Destroyed or Tab.Visible == false then
                 return
             end
 
@@ -17172,11 +17310,18 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
+            Tab.Visible = Visible == true
+            TabButton.Visible = Tab.Visible
+            if not Tab.Visible and Library.ActiveTab == Tab then
                 Tab:Hide()
+                local NextTab
+                for _, Candidate in Library.Tabs do
+                    if Candidate ~= Tab and not Candidate.Destroyed and Candidate.Visible ~= false
+                        and (not NextTab or (Candidate.Order or 0) < (NextTab.Order or 0)) then NextTab = Candidate end
+                end
+                if NextTab then NextTab:Show() end
             end
+            return Tab
         end
 
         function Tab:SetOrder(Order: number)
@@ -17519,7 +17664,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Show()
-            if Tab.Destroyed then
+            if Tab.Destroyed or Tab.Visible == false then
                 return
             end
 
@@ -17567,11 +17712,18 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
+            Tab.Visible = Visible == true
+            TabButton.Visible = Tab.Visible
+            if not Tab.Visible and Library.ActiveTab == Tab then
                 Tab:Hide()
+                local NextTab
+                for _, Candidate in Library.Tabs do
+                    if Candidate ~= Tab and not Candidate.Destroyed and Candidate.Visible ~= false
+                        and (not NextTab or (Candidate.Order or 0) < (NextTab.Order or 0)) then NextTab = Candidate end
+                end
+                if NextTab then NextTab:Show() end
             end
+            return Tab
         end
 
         
@@ -18194,6 +18346,7 @@ function Library:CreateWindow(WindowInfo)
         end
         local Show = Tab.Show
         function Tab:Show()
+            if Tab.Destroyed or Tab.Visible == false then return end
             local Success, Message = Tab:Build()
             if not Success then error(Message, 2) end
             return Show(Tab)
@@ -19540,12 +19693,14 @@ end
 
 Library.mount = Library.create
 
-local function OnPlayerChange()
+local function OnPlayerChange(Removing)
     if Library.Unloaded then
         return
     end
 
     local PlayerList = GetPlayers()
+    local RemovingIndex = Removing and table.find(PlayerList, Removing)
+    if RemovingIndex then table.remove(PlayerList, RemovingIndex) end
     local ExcludedPlayerList = table.clone(PlayerList)
     local LocalPlayerIndex = table.find(ExcludedPlayerList, LocalPlayer)
     if LocalPlayerIndex then
@@ -19553,7 +19708,11 @@ local function OnPlayerChange()
     end
     for _, Dropdown in Options do
         if Dropdown.Type == "Dropdown" and Dropdown.SpecialType == "Player" then
-            Dropdown:SetValues(Dropdown.ExcludeLocalPlayer and ExcludedPlayerList or PlayerList)
+            local Values = table.clone(Dropdown.ExcludeLocalPlayer and ExcludedPlayerList or PlayerList)
+            if Dropdown.PlayerValue == "Name" then
+                for Index, Player in Values do Values[Index] = Player.Name end
+            end
+            Dropdown:SetValues(Values)
         end
     end
 end
@@ -19571,7 +19730,7 @@ local function OnTeamChange()
     end
 end
 
-Library:GiveSignal(Players.PlayerAdded:Connect(OnPlayerChange))
+Library:GiveSignal(Players.PlayerAdded:Connect(function() OnPlayerChange() end))
 Library:GiveSignal(Players.PlayerRemoving:Connect(OnPlayerChange))
 
 Library:GiveSignal(Teams.ChildAdded:Connect(OnTeamChange))

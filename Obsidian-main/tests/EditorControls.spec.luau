@@ -1,5 +1,40 @@
 return function(CreateEditor, Mock, Modules)
     local Library, Box, Window, Input = CreateEditor()
+    local Stat = Box:AddStatRow("stat", { Text = "Balance", Value = "1,200" })
+    assert(Stat.ValueLabel.Text == "1,200")
+    Stat:SetValue("2,500"):SetText("Total")
+    assert(Stat.ValueLabel.Text == "2,500" and Stat.Label.Text == "Total")
+    Stat:Destroy()
+    local Progress = Box:AddProgressBar("progress", { Text = "Progress", Min = 10, Max = 110, Value = 60 })
+    assert(Progress.Fill.Size.X.Scale == 0.5)
+    Progress:SetValue(200)
+    assert(Progress.Value == 110 and Progress.Fill.Size.X.Scale == 1)
+    Progress:SetRange(0, 220)
+    assert(Progress.Fill.Size.X.Scale == 0.5)
+    assert(not pcall(function() Progress:SetRange(2, 1) end))
+    Progress:Destroy()
+    local InputCalls = 0
+    local Amount = Box:AddInput("amount", { Numeric = true, Min = 100, Max = 20000, Default = "12000",
+        ThousandsSeparator = true, Callback = function() InputCalls += 1 end })
+    local TextBox
+    for _, Child in Amount.Holder:GetChildren() do if Child.ClassName == "TextBox" then TextBox = Child end end
+    assert(TextBox.Text == "12,000" and Amount.Value == "12000" and InputCalls == 0)
+    Amount:SetValue("99999")
+    assert(Amount:GetNumber() == 20000 and TextBox.Text == "20,000" and InputCalls == 1)
+    Amount:SetValue("invalid")
+    assert(Amount:GetNumber() == 20000 and InputCalls == 1)
+    TextBox.HasFocus = true
+    TextBox.Focused:Fire()
+    assert(TextBox.Text == "20000")
+    TextBox.Text = "1"
+    TextBox:GetPropertyChangedSignal("Text"):Fire()
+    assert(Amount.Value == "20000", "Bounded input clamps while the user is still typing")
+    TextBox.Text = "1,200"
+    TextBox.HasFocus = false
+    TextBox.FocusLost:Fire(false)
+    assert(Amount.Value == "1200" and TextBox.Text == "1,200")
+    Amount:Destroy()
+    print("PASS numeric bounds, formatting, focus commit and unchanged input callbacks")
     local Changes = {}
     local Disconnect = Library:OnConfigChanged(function(Event) table.insert(Changes, Event) end)
     local First = Library:AddHidden("batch-a", 1, { ConfigVersion = 2, Save = false })

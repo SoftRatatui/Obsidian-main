@@ -236,6 +236,7 @@ export type ButtonInfo = {
 export type ToggleInfo = {
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Text: string,
     Default: boolean?,
     Variant: ToggleVariant?,
@@ -252,8 +253,12 @@ export type ToggleInfo = {
 }
 
 export type InputInfo = {
+    Min: number?,
+    Max: number?,
+    ThousandsSeparator: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Text: string,
     Default: string?,
     Finished: boolean?,
@@ -275,6 +280,7 @@ export type SliderInfo = {
     CallbackOnRelease: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Text: string,
     Default: number?,
     Min: number?,
@@ -295,8 +301,10 @@ export type SliderInfo = {
 }
 
 export type DropdownInfo = {
+    PlayerValue: ("Instance" | "Name")?,
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Text: string?,
     Values: { [any]: any },
     Default: any,
@@ -380,6 +388,7 @@ export type UIPassthroughInfo = {
 export type KeyPickerInfo = {
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Text: string,
     Default: string?,
     Mode: "Toggle" | "Hold" | "Press"?,
@@ -396,6 +405,7 @@ export type KeyPickerInfo = {
 export type ColorPickerInfo = {
     Save: boolean?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     Default: Color3?,
     Transparency: number?,
     Title: string?,
@@ -508,6 +518,7 @@ export type KeyPicker = {
     SetSave: (self: KeyPicker, Enabled: boolean) -> KeyPicker,
     SetVisible: (self: KeyPicker, Visible: boolean) -> KeyPicker,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: KeyPicker, Version: number) -> KeyPicker,
     Text: string,
     Value: string,
@@ -537,6 +548,7 @@ export type ColorPicker = {
     SetSave: (self: ColorPicker, Enabled: boolean) -> ColorPicker,
     SetVisible: (self: ColorPicker, Visible: boolean) -> ColorPicker,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: ColorPicker, Version: number) -> ColorPicker,
     Value: Color3,
     Transparency: number,
@@ -648,6 +660,7 @@ export type SubButton = {
 export type Toggle = {
     SetSave: (self: Toggle, Enabled: boolean) -> Toggle,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: Toggle, Version: number) -> Toggle,
     Text: string,
     Value: boolean,
@@ -689,8 +702,13 @@ export type Toggle = {
 }
 
 export type Input = {
+    GetNumber: (self: Input) -> number?,
+    Min: number?,
+    Max: number?,
+    ThousandsSeparator: boolean,
     SetSave: (self: Input, Enabled: boolean) -> Input,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: Input, Version: number) -> Input,
     Text: string,
     Value: string,
@@ -722,6 +740,7 @@ export type Input = {
 export type Slider = {
     SetSave: (self: Slider, Enabled: boolean) -> Slider,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: Slider, Version: number) -> Slider,
     Text: string,
     Value: number,
@@ -761,6 +780,7 @@ export type Dropdown = {
     SetSave: (self: Dropdown, Enabled: boolean) -> Dropdown,
     GetSelected: (self: Dropdown) -> { any },
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     SetConfigVersion: (self: Dropdown, Version: number) -> Dropdown,
     Connections: { RBXScriptConnection },
     Destroyed: boolean,
@@ -948,6 +968,7 @@ export type Hidden = {
     Value: any,
     Default: any,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     GetValue: (self: Hidden) -> any,
     SetValue: (self: Hidden, Value: any) -> Hidden,
     SetConfigVersion: (self: Hidden, Version: number) -> Hidden,
@@ -994,6 +1015,7 @@ export type ItemSlotsInfo = {
     Items: { any }?,
     Default: { [string]: string | number }?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     DragType: string?,
     Visible: boolean?,
     CornerRadius: number?,
@@ -1022,6 +1044,7 @@ export type SliderGroupInfo = {
     Sliders: { SliderInfo & { Id: string } }?,
     Callback: (({ [string]: number }) -> ())?,
     ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
     MinCellWidth: number?,
     Visible: boolean?,
 }
@@ -1047,7 +1070,34 @@ export type PopupInfo = {
     FooterButtons: { [any]: DialogButtonInfo }?,
 }
 
+export type StatRowInfo = {
+    Text: string?, Value: any?, Height: number?, Visible: boolean?, LabelRatio: number?,
+}
+export type StatRow = {
+    Text: string, Value: any, Holder: Frame, Label: TextLabel, ValueLabel: TextLabel,
+    SetText: (self: StatRow, Value: string) -> StatRow,
+    SetValue: (self: StatRow, Value: any) -> StatRow,
+    SetVisible: (self: StatRow, Value: boolean) -> (),
+    SetHeight: (self: StatRow, Height: number) -> (),
+    Destroy: (self: StatRow) -> (),
+}
+export type ProgressBarInfo = {
+    Text: string?, Value: number?, Min: number?, Max: number?, ShowValue: boolean?,
+    Height: number?, Visible: boolean?, LabelRatio: number?, Color: Color3?,
+}
+export type ProgressBar = {
+    Value: number, Min: number, Max: number, Holder: Frame, Fill: Frame,
+    SetText: (self: ProgressBar, Value: string) -> ProgressBar,
+    SetValue: (self: ProgressBar, Value: number) -> ProgressBar,
+    SetRange: (self: ProgressBar, Min: number, Max: number) -> ProgressBar,
+    SetVisible: (self: ProgressBar, Value: boolean) -> (),
+    SetHeight: (self: ProgressBar, Height: number) -> (),
+    Destroy: (self: ProgressBar) -> (),
+}
+
 export type BaseGroupbox = {
+    AddStatRow: (self: BaseGroupbox, Id: string, Info: StatRowInfo?) -> StatRow,
+    AddProgressBar: (self: BaseGroupbox, Id: string, Info: ProgressBarInfo?) -> ProgressBar,
     AddSection: (self: BaseGroupbox, Title: string) -> Label,
     AddImageGrid: (self: BaseGroupbox, Id: string, Info: ImageGridInfo) -> any,
     AddItemSlots: (self: BaseGroupbox, Id: string, Info: ItemSlotsInfo?) -> ItemSlots,
@@ -1717,6 +1767,8 @@ export type Library = {
         Time: (number | Instance)?,
         SoundId: string | number?
     ) -> Notification,
+    IsMenuOpen: (self: Library) -> boolean,
+    TryCreateWindow: (self: Library, Info: { [string]: any }) -> (Window?, string?),
     CreateLoading: (self: Library, LoadingInfo: LoadingInfo) -> Loading,
     CreateWindow: (
         self: Library,

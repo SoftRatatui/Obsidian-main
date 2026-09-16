@@ -181,13 +181,16 @@ local function CreateDropdown(Info)
 $taskSource += "`n$taskDropdownMethods`nreturn Dropdown, View`nend`n"
 $taskTypographySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Typography.spec.luau'))
 $taskSource += "local RunTypography = (function()`n$taskTypographySpec`nend)()`nRunTypography(CreateDropdown, Mock)`n"
-$taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddImageGrid(')
+$taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddStatRow(')
 $taskDragStart = $taskLibrarySource.IndexOf('function Library:RegisterImageGrid(')
 $taskDragEnd = $taskLibrarySource.IndexOf('local function CopyOptionValue(', $taskDragStart)
 $taskDragMethods = $taskLibrarySource.Substring($taskDragStart, $taskDragEnd - $taskDragStart)
 $taskDependencyStart = $taskLibrarySource.IndexOf('function Library:UpdateDependencyBoxes()')
 $taskDependencyEnd = $taskLibrarySource.IndexOf('local function MatchesSearch(', $taskDependencyStart)
 $taskDependencyCode = $taskLibrarySource.Substring($taskDependencyStart, $taskDependencyEnd - $taskDependencyStart)
+$taskInputStart = $taskLibrarySource.IndexOf('    function Funcs:AddInput(')
+$taskInputEnd = $taskLibrarySource.IndexOf('    function Funcs:AddSlider(', $taskInputStart)
+$taskInputMethods = $taskLibrarySource.Substring($taskInputStart, $taskInputEnd - $taskInputStart)
 $taskEditorEnd = $taskLibrarySource.IndexOf('    function Funcs:AddDependencyBox()', $taskEditorStart)
 $taskEditorMethods = $taskLibrarySource.Substring($taskEditorStart, $taskEditorEnd - $taskEditorStart)
 $taskHiddenStart = $taskLibrarySource.IndexOf('local function CopyOptionValue(')
@@ -215,6 +218,10 @@ local function CreateEditor()
     local function New(Class, Properties)
         local Object = Mock.New(Library, Class, Properties)
         if Class == "UIListLayout" then Object.AbsoluteContentSize = Vector2.new(300, 100) end
+        if Class == "TextBox" then
+            Object.Focused, Object.FocusLost = Mock.Signal(), Mock.Signal()
+            Object.IsFocused = function() return Object.HasFocus == true end
+        end
         return Object
     end
     function Library:SafeCallback(Callback, ...) if Callback then return Callback(...) end end
@@ -225,12 +232,15 @@ local function CreateEditor()
         self:RemoveFromRegistry(Root)
         for _, Child in Root:GetDescendants() do self:RemoveFromRegistry(Child) end
     end
+    function Library:Snap(Value) return math.round(Value) end
+    function Library:Metric(_, Value) return Value end
+    local function Trim(Value) return Value:match("^%s*(.-)%s*$") end
     local Funcs = {}
     local BaseGroupbox = { __index = Funcs }
     function Funcs:AddAddon(Id, Addon, Info) return Addon.CreateEmbedded(Library, self, Id, Info) end
     function Funcs:AddUIPassthrough(Id, Info)
         Info.Instance.Parent = self.Container
-        local Element = {}
+        local Element = { Instance = Info.Instance, Holder = Info.Instance }
         function Element:Destroy() Info.Instance:Destroy(); Options[Id] = nil end
         function Element:SetVisible(Value) Info.Instance.Visible = Value end
         function Element:SetHeight() end
@@ -258,7 +268,11 @@ local function CreateEditor()
         local Pos, Size = Object.AbsolutePosition, Object.AbsoluteSize
         return Point.X >= Pos.X and Point.Y >= Pos.Y and Point.X <= Pos.X + Size.X and Point.Y <= Pos.Y + Size.Y
     end
-    local Templates = { Dialog = { Title = "Dialog", Description = "", FooterButtons = {} } }
+    local Templates = {
+        Dialog = { Title = "Dialog", Description = "", FooterButtons = {} },
+        Input = { Text = "Input", Default = "", Numeric = false, Finished = false, Visible = true,
+            AllowEmpty = true, EmptyReset = "None", Placeholder = "", ClearTextOnFocus = true, Disabled = false },
+    }
     function Library:Validate(Info, Template)
         local Result = table.clone(Template)
         for Key, Value in Info or {} do Result[Key] = Value end
@@ -267,7 +281,7 @@ local function CreateEditor()
     Library.DialogOpenAnimationInfo, Library.DialogCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
     Library.DialogOverlayOpenAnimationInfo, Library.DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
 '@
-$taskSource += "`n$taskDependencyCode`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskPopupMethods`n"
+$taskSource += "`n$taskDependencyCode`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskInputMethods`n$taskPopupMethods`n"
 $taskSource += @'
     local Groupbox = setmetatable({ Elements = {}, Container = New("Frame", { Parent = MainFrame }), Resize = function() end }, BaseGroupbox)
     return Library, Groupbox, Window, UserInputService
@@ -275,6 +289,59 @@ end
 '@
 $taskEditorSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'EditorControls.spec.luau'))
 $taskSource += "`nlocal RunEditor = (function()`n$taskEditorSpec`nend)()`nRunEditor(CreateEditor, Mock, Modules)`n"
+$taskMenuStart = $taskLibrarySource.IndexOf('function Library:IsMenuOpen()')
+$taskMenuEnd = $taskLibrarySource.IndexOf('function Library:CreateWindow(', $taskMenuStart)
+$taskMenuMethods = $taskLibrarySource.Substring($taskMenuStart, $taskMenuEnd - $taskMenuStart)
+$taskTabStart = $taskLibrarySource.IndexOf('        function Tab:SetVisible(')
+$taskTabEnd = $taskLibrarySource.IndexOf('        function Tab:SetOrder(', $taskTabStart)
+$taskTabMethods = $taskLibrarySource.Substring($taskTabStart, $taskTabEnd - $taskTabStart)
+$taskPlayersStart = $taskLibrarySource.IndexOf('local function OnPlayerChange(')
+$taskPlayersEnd = $taskLibrarySource.IndexOf('local function OnTeamChange(', $taskPlayersStart)
+$taskPlayersMethods = $taskLibrarySource.Substring($taskPlayersStart, $taskPlayersEnd - $taskPlayersStart)
+$taskSource += "`ndo`nlocal Library = { Tabs = {}, Toggled = false }`n$taskMenuMethods`n"
+$taskSource += @'
+    assert(not Library:IsMenuOpen())
+    Library.Toggled = true
+    assert(Library:IsMenuOpen())
+    Library.Unloaded = true
+    assert(not Library:IsMenuOpen())
+    Library.Unloaded = false
+    Library.CreateWindow = function() error("lacking capability Plugin") end
+    local Result, Message = Library:TryCreateWindow({})
+    assert(Result == nil and Message:find("lacking capability Plugin", 1, true))
+    local Tab, TabButton = {}, { Visible = true }
+    local Other = { Order = 2 }
+    function Tab:Hide() Library.ActiveTab = nil end
+    function Other:Show() Library.ActiveTab = self end
+    Library.Tabs = { first = Tab, second = Other }
+    Library.ActiveTab = Tab
+'@
+$taskSource += "`n$taskTabMethods`n"
+$taskSource += @'
+    Tab:SetVisible(false)
+    assert(Tab.Visible == false and not TabButton.Visible and Library.ActiveTab == Other)
+    Tab:SetVisible(true)
+    assert(TabButton.Visible and Library.ActiveTab == Other)
+    local LocalPlayer = { Name = "Local" }
+    local Guest = { Name = "Guest" }
+    local GetPlayers = function() return { LocalPlayer, Guest } end
+    local Names = { Type = "Dropdown", SpecialType = "Player", PlayerValue = "Name", ExcludeLocalPlayer = true }
+    local Instances = { Type = "Dropdown", SpecialType = "Player" }
+    function Names:SetValues(Values) self.Values = Values end
+    Instances.SetValues = Names.SetValues
+    local Options = { Names, Instances }
+'@
+$taskSource += "`n$taskPlayersMethods`n"
+$taskSource += @'
+    OnPlayerChange()
+    assert(Names.Values[1] == "Guest" and #Names.Values == 1)
+    assert(Instances.Values[1] == LocalPlayer and Instances.Values[2] == Guest)
+    OnPlayerChange(Guest)
+    assert(#Names.Values == 0 and #Instances.Values == 1)
+    print("PASS menu state, visible-tab fallback, player usernames and UI creation error reporting")
+end
+'@
+$taskSource += "`n"
 $taskSearchStart = $taskLibrarySource.IndexOf('local function MatchesSearch(')
 $taskSearchEnd = $taskLibrarySource.IndexOf('local function CheckDepbox(', $taskSearchStart)
 $taskSearchCode = $taskLibrarySource.Substring($taskSearchStart, $taskSearchEnd - $taskSearchStart)
@@ -343,6 +410,13 @@ try {
 $taskSaveManagerSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'addons/SaveManager.lua'))
 $taskSaveManagerSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'SaveManager.spec.luau'))
 $taskSaveSource = @'
+local pendingCallbacks = {}
+local task = { defer = function(Func) table.insert(pendingCallbacks, Func) end }
+local function FlushCallbacks()
+    local Pending = table.clone(pendingCallbacks)
+    table.clear(pendingCallbacks)
+    for _, Func in Pending do Func() end
+end
 local storedJson = {}
 local jsonSequence = 0
 local files = {}
@@ -417,7 +491,7 @@ $taskCallbackStart = $taskLibrarySource.IndexOf('function Library:SafeCallback('
 $taskCallbackEnd = $taskLibrarySource.IndexOf('function GetOverlappingDraggable', $taskCallbackStart)
 $taskCallbackSource = $taskLibrarySource.Substring($taskCallbackStart, $taskCallbackEnd - $taskCallbackStart)
 $taskSaveSource += "local function BindCallbacks(Library)`n$taskCallbackSource`nend`n"
-$taskSaveSource += "local Run = (function()`n$taskSaveManagerSpec`nend)()`nRun(SaveManager, { files = files, folders = folders, storedJson = storedJson, UDim2 = UDim2, Color3 = Color3, faults = faults, CreateSaveManager = CreateSaveManager, BindCallbacks = BindCallbacks })`n"
+$taskSaveSource += "local Run = (function()`n$taskSaveManagerSpec`nend)()`nRun(SaveManager, { files = files, folders = folders, storedJson = storedJson, UDim2 = UDim2, Color3 = Color3, faults = faults, CreateSaveManager = CreateSaveManager, BindCallbacks = BindCallbacks, FlushCallbacks = FlushCallbacks })`n"
 $taskThemeManagerSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'addons/ThemeManager.lua'))
 $taskThemeManagerSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'ThemeManagerPersistence.spec.luau'))
 $taskSaveSource += "local ThemeManager = (function()`n$taskThemeManagerSource`nend)()`n"

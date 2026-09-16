@@ -139,3 +139,38 @@ remain unchanged. Preview includes a spectator-list demo and preset switching.
 Tests cover compact and classic headers, content resizing, section headings and
 fixed-size compatibility. Update Library.lua and DashboardWindow.lua together with
 the latest types and examples. Real Roblox rendering still needs an in-game check.
+2026-09-16 | Release 3 API and config loading
+Version remains 0.0.1-release-3.
+
+Unchanged controls no longer rerun callbacks during config loads, including
+multi-dropdown selections, key modifiers, colors and hidden values. Adapters
+retain their load behavior. Load reports include Unchanged and CallbackTimings.
+Use SaveManager:GetSlowCallbacks(0.05) to inspect handlers taking at least 50 ms.
+
+Set ConfigCallbackMode = "Background" on independent handlers that may wait.
+SaveManager:SetCallbackMode("Background") changes the default; per-option Sync
+overrides it. Jobs start after a successful transaction. BackgroundCallbacks
+reports their state, duration and errors. OnConfigLoaded confirms applied values
+and adapters; background work may still be pending. Async errors do not roll back
+a completed load. Keep dependent handlers synchronous and cancel stale work in
+application code. Theme restoration stays synchronous.
+
+AssetCatalog now supports MultiSelect. GetSelected returns source and normalized
+arrays; Select toggles a card and SetSelected(ids, silent) replaces the selection.
+SetItemState(id, patch) updates a card without replacing its button. Source data
+is not mutated. ShowPager=false hides navigation; omit it to hide only on one
+page. CollectionModel remains a single-selection model.
+
+AddStatRow aligns a label and value without overlapping text. AddProgressBar
+supports SetValue and SetRange; both are runtime displays, not saved options.
+Numeric inputs support Min, Max, ThousandsSeparator and GetNumber. Formatting is
+visual; configs retain plain strings. Bounded/formatted fields commit on blur.
+
+Player dropdowns accept PlayerValue="Name" for serializable usernames. Leaving
+players are removed immediately. Tab:SetVisible switches away from hidden active
+tabs. Library:IsMenuOpen returns the supported menu-state query. TryCreateWindow
+returns creation errors without changing caller capabilities.
+
+Preview demonstrates the new controls and catalog behavior. GUIDE.md covers the
+APIs, scheduling, persistence and supported caller context. Update Library,
+Example, managers and addons together to the latest revision, then restart.

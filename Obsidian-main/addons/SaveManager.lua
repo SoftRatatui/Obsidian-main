@@ -110,6 +110,14 @@ local SpecialValueParser = {
 }
 
 local ElementParser = {}; do
+    local function Equal(First, Second)
+        if type(First) ~= type(Second) then return false end
+        if type(First) ~= "table" then return First == Second end
+        for Key, Value in First do if not Equal(Value, Second[Key]) then return false end end
+        for Key in Second do if First[Key] == nil then return false end end
+        return true
+    end
+
     local function CreateParser(
         ElementType: string, 
         LibaryIndex: string, 
@@ -136,11 +144,30 @@ local ElementParser = {}; do
                 local Elements = SaveManager.Library and SaveManager.Library[LibaryIndex]
                 local Element = Elements and Elements[Index]
                 if not Element then return end
+                local Current = Save(Index, Element)
+                local Same = true
+                for Key, Value in Current do
+                    local Incoming = Data[Key]
+                    if ElementType == "Slider" and Key == "value" then Incoming = tonumber(Incoming) end
+                    if ElementType == "Dropdown" and Element.Multi and Key == "value" then
+                        local A, B = {}, {}
+                        for _, Item in Value do A[Item] = true end
+                        for Id, Item in Incoming or {} do
+                            if type(Item) == "boolean" then if Item then B[Id] = true end else B[Item] = true end
+                        end
+                        if not Equal(A, B) then Same = false; break end
+                    elseif not Equal(Value, Incoming) then Same = false; break end
+                end
+                for Key in Data do
+                    if Key ~= "type" and Key ~= "idx" and Key ~= "version" and Current[Key] == nil then Same = false end
+                end
+                if Same then return false end
                 local WasDisabled = Element.Disabled
                 Element.Disabled = false
                 local Success, ErrorMessage = pcall(Load, Element, Data)
                 Element.Disabled = WasDisabled
                 if not Success then error(ErrorMessage, 0) end
+                return true
             end
         }
     end
@@ -153,7 +180,6 @@ local ElementParser = {}; do
         function(Element: any?, Data: any)
             if not Element then return end
             if Element.Value == Data.value then
-                Element:RunChanged()
                 return
             end
             
@@ -169,7 +195,6 @@ local ElementParser = {}; do
         function(Element: any?, Data: any)
             if not Element then return end
             if Element.Value == tonumber(Data.value) then
-                Element:RunChanged()
                 return
             end
 
@@ -201,7 +226,6 @@ local ElementParser = {}; do
         function(Element: any?, Data: any)
             if not Element then return end
             if Element.Value == Data.value then
-                Element:RunChanged()
                 return
             end
             
@@ -247,7 +271,6 @@ local ElementParser = {}; do
             if typeof(Data.text) ~= "string" then return end
 
             if Element.Value == Data.text then
-                Element:RunChanged()
                 return
             end
 
@@ -758,6 +781,26 @@ function SaveManager:Save(ConfigName: string): (boolean, string?)
     return WriteVerified(ConfigPath, EncodedData)
 end
 
+function SaveManager:SetCallbackMode(Mode)
+    assert(Mode == "Sync" or Mode == "Background", "Callback mode must be Sync or Background")
+    self.CallbackMode = Mode
+    return self
+end
+
+function SaveManager:GetSlowCallbacks(Threshold)
+    local Result = {}
+    local Report = self.LastLoadReport
+    if not Report then return Result end
+    Threshold = tonumber(Threshold) or 0.05
+    for _, Entries in { Report.CallbackTimings or {}, Report.BackgroundCallbacks or {} } do
+        for _, Entry in Entries do
+            if Entry.Seconds and Entry.Seconds >= Threshold then table.insert(Result, table.clone(Entry)) end
+        end
+    end
+    table.sort(Result, function(A, B) return A.Seconds > B.Seconds end)
+    return Result
+end
+
 function SaveManager:OnConfigLoaded(Callback)
     assert(type(Callback) == "function", "Expected a callback")
     self.LoadListeners = self.LoadListeners or {}
@@ -917,7 +960,7 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
     local LoadingOrder = SaveManager.LoadingOrder
     local IgnoreIndexes = SaveManager.Ignore
     local LoadErrors = {}
-    local LoadReport = { Applied = 0, Skipped = 0, Missing = 0, MissingIds = {}, Total = #Objects }
+    local LoadReport = { Unchanged = 0, CallbackTimings = {}, BackgroundCallbacks = {}, Applied = 0, Skipped = 0, Missing = 0, MissingIds = {}, Total = #Objects }
     local RollbackJSON = nil
     if not SkipRollback then
         local Snapshot, SnapshotReady = SaveManager:SaveJSON("rollback")
@@ -1082,7 +1125,11 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
         end
 
         local PreviousContext = Library.ConfigLoadContext
-        local Context = { Thread = coroutine.running(), Errors = {} }
+        local Context = { Thread = coroutine.running(), Errors = {}, Timings = LoadReport.CallbackTimings, Id = Option.idx }
+        if not SkipRollback and not IsThemeManagerOption(Option.idx)
+            and (Target and Target.ConfigCallbackMode or SaveManager.CallbackMode) == "Background" then
+            Context.BackgroundJobs = LoadReport.BackgroundCallbacks
+        end
         Library.ConfigLoadContext = Context
         local SuccessLoad, LoadError = pcall(Parser.Load, Option.idx, Option)
         Library.ConfigLoadContext = PreviousContext
@@ -1094,7 +1141,7 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
             table.insert(LoadErrors, string.format("%s %q: %s", tostring(Option.type), tostring(Option.idx), tostring(LoadError)))
             continue
         end
-        LoadReport.Applied += 1
+        if LoadError == false then LoadReport.Unchanged += 1 else LoadReport.Applied += 1 end
 
         if ThemeLoadStarted and IsThemeManagerOption(Option.idx) then
             local SuccessMark, MarkError = pcall(ThemeManager.MarkConfigOptionLoaded, ThemeManager, Option.idx)
@@ -1113,10 +1160,11 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
         end
     end
 
-    if LoadReport.Applied == 0 and LoadReport.Missing > 0 then
+    if LoadReport.Applied == 0 and LoadReport.Unchanged == 0 and LoadReport.Missing > 0 then
         table.insert(LoadErrors, "No matching controls or adapters. Create them before loading and keep their IDs stable")
     end
 
+    table.sort(LoadReport.CallbackTimings, function(A, B) return A.Seconds > B.Seconds end)
     LoadReport.Errors = LoadErrors
     SaveManager.LastLoadReport = LoadReport
 
@@ -1124,10 +1172,16 @@ function SaveManager:LoadJSON(Content: string, SkipRollback: boolean?, LoadConte
         LoadReport.Status = LoadReport.Missing > 0 and "Partial" or "Loaded"
         LoadReport.ConfigName = LoadContext and LoadContext.ConfigName or Decoded.name
         LoadReport.Source = LoadContext and LoadContext.Source or "JSON"
+        for _, Job in LoadReport.BackgroundCallbacks do
+            local Run = Job.Run
+            Job.Run = nil
+            task.defer(Run)
+        end
         if not SkipRollback then SaveManager:EmitConfigLoaded(LoadReport) end
         return true, nil, LoadReport
     end
 
+    for _, Job in LoadReport.BackgroundCallbacks do Job.Status = "Cancelled"; Job.Run = nil end
     if RollbackJSON then
         local RolledBack, RollbackError = SaveManager:LoadJSON(RollbackJSON, true)
         if not RolledBack then

@@ -8,6 +8,105 @@ Always update Library, Example, SaveManager, ThemeManager, and the addons you us
 
 MonHub is a compact Roblox Luau interface library built around a neutral dark palette, consistent spacing, short motion, theme-safe surfaces, and optional visual addons. The core library never loads an addon automatically.
 
+## Config callback scheduling and load reports
+
+Loading the same control value no longer runs its callbacks again. Comparison includes color transparency, key modifiers, hidden data and multi-dropdown membership. `report.Unchanged` counts matching controls; `Applied` counts applied entries, including adapters and layout entries. Adapters still run because their state and side effects belong to the adapter. Initialize application state once when creating controls; do not use repeated config loading as an action button.
+
+```lua
+local ok, message, report = SaveManager:Load("default")
+if not ok then warn(message) end
+for _, entry in SaveManager:GetSlowCallbacks(0.05) do
+    print(entry.Id, math.round(entry.Seconds * 1000), "ms")
+end
+```
+
+`CallbackTimings` is sorted from slowest to fastest and contains `Id`, `Seconds` and `Success` for synchronous callbacks invoked through `Library:SafeCallback`. Durations include time spent yielding. Callback and Changed handlers receive separate entries, even when their option ID matches. `GetSlowCallbacks(seconds)` returns copies of completed entries from the latest load, sorted by duration; the default threshold is 0.05 seconds. Direct custom setter work and adapter execution are not callback timings.
+
+Callbacks remain synchronous by default so existing dependencies and rollback retain their order. Mark independent handlers explicitly:
+
+```lua
+Group:AddToggle("RefreshPreview", {
+    Text = "Preview",
+    Default = false,
+    ConfigCallbackMode = "Background",
+    Callback = function(enabled)
+        UpdatePreview(enabled)
+    end,
+})
+```
+
+`SaveManager:SetCallbackMode("Background")` sets the default for options without an override; `"Sync"` restores the original policy. An option with `ConfigCallbackMode = "Sync"` stays synchronous even when the default is Background. Theme controls always stay synchronous.
+
+Background jobs are queued only after successful option, adapter and theme application. Failed transactions discard them. `OnConfigLoaded` means stored values and adapters have been applied, not that background jobs have finished. `report.BackgroundCallbacks` is a live list with `Id`, `Status` (Pending, Running, Completed, Failed or Cancelled), and, after completion, `Seconds` and optional `Error`. Inspect it after your background work finishes. Errors in these jobs do not roll back an already completed load. Jobs that have not started are cancelled when the library is unloaded; already running work remains the application's responsibility. Repeated loads can overlap background work, so use cancellation tokens in long-running handlers. Background scheduling does not make CPU-bound work run in parallel; break large work into bounded steps.
+
+## AssetCatalog selection, pager and card updates
+
+```lua
+local catalog = Group:AddAddon("Assets", AssetCatalog, {
+    Items = {
+        { Id = "first", Name = "First", Image = 123 },
+        { Id = "second", Name = "Second", Image = 456 },
+    },
+    MultiSelect = true,
+    ShowPager = false,
+    OnSelected = function(items, normalizedItems)
+        print(#items, "selected")
+    end,
+})
+catalog:SetSelected({ "first", "second" }, true)
+local items, normalizedItems = catalog:GetSelected()
+catalog:SetItemState("first", { Status = "Ready", Favorite = true })
+```
+
+With `MultiSelect = true`, clicking a card or calling `Select(id)` toggles its selection. `SetSelected(ids, silent?)` replaces it; an empty array clears it. `GetSelected()` returns new arrays of source records and normalized records in catalog item order. Callback arguments use the same arrays. Treat the records as read-only and use `SetItemState` for edits. Selection survives search, pagination and item replacement when IDs still exist; removed or disabled IDs are removed from the selection. Programmatic selection rejects disabled items. Without MultiSelect, the original single-item API and callback signature remain unchanged. `CollectionModel` currently owns a single selection, so combining it with MultiSelect is rejected explicitly.
+
+`ShowPager = false` always hides the footer. `true` always shows it. Omit it for automatic hiding when there is one page. `SetShowPager(nil)` restores automatic behavior. The grid reclaims the footer space. Hiding the footer does not disable pagination: use `SetPage`, `NextPage` and `PreviousPage`, or choose an appropriate `PageSize` for your view.
+
+`SetItemState(id, patch)` returns true when the ID exists, otherwise false. It accepts the same item fields as `Items`, except that `Id` stays fixed. Use false to clear boolean fields and an empty string to clear Status. Updating Status, Disabled, Locked, Favorite, colors or imagery updates the visible matching card and its preview without replacing card instances. Changes that affect active filters, names, categories or sorting refresh the filtered view. Source tables supplied by the caller are not modified. Selection callbacks are not emitted for state patches; read GetSelected afterward if a patch disables a selected item.
+
+## Runtime display controls
+
+```lua
+local status = Group:AddStatRow("Processed", {
+    Text = "Processed", Value = "0 items", LabelRatio = 0.55,
+})
+local progress = Group:AddProgressBar("WorkProgress", {
+    Text = "Completed", Min = 0, Max = 100, Value = 0, ShowValue = true,
+})
+status:SetValue("25 items")
+progress:SetValue(25)
+progress:SetRange(0, 200)
+```
+
+StatRow puts the label and value in separate columns and truncates long text instead of allowing overlap. Options: `Text` (defaults to the ID), `Value`, `Height` (22), `LabelRatio` (0.55, clamped to 0.1..0.9), and `Visible` (true). Methods: `SetText`, `SetValue`, `SetVisible`, `SetHeight`, `Destroy`.
+
+ProgressBar adds `Min` (0), `Max` (100), `Value` (Min), `ShowValue` (true), and optional `Color`; its default height is 30. It uses the library font and theme accent unless Color is supplied. `SetValue` clamps finite values to the range; `SetRange(min, max)` requires a finite increasing range and reclamps the current value. Updates are immediate, so frequent progress reports do not accumulate tweens. It also supports `SetText`, `SetVisible`, `SetHeight` and `Destroy`. Both controls display runtime data and are not saved as configuration options.
+
+## Numeric input and player usernames
+
+```lua
+local amount = Group:AddInput("Amount", {
+    Text = "Amount", Default = "12000", Numeric = true,
+    Min = 0, Max = 1000000, ThousandsSeparator = true,
+})
+print(amount:GetNumber())
+Group:AddDropdown("SelectedPlayer", {
+    Text = "Player", SpecialType = "Player", PlayerValue = "Name",
+    ExcludeLocalPlayer = true, EnablePlayerImages = true,
+})
+```
+
+Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` displays comma grouping outside editing. Value and config data remain plain numeric strings; `GetNumber()` returns a number or nil for empty input. Bounded or formatted numeric inputs commit when focus leaves the field, including a mobile tap outside. They do not clamp incomplete text while typing. Programmatic SetValue clamps immediately. Invalid text restores the last valid value. Existing unbounded inputs keep their original live-edit behavior. `AllowEmpty` still controls empty input.
+
+`PlayerValue = "Name"` stores Roblox usernames, not display names or Player instances. It works with Multi and avatar images. Omit it to retain the existing Player-instance API. Player additions and removals refresh the list. Only current players are valid dropdown entries; loading a saved username that is absent follows the existing stale-value fallback and is reported in AdjustedIds. Use a hidden option or a separate catalog when offline names must remain selected.
+
+## Menu state, hidden tabs and authorized UI creation
+
+`Library:IsMenuOpen()` returns a boolean and returns false after unload. `Tab:SetVisible(false)` hides its sidebar button and active content, closes its popups and selects another visible tab when available. If all tabs are hidden, no tab content is shown. Hidden tabs cannot be opened through Show; call SetVisible(true) first. Hidden lazy tabs do not build just because Show was called. Config persistence can still build lazy controls when necessary.
+
+`Library:TryCreateWindow(info)` returns `window` on success, or `nil, message` when CreateWindow raises an error. It does not grant permissions, move work into a privileged thread, or guarantee recovery of partially created UI. Create UI from an authorized client context. If the caller lacks a Roblox capability, correct the caller or environment before retrying; a task.defer/task.spawn wrapper is not a permissions fix.
+
+
 ## Contents
 
 - [Quick start](#quick-start) and [Standards](#standards)

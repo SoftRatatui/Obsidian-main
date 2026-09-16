@@ -1994,6 +1994,35 @@ do
     })
     PreviewControls:AddButton("Open deferred page", function() LazyPreview:Show() end)
 
+    local ProgressDemo = PreviewControls:AddProgressBar("PreviewProgress", { Text = "Completed", Max = 100, Value = 25 })
+    local StatDemo = PreviewControls:AddStatRow("PreviewStat", { Text = "Processed", Value = "25 items" })
+    PreviewControls:AddButton("Advance progress", function()
+        local Value = (ProgressDemo.Value + 25) % 125
+        ProgressDemo:SetValue(Value)
+        StatDemo:SetValue(tostring(Value) .. " items")
+    end)
+    PreviewControls:AddInput("PreviewAmount", {
+        Text = "Amount", Default = "12000", Numeric = true, Min = 0, Max = 1000000,
+        ThousandsSeparator = true, Save = false,
+    })
+    PreviewControls:AddDropdown("PreviewPlayerName", {
+        Text = "Player username", SpecialType = "Player", PlayerValue = "Name", Save = false,
+    })
+    PreviewControls:AddButton("Toggle deferred tab visibility", function()
+        LazyPreview:SetVisible(LazyPreview.Visible == false)
+    end)
+    if AssetCatalog then
+        local MultiBox = Tabs.Preview:AddFullGroupbox("Multiple selection", "images")
+        local MultiCatalog = MultiBox:AddAddon("PreviewMultiCatalog", AssetCatalog, {
+            Items = GalleryItems, MultiSelect = true, ShowPager = false, Layout = "Grid", Height = 280,
+            OnSelected = function(Items) StatDemo:SetValue(tostring(#Items) .. " selected") end,
+        })
+        MultiBox:AddButton("Mark first card ready", function()
+            local Item = MultiCatalog.Items[1]
+            if Item then MultiCatalog:SetItemState(Item.Id, { Status = "Ready" }) end
+        end)
+    end
+
     local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
 	PreviewAddons:AddLabel("Open or trigger every large module from one place.", true)
 	PreviewAddons:AddButton("Toggle skin catalog", function()

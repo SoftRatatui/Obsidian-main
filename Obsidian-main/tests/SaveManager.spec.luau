@@ -95,7 +95,16 @@ return function(SaveManager, Environment)
     assert(Accent.Value:ToHex() == "786FD4" and Accent.Transparency == 0.25)
     assert(ModuleState.Layout == "Split" and ModuleState.Visible == true)
     assert(Library.KeybindFrame.Visible == true and KeybindMenu.Value == true)
-    assert(Report.Applied >= 7 and Report.Skipped == 0)
+    assert(Report.Applied + Report.Unchanged >= 7 and Report.Skipped == 0)
+
+    local Runs = Feature.ChangedRuns + Strength.ChangedRuns + Accent.ChangedRuns + Keybind.ChangedRuns + Profile.ChangedRuns
+    local SameOK, SameError, SameReport = SaveManager:Load("zeta")
+    assert(SameOK, SameError)
+    assert(SameReport.Unchanged >= 6)
+    assert(Feature.ChangedRuns + Strength.ChangedRuns + Accent.ChangedRuns + Keybind.ChangedRuns + Profile.ChangedRuns == Runs, "Unchanged controls ran callbacks")
+    Keybind.Modifiers = nil
+    assert(SaveManager:Load("zeta"))
+    assert(Keybind.Modifiers[1] == "LeftControl", "Missing current fields incorrectly count as unchanged")
 
     SaveManager:Save("Alpha")
     Environment.files["MonHub/Tests/settings/place-1/notes.txt"] = "ignore"
@@ -199,6 +208,42 @@ return function(SaveManager, Environment)
     local CallbackOK, CallbackError = Restarted:Load("groups")
     assert(not CallbackOK and CallbackError:find("real SafeCallback failure", 1, true))
     assert(Strength.Value == 31 and Library.ConfigLoadContext == nil, "Callback failure did not roll back or clear context")
+    Strength.SetValue = OriginalSliderSetter
+
+    local BackgroundCalls = 0
+    function Strength:SetValue(Value)
+        OriginalSliderSetter(self, Value)
+        Library:SafeCallback(function() BackgroundCalls += 1 end)
+    end
+    Strength.ConfigCallbackMode = "Background"
+    Strength.Value = 10
+    local BackgroundOK, BackgroundError, BackgroundReport = Restarted:Load("groups")
+    assert(BackgroundOK, BackgroundError)
+    assert(Strength.Value == 72 and BackgroundCalls == 0 and #BackgroundReport.BackgroundCallbacks == 1)
+    Environment.FlushCallbacks()
+    assert(BackgroundCalls == 1 and BackgroundReport.BackgroundCallbacks[1].Status == "Completed")
+    assert(Restarted:GetSlowCallbacks(0)[1].Id == "Strength")
+    assert(Restarted:Load("groups"))
+    Environment.FlushCallbacks()
+    assert(BackgroundCalls == 1, "Unchanged background callback was queued")
+    Strength.Value = 12
+    function Strength:SetValue(Value)
+        OriginalSliderSetter(self, Value)
+        Library:SafeCallback(function() error("background failure") end)
+    end
+    assert(Restarted:Load("groups"))
+    local FailedJob = Restarted.LastLoadReport.BackgroundCallbacks[1]
+    Environment.FlushCallbacks()
+    assert(FailedJob.Status == "Failed" and FailedJob.Error:find("background failure", 1, true))
+    assert(Strength.Value == 72, "Background failure rolled back committed values")
+    function Strength:SetValue(Value)
+        OriginalSliderSetter(self, Value)
+        Library:SafeCallback(function() BackgroundCalls += 1 end)
+    end
+    Strength.ConfigCallbackMode = nil
+    Strength.Value = 20
+    assert(Restarted:Load("groups"))
+    assert(BackgroundCalls == 2 and #Restarted.LastLoadReport.CallbackTimings == 1)
     Strength.SetValue = OriginalSliderSetter
 
     local Multi = Control("Dropdown", { [2] = true, [17] = true })
@@ -308,8 +353,9 @@ return function(SaveManager, Environment)
     for _, Object in Invalid.objects do
         if Object.type == "Slider" then Object.value = "not a number" end
     end
+    local BeforeInvalid = Strength.Value
     assert(not Restarted:Load("groups"))
-    assert(Strength.Value == 31)
+    assert(Strength.Value == BeforeInvalid)
 
     print("PASS config round-trip, cross-tab groups, disabled controls, failed-write recovery, restart autoload and real callback rollback")
 end

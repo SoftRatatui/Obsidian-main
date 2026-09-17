@@ -146,11 +146,12 @@ return function(SaveManager, Environment)
     for _, Object in LegacyColor.objects do
         if Object.type == "Input" and Object.idx == "Profile" then Object.text = "explode" end
     end
-    local FailedLoad, FailedError = SaveManager:Load("zeta")
-    assert(not FailedLoad, "Throwing input restore returned success: " .. tostring(Profile.Value) .. "; " .. tostring(FailedError))
-    assert(Accent.Value:ToHex() == "ABCDEF", "rollback color: " .. tostring(Accent.Value:ToHex()) .. "; " .. tostring(FailedError))
-    assert(Accent.Transparency == 0.4, "rollback transparency: " .. tostring(Accent.Transparency))
-    assert(Profile.Value == "stable", "rollback input: " .. tostring(Profile.Value))
+    local PartialLoad, PartialError, PartialReport = SaveManager:Load("zeta")
+    assert(PartialLoad, "Resilient load should keep working entries: " .. tostring(PartialError))
+    assert(PartialReport.Failed == 1 and PartialReport.FailedIds[1] == "Profile", "Throwing entry was not recorded as failed")
+    assert(Accent.Value:ToHex() == "786FD4", "A good entry must still apply when another throws: " .. tostring(Accent.Value:ToHex()))
+    assert(Profile.Value == "stable", "Throwing entry must be skipped, not applied: " .. tostring(Profile.Value))
+    assert(PartialReport.Missing == 1 and PartialReport.MissingIds[1] == "CatalogState", "Missing adapter was not reported")
 
     Profile.SetValue = OriginalSetValue
     local A = { Collapsed = true, SetCollapsed = function(self, Value) self.Collapsed = Value end }
@@ -205,9 +206,15 @@ return function(SaveManager, Environment)
             if tonumber(Value) == 72 then error("real SafeCallback failure") end
         end)
     end
-    local CallbackOK, CallbackError = Restarted:Load("groups")
-    assert(not CallbackOK and CallbackError:find("real SafeCallback failure", 1, true))
-    assert(Strength.Value == 31 and Library.ConfigLoadContext == nil, "Callback failure did not roll back or clear context")
+    local CallbackOK, CallbackError, CallbackReport = Restarted:Load("groups")
+    assert(CallbackOK, "A failing callback must not fail the whole load: " .. tostring(CallbackError))
+    assert(CallbackReport.Failed >= 1 and CallbackReport.FailedIds[1] == "Strength")
+    local SawCallbackError = false
+    for _, Message in CallbackReport.Errors do
+        if string.find(Message, "real SafeCallback failure", 1, true) then SawCallbackError = true end
+    end
+    assert(SawCallbackError, "Callback failure was not recorded in the report")
+    assert(Strength.Value == 72 and Library.ConfigLoadContext == nil, "Applied value must survive a failing callback and context must clear")
     Strength.SetValue = OriginalSliderSetter
 
     local BackgroundCalls = 0
@@ -245,6 +252,20 @@ return function(SaveManager, Environment)
     assert(Restarted:Load("groups"))
     assert(BackgroundCalls == 2 and #Restarted.LastLoadReport.CallbackTimings == 1)
     Strength.SetValue = OriginalSliderSetter
+
+    local ApplyCalls = 0
+    Strength.Value = 5
+    function Strength:SetValue(Value)
+        OriginalSliderSetter(self, Value)
+        Library:SafeCallback(function() ApplyCalls += 1 end)
+    end
+    local BatchedOK = Restarted:Load("groups", "Manual", { AutoApply = false })
+    assert(BatchedOK, "Batched load with deferred apply failed")
+    assert(Strength.Value == 72 and ApplyCalls == 0, "Batched load must set values before running callbacks")
+    Restarted:Apply()
+    assert(ApplyCalls == 1, "Apply did not run the deferred callback exactly once")
+    Strength.SetValue = OriginalSliderSetter
+    print("PASS resilient partial load, batched apply and per-entry reporting")
 
     local Multi = Control("Dropdown", { [2] = true, [17] = true })
     Multi.Multi = true
@@ -349,13 +370,71 @@ return function(SaveManager, Environment)
     assert(table.find(Restarted:GetConfigs(), "ignored-control"))
     print("PASS stale dropdown fallback reporting and per-control persistence")
 
+    assert(Restarted:Duplicate("groups", "copy-profile"))
+    assert(not Restarted:Duplicate("groups", "copy-profile"))
+    assert(Restarted:Rename("copy-profile", "renamed-profile"))
+    assert(Environment.files["MonHub/Tests/settings/place-1/renamed-profile.json"])
+    assert(not Environment.files["MonHub/Tests/settings/place-1/copy-profile.json"])
+    Profile.Value = "round-trip"
+    assert(Restarted:Save("profile-a"))
+    assert(Restarted:Duplicate("profile-a", "profile-b"))
+    Profile.Value = "changed-after"
+    assert(Restarted:Rename("profile-b", "profile-c"))
+    assert(Environment.files["MonHub/Tests/settings/place-1/profile-c.json"])
+    assert(not Environment.files["MonHub/Tests/settings/place-1/profile-b.json"])
+    Profile.Value = "scratch"
+    assert(Restarted:Load("profile-c"))
+    assert(Profile.Value == "round-trip", "Duplicated then renamed profile lost its settings")
+    local Subset, SubsetOK = Restarted:SaveSubsetJSON({ "Strength" })
+    assert(SubsetOK)
+    local SubsetData = Environment.storedJson[Subset]
+    assert(#SubsetData.objects == 1 and SubsetData.objects[1].idx == "Strength" and not SubsetData.keybindMenu)
+    Profile.Value = "before migration"
+    assert(Restarted:Save("migration"))
+    Restarted:SetSchemaVersion(3)
+    Restarted:RegisterMigration(2, function(Data)
+        for _, Object in Data.objects do if Object.idx == "Profile" then Object.text = "migrated" end end
+    end)
+    local Preview = Restarted:PreviewJSON(Environment.files["MonHub/Tests/settings/place-1/migration.json"])
+    assert(#Preview >= 1 and Profile.Value == "before migration")
+    assert(Restarted:Load("migration"))
+    assert(Profile.Value == "migrated")
+    Restarted:SetSchemaVersion(4)
+    local MissingMigration, MigrationError = Restarted:Load("migration")
+    assert(not MissingMigration and MigrationError:find("Missing migration", 1, true))
+    Restarted:SetSchemaVersion(2)
+    print("PASS profile duplication/rename, partial exports, preview and sequential schema migrations")
+
     local Invalid = Environment.storedJson[OriginalContent]
     for _, Object in Invalid.objects do
         if Object.type == "Slider" then Object.value = "not a number" end
     end
     local BeforeInvalid = Strength.Value
-    assert(not Restarted:Load("groups"))
-    assert(Strength.Value == BeforeInvalid)
+    local Resilient, ResilientError, InvalidReport = Restarted:Load("groups")
+    assert(Resilient, "A malformed entry must not abort the whole file: " .. tostring(ResilientError))
+    assert(Strength.Value == BeforeInvalid, "Malformed slider must be skipped, not applied")
+    assert(InvalidReport.Skipped >= 1)
+    local SawSkip = false
+    for _, Entry in InvalidReport.Entries do
+        if Entry.Id == "Strength" and Entry.Status == "Skipped" then SawSkip = true end
+    end
+    assert(SawSkip, "Malformed slider was not reported as skipped with a reason")
 
-    print("PASS config round-trip, cross-tab groups, disabled controls, failed-write recovery, restart autoload and real callback rollback")
+    Restarted:SetBackupCount(2)
+    Profile.Value = "v1"
+    assert(Restarted:Save("rotate"))
+    Profile.Value = "v2"
+    assert(Restarted:Save("rotate"))
+    Profile.Value = "v3"
+    assert(Restarted:Save("rotate"))
+    local Backups = Restarted:ListBackups("rotate")
+    assert(#Backups == 2, "Expected two rotated backups")
+    assert(Restarted:RestoreBackup("rotate", 1))
+    Profile.Value = "scratch"
+    assert(Restarted:Load("rotate"))
+    assert(Profile.Value == "v2", "Restoring backup 1 should recover the previous version")
+    Restarted:SetBackupCount(0)
+    print("PASS malformed-entry skip, resilient reporting and backup rotation restore")
+
+    print("PASS config round-trip, cross-tab groups, disabled controls, failed-write recovery, restart autoload and resilient partial loads")
 end

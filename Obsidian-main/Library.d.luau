@@ -234,6 +234,8 @@ export type ButtonInfo = {
 }
 
 export type ToggleInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
     ConfigCallbackMode: ("Sync" | "Background")?,
@@ -253,6 +255,8 @@ export type ToggleInfo = {
 }
 
 export type InputInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     Min: number?,
     Max: number?,
     ThousandsSeparator: boolean?,
@@ -277,6 +281,8 @@ export type InputInfo = {
 }
 
 export type SliderInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     CallbackOnRelease: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
@@ -301,6 +307,8 @@ export type SliderInfo = {
 }
 
 export type DropdownInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     PlayerValue: ("Instance" | "Name")?,
     Save: boolean?,
     ConfigVersion: number?,
@@ -386,6 +394,8 @@ export type UIPassthroughInfo = {
 }
 
 export type KeyPickerInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
     ConfigCallbackMode: ("Sync" | "Background")?,
@@ -403,6 +413,8 @@ export type KeyPickerInfo = {
 }
 
 export type ColorPickerInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
     Save: boolean?,
     ConfigVersion: number?,
     ConfigCallbackMode: ("Sync" | "Background")?,
@@ -1096,6 +1108,10 @@ export type ProgressBar = {
 }
 
 export type BaseGroupbox = {
+    AddTable: (self: BaseGroupbox, Id: string, Info: DataTableInfo?) -> DataTable,
+    AddChart: (self: BaseGroupbox, Id: string, Info: ChartInfo?) -> Chart,
+    AddLog: (self: BaseGroupbox, Id: string, Info: { Height: number?, Capacity: number?, AutoScroll: boolean? }?) -> LogPanel,
+
     AddStatRow: (self: BaseGroupbox, Id: string, Info: StatRowInfo?) -> StatRow,
     AddProgressBar: (self: BaseGroupbox, Id: string, Info: ProgressBarInfo?) -> ProgressBar,
     AddSection: (self: BaseGroupbox, Title: string) -> Label,
@@ -1199,6 +1215,7 @@ export type Tab = {
     Tabboxes: { [string]: Tabbox },
     DependencyGroupboxes: { [number]: DependencyGroupbox },
     Sides: { ScrollingFrame },
+    SubTabs: { Tab },
     WarningBox: { IsNormal: boolean, LockSize: boolean, Visible: boolean, Title: string, Text: string },
 
     UpdateWarningBox: (
@@ -1250,6 +1267,15 @@ export type Tab = {
     Hide: (self: Tab) -> (),
     SetVisible: (self: Tab, Visible: boolean) -> (),
     SetOrder: (self: Tab, Order: number) -> (),
+    AddSubTab: (
+        self: Tab,
+        Info: { Name: string, Icon: string?, Description: string?, Order: number? } | string,
+        Icon: string?,
+        Description: string?,
+        Order: number?
+    ) -> Tab,
+    SetExpanded: (self: Tab, Expanded: boolean) -> Tab,
+    IsExpanded: (self: Tab) -> boolean,
 }
 
 export type KeyTab = BaseGroupbox & {
@@ -1432,7 +1458,93 @@ export type App = {
 }
 
 
+export type ReactiveState<T> = {
+    Get: (self: ReactiveState<T>) -> T,
+    Set: (self: ReactiveState<T>, Value: T) -> boolean,
+    Subscribe: (self: ReactiveState<T>, Callback: (T, T?) -> (), Immediate: boolean?) -> (() -> ()),
+    Destroy: (self: ReactiveState<T>) -> (),
+}
+export type Pool = {
+    Free: { any }, Active: { [any]: boolean }, Created: number, Destroyed: boolean,
+    Acquire: (self: Pool, ...any) -> any,
+    Release: (self: Pool, Item: any) -> boolean,
+    Trim: (self: Pool, Keep: number?) -> (), Destroy: (self: Pool) -> (),
+}
+export type VirtualList = {
+    Pool: Pool, Count: number, RowHeight: number, Columns: number, Rows: { [number]: any },
+    First: number, Last: number, Destroyed: boolean,
+    Refresh: (self: VirtualList) -> (), SetCount: (self: VirtualList, Count: number) -> VirtualList,
+    ScrollTo: (self: VirtualList, Index: number) -> (), Destroy: (self: VirtualList) -> (),
+}
+export type VirtualListInfo = {
+    CreateRow: () -> any, RenderRow: (any, number) -> (), Count: number?, RowHeight: number?,
+    Columns: number?, Overscan: number?, Gap: number?, Scale: (() -> number)?,
+}
+export type TableColumn = {
+    Key: string, Text: string?, Width: number?, Image: boolean?, Align: ("Left" | "Center" | "Right")?,
+    Sortable: boolean?, Format: ((any, { [any]: any }) -> any)?,
+}
+export type DataTableInfo = {
+    Text: string?, Columns: { TableColumn }?, Rows: { { [any]: any } }?, Items: { { [any]: any } }?,
+    Height: number?, RowHeight: number?, TextSize: number?, Visible: boolean?, EmptyText: string?,
+    OnSelected: (({ [any]: any }?) -> ())?, Callback: (({ [any]: any }?) -> ())?,
+}
+export type DataTable = UIPassthrough & {
+    Rows: { { [any]: any } }, Filtered: { { [any]: any } }, View: VirtualList, Scroll: ScrollingFrame,
+    SetRows: (self: DataTable, Rows: { { [any]: any } }) -> DataTable,
+    Refresh: (self: DataTable) -> DataTable, SetSearch: (self: DataTable, Query: string) -> DataTable,
+    SetSort: (self: DataTable, Key: string, Descending: boolean?) -> DataTable,
+    Select: (self: DataTable, Id: any, Silent: boolean?) -> { [any]: any }?,
+    GetSelected: (self: DataTable) -> { [any]: any }?,
+}
+export type ChartInfo = {
+    Text: string?, Height: number?, Visible: boolean?, Capacity: number?, Values: { number }?,
+    Min: number?, Max: number?, Kind: ("Line" | "Bar" | "Sparkline")?, Color: Color3?, Thickness: number?,
+}
+export type Chart = UIPassthrough & {
+    Values: { number }, Capacity: number,
+    SetValues: (self: Chart, Values: { number }) -> Chart, Push: (self: Chart, Value: number) -> Chart,
+    Refresh: (self: Chart) -> (),
+}
+export type LogPanel = DataTable & {
+    Append: (self: LogPanel, Level: string, Message: string) -> (),
+    SetLevel: (self: LogPanel, Level: string?) -> (), Clear: (self: LogPanel) -> (),
+    CopySelected: (self: LogPanel) -> boolean,
+}
+export type BuildJob = {
+    Id: any, Status: string, Seconds: number?, Error: string?, Cancel: (self: BuildJob) -> (),
+}
+
 export type Library = {
+    Version: string, Revision: string, Env: { [string]: boolean },
+    State: <T>(self: Library, Default: T) -> ReactiveState<T>,
+    Observe: (self: Library, Callback: () -> ()) -> { Destroy: (any) -> () },
+    CreatePool: (self: Library, Template: any, Factory: ((...any) -> any)?) -> Pool,
+    CreateVirtualList: (self: Library, Scroll: ScrollingFrame, Info: VirtualListInfo) -> VirtualList,
+    SetBuildBudget: (self: Library, Milliseconds: number) -> Library,
+    QueueBuild: (self: Library, Callback: () -> (), Id: any?) -> BuildJob,
+    QueueFrame: (self: Library, Key: any, Callback: () -> ()) -> (), RequestLayout: (self: Library, Target: any) -> (),
+    GetControl: (self: Library, Id: any) -> any, GetAll: (self: Library) -> { [any]: any },
+    ForEach: (self: Library, Callback: (any, any) -> ()) -> (),
+    SetFavorite: (self: Library, Id: any, Enabled: boolean?) -> (), GetFavorites: (self: Library) -> { any },
+    SearchControls: (self: Library, Query: string?, FavoritesOnly: boolean?) -> { any },
+    RevealControl: (self: Library, Id: any) -> boolean,
+    RegisterCommand: (self: Library, Id: any, Text: string, Callback: () -> ()) -> (() -> ()),
+    OpenCommandPalette: (self: Library, FavoritesOnly: boolean?) -> (Dialog?, string?),
+    EnableCommandKeys: (self: Library) -> (), EnableHistory: (self: Library, Limit: number?) -> Library,
+    Undo: (self: Library) -> (boolean, string?), Redo: (self: Library) -> (boolean, string?),
+    GetRecentChanges: (self: Library) -> { any }, ResetDefaults: (self: Library, Ids: { any }?) -> (boolean, string?),
+    On: (self: Library, Event: string, Callback: (...any) -> ()) -> (() -> ()),
+    Emit: (self: Library, Event: string, ...any) -> (), OnError: (self: Library, Callback: (any) -> ()) -> (() -> ()),
+    OnBuilt: (self: Library, Callback: (any) -> ()) -> (() -> ()),
+    OnShown: (self: Library, Callback: (any) -> ()) -> (() -> ()),
+    OnHidden: (self: Library, Callback: (any) -> ()) -> (() -> ()),
+    OnResized: (self: Library, Callback: (Vector2) -> ()) -> (() -> ()),
+    OnTabChanged: (self: Library, Callback: (Tab) -> ()) -> (() -> ()),
+    ReportError: (self: Library, Message: any, Id: any?, Source: string?) -> any,
+    Diagnose: (self: Library) -> { [string]: any }, GetProfile: (self: Library) -> { [string]: any },
+    DestroyRuntime: (self: Library) -> (),
+
     SetValues: (self: Library, Values: { [any]: any }) -> (boolean, string?),
     OnConfigChanged: (self: Library, Callback: (any) -> ()) -> (() -> ()),
     BuildLazyTabs: (self: Library) -> (boolean, string?),

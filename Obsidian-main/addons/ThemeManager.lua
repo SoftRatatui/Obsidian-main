@@ -160,6 +160,75 @@ local AshTheme = {
     FontFace = "GothamMedium",
 }
 
+local DeuteranopiaTheme = {
+    FontColor = "edf1f6",
+    MutedFontColor = "a8b2be",
+    MainColor = "1e232b",
+    TopBarColor = "1a1f26",
+    SurfaceColor = "161a20",
+    RaisedColor = "1a1f26",
+    ElementColor = "1e232b",
+    HoverColor = "282f39",
+    AccentColor = "4092e0",
+    AccentSoftColor = "25303f",
+    BackgroundColor = "101318",
+    OutlineColor = "404a58",
+    ShadowColor = "03040a",
+    WarningColor = "d6a353",
+    DestructiveColor = "d1495b",
+    RedColor = "e85c74",
+    DarkColor = "05060a",
+    WhiteColor = "f6f9fc",
+    BackgroundImage = "",
+    FontFace = "GothamMedium",
+}
+
+local ProtanopiaTheme = {
+    FontColor = "f4f1ea",
+    MutedFontColor = "beb6a8",
+    MainColor = "23211c",
+    TopBarColor = "1e1c17",
+    SurfaceColor = "1a1814",
+    RaisedColor = "1e1c17",
+    ElementColor = "23211c",
+    HoverColor = "302d26",
+    AccentColor = "e8b63a",
+    AccentSoftColor = "3a3526",
+    BackgroundColor = "12110e",
+    OutlineColor = "4e493e",
+    ShadowColor = "060504",
+    WarningColor = "d1a24a",
+    DestructiveColor = "c0554a",
+    RedColor = "e06a3a",
+    DarkColor = "070604",
+    WhiteColor = "faf7f0",
+    BackgroundImage = "",
+    FontFace = "GothamMedium",
+}
+
+local HighContrastTheme = {
+    FontColor = "ffffff",
+    MutedFontColor = "d6d6d6",
+    MainColor = "121212",
+    TopBarColor = "0c0c0c",
+    SurfaceColor = "0a0a0a",
+    RaisedColor = "0c0c0c",
+    ElementColor = "121212",
+    HoverColor = "202020",
+    AccentColor = "ffd60a",
+    AccentSoftColor = "2e2a10",
+    BackgroundColor = "000000",
+    OutlineColor = "787878",
+    ShadowColor = "000000",
+    WarningColor = "ffb000",
+    DestructiveColor = "ff5555",
+    RedColor = "ff5555",
+    DarkColor = "000000",
+    WhiteColor = "ffffff",
+    BackgroundImage = "",
+    FontFace = "GothamMedium",
+}
+
 local ThemeManager = {
     ReleaseVersion = "0.0.1-release-3",
     Library = nil,
@@ -176,7 +245,7 @@ local ThemeManager = {
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
     CustomThemes = {},
-    ThemeNames = { "Default", "Metal", "Midnight", "Steel", "Sage", "Ash" },
+    ThemeNames = { "Default", "Metal", "Midnight", "Steel", "Sage", "Ash", "Deuteranopia", "Protanopia", "High Contrast" },
     BuiltInThemes = {
         Default = { 1, table.clone(DefaultTheme) },
         Metal = { 2, table.clone(MetalTheme) },
@@ -184,6 +253,14 @@ local ThemeManager = {
         Steel = { 4, table.clone(SteelTheme) },
         Sage = { 5, table.clone(SageTheme) },
         Ash = { 6, table.clone(AshTheme) },
+        Deuteranopia = { 7, table.clone(DeuteranopiaTheme) },
+        Protanopia = { 8, table.clone(ProtanopiaTheme) },
+        ["High Contrast"] = { 9, table.clone(HighContrastTheme) },
+    },
+    AccessibilityThemes = {
+        { "Deuteranopia", DeuteranopiaTheme },
+        { "Protanopia", ProtanopiaTheme },
+        { "High Contrast", HighContrastTheme },
     },
 }
 
@@ -228,6 +305,96 @@ local ThemeColorKeys = {
     "AccentColor", "AccentSoftColor", "OutlineColor", "FontColor", "MutedFontColor", "ShadowColor", "WarningColor",
     "DestructiveColor", "RedColor", "DarkColor", "WhiteColor",
 }
+
+local SwatchColorKeys = { "BackgroundColor", "SurfaceColor", "AccentColor", "FontColor" }
+local ContrastSurfaceKeys = { "BackgroundColor", "SurfaceColor", "MainColor", "ElementColor" }
+local BodyContrastTarget = 4.5
+local CodePrefix = "MONHUB1:"
+
+local function ContrastRatio(First, Second)
+    local Library = ThemeManager.Library
+    if not (Library and typeof(First) == "Color3" and typeof(Second) == "Color3") then return 21 end
+    local High = math.max(Library:GetLuminance(First), Library:GetLuminance(Second))
+    local Low = math.min(Library:GetLuminance(First), Library:GetLuminance(Second))
+    return (High + 0.05) / (Low + 0.05)
+end
+
+local function WorstBodyContrast(Font)
+    local Library = ThemeManager.Library
+    if not Library then return 21, nil end
+    local Worst, WorstKey = 21, nil
+    for _, Key in ContrastSurfaceKeys do
+        local Ratio = ContrastRatio(Font, Library.Scheme[Key])
+        if Ratio < Worst then
+            Worst, WorstKey = Ratio, Key
+        end
+    end
+    return Worst, WorstKey
+end
+
+local function ThemePaletteColors(Name)
+    local Library = ThemeManager.Library
+    if not Library then return {} end
+    local Resolved = Library:ResolveThemeName(Name)
+    local Source = Library.Themes[Resolved]
+    if not Source and IsValidThemeName(Name) and not IsBuiltInTheme(Name) then
+        ThemeManager:GetCustomTheme(Name)
+        Resolved = Library:ResolveThemeName(Name)
+        Source = Library.Themes[Resolved]
+    end
+    Source = Source or Library.Scheme
+    local Colors = {}
+    for _, Key in ThemeColorKeys do
+        if typeof(Source[Key]) == "Color3" then Colors[Key] = Source[Key] end
+    end
+    return Colors
+end
+
+local function SnapshotPalette()
+    local Library = ThemeManager.Library
+    local Snapshot = {}
+    if not Library then return Snapshot end
+    for _, Key in ThemeColorKeys do
+        if typeof(Library.Scheme[Key]) == "Color3" then Snapshot[Key] = Library.Scheme[Key] end
+    end
+    return Snapshot
+end
+
+local function EncodeThemeCode()
+    local Library = ThemeManager.Library
+    if not Library then return nil, "Library is not set" end
+    local Parts = {}
+    for _, Key in ThemeColorKeys do
+        local Color = Library.Scheme[Key]
+        if typeof(Color) ~= "Color3" then return nil, "Missing palette color " .. Key end
+        table.insert(Parts, Color:ToHex())
+    end
+    return CodePrefix .. table.concat(Parts)
+end
+
+local function DecodeThemeCode(Code)
+    if typeof(Code) ~= "string" then return nil, "No theme code was provided" end
+    local Trimmed = Code:match("^%s*(.-)%s*$")
+    if Trimmed:sub(1, #CodePrefix) ~= CodePrefix then
+        return nil, "Unrecognised theme code, expected a " .. CodePrefix .. " string"
+    end
+    local Body = Trimmed:sub(#CodePrefix + 1):gsub("%s", "")
+    local Expected = #ThemeColorKeys * 6
+    if #Body ~= Expected then
+        return nil, string.format("Theme code is %d characters, expected %d", #Body, Expected)
+    end
+    if Body:match("[^0-9a-fA-F]") then
+        return nil, "Theme code contains non-hex characters"
+    end
+    local Overrides = {}
+    for Index, Key in ThemeColorKeys do
+        local Hex = Body:sub((Index - 1) * 6 + 1, Index * 6)
+        local Parsed, Color = pcall(Color3.fromHex, Hex)
+        if not Parsed then return nil, "Invalid colour for " .. Key end
+        Overrides[Key] = Color
+    end
+    return Overrides
+end
 
 local function ThemeFolder()
     return ThemeManager.Folder .. "/themes"
@@ -342,9 +509,27 @@ local function ResolveThemeName(Value)
     return "Default"
 end
 
+function ThemeManager:RegisterAccessibilityThemes()
+    local Library = ThemeManager.Library
+    if not (Library and Library.RegisterTheme and Library.Themes) then return false end
+    for _, Entry in ThemeManager.AccessibilityThemes do
+        local Name, Source = Entry[1], Entry[2]
+        if not Library.Themes[Name] then
+            local Overrides = {}
+            for _, Key in ThemeColorKeys do
+                local Parsed, Color = pcall(Color3.fromHex, Source[Key])
+                if Parsed then Overrides[Key] = Color end
+            end
+            pcall(Library.RegisterTheme, Library, Name, Overrides, "Default")
+        end
+    end
+    return true
+end
+
 function ThemeManager:SetLibrary(Library)
     ThemeManager.Library = Library
     Library.ThemeManager = ThemeManager
+    ThemeManager:RegisterAccessibilityThemes()
     local InitialTheme = Library.CurrentTheme or Library.DefaultTheme or ThemeManager.FallbackThemeName
     if ThemeManager.FileSystemAvailable then
         ThemeManager:BuildFolderTree()
@@ -379,6 +564,11 @@ function ThemeManager:SyncFromLibrary(ThemeName)
         end
     end
     ThemeManager.SyncingAppearance = false
+
+    if not ThemeManager.Previewing then
+        ThemeManager:SetGallerySelection(Resolved)
+    end
+    ThemeManager:UpdateContrast()
 
     return true
 end
@@ -629,6 +819,10 @@ function ThemeManager:ApplyTheme(ThemeName)
         return false, "Library is not set"
     end
 
+    ThemeManager.Previewing = false
+    ThemeManager.PreviewSnapshot = nil
+    ThemeManager.PreviewName = nil
+
     ThemeName = FindRegisteredTheme(ThemeName) or ThemeName
     if typeof(ThemeName) == "string" and not Library.Themes[ThemeName] and IsValidThemeName(ThemeName) then
         ThemeManager:GetCustomTheme(ThemeName)
@@ -646,7 +840,63 @@ function ThemeManager:ApplyTheme(ThemeName)
 
     ThemeManager.CurrentTheme = Resolved
     ThemeManager:SyncFromLibrary(Resolved)
+    ThemeManager:UpdatePreviewControls()
     return true
+end
+
+function ThemeManager:PreviewTheme(Name)
+    local Library = ThemeManager.Library
+    if not Library then return false, "Library is not set" end
+    local Colors = ThemePaletteColors(Name)
+    if not next(Colors) then return false, "Theme has no palette" end
+    if not ThemeManager.Previewing then
+        ThemeManager.PreviewSnapshot = SnapshotPalette()
+    end
+    ThemeManager.Previewing = true
+    ThemeManager.PreviewName = Name
+    Library:SetPalette(Colors)
+    ThemeManager:SetGallerySelection(Name)
+    ThemeManager:UpdatePreviewControls()
+    return true
+end
+
+function ThemeManager:ApplyPreview()
+    if not ThemeManager.Previewing then return false, "No theme preview is active" end
+    return ThemeManager:ApplyTheme(ThemeManager.PreviewName)
+end
+
+function ThemeManager:CancelPreview()
+    local Library = ThemeManager.Library
+    if not ThemeManager.Previewing then return false, "No theme preview is active" end
+    local Snapshot = ThemeManager.PreviewSnapshot
+    ThemeManager.Previewing = false
+    ThemeManager.PreviewSnapshot = nil
+    ThemeManager.PreviewName = nil
+    if Snapshot and next(Snapshot) and Library then
+        Library:SetPalette(Snapshot)
+    end
+    ThemeManager:SetGallerySelection(Library and Library.CurrentTheme)
+    ThemeManager:UpdatePreviewControls()
+    return true
+end
+
+function ThemeManager:UpdatePreviewControls()
+    local Active = ThemeManager.Previewing == true
+    if ThemeManager.PreviewApplyButton then ThemeManager.PreviewApplyButton:SetVisible(Active) end
+    if ThemeManager.PreviewCancelButton then ThemeManager.PreviewCancelButton:SetVisible(Active) end
+end
+
+function ThemeManager:SetGallerySelection(Name)
+    local Library = ThemeManager.Library
+    if not (ThemeManager.GalleryCards and Library) then return end
+    local Resolved = typeof(Name) == "string" and Library:ResolveThemeName(Name) or nil
+    for CardName, Card in ThemeManager.GalleryCards do
+        local Selected = Resolved ~= nil and Library:ResolveThemeName(CardName) == Resolved
+        Library:AddToRegistry(Card.Stroke, { Color = Selected and "AccentColor" or "OutlineColor" })
+        Card.Stroke.Color = Selected and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+        Card.Stroke.Thickness = Selected and 2 or 1
+        Card.Stroke.Transparency = Selected and 0 or Library:GetDesignToken("Stroke.SoftTransparency", 0.46)
+    end
 end
 
 function ThemeManager:RefreshThemeList()
@@ -663,13 +913,138 @@ function ThemeManager:RefreshThemeList()
     if ThemeManager.ThemeSelector then
         ThemeManager.ThemeSelector:SetValues(Names)
     end
+    ThemeManager:RebuildGallery(Names)
     return Names
+end
+
+function ThemeManager:CreateGalleryCard(Name, Order)
+    local Library = ThemeManager.Library
+    local Holder = ThemeManager.GalleryHolder
+    if not (Library and Holder) then return end
+
+    local Card, Stroke = Library:CreateSurface(Holder, {
+        ClassName = "TextButton",
+        Role = "Raised",
+        RadiusRole = "Card",
+    })
+    Card.AutoButtonColor = false
+    Card.Text = ""
+    Card.LayoutOrder = Order
+    Card.ClipsDescendants = true
+
+    local Colors = ThemePaletteColors(Name)
+    local CardHeight = Library.IsMobile and 56 or 48
+    local PreviewSize = 40
+    local ChipSize = 19
+    local ChipStep = ChipSize + 2
+
+    local Preview = Instance.new("Frame")
+    Preview.BackgroundColor3 = Colors.BackgroundColor or Library.Scheme.BackgroundColor
+    Preview.BorderSizePixel = 0
+    Preview.Size = UDim2.fromOffset(PreviewSize, PreviewSize)
+    Preview.Position = UDim2.fromOffset(6, Library:CenterOffset(CardHeight, PreviewSize))
+    Preview.Parent = Card
+
+    for _, Chip in {
+        { Colors.BackgroundColor, 0, 0 },
+        { Colors.SurfaceColor, ChipStep, 0 },
+        { Colors.AccentColor, 0, ChipStep },
+        { Colors.FontColor, ChipStep, ChipStep },
+    } do
+        local Swatch = Instance.new("Frame")
+        Swatch.BackgroundColor3 = Chip[1] or Library.Scheme.SurfaceColor
+        Swatch.BorderSizePixel = 0
+        Swatch.Size = UDim2.fromOffset(ChipSize, ChipSize)
+        Swatch.Position = UDim2.fromOffset(Chip[2], Chip[3])
+        Swatch.Parent = Preview
+    end
+
+    local Label = Instance.new("TextLabel")
+    Label.BackgroundTransparency = 1
+    Label.Text = Name
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.TextSize = Library:GetDesignToken("Size.Text", 14)
+    Label.FontFace = Library.Scheme.Font
+    Label.TextColor3 = Library.Scheme.FontColor
+    Label.Position = UDim2.fromOffset(6 + PreviewSize + 8, 0)
+    Label.Size = UDim2.new(1, -(6 + PreviewSize + 8 + 6), 1, 0)
+    Label.Parent = Card
+    Library:AddToRegistry(Label, { TextColor3 = "FontColor" })
+
+    Library:GiveSignal(Card.Activated:Connect(function()
+        ThemeManager:PreviewTheme(Name)
+    end))
+
+    ThemeManager.GalleryCards[Name] = { Card = Card, Stroke = Stroke, Label = Label }
+end
+
+function ThemeManager:RebuildGallery(Names)
+    local Library = ThemeManager.Library
+    local Holder = ThemeManager.GalleryHolder
+    if not (Library and Holder and Holder.Parent) then return end
+    Names = Names or table.clone(ThemeManager.ThemeNames)
+    for _, Card in ThemeManager.GalleryCards do
+        Library:ReleaseRegistryTree(Card.Card)
+        Card.Card:Destroy()
+    end
+    table.clear(ThemeManager.GalleryCards)
+    for Order, Name in Names do
+        ThemeManager:CreateGalleryCard(Name, Order)
+    end
+    if ThemeManager.GalleryResize then ThemeManager.GalleryResize() end
+    ThemeManager:SetGallerySelection(ThemeManager.Previewing and ThemeManager.PreviewName or Library.CurrentTheme)
+end
+
+function ThemeManager:BuildGallery(Groupbox)
+    local Library = ThemeManager.Library
+    if not (Library and Library.CreateSurface) then return end
+    ThemeManager.GalleryGroupbox = Groupbox
+    ThemeManager.GalleryCards = {}
+
+    local Holder = Instance.new("Frame")
+    Holder.BackgroundTransparency = 1
+    Holder.Size = UDim2.new(1, 0, 0, 0)
+    Holder.Parent = Groupbox.Container
+    ThemeManager.GalleryHolder = Holder
+
+    local CardHeight = Library.IsMobile and 56 or 48
+    local Gap = 6
+    local MinCardWidth = 150
+
+    local Layout = Instance.new("UIGridLayout")
+    Layout.CellPadding = UDim2.fromOffset(Gap, Gap)
+    Layout.CellSize = UDim2.fromOffset(MinCardWidth, CardHeight)
+    Layout.SortOrder = Enum.SortOrder.LayoutOrder
+    Layout.Parent = Holder
+
+    local function Resize()
+        if not Holder.Parent then return end
+        local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / math.max(Library.DPIScale, 1)))
+        local Count = 0
+        for _ in ThemeManager.GalleryCards do Count += 1 end
+        Count = math.max(Count, 1)
+        local Columns = math.max(1, math.min(Count, math.floor((Width + Gap) / (MinCardWidth + Gap))))
+        local CellWidth = math.max(1, math.floor((Width - (Columns - 1) * Gap) / Columns))
+        Layout.CellSize = UDim2.fromOffset(CellWidth, CardHeight)
+        local Rows = math.ceil(Count / Columns)
+        Holder.Size = UDim2.new(1, 0, 0, Rows * (CardHeight + Gap) - Gap)
+        Library:RequestLayout(Groupbox)
+    end
+    ThemeManager.GalleryResize = Resize
+    Library:GiveSignal(Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(Resize))
+
+    ThemeManager:RefreshThemeList()
 end
 
 function ThemeManager:CreateThemeManager(Groupbox)
     assert(ThemeManager.Library, "Library is not set, call ThemeManager:SetLibrary(Library) first.")
     assert(not ThemeManager.AppliedToTab, "ThemeManager is already applied to a tab")
     local Names = ThemeManager:RefreshThemeList()
+    local function Notify(Message)
+        if ThemeManager.Library.Notify then ThemeManager.Library:Notify(Message) end
+    end
+
     ThemeManager.ThemeSelector = Groupbox:AddDropdown("ThemeManager_ThemeList", {
         Text = "Theme",
         Values = Names,
@@ -681,14 +1056,72 @@ function ThemeManager:CreateThemeManager(Groupbox)
         end,
     })
 
+    ThemeManager:BuildGallery(Groupbox)
+
+    ThemeManager.PreviewApplyButton = Groupbox:AddButton({
+        Text = "Apply preview",
+        Visible = false,
+        Func = function()
+            local Name = ThemeManager.PreviewName
+            local Applied, ErrorMessage = ThemeManager:ApplyPreview()
+            Notify(Applied and string.format("Applied theme %q", tostring(Name)) or "Apply failed: " .. tostring(ErrorMessage))
+        end,
+    })
+    ThemeManager.PreviewCancelButton = Groupbox:AddButton({
+        Text = "Cancel preview",
+        Visible = false,
+        Func = function()
+            ThemeManager:CancelPreview()
+        end,
+    })
+
+    if Groupbox.AddInput and Groupbox.AddButton then
+        Groupbox:AddInput("ThemeManager_ThemeCode", {
+            Text = "Theme code",
+            ClearTextOnFocus = false,
+            Placeholder = CodePrefix .. "...",
+        })
+        Groupbox:AddButton("Export theme code", function()
+            local Code, ErrorMessage = EncodeThemeCode()
+            if not Code then
+                Notify("Export failed: " .. tostring(ErrorMessage))
+                return
+            end
+            local Field = ThemeManager.Library.Options.ThemeManager_ThemeCode
+            if Field then Field:SetValue(Code) end
+            if ThemeManager.Library.Env and ThemeManager.Library.Env.Clipboard then
+                local Copied = pcall(setclipboard, Code)
+                Notify(Copied and "Theme code copied to clipboard" or "Clipboard write failed, copy it from the field")
+            else
+                Notify("Clipboard is unavailable, copy the code from the field")
+            end
+        end)
+        Groupbox:AddButton("Import theme code", function()
+            local Field = ThemeManager.Library.Options.ThemeManager_ThemeCode
+            local Code = Field and tostring(Field.Value) or ""
+            if Code:match("^%s*(.-)%s*$") == "" and ThemeManager.Library.Env and ThemeManager.Library.Env.Clipboard then
+                local Read, Clipboard = pcall(function()
+                    return type(getclipboard) == "function" and getclipboard() or nil
+                end)
+                if Read and typeof(Clipboard) == "string" then Code = Clipboard end
+            end
+            local Overrides, ErrorMessage = DecodeThemeCode(Code)
+            if not Overrides then
+                Notify("Import failed: " .. tostring(ErrorMessage))
+                return
+            end
+            local Applied, ApplyError = pcall(function()
+                ThemeManager.Library:SetPalette(Overrides)
+            end)
+            Notify(Applied and "Imported theme code" or "Import failed: " .. tostring(ApplyError))
+        end)
+    end
+
     if ThemeManager.FileSystemAvailable and Groupbox.AddInput and Groupbox.AddButton then
         Groupbox:AddInput("ThemeManager_CustomThemeName", {
             Text = "Custom theme name",
             ClearTextOnFocus = false,
         })
-        local function Notify(Message)
-            if ThemeManager.Library.Notify then ThemeManager.Library:Notify(Message) end
-        end
         Groupbox:AddButton("Save current as custom", function()
             local Input = ThemeManager.Library.Options.ThemeManager_CustomThemeName
             local Name = Input and tostring(Input.Value):match("^%s*(.-)%s*$") or ""
@@ -749,6 +1182,18 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
         })
         ThemeManager.PalettePickers[Key] = Library.Options["ThemeManager_" .. Key]
     end
+
+    ThemeManager.ContrastLabel = Groupbox:AddLabel({ Text = "", DoesWrap = true, Visible = false })
+    ThemeManager.ContrastFixButton = Groupbox:AddButton({
+        Text = "Fix text contrast",
+        Visible = false,
+        Func = function()
+            local _, WorstKey = WorstBodyContrast(Library.Scheme.FontColor)
+            local Surface = Library.Scheme[WorstKey or "BackgroundColor"]
+            Library:SetPalette({ FontColor = Library:GetContrastColor(Surface) })
+        end,
+    })
+
     for _, Field in { { "Window", "Window corners" }, { "Card", "Panel corners" }, { "Control", "Control corners" }, { "Indicator", "Checkbox corners" } } do
         local Key = Field[1]
         Groupbox:AddSlider("ThemeManager_Radius_" .. Key, {
@@ -758,6 +1203,7 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
             Max = Key == "Indicator" and 6 or 12,
             Rounding = 0,
             Suffix = "px",
+            CallbackOnRelease = true,
             Callback = function(Value)
                 if Ready then
                     Library:SetDesign({ Radius = { [Key] = Value } })
@@ -772,6 +1218,7 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
         Max = 6,
         Rounding = 0,
         Suffix = "px",
+        CallbackOnRelease = true,
         Callback = function(Value)
             if Ready then Library:SetDesign({ Shell = { ScrollbarThickness = Value } }) end
         end,
@@ -799,7 +1246,24 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
         ThemeManager:ApplyTheme(Library.CurrentTheme)
     end)
     Ready = true
+    ThemeManager:UpdateContrast()
     return Groupbox
+end
+
+function ThemeManager:UpdateContrast()
+    local Library = ThemeManager.Library
+    if not (Library and ThemeManager.ContrastLabel) then return end
+    local Worst, WorstKey = WorstBodyContrast(Library.Scheme.FontColor)
+    local Below = Worst < BodyContrastTarget
+    if Below then
+        ThemeManager.ContrastLabel:SetText(
+            string.format("Text contrast is %.1f:1 against %s, below the 4.5:1 minimum for body text.", Worst, WorstKey or "the background")
+        )
+    end
+    ThemeManager.ContrastLabel:SetVisible(Below)
+    if ThemeManager.ContrastFixButton then
+        ThemeManager.ContrastFixButton:SetVisible(Below)
+    end
 end
 
 function ThemeManager:ApplyToTab(Tab, IconName)

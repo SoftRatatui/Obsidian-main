@@ -302,6 +302,7 @@ function AssetCatalog.Create(Library, Info)
     GridScroll.BackgroundTransparency = 1
     GridScroll.BorderSizePixel = 0
     GridScroll.CanvasSize = UDim2.fromScale(0, 0)
+    GridScroll.CanvasPosition = Vector2.zero
     GridScroll.Position = UDim2.fromOffset(Padding, Padding)
     GridScroll.ScrollBarImageColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
     GridScroll.ScrollBarImageTransparency = 0.45
@@ -314,6 +315,8 @@ function AssetCatalog.Create(Library, Info)
 
     local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 132), 64, 400)
 
+    local VirtualView
+    local Virtualized = Info.Virtualized ~= false and Library and type(Library.CreateVirtualList) == "function"
     local Grid = Instance.new("UIGridLayout")
     Grid.CellPadding = UDim2.fromOffset(Gap, Gap)
     Grid.CellSize = UDim2.fromOffset(MinCellWidth, CellHeight)
@@ -344,6 +347,7 @@ function AssetCatalog.Create(Library, Info)
         GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
         Grid.FillDirectionMaxCells = Count
         Grid.CellSize = UDim2.fromOffset(CellWidth, CellHeight)
+        if VirtualView then VirtualView.Columns = Count; VirtualView.RowHeight = CellHeight + Gap; VirtualView:Refresh() end
     end
 
     ResolveGridMetrics()
@@ -601,6 +605,7 @@ function AssetCatalog.Create(Library, Info)
         Category = "All",
         MultiSelect = Info.MultiSelect == true,
         SelectedIds = {},
+        Virtualized = Virtualized == true,
         ShowPager = Info.ShowPager,
         Pager = Footer,
         SelectedId = nil,
@@ -944,6 +949,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     local function CreateSlot(Index)
+        local ConnectionStart = #Catalog.Connections
         local Button = Instance.new("TextButton")
         Button.AutoButtonColor = false
         Button.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(31, 34, 39)
@@ -1072,10 +1078,23 @@ function AssetCatalog.Create(Library, Info)
             end
             Catalog:Select(Slot.Item.Id)
         end))
+        local Connections = {}
+        for Number = ConnectionStart + 1, #Catalog.Connections do table.insert(Connections, Catalog.Connections[Number]) end
+        function Slot:Reset() self.Item = nil; self.Hovered = false; self.Selected = false end
+        function Slot:Destroy()
+            for _, Connection in Connections do
+                Connection:Disconnect()
+                local Found = table.find(Catalog.Connections, Connection)
+                if Found then table.remove(Catalog.Connections, Found) end
+            end
+            RemoveRegistryTree(Library, Button)
+            Button:Destroy(); Catalog.Slots[Index] = nil
+        end
+        return Slot
     end
 
-    for Index = 1, PageSize do
-        CreateSlot(Index)
+    if not Virtualized then
+        for Index = 1, PageSize do CreateSlot(Index) end
     end
 
     local function RebuildCategories()
@@ -1120,6 +1139,18 @@ function AssetCatalog.Create(Library, Info)
         UpdateSlotState(Slot, false)
     end
 
+    if Virtualized then
+        Grid.Parent = nil
+        local Sequence = 0
+        VirtualView = Library:CreateVirtualList(GridScroll, {
+            Count = 0, Columns = Grid.FillDirectionMaxCells, RowHeight = CellHeight + Gap, Gap = Gap,
+            Scale = function() return GetGuiScale(GridScroll) end,
+            CreateRow = function() Sequence += 1; return CreateSlot(Sequence) end,
+            RenderRow = function(Slot, Index) RenderSlot(Slot, Catalog.Filtered[Index]) end,
+        })
+        Catalog.VirtualView = VirtualView
+    end
+
     local function Refresh()
         if Catalog.Destroyed then
             return
@@ -1146,16 +1177,19 @@ function AssetCatalog.Create(Library, Info)
         Catalog.PageCount = math.max(1, math.ceil(#Catalog.Filtered / Catalog.PageSize))
         Catalog.Page = math.clamp(Catalog.Page, 1, Catalog.PageCount)
         PageLabel.Text = string.format("%d / %d  ·  %d", Catalog.Page, Catalog.PageCount, #Catalog.Filtered)
-        Footer.Visible = Catalog.ShowPager == true or Catalog.ShowPager ~= false and Catalog.PageCount > 1
+        Footer.Visible = not Virtualized and (Catalog.ShowPager == true or Catalog.ShowPager ~= false and Catalog.PageCount > 1)
         local PagerSpace = Footer.Visible and FooterHeight or 0
         GridScroll.Size = UDim2.new(1, -Padding * 2, 1, -(Padding * 2 + PagerSpace))
         Empty.Size = GridScroll.Size
         Empty.Visible = #Catalog.Filtered == 0
         GridScroll.Visible = #Catalog.Filtered > 0
         local Start = (Catalog.Page - 1) * Catalog.PageSize
-        for SlotIndex, Slot in Catalog.Slots do
-            local Item = Catalog.Filtered[Start + SlotIndex]
-            RenderSlot(Slot, Item)
+        if VirtualView then VirtualView:SetCount(#Catalog.Filtered)
+        else
+            for SlotIndex, Slot in Catalog.Slots do
+                local Item = Catalog.Filtered[Start + SlotIndex]
+                RenderSlot(Slot, Item)
+            end
         end
         Previous.TextTransparency = Catalog.Page > 1 and 0 or 0.6
         Next.TextTransparency = Catalog.Page < Catalog.PageCount and 0 or 0.6
@@ -1275,6 +1309,7 @@ function AssetCatalog.Create(Library, Info)
     end
 
     function Catalog:SetPage(Value)
+        if VirtualView then VirtualView:ScrollTo((math.clamp(math.floor(tonumber(Value) or 1), 1, Catalog.PageCount) - 1) * Catalog.PageSize + 1) end
         Catalog.Page = math.clamp(math.floor(tonumber(Value) or Catalog.Page), 1, Catalog.PageCount)
         Refresh()
         return Catalog
@@ -1537,6 +1572,7 @@ function AssetCatalog.Create(Library, Info)
             return
         end
         Catalog.Destroyed = true
+        if VirtualView then VirtualView:Destroy(); Grid:Destroy() end
         if Catalog.StyleController then
             Catalog.StyleController:Destroy()
             Catalog.StyleController = nil

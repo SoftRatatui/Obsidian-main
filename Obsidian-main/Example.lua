@@ -2023,6 +2023,39 @@ do
         end)
     end
 
+    PreviewControls:AddButton("Open command palette", function() Library:OpenCommandPalette() end)
+    PreviewControls:AddButton("Favorite strength", function()
+        Library:SetFavorite("PreviewStrength", true)
+        Library:OpenCommandPalette(true)
+    end)
+    Library:EnableHistory(100)
+    Library:EnableCommandKeys()
+    PreviewControls:AddButton("Undo last edit", function() Library:Undo() end)
+    PreviewControls:AddButton("Redo last edit", function() Library:Redo() end)
+    local DetailsState = Library:State(false)
+    PreviewControls:AddToggle("PreviewStateToggle", { Text = "Reactive details", State = DetailsState, Save = false })
+    PreviewControls:AddInput("PreviewConditional", {
+        Text = "Conditional input", Default = "Visible through State:Get()", Save = false,
+        VisibleWhen = function() return DetailsState:Get() end,
+    })
+    local DataDemo = Tabs.Preview:AddFullGroupbox("Data and runtime", "chart-no-axes-combined")
+    local TableDemo = DataDemo:AddTable("PreviewDataTable", {
+        Height = 180, Columns = { { Key = "Name", Width = 3 }, { Key = "Value", Width = 1, Align = "Right" } },
+        Rows = { { Id = 1, Name = "First", Value = 20 }, { Id = 2, Name = "Second", Value = 10 } },
+    })
+    DataDemo:AddButton("Load 5,000 rows", function()
+        local Rows = {}
+        for Index = 1, 5000 do Rows[Index] = { Id = Index, Name = "Item " .. Index, Value = 5001 - Index } end
+        TableDemo:SetRows(Rows)
+    end)
+    local ChartDemo = DataDemo:AddChart("PreviewChart", { Height = 80, Capacity = 30, Values = { 2, 4, 3, 8, 6, 10 } })
+    DataDemo:AddButton("Append chart sample", function() ChartDemo:Push(math.random(1, 12)) end)
+    local LogDemo = DataDemo:AddLog("PreviewLog", { Height = 130, Capacity = 100 })
+    DataDemo:AddButton("Inspect runtime", function()
+        local Report = Library:Diagnose()
+        LogDemo:Append("Info", string.format("%d active rows, %d pooled rows, %d tracked connections", Report.ActiveRows, Report.PooledRows, Report.Connections))
+    end)
+
     local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
 	PreviewAddons:AddLabel("Open or trigger every large module from one place.", true)
 	PreviewAddons:AddButton("Toggle skin catalog", function()

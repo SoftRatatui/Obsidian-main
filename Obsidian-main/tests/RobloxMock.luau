@@ -316,6 +316,7 @@ function Mock.HostLibrary()
         end
         return Style
     end
+    function Library:RequestLayout(Target) if Target.Resize then Target:Resize() end end
     function Library:GetDesignToken(_, Fallback)
         return Fallback
     end

@@ -27,6 +27,53 @@ foreach ($taskModule in @('AssetCatalog', 'ImageGallery', 'ImagePreview', 'Textu
     $taskSource += "Modules.$taskModule = (function()`n$taskModuleSource`nend)()`n"
 }
 $taskLibrarySource = [IO.File]::ReadAllText((Join-Path $taskRoot 'Library.lua'))
+$taskRuntimeStart = $taskLibrarySource.IndexOf("do`n    local Runtime =")
+if ($taskRuntimeStart -lt 0) { $taskRuntimeStart = $taskLibrarySource.IndexOf("do`r`n    local Runtime =") }
+$taskRuntimeEnd = $taskLibrarySource.IndexOf('function Library:SafeCallback(', $taskRuntimeStart)
+$taskRuntimeCode = $taskLibrarySource.Substring($taskRuntimeStart, $taskRuntimeEnd - $taskRuntimeStart)
+$taskSource += "local function InstallRuntime(Library)`nlocal RunService = { Heartbeat = Mock.Signal() }`n$taskRuntimeCode`nreturn RunService.Heartbeat`nend`n"
+$taskRuntimeSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Runtime.spec.luau'))
+$taskSource += "local RunRuntime = (function()`n$taskRuntimeSpec`nend)()`nRunRuntime(InstallRuntime, Mock, Modules)`n"
+$taskGestureStart = $taskLibrarySource.IndexOf('function Library:MakeDraggable(')
+$taskGestureEnd = $taskLibrarySource.IndexOf('function Library:MakeResizable(', $taskGestureStart)
+$taskGestureCode = $taskLibrarySource.Substring($taskGestureStart, $taskGestureEnd - $taskGestureStart)
+$taskSource += @'
+do
+    local Library = { Signals = {}, Toggled = true }
+    function Library:GiveSignal(Connection) table.insert(self.Signals, Connection); return Connection end
+    local ScreenGui = { Parent = true }
+    local UserInputService = { InputChanged = Mock.Signal() }
+    local function IsClickInput(Input) return Input.UserInputType == Enum.UserInputType.Touch end
+    local function IsHoverInput(Input) return IsClickInput(Input) end
+    local function ClampGuiToViewport() end
+    local function Point(X, Y)
+        return setmetatable({ X = X, Y = Y }, { __sub = function(A, B) return Point(A.X - B.X, A.Y - B.Y) end })
+    end
+'@
+$taskSource += "`n$taskGestureCode`n"
+$taskSource += @'
+    local UI, Handle = Mock.Instance.new("Frame"), Mock.Instance.new("Frame")
+    Library:MakeDraggable(UI, Handle)
+    local First = { Position = Point(10, 10), UserInputType = Enum.UserInputType.Touch, Changed = Mock.Signal() }
+    local Second = { Position = Point(100, 100), UserInputType = Enum.UserInputType.Touch, Changed = Mock.Signal() }
+    Handle.InputBegan:Fire(First)
+    Handle.InputBegan:Fire(Second)
+    UserInputService.InputChanged:Fire(Second)
+    assert(UI.Position.X.Offset == 0 and UI.Position.Y.Offset == 0)
+    First.Position = Point(20, 30)
+    UserInputService.InputChanged:Fire(First)
+    assert(UI.Position.X.Offset == 10 and UI.Position.Y.Offset == 20)
+    First.UserInputState = Enum.UserInputState.End
+    First.Changed:Fire()
+    First.Position = Point(50, 60)
+    UserInputService.InputChanged:Fire(First)
+    assert(UI.Position.X.Offset == 10)
+    UI:Destroy()
+    assert(#Library.Signals == 0)
+    print("PASS touch gesture ownership, secondary-finger rejection and drag cleanup")
+end
+'@
+$taskSource += "`n"
 $taskBoundsStart = $taskLibrarySource.IndexOf('local TextBoundsCache = {}')
 $taskBoundsEnd = $taskLibrarySource.IndexOf('function Library:MouseIsOverFrame', $taskBoundsStart)
 $taskBoundsSource = $taskLibrarySource.Substring($taskBoundsStart, $taskBoundsEnd - $taskBoundsStart)
@@ -181,7 +228,7 @@ local function CreateDropdown(Info)
 $taskSource += "`n$taskDropdownMethods`nreturn Dropdown, View`nend`n"
 $taskTypographySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Typography.spec.luau'))
 $taskSource += "local RunTypography = (function()`n$taskTypographySpec`nend)()`nRunTypography(CreateDropdown, Mock)`n"
-$taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddStatRow(')
+$taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddTable(')
 $taskDragStart = $taskLibrarySource.IndexOf('function Library:RegisterImageGrid(')
 $taskDragEnd = $taskLibrarySource.IndexOf('local function CopyOptionValue(', $taskDragStart)
 $taskDragMethods = $taskLibrarySource.Substring($taskDragStart, $taskDragEnd - $taskDragStart)
@@ -207,8 +254,10 @@ local function CreateEditor()
             __sub = function(A, B) return Vector2.new(A.X - B.X, A.Y - B.Y) end,
         })
     end
+    Vector2.zero = Mock.Vector2.zero
     local Library = Mock.HostLibrary()
     local ScreenGui = Library.ScreenGui
+    InstallRuntime(Library)
     local Options, Toggles = {}, {}
     Library.Options, Library.Toggles = Options, Toggles
     local DependencyUpdateQueued = false
@@ -240,7 +289,7 @@ local function CreateEditor()
     function Funcs:AddAddon(Id, Addon, Info) return Addon.CreateEmbedded(Library, self, Id, Info) end
     function Funcs:AddUIPassthrough(Id, Info)
         Info.Instance.Parent = self.Container
-        local Element = { Instance = Info.Instance, Holder = Info.Instance }
+        local Element = { Instance = Info.Instance, Holder = Info.Instance, Connections = {}, Visible = Info.Visible ~= false }
         function Element:Destroy() Info.Instance:Destroy(); Options[Id] = nil end
         function Element:SetVisible(Value) Info.Instance.Visible = Value end
         function Element:SetHeight() end

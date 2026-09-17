@@ -83,6 +83,10 @@ local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
+local HapticService: any = nil
+pcall(function()
+    HapticService = cloneref(game:GetService("HapticService"))
+end)
 
 local NativeGetGenv = GetExecutorGlobal("getgenv")
 local getgenv = IsFunction(NativeGetGenv) and NativeGetGenv or function()
@@ -244,8 +248,12 @@ local Library = {
     
     DevicePlatform = nil,
     IsMobile = false,
+    Density = "Auto",
+    ActiveDensity = "Compact",
+    TabSwipeEnabled = true,
+    HapticsEnabled = true,
 
-    
+
     ScreenGui = nil,
     Window = nil,
     WindowContainer = nil,
@@ -1441,6 +1449,176 @@ function Library:SetReducedMotion(Enabled: boolean)
     Library.Design.Motion.Reduced = Enabled == true
     Library:RefreshMotion()
     return Library
+end
+
+Library.DensityPresets = {
+    Compact = {
+        Row = 24,
+        NavigationHeight = 38,
+        Grid = {
+            Row = 24, RowGap = 9, Indicator = 16, IndicatorGap = 9, Swatch = 16,
+            LabelRow = 18, TrackRow = 14, Track = 4, Thumb = 10, ThumbHover = 12, ControlGap = 4,
+        },
+    },
+    Comfortable = {
+        Row = 30,
+        NavigationHeight = 44,
+        Grid = {
+            Row = 30, RowGap = 10, Indicator = 18, IndicatorGap = 10, Swatch = 18,
+            LabelRow = 20, TrackRow = 18, Track = 4, Thumb = 12, ThumbHover = 14, ControlGap = 6,
+        },
+    },
+    Touch = {
+        Row = 44,
+        NavigationHeight = 44,
+        Grid = {
+            Row = 44, RowGap = 12, Indicator = 24, IndicatorGap = 12, Swatch = 24,
+            LabelRow = 22, TrackRow = 20, Track = 4, Thumb = 18, ThumbHover = 20, ControlGap = 8,
+        },
+    },
+}
+
+function Library:ResolveDensity(Mode: string?): string
+    Mode = Mode or Library.Density or "Auto"
+    if Mode == "Auto" then
+        return Library.IsMobile and "Touch" or "Compact"
+    end
+    if Library.IsMobile and Mode ~= "Touch" then
+        return "Touch"
+    end
+    if Library.DensityPresets[Mode] then
+        return Mode
+    end
+    return Library.IsMobile and "Touch" or "Compact"
+end
+
+function Library:ApplyDensity()
+    local Name = Library:ResolveDensity(Library.Density)
+    local Preset = Library.DensityPresets[Name]
+    if not Preset then
+        return Library
+    end
+
+    Library.ActiveDensity = Name
+    for Key, Value in Preset.Grid do
+        Library.Design.Grid[Key] = Value
+    end
+    Library.Design.Size.Row = Preset.Row
+    Library.Design.Shell.NavigationHeight = Preset.NavigationHeight
+    return Library
+end
+
+function Library:SetDensity(Mode: string)
+    Library.Density = Mode or "Auto"
+    Library:ApplyDensity()
+    Library.DesignRevision += 1
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
+
+    for _, Tab in Library.Tabs or {} do
+        if type(Tab) == "table" and type(Tab.Resize) == "function" then
+            pcall(Tab.Resize, Tab)
+        end
+    end
+    return Library
+end
+
+local HapticAmplitudes = {
+    Light = 0.25,
+    Medium = 0.55,
+    Heavy = 1,
+}
+
+function Library:Vibrate(Kind: string?)
+    if not Library.HapticsEnabled then
+        return
+    end
+    if not (Library.Env and Library.Env.Haptics and HapticService) then
+        return
+    end
+
+    local Amplitude = HapticAmplitudes[Kind or "Light"] or HapticAmplitudes.Light
+    pcall(function()
+        local Motor = Enum.VibrationMotor.Small
+        if not HapticService:IsMotorSupported(Enum.UserInputType.Touch, Motor) then
+            Motor = Enum.VibrationMotor.Large
+            if not HapticService:IsMotorSupported(Enum.UserInputType.Touch, Motor) then
+                return
+            end
+        end
+        HapticService:SetMotor(Enum.UserInputType.Touch, Motor, Amplitude)
+        task.delay(0.08, function()
+            pcall(function()
+                HapticService:SetMotor(Enum.UserInputType.Touch, Motor, 0)
+            end)
+        end)
+    end)
+end
+
+function Library:SetHapticsEnabled(Enabled: boolean)
+    Library.HapticsEnabled = Enabled == true
+    return Library
+end
+
+function Library:SetTabSwipeEnabled(Enabled: boolean)
+    Library.TabSwipeEnabled = Enabled == true
+    return Library
+end
+
+function Library:GetOrderedTabs(): { any }
+    local Roots = {}
+    for _, Tab in Library.Tabs or {} do
+        if type(Tab) == "table" and not Tab.Destroyed and not Tab.ParentTab and Tab.Visible ~= false and not Tab.IsKeyTab then
+            table.insert(Roots, Tab)
+        end
+    end
+    table.sort(Roots, function(A, B)
+        return (tonumber(A.Order) or 0) < (tonumber(B.Order) or 0)
+    end)
+
+    local Sequence = {}
+    for _, Tab in Roots do
+        table.insert(Sequence, Tab)
+        if Tab.Expanded and Tab.SubTabs and #Tab.SubTabs > 0 then
+            local Children = {}
+            for _, Child in Tab.SubTabs do
+                if type(Child) == "table" and not Child.Destroyed and Child.Visible ~= false then
+                    table.insert(Children, Child)
+                end
+            end
+            table.sort(Children, function(A, B)
+                return (tonumber(A.Order) or 0) < (tonumber(B.Order) or 0)
+            end)
+            for _, Child in Children do
+                table.insert(Sequence, Child)
+            end
+        end
+    end
+    return Sequence
+end
+
+function Library:SwitchTabRelative(Delta: number): boolean
+    local Sequence = Library:GetOrderedTabs()
+    if #Sequence == 0 then
+        return false
+    end
+
+    local CurrentIndex = table.find(Sequence, Library.ActiveTab)
+    if not CurrentIndex then
+        return false
+    end
+
+    local NextIndex = CurrentIndex + Delta
+    if NextIndex < 1 or NextIndex > #Sequence then
+        return false
+    end
+
+    local NextTab = Sequence[NextIndex]
+    if NextTab and type(NextTab.Show) == "function" then
+        NextTab:Show()
+        return true
+    end
+    return false
 end
 
 function Library:GetAddonStyle(Overrides)
@@ -3337,10 +3515,11 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
     local FinalWidth = tonumber(Width) or GetViewportSize().X - 32
     if FinalWidth ~= FinalWidth or FinalWidth == math.huge then FinalWidth = 10000 end
     FinalWidth = math.clamp(FinalWidth, 1, 1000000)
-    local FontCache = TextBoundsCache[Font]
+    local FontKey = tostring(Font.Family) .. "|" .. tostring(Font.Weight) .. "|" .. tostring(Font.Style)
+    local FontCache = TextBoundsCache[FontKey]
     if not FontCache then
         FontCache = {}
-        TextBoundsCache[Font] = FontCache
+        TextBoundsCache[FontKey] = FontCache
     end
 
     local SizeCache = FontCache[Size]
@@ -3362,7 +3541,7 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
     end
 
     local Bounds
-    local RetryAt = TextBoundsRetry[Font] or 0
+    local RetryAt = TextBoundsRetry[FontKey] or 0
     local Fallback = Now < RetryAt
     if not Fallback then
         local Params
@@ -3379,11 +3558,11 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
         if Success and typeof(Result) == "Vector2" and Result.X >= 0 and Result.Y >= 0
             and Result.X < math.huge and Result.Y < math.huge then
             Bounds = Result
-            TextBoundsRetry[Font] = nil
+            TextBoundsRetry[FontKey] = nil
         else
             Fallback = true
             RetryAt = os.clock() + 5
-            TextBoundsRetry[Font] = RetryAt
+            TextBoundsRetry[FontKey] = RetryAt
         end
     end
     if Fallback then
@@ -3410,7 +3589,7 @@ function Library:GetTextBounds(Text: string, Font: Font, Size: number, Width: nu
         FontCache = {}
         SizeCache = {}
         WidthCache = {}
-        TextBoundsCache[Font] = FontCache
+        TextBoundsCache[FontKey] = FontCache
         FontCache[Size] = SizeCache
         SizeCache[FinalWidth] = WidthCache
     end
@@ -3441,6 +3620,559 @@ function Library:IsInsideFrame(ParentFrame: GuiObject, Frame: GuiObject)
 		and GuiPos.Y + GuiSize.Y <= FramePos.Y + FrameSize.Y
 end
 
+do
+    local Runtime = { Resources = {}, Errors = {}, Jobs = {}, Layouts = {}, Events = {}, History = {}, Redo = {}, Favorites = {}, BuildBudget = 4 }
+    local Collector
+    Library.Runtime = Runtime
+    Library.Version = Library.ReleaseVersion
+    Library.Revision = "2026-09-17.1"
+    Library.Env = {
+        Drawing = type(Drawing) == "table" and type(Drawing.new) == "function",
+        CustomAsset = type(getcustomasset) == "function", Clipboard = type(setclipboard) == "function",
+        Request = type(request) == "function" or type(http_request) == "function", FPSCap = type(setfpscap) == "function",
+        Haptics = (function()
+            if not HapticService then return false end
+            local Ok, Supported = pcall(function()
+                return HapticService:IsVibrationSupported(Enum.UserInputType.Touch)
+            end)
+            return Ok and Supported == true
+        end)(),
+    }
+
+    local function Copy(Value, Seen)
+        if type(Value) ~= "table" then return Value end
+        Seen = Seen or {}
+        if Seen[Value] then return Seen[Value] end
+        local Result = {}; Seen[Value] = Result
+        for Key, Item in Value do Result[Key] = Copy(Item, Seen) end
+        return Result
+    end
+
+    function Library:ReportError(Message, Id, Source)
+        local Entry = { Message = tostring(Message), Id = Id, Source = Source or "Callback", Time = os.clock() }
+        table.insert(Runtime.Errors, Entry)
+        if #Runtime.Errors > 100 then table.remove(Runtime.Errors, 1) end
+        if not Runtime.ReportingError then
+            Runtime.ReportingError = true
+            for _, Listener in table.clone(Runtime.Events.Error or {}) do pcall(Listener, Entry) end
+            Runtime.ReportingError = false
+        end
+        return Entry
+    end
+
+    function Library:On(Event, Callback)
+        assert(type(Callback) == "function", "Expected event callback")
+        Runtime.Events[Event] = Runtime.Events[Event] or {}
+        local List = Runtime.Events[Event]
+        table.insert(List, Callback)
+        return function() local Index = table.find(List, Callback); if Index then table.remove(List, Index) end end
+    end
+
+    function Library:Emit(Event, ...)
+        for _, Callback in table.clone(Runtime.Events[Event] or {}) do self:SafeCallback(Callback, ...) end
+    end
+
+    function Library:OnError(Callback) return self:On("Error", Callback) end
+
+    function Library:TrackResource(Resource, Kind)
+        Runtime.Resources[Resource] = Kind
+        return Resource
+    end
+
+    function Library:CreatePool(Template, Factory)
+        assert(type(Factory) == "function" or typeof(Template) == "Instance", "Pool requires a factory or an Instance template")
+        local Pool = { Free = {}, Active = {}, Destroyed = false, Created = 0 }
+        local function Root(Item) return typeof(Item) == "Instance" and Item or Item.Root or Item.Holder or Item.Button end
+        function Pool:Acquire(...)
+            assert(not self.Destroyed, "Pool is destroyed")
+            local Item = table.remove(self.Free)
+            if not Item then Item = Factory and Factory(Template, ...) or Template:Clone(); self.Created += 1 end
+            assert(Item ~= nil and not self.Active[Item], "Pool factory must return a unique row")
+            self.Active[Item] = true
+            local Object = Root(Item); if Object then Object.Visible = true end
+            return Item
+        end
+        function Pool:Release(Item)
+            if not self.Active[Item] then return false end
+            self.Active[Item] = nil
+            local Object = Root(Item); if Object then Object.Visible = false end
+            if type(Item) == "table" and Item.Reset then Library:SafeCallback(Item.Reset, Item) end
+            table.insert(self.Free, Item)
+            return true
+        end
+        function Pool:Trim(Keep)
+            Keep = math.max(0, math.floor(tonumber(Keep) or 0))
+            while #self.Free > Keep do
+                local Item = table.remove(self.Free)
+                if Item.Destroy then Library:SafeCallback(Item.Destroy, Item)
+                else local Object = Root(Item); if Object then Object:Destroy() end end
+            end
+        end
+        function Pool:Destroy()
+            if self.Destroyed then return end
+            for Item in table.clone(self.Active) do self:Release(Item) end
+            self:Trim(0); self.Destroyed = true; Runtime.Resources[self] = nil
+        end
+        return self:TrackResource(Pool, "Pool")
+    end
+
+    function Library:CreateVirtualList(Scroll, Info)
+        assert(Info and type(Info.CreateRow) == "function" and type(Info.RenderRow) == "function", "Virtual list requires CreateRow and RenderRow")
+        local View = { Rows = {}, Connections = {}, Count = Info.Count or 0, RowHeight = Info.RowHeight or 28, Columns = Info.Columns or 1,
+            Overscan = math.max(0, math.floor(Info.Overscan or 2)), Destroyed = false }
+        assert(View.RowHeight > 0 and View.Columns >= 1, "Invalid virtual list dimensions")
+        View.Pool = self:CreatePool(nil, Info.CreateRow)
+        Scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+        function View:Refresh()
+            if self.Destroyed then return end
+            local Scale = math.max(tonumber(Info.Scale and Info.Scale()) or Library.DPIScale or 1, 0.01)
+            local Height = Scroll.AbsoluteSize.Y / Scale
+            local Count = math.max(0, math.floor(self.Count))
+            local TotalRows = math.ceil(Count / self.Columns)
+            local Offset = math.clamp(Scroll.CanvasPosition.Y / Scale, 0, math.max(0, TotalRows * self.RowHeight - Height))
+            local FirstRow = math.max(0, math.floor(Offset / self.RowHeight) - self.Overscan)
+            local LastRow = math.min(TotalRows, math.ceil((Offset + Height) / self.RowHeight) + self.Overscan)
+            local First, Last = FirstRow * self.Columns + 1, math.min(Count, LastRow * self.Columns)
+            Scroll.CanvasSize = UDim2.fromOffset(0, TotalRows * self.RowHeight)
+            for Index, Row in table.clone(self.Rows) do
+                if Index < First or Index > Last then self.Pool:Release(Row); self.Rows[Index] = nil end
+            end
+            for Index = First, Last do
+                local Row = self.Rows[Index]
+                if not Row then Row = self.Pool:Acquire(); self.Rows[Index] = Row end
+                local Root = typeof(Row) == "Instance" and Row or Row.Root or Row.Holder or Row.Button
+                Root.Parent = Scroll
+                Root.Position = UDim2.new(((Index - 1) % self.Columns) / self.Columns, 0, 0, math.floor((Index - 1) / self.Columns) * self.RowHeight)
+                Root.Size = UDim2.new(1 / self.Columns, -(Info.Gap or 0), 0, self.RowHeight - (Info.Gap or 0))
+                Library:SafeCallback(Info.RenderRow, Row, Index)
+            end
+            self.Pool:Trim(self.Columns * self.Overscan)
+            self.First, self.Last = First, Last
+        end
+        function View:SetCount(Count)
+            assert(type(Count) == "number" and Count >= 0 and Count < math.huge, "Invalid item count")
+            self.Count = math.floor(Count); self:Refresh(); return self
+        end
+        function View:ScrollTo(Index)
+            Scroll.CanvasPosition = Vector2.new(0, math.max(0, math.floor((Index - 1) / self.Columns)) * self.RowHeight * (Library.DPIScale or 1))
+            self:Refresh()
+        end
+        function View:Destroy()
+            if self.Destroyed then return end
+            self.Destroyed = true
+            for _, Connection in self.Connections do Connection:Disconnect() end
+            table.clear(self.Connections); table.clear(self.Rows); self.Pool:Destroy(); Runtime.Resources[self] = nil
+        end
+        table.insert(View.Connections, Scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function() View:Refresh() end))
+        table.insert(View.Connections, Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() View:Refresh() end))
+        table.insert(View.Connections, Scroll.Destroying:Connect(function() View:Destroy() end))
+        self:TrackResource(View, "VirtualList"); View:Refresh()
+        return View
+    end
+
+    function Library:State(Default)
+        local State = { Value = Copy(Default), Listeners = {}, Destroyed = false }
+        function State:Get()
+            if Collector then Collector[self] = true end
+            return Copy(self.Value)
+        end
+        function State:Set(Value)
+            if self.Destroyed then return false end
+            local function Equal(A, B, Seen)
+                if type(A) ~= type(B) then return false end
+                if type(A) ~= "table" then return A == B end
+                Seen = Seen or {}; if Seen[A] == B then return true end; Seen[A] = B
+                for Key, Item in A do if not Equal(Item, B[Key], Seen) then return false end end
+                for Key in B do if A[Key] == nil then return false end end
+                return true
+            end
+            if Equal(self.Value, Value) then return false end
+            local Previous = self:Get(); self.Value = Copy(Value)
+            if self.Dispatching then self.Pending = true; return true end
+            self.Dispatching = true
+            local Iterations = 0
+            repeat
+                self.Pending = false; Iterations += 1
+                local Current = self:Get()
+                for _, Callback in table.clone(self.Listeners) do Library:SafeCallback(Callback, Copy(Current), Previous) end
+                Previous = Current
+                if Iterations >= 100 then
+                    if self.Pending then Library:ReportError("Reactive update cycle exceeded 100 changes", nil, "State") end
+                    break
+                end
+            until not self.Pending or self.Destroyed
+            self.Dispatching = false
+            return true
+        end
+        function State:Subscribe(Callback, Immediate)
+            assert(type(Callback) == "function" and not self.Destroyed, "Invalid state subscription")
+            table.insert(self.Listeners, Callback)
+            if Immediate then Library:SafeCallback(Callback, self:Get()) end
+            return function() local Index = table.find(self.Listeners, Callback); if Index then table.remove(self.Listeners, Index) end end
+        end
+        function State:Destroy() self.Destroyed = true; table.clear(self.Listeners); Runtime.Resources[self] = nil end
+        return self:TrackResource(State, "State")
+    end
+
+    function Library:Observe(Callback)
+        local Observer = { Connections = {}, Destroyed = false, Running = false }
+        local function Run()
+            if Observer.Destroyed or Observer.Running then return end
+            Observer.Running = true
+            for _, Disconnect in Observer.Connections do Disconnect() end
+            table.clear(Observer.Connections)
+            local Previous, Dependencies = Collector, {}
+            Collector = Dependencies
+            local Success, Message = pcall(Callback)
+            Collector = Previous
+            if not Success then Library:ReportError(Message, nil, "Observe") end
+            for State in Dependencies do
+                if not State.Destroyed then table.insert(Observer.Connections, State:Subscribe(Run)) end
+            end
+            Observer.Running = false
+        end
+        function Observer:Destroy()
+            if self.Destroyed then return end
+            self.Destroyed = true
+            for _, Disconnect in self.Connections do Disconnect() end
+            table.clear(self.Connections); Runtime.Resources[self] = nil
+        end
+        self:TrackResource(Observer, "Observer"); Run()
+        return Observer
+    end
+
+    function Library:QueueFrame(Key, Callback)
+        if self.Unloaded then return end
+        Runtime.Layouts[Key] = Callback
+        if Runtime.FrameConnection then return end
+        Runtime.FrameConnection = RunService.Heartbeat:Once(function()
+            Runtime.FrameConnection = nil
+            local Pending = Runtime.Layouts; Runtime.Layouts = {}
+            for _, Work in Pending do if not Library.Unloaded then Library:SafeCallback(Work) end end
+        end)
+    end
+
+    function Library:RequestLayout(Target)
+        self:QueueFrame(Target, function() if not Target.Destroyed then Target:Resize() end end)
+    end
+
+    function Library:SetBuildBudget(Milliseconds)
+        assert(type(Milliseconds) == "number" and Milliseconds > 0 and Milliseconds <= 100, "Build budget must be in (0, 100] milliseconds")
+        Runtime.BuildBudget = Milliseconds; return self
+    end
+
+    function Library:QueueBuild(Callback, Id)
+        local Job = { Status = "Pending", Id = Id, Callback = Callback }
+        assert(type(Callback) == "function", "Expected build callback")
+        table.insert(Runtime.Jobs, Job)
+        local function Pump()
+            local Started = os.clock()
+            while #Runtime.Jobs > 0 do
+                local Current = table.remove(Runtime.Jobs, 1)
+                if Current.Status == "Pending" then
+                    Current.Status = "Running"
+                    local Time = os.clock()
+                    local Success, Message = pcall(Current.Callback)
+                    Current.Seconds = os.clock() - Time; Current.Callback = nil
+                    Current.Status = Success and "Completed" or "Failed"
+                    Runtime.BuildSamples = Runtime.BuildSamples or {}
+                    table.insert(Runtime.BuildSamples, { Id = Current.Id, Seconds = Current.Seconds, Status = Current.Status })
+                    if #Runtime.BuildSamples > 200 then table.remove(Runtime.BuildSamples, 1) end
+                    if not Success then Current.Error = tostring(Message); Library:ReportError(Message, Current.Id, "Build") end
+                end
+                if (os.clock() - Started) * 1000 >= Runtime.BuildBudget then break end
+            end
+            if #Runtime.Jobs > 0 then Library:QueueFrame(Runtime.Jobs, Pump) end
+        end
+        function Job:Cancel() if self.Status == "Pending" then self.Status = "Cancelled"; self.Callback = nil end end
+        self:QueueFrame(Runtime.Jobs, Pump)
+        return Job
+    end
+
+    function Library:GetControl(Id)
+        local Kind, Key = tostring(Id):match("^(%a+):(.*)$")
+        if Kind == "button" then return (self.Buttons or {})[Key] or (self.Buttons or {})[tonumber(Key)] end
+        if Kind == "label" then return (self.Labels or {})[Key] or (self.Labels or {})[tonumber(Key)] end
+        return self.Options[Id] or self.Toggles[Id] or (self.Buttons or {})[Id] or (self.Labels or {})[Id]
+    end
+    function Library:GetAll()
+        local Result = {}
+        for Id, Control in self.Options do if not Control.Destroyed then Result[Id] = Control end end
+        for Id, Control in self.Toggles do if not Control.Destroyed then Result[Id] = Control end end
+        for Id, Control in self.Buttons or {} do if not Control.Destroyed then Result["button:" .. tostring(Id)] = Control end end
+        for Id, Control in self.Labels or {} do if not Control.Destroyed then Result["label:" .. tostring(Id)] = Control end end
+        return Result
+    end
+    function Library:ForEach(Callback) for Id, Control in self:GetAll() do self:SafeCallback(Callback, Control, Id) end end
+    function Library:SetFavorite(Id, Enabled)
+        assert(self:GetControl(Id), "Unknown control")
+        Runtime.Favorites[Id] = Enabled ~= false or nil
+    end
+    function Library:GetFavorites()
+        local Result = {}; for Id in Runtime.Favorites do if self:GetControl(Id) then table.insert(Result, Id) end end
+        table.sort(Result, function(A, B) return tostring(A) < tostring(B) end); return Result
+    end
+    function Library:SearchControls(Query, FavoritesOnly)
+        local Result = {}; Query = string.lower(tostring(Query or ""))
+        for Id, Control in self:GetAll() do
+            local Text = tostring(Control.Text or Id)
+            if (not FavoritesOnly or Runtime.Favorites[Id]) and string.find(string.lower(Text .. " " .. tostring(Id)), Query, 1, true) then
+                table.insert(Result, { Id = Id, Text = Text, Control = Control })
+            end
+        end
+        table.sort(Result, function(A, B) return A.Text < B.Text end); return Result
+    end
+    function Library:RevealControl(Id)
+        local Control = self:GetControl(Id)
+        if not Control or Control.Destroyed then return false end
+        for _, Tab in self.Tabs do
+            for _, Group in Tab.Groupboxes or {} do
+                if table.find(Group.Elements or {}, Control) then
+                    Tab:SetVisible(true); Tab:Show()
+                    if Group.SetCollapsed then Group:SetCollapsed(false) end
+                    if Control.SetVisible then Control:SetVisible(true) end
+                    self:RequestLayout(Group)
+                    self:QueueFrame(Control, function()
+                        local Holder = Control.Holder
+                        if not Holder or not Holder.Parent then return end
+                        local Parent = Holder.Parent
+                        while Parent and not Parent:IsA("ScrollingFrame") do Parent = Parent.Parent end
+                        if Parent then Parent.CanvasPosition = Vector2.new(0, math.max(0, Parent.CanvasPosition.Y + Holder.AbsolutePosition.Y - Parent.AbsolutePosition.Y - 12)) end
+                        if Library.RevealText then Library:RevealText(Holder) end
+                    end)
+                    return true
+                end
+            end
+        end
+        return false
+    end
+    function Library:Diagnose()
+        local Report = { Resources = {}, Connections = 0, Tweens = 0, Instances = 0, PooledRows = 0, ActiveRows = 0,
+            PendingBuilds = #Runtime.Jobs, Errors = Copy(Runtime.Errors), Unloaded = self.Unloaded == true }
+        for Resource, Kind in Runtime.Resources do
+            Report.Resources[Kind] = (Report.Resources[Kind] or 0) + 1
+            if Kind == "Pool" then
+                Report.PooledRows += #Resource.Free
+                for _ in Resource.Active do Report.ActiveRows += 1 end
+            end
+            for _, Connection in Resource.Connections or {} do if Connection.Connected then Report.Connections += 1 end end
+        end
+        for _, Connection in self.Signals or {} do if Connection.Connected then Report.Connections += 1 end end
+        if Runtime.FrameConnection and Runtime.FrameConnection.Connected then Report.Connections += 1 end
+        for _, Slots in self.ActiveTweens or {} do for _ in Slots do Report.Tweens += 1 end end
+        for Object in self.Registry or {} do if Object.Parent then Report.Instances += 1 end end
+        return Report
+    end
+    function Library:GetControlValue(Control)
+        if Control.Type == "ColorPicker" then return { Value = Control.Value, Transparency = Control.Transparency } end
+        if Control.Type == "KeyPicker" then return { Control.Value, Control.Mode, Copy(Control.Modifiers) } end
+        return Copy(Control.Value)
+    end
+    function Library:EnableHistory(Limit)
+        Runtime.HistoryLimit = math.clamp(math.floor(Limit or 100), 1, 1000)
+        return self
+    end
+    function Library:RecordChange(Control)
+        local Value = self:GetControlValue(Control)
+        if Runtime.HistoryLimit and not Runtime.Replaying and not self.ConfigLoadContext and Control.Save ~= false then
+            table.insert(Runtime.History, { Id = Control.ConfigId, Before = Control.LastSnapshot, After = Value, Time = os.clock() })
+            if #Runtime.History > Runtime.HistoryLimit then table.remove(Runtime.History, 1) end
+            table.clear(Runtime.Redo)
+        end
+        Control.LastSnapshot = Copy(Value)
+    end
+    function Library:Undo()
+        local Entry = table.remove(Runtime.History)
+        if not Entry then return false, "History is empty" end
+        Runtime.Replaying = true
+        local Success, Message
+        if Entry.Before == nil and self:GetControl(Entry.Id) then Success, Message = pcall(self:GetControl(Entry.Id).SetValue, self:GetControl(Entry.Id), nil)
+        else Success, Message = self:SetValues({ [Entry.Id] = Copy(Entry.Before) }) end
+        Runtime.Replaying = false
+        table.insert(Success and Runtime.Redo or Runtime.History, Entry)
+        return Success, Message
+    end
+    function Library:Redo()
+        local Entry = table.remove(Runtime.Redo)
+        if not Entry then return false, "Redo is empty" end
+        Runtime.Replaying = true
+        local Success, Message
+        if Entry.After == nil and self:GetControl(Entry.Id) then Success, Message = pcall(self:GetControl(Entry.Id).SetValue, self:GetControl(Entry.Id), nil)
+        else Success, Message = self:SetValues({ [Entry.Id] = Copy(Entry.After) }) end
+        Runtime.Replaying = false
+        table.insert(Success and Runtime.History or Runtime.Redo, Entry)
+        return Success, Message
+    end
+    function Library:GetRecentChanges() return Copy(Runtime.History) end
+    function Library:ResetDefaults(Ids)
+        local Values, Empty = {}, {}
+        local Controls = self:GetAll()
+        local Selected = {}
+        if Ids then for _, Id in Ids do Selected[Id] = true end end
+        for Id, Control in Controls do
+            if (not Ids or Selected[Id]) and Control.ConfigDefault then
+                local Default = Control.ConfigDefault
+                if Control.Type == "ColorPicker" then Values[Id] = { Value = Default.Value, Transparency = Default.Transparency }
+                elseif Control.Type == "KeyPicker" then Values[Id] = { Default.Value, Default.Mode, Copy(Default.Modifiers) }
+                elseif Default.Value == nil then table.insert(Empty, Control)
+                else Values[Id] = Copy(Default.Value) end
+            end
+        end
+        local Success, Message = self:SetValues(Values)
+        if not Success then return Success, Message end
+        for _, Control in Empty do
+            local Disabled = Control.Disabled; Control.Disabled = false
+            local OK, Error = pcall(Control.SetValue, Control, nil)
+            Control.Disabled = Disabled
+            if not OK then return false, tostring(Error) end
+        end
+        return true
+    end
+    function Library:BindControl(Control, Info)
+        Info = Info or {}
+        Control.LastSnapshot = self:GetControlValue(Control)
+        Control.NoSave, Control.Secret = Info.NoSave == true, Info.Secret == true
+        if Control.NoSave or Control.Secret then Control.Save = false end
+        self.CallbackOwners = self.CallbackOwners or setmetatable({}, { __mode = "k" })
+        if type(Control.Callback) == "function" then self.CallbackOwners[Control.Callback] = Control.ConfigId end
+        if type(Control.Changed) == "function" then self.CallbackOwners[Control.Changed] = Control.ConfigId end
+        local Binding = { Disconnectors = {}, Observers = {}, Destroyed = false }
+        function Binding:Destroy()
+            if self.Destroyed then return end
+            self.Destroyed = true
+            for _, Disconnect in self.Disconnectors do Disconnect() end
+            for _, Observer in self.Observers do Observer:Destroy() end
+            if self.Connection then self.Connection:Disconnect() end
+            Runtime.Resources[self] = nil
+        end
+        if Control.Holder then Binding.Connection = Control.Holder.Destroying:Connect(function() Binding:Destroy() end) end
+        Control.Binding = self:TrackResource(Binding, "ControlBinding")
+        local State = Info.State
+        if State then
+            assert(type(State.Get) == "function" and type(State.Subscribe) == "function", "Invalid State binding")
+            local Busy = false
+            local function Apply(Value)
+                if Control.Destroyed or Busy then return end
+                Busy = true
+                local Disabled = Control.Disabled; Control.Disabled = false
+                local Success, Message = pcall(function()
+                    if Control.Type == "ColorPicker" then
+                        if typeof(Value) == "Color3" then Control:SetValueRGB(Value) else Control:SetValueRGB(Value.Value, Value.Transparency) end
+                    else Control:SetValue(Value) end
+                end)
+                Control.Disabled = Disabled; Busy = false
+                if not Success then Library:ReportError(Message, Control.ConfigId, "State") end
+            end
+            table.insert(Binding.Disconnectors, State:Subscribe(Apply))
+            local Changed = Control.RunChanged
+            if Changed then
+                function Control:RunChanged(...)
+                    Changed(self, ...)
+                    if not Busy then Busy = true; State:Set(Library:GetControlValue(self)); Busy = false end
+                end
+            end
+            Apply(State:Get())
+        end
+        for _, Rule in { { "VisibleWhen", "SetVisible" }, { "EnabledWhen", "SetDisabled" } } do
+            local Expression, Setter = Info[Rule[1]], Rule[2]
+            if Expression ~= nil and Control[Setter] then
+                table.insert(Binding.Observers, self:Observe(function()
+                    if Control.Destroyed then return end
+                    local Value = Expression
+                    if type(Expression) == "function" then Value = Expression() end
+                    if type(Value) == "table" and Value.Get then Value = Value:Get() end
+                    Control[Setter](Control, Setter == "SetDisabled" and not Value or Setter ~= "SetDisabled" and Value == true)
+                end))
+            end
+        end
+        function Control:Reset() return Library:ResetDefaults({ self.ConfigId }) end
+        return Binding
+    end
+    function Library:RegisterCommand(Id, Text, Callback)
+        assert(type(Callback) == "function", "Expected command callback")
+        Runtime.Commands = Runtime.Commands or {}
+        Runtime.Commands[Id] = { Text = Text, Callback = Callback }
+        return function() Runtime.Commands[Id] = nil end
+    end
+    function Library:OpenCommandPalette(FavoritesOnly)
+        if not self.Window then return nil, "Create a window first" end
+        if Runtime.Palette and not Runtime.Palette.Destroyed then Runtime.Palette:Dismiss() end
+        local Dialog = self.Window:AddDialog("__commands", { Title = FavoritesOnly and "Favorites" or "Commands", Width = 480, FooterButtons = {} })
+        Runtime.Palette = Dialog
+        local Results
+        local function Search(Query)
+            if not Results then return end
+            local Rows = {}
+            for _, Entry in self:SearchControls(Query, FavoritesOnly) do
+                local Id = Entry.Id
+                table.insert(Rows, { Id = "control:" .. tostring(Id), Name = Entry.Text, Kind = "Control", Run = function() self:RevealControl(Id) end })
+            end
+            if not FavoritesOnly then
+                local Lower = string.lower(Query or "")
+                for Name, Tab in self.Tabs do
+                    if string.find(string.lower(tostring(Name)), Lower, 1, true) then
+                        table.insert(Rows, { Id = "tab:" .. tostring(Name), Name = tostring(Name), Kind = "Tab", Run = function() Tab:SetVisible(true); Tab:Show() end })
+                    end
+                end
+                for Id, Command in Runtime.Commands or {} do
+                    if string.find(string.lower(tostring(Command.Text)), Lower, 1, true) then
+                        table.insert(Rows, { Id = "action:" .. tostring(Id), Name = Command.Text, Kind = "Action", Run = Command.Callback })
+                    end
+                end
+            end
+            Results:SetRows(Rows)
+        end
+        Dialog:AddInput("__command_query", { Text = "Search", Save = false, Callback = Search })
+        Results = Dialog:AddTable("__command_results", { Height = 260, Columns = { { Key = "Name", Width = 3 }, { Key = "Kind", Width = 1 } },
+            OnSelected = function(Row) if Row then Dialog:Dismiss(); self:SafeCallback(Row.Run) end end })
+        Search("")
+        return Dialog
+    end
+    for _, Event in { "Built", "Shown", "Hidden", "Resized", "TabChanged" } do
+        Library["On" .. Event] = function(self, Callback) return self:On(Event, Callback) end
+    end
+    function Library:EnableCommandKeys()
+        if Runtime.CommandKeys then return end
+        Runtime.CommandKeys = UserInputService.InputBegan:Connect(function(Input, Processed)
+            if Processed or self.Unloaded or UserInputService:GetFocusedTextBox() then return end
+            if not (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then return end
+            if Input.KeyCode == Enum.KeyCode.K then self:OpenCommandPalette()
+            elseif self:IsMenuOpen() and Input.KeyCode == Enum.KeyCode.Z then self:Undo()
+            elseif self:IsMenuOpen() and Input.KeyCode == Enum.KeyCode.Y then self:Redo() end
+        end)
+        self:GiveSignal(Runtime.CommandKeys)
+    end
+    function Library:GetProfile()
+        local Samples = Copy(Runtime.BuildSamples or {})
+        table.sort(Samples, function(A, B) return A.Seconds > B.Seconds end)
+        return { BuildSamples = Samples, BuildBudget = Runtime.BuildBudget, Runtime = self:Diagnose() }
+    end
+    function Library:ResetScope(Scope, Confirm)
+        local Ids, Seen = {}, {}
+        local function Visit(Object)
+            if type(Object) ~= "table" or Seen[Object] then return end
+            Seen[Object] = true
+            if Object.ConfigId ~= nil then table.insert(Ids, Object.ConfigId) end
+            for _, Key in { "Elements", "Groupboxes", "Tabboxes", "Tabs" } do
+                for _, Child in Object[Key] or {} do Visit(Child) end
+            end
+        end
+        if Scope then Visit(Scope) else Ids = nil end
+        if Confirm ~= false and self.Window then
+            return self.Window:AddDialog("__reset_defaults", { Title = "Reset settings?", Description = "Restore the selected controls to their defaults. History remains available when enabled.",
+                FooterButtons = { Cancel = { Text = "Cancel" }, Reset = { Text = "Reset", Callback = function() self:ResetDefaults(Ids) end } } })
+        end
+        return self:ResetDefaults(Ids)
+    end
+    function Library:DestroyRuntime()
+        if Runtime.FrameConnection then Runtime.FrameConnection:Disconnect(); Runtime.FrameConnection = nil end
+        for _, Job in Runtime.Jobs do Job:Cancel() end
+        table.clear(Runtime.Jobs); table.clear(Runtime.Layouts)
+        for Resource in table.clone(Runtime.Resources) do if Resource.Destroy then self:SafeCallback(Resource.Destroy, Resource) end end
+        table.clear(Runtime.Events)
+    end
+end
+
 function Library:SafeCallback(Func: (...any) -> ...any, ...: any)
     if not (Func and typeof(Func) == "function") then
         return
@@ -3466,10 +4198,11 @@ function Library:SafeCallback(Func: (...any) -> ...any, ...: any)
     local Result = table.pack(xpcall(Func, function(Error)
         local Context = Library.ConfigLoadContext
         if Context and Context.Thread == coroutine.running() then
+            if Library.ReportError then Library:ReportError(Error, Context.Id, "Config") end
             table.insert(Context.Errors, tostring(Error))
             return Error
         end
-        task.defer(error, debug.traceback(Error, 2))
+        if Library.ReportError then Library:ReportError(Error, Library.CallbackContexts and Library.CallbackContexts[coroutine.running()] or Library.CallbackOwners and Library.CallbackOwners[Func], "Callback") end
         if Library.NotifyOnError and Library.Notify then
             Library:Notify(Error)
         end
@@ -3640,6 +4373,7 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
     local StartPos
     local FramePos
     local Dragging = false
+    local GestureInput
     local Changed
     local InputBegan
     local InputChanged
@@ -3654,10 +4388,11 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
     end
 
     InputBegan = DragFrame.InputBegan:Connect(function(Input: InputObject)
-        if not IsClickInput(Input) or not DragAllowed() or IsMainWindow and Library.CantDragForced then
+        if Dragging or not IsClickInput(Input) or not DragAllowed() or IsMainWindow and Library.CantDragForced then
             return
         end
 
+        GestureInput = Input
         StartPos = Input.Position
         FramePos = UI.Position
         Dragging = true
@@ -3704,7 +4439,7 @@ function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggle
             return
         end
 
-        if Dragging and IsHoverInput(Input) then
+        if Dragging and IsHoverInput(Input) and (GestureInput.UserInputType ~= Enum.UserInputType.Touch or Input == GestureInput) then
             local Delta = Input.Position - StartPos
             UI.Position =
                 UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)
@@ -3746,6 +4481,7 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ((
     local StartPos
     local FrameSize
     local Dragging = false
+    local GestureInput
     local Changed
     local InputBegan
     local InputChanged
@@ -3766,10 +4502,11 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ((
     end
 
     InputBegan = DragFrame.InputBegan:Connect(function(Input: InputObject)
-        if not IsClickInput(Input) then
+        if Dragging or not IsClickInput(Input) then
             return
         end
 
+        GestureInput = Input
         StartPos = Input.Position
         FrameSize = UI.Size
         Dragging = true
@@ -3802,7 +4539,7 @@ function Library:MakeResizable(UI: GuiObject, DragFrame: GuiObject, Callback: ((
             return
         end
 
-        if Dragging and IsHoverInput(Input) then
+        if Dragging and IsHoverInput(Input) and (GestureInput.UserInputType ~= Enum.UserInputType.Touch or Input == GestureInput) then
             local Delta = Input.Position - StartPos
             local ViewportSize = GetViewportSize()
             local Scale = math.max(tonumber(ResizeInfo.Scale) or Library.DPIScale or 1, 0.01)
@@ -8660,11 +9397,22 @@ function Library:RegisterConfigOption(Option, Info, Idx)
     Option.ConfigCallbackMode = Info and Info.ConfigCallbackMode
     Option.ConfigId = Idx
     Option.Save = not Info or Info.Save ~= false
-    function Option:SetSave(Enabled) Option.Save = Enabled ~= false; return Option end
+    function Option:SetSave(Enabled) Option.Save = Enabled ~= false and not Option.Secret and not Option.NoSave; return Option end
     if Option.RunChanged then
         local RunChanged = Option.RunChanged
         function Option:RunChanged(...)
-            RunChanged(Option, ...)
+            Library.CallbackContexts = Library.CallbackContexts or setmetatable({}, { __mode = "k" })
+            local Thread = coroutine.running()
+            local Previous = Library.CallbackContexts[Thread]
+            Library.CallbackContexts[Thread] = Idx
+            local Success, Message = pcall(RunChanged, Option, ...)
+            Library.CallbackContexts[Thread] = Previous
+            if not Success then
+                if Library.ReportError then Library:ReportError(Message, Idx, "Control") end
+                local Context = Library.ConfigLoadContext
+                if Context and Context.Thread == Thread then table.insert(Context.Errors, tostring(Message)) end
+            end
+            if Library.RecordChange then Library:RecordChange(Option) end
             if Library.EmitConfigChanged and not (Option.Dragging and Option.CallbackOnRelease) then Library:EmitConfigChanged(Option) end
         end
     end
@@ -8678,6 +9426,7 @@ function Library:RegisterConfigOption(Option, Info, Idx)
         Modifiers = Option.Modifiers, Toggled = Option.Toggled, Multi = Option.Multi,
     })
     if Info and Info.ConfigVersion ~= nil then Option:SetConfigVersion(Info.ConfigVersion) end
+    if self.BindControl then self:BindControl(Option, Info) end
     return Option
 end
 
@@ -8708,6 +9457,7 @@ function Library:AddHidden(Idx, Default, Info)
     function Hidden:SetVisible() return Hidden end
     function Hidden:Destroy()
         if Hidden.Destroyed then return end
+        if Hidden.Binding then Hidden.Binding:Destroy() end
         Hidden.Destroyed = true
         Hidden.Callback, Hidden.Changed = nil, nil
         if Options[Idx] == Hidden then Options[Idx] = nil end
@@ -8720,6 +9470,8 @@ end
 local BaseGroupbox = {}
 do
     local Funcs = {}
+
+    function Funcs:Reset(Confirm) return Library:ResetScope(self, Confirm) end
 
     function Funcs:AddHidden(Idx, Default, Info)
         if self.Destroyed then return nil end
@@ -8880,7 +9632,7 @@ do
             table.insert(DividerConnections, TextLabel:GetPropertyChangedSignal("FontFace"):Connect(LayoutLines))
         end
         LayoutLines()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         local Divider = {
             Connections = DividerConnections,
@@ -8895,7 +9647,7 @@ do
 
         function Divider:SetVisible(Value)
             Holder.Visible = Value == true
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Divider:Destroy()
@@ -8920,7 +9672,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         table.insert(Groupbox.Elements, Divider)
@@ -9001,7 +9753,7 @@ do
             Label.Visible = Visible
 
             TextLabel.Visible = Label.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Label:SetText(Text: string)
@@ -9009,7 +9761,7 @@ do
             TextLabel.Text = Text
 
             Label:Display()
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         if Label.DoesWrap then
@@ -9024,7 +9776,7 @@ do
                 Label:Display()
                 Last = TextLabel.AbsoluteSize
 
-                Groupbox:Resize()
+                Library:RequestLayout(Groupbox)
             end)
         else
             New("UIListLayout", {
@@ -9035,7 +9787,7 @@ do
             })
         end
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Label.TextLabel = TextLabel
         Label.Container = Container
@@ -9083,7 +9835,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
 
             if Data.Idx then
                 Labels[Data.Idx] = nil
@@ -9498,7 +10250,7 @@ do
                 SubButton.Visible = Visible
 
                 SubButton.Base.Visible = SubButton.Visible
-                Groupbox:Resize()
+                Library:RequestLayout(Groupbox)
             end
 
             function SubButton:SetText(Text: string)
@@ -9605,7 +10357,7 @@ do
             Button.Visible = Visible
 
             Holder.Visible = Button.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Button:SetText(Text: string)
@@ -9631,9 +10383,11 @@ do
             Button.TooltipTable.Disabled = Button.Disabled
         end
 
+        Library.CallbackOwners = Library.CallbackOwners or setmetatable({}, { __mode = "k" })
+        if type(Button.Func) == "function" then Library.CallbackOwners[Button.Func] = Info.Idx or Button.Text end
         Button:UpdateIcon()
         Button:UpdateColors()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Button.Holder = Holder
         table.insert(Groupbox.Elements, Button)
@@ -9681,7 +10435,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
 
             if Info.Idx then
                 Buttons[Info.Idx] = nil
@@ -9968,7 +10722,7 @@ do
             end
 
             Button.Visible = Toggle.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Toggle:SetText(Text: string)
@@ -9990,7 +10744,7 @@ do
         end
 
         Toggle:Display()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Toggle.TextLabel = Label
         Toggle.Checkbox = Checkbox
@@ -10049,7 +10803,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Toggles[Idx] = nil
         end
 
@@ -10310,7 +11064,7 @@ do
             end
 
             Button.Visible = Toggle.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Toggle:SetText(Text: string)
@@ -10332,7 +11086,7 @@ do
         end
 
         Toggle:Display()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Toggle.TextLabel = Label
         Toggle.Container = Container
@@ -10389,7 +11143,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Toggles[Idx] = nil
         end
 
@@ -10592,7 +11346,7 @@ do
             Input.Visible = Visible
 
             Holder.Visible = Input.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Input:SetText(Text: string)
@@ -10645,7 +11399,7 @@ do
             Input.TooltipTable.Disabled = Input.Disabled
         end
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Input.Holder = Holder
         table.insert(Groupbox.Elements, Input)
@@ -10689,7 +11443,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -11002,7 +11756,7 @@ do
             Slider.Visible = Visible
 
             Holder.Visible = Slider.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Slider:SetText(Text: string)
@@ -11153,7 +11907,7 @@ do
 
         Slider:UpdateColors()
         Slider:Display()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Slider.Holder = Holder
         table.insert(Groupbox.Elements, Slider)
@@ -11189,7 +11943,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -11818,6 +12572,7 @@ do
                 Parent = Button,
             })
 
+            Row.Root = Container
             Row.Container = Container
             Row.Corner = Corner
             Row.Image = Image
@@ -12007,9 +12762,8 @@ do
             Dropdown:RecalculateListSize(#FilteredEntries)
         end
 
-        for _ = 1, PoolSize do
-            table.insert(Pool, CreatePoolRow())
-        end
+        local RowPool = Library:CreatePool(nil, CreatePoolRow)
+        for _ = 1, PoolSize do table.insert(Pool, RowPool:Acquire()) end
 
         table.insert(Dropdown.Connections, MenuTable.Menu:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
             Dropdown:RefreshPool()
@@ -12217,7 +12971,7 @@ do
             Dropdown.Visible = Visible
 
             Holder.Visible = Dropdown.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Dropdown:SetText(Text: string)
@@ -12227,7 +12981,7 @@ do
             DisplayContainer.Position = UDim2.fromOffset(0, HasLabel and DropdownLabelRow or 0)
             Label.Text = Dropdown.Text or ""
             Label.Visible = HasLabel
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Dropdown:SetDragSelect(Value: boolean)
@@ -12315,7 +13069,7 @@ do
         Dropdown:UpdateColors()
         Dropdown:Display()
         Dropdown:BuildDropdownList()
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Dropdown.Holder = Holder
         table.insert(Groupbox.Elements, Dropdown)
@@ -12336,6 +13090,7 @@ do
             Dropdown.Destroyed = true
 
             StopDragSelect()
+            RowPool:Destroy()
 
             if Dropdown.Connections then
                 for _, Connection in Dropdown.Connections do
@@ -12360,7 +13115,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -12724,14 +13479,14 @@ do
             end
 
             Viewport:RefreshAttachmentPoints()
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Viewport:SetHeight(Height: number)
             assert(typeof(Height) == "number" and Height > 0, "Height must be greater than 0.")
 
             Holder.Size = UDim2.new(1, 0, 0, Height)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Viewport:Focus()
@@ -12780,10 +13535,10 @@ do
             Viewport.Visible = Visible
 
             Holder.Visible = Viewport.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Viewport.Holder = Holder
         Viewport.Box = Box
@@ -12822,7 +13577,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -12971,7 +13726,7 @@ do
             Image.Height = Height
             Holder.Size = UDim2.new(1, 0, 0, Height)
             Image:SetPadding(Image.Padding)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Image:SetImage(NewImage: string)
@@ -13114,10 +13869,10 @@ do
             Image.Visible = Visible
 
             Holder.Visible = Image.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Image.Holder = Holder
         Image.Box = Box
@@ -13144,7 +13899,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -13214,7 +13969,7 @@ do
 
             Video.Height = Height
             Holder.Size = UDim2.new(1, 0, 0, Height)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Video:SetVideo(NewVideo: string)
@@ -13259,10 +14014,10 @@ do
             Video.Visible = Visible
 
             Holder.Visible = Video.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         Video.Holder = Holder
         Video.VideoFrame = VideoFrameInstance
@@ -13292,7 +14047,7 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
@@ -13334,14 +14089,14 @@ do
 
         Passthrough.Instance.Parent = Holder
 
-        Groupbox:Resize()
+        Library:RequestLayout(Groupbox)
 
         function Passthrough:SetHeight(Height: number)
             assert(typeof(Height) == "number" and Height > 0, "Height must be a number greater than 0.")
 
             Passthrough.Height = Height
             Holder.Size = UDim2.new(1, 0, 0, Height)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Passthrough:SetInstance(Instance: Instance)
@@ -13363,7 +14118,7 @@ do
             Passthrough.Visible = Visible
 
             Holder.Visible = Passthrough.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         Passthrough.Holder = Holder
@@ -13393,11 +14148,216 @@ do
                 table.remove(Groupbox.Elements, ElemIdx) 
             end
 
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             Options[Idx] = nil
         end
 
         return Passthrough
+    end
+
+    function Funcs:AddTable(Idx, Info)
+        if self.Destroyed then return nil end
+        Info = Info or {}
+        local Columns = Info.Columns or { { Key = "Text", Text = "Item" } }
+        assert(#Columns > 0, "Table requires columns")
+        local Height, RowHeight = Info.Height or 240, Info.RowHeight or (Library.IsMobile and 44 or 28)
+        local Root = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true })
+        local Header = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, RowHeight), Parent = Root })
+        local Scroll = New("ScrollingFrame", { BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true,
+            Position = UDim2.fromOffset(0, RowHeight), Size = UDim2.new(1, 0, 1, -RowHeight), ScrollBarThickness = 3,
+            ScrollBarImageColor3 = "AccentColor", CanvasSize = UDim2.fromScale(0, 0), CanvasPosition = Vector2.zero, Parent = Root })
+        local Empty = New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
+            Text = Info.EmptyText or "No items", TextSize = 14, Parent = Scroll })
+        local Control = self:AddUIPassthrough(Idx, { Instance = Root, Height = Height, Visible = Info.Visible ~= false })
+        Control.Type, Control.Text, Control.Rows, Control.Filtered = "Table", Info.Text or tostring(Idx), {}, {}
+        Control.SelectedId, Control.Search = nil, ""
+        local Weight = 0
+        for _, Column in Columns do Weight += math.max(0.01, tonumber(Column.Width) or 1) end
+        local function LayoutCell(Cell, Index)
+            local Start = 0
+            for Number = 1, Index - 1 do Start += math.max(0.01, tonumber(Columns[Number].Width) or 1) end
+            Cell.Position = UDim2.fromScale(Start / Weight, 0)
+            Cell.Size = UDim2.new(math.max(0.01, tonumber(Columns[Index].Width) or 1) / Weight, -8, 1, 0)
+        end
+        local View = Library:CreateVirtualList(Scroll, {
+            RowHeight = RowHeight, Count = 0,
+            CreateRow = function()
+                local Row = { Cells = {} }
+                Row.Root = New("TextButton", { BackgroundColor3 = "MainColor", BorderSizePixel = 0, Text = "", AutoButtonColor = false, ClipsDescendants = true })
+                for Index, Column in Columns do
+                    local Cell = New(Column.Image and "ImageLabel" or "TextLabel", {
+                        BackgroundTransparency = 1, Parent = Row.Root,
+                    })
+                    if not Column.Image then
+                        Cell.TextSize = Info.TextSize or 13
+                        Cell.TextXAlignment = Column.Align == "Right" and Enum.TextXAlignment.Right or Column.Align == "Center" and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
+                        Cell.TextTruncate = Enum.TextTruncate.AtEnd
+                    else Cell.ScaleType = Enum.ScaleType.Fit end
+                    LayoutCell(Cell, Index); Row.Cells[Index] = Cell
+                end
+                Row.Root.Activated:Connect(function()
+                    if not Row.Item then return end
+                    Control:Select(Row.Item.Id)
+                end)
+                return Row
+            end,
+            RenderRow = function(Row, Index)
+                local Item = Control.Filtered[Index]; Row.Item = Item
+                Row.Root.BackgroundTransparency = Control.SelectedId == Item.Id and 0 or Index % 2 == 0 and 0.45 or 1
+                for Number, Column in Columns do
+                    local Value = Item[Column.Key]
+                    if Column.Format then Value = Library:SafeCallback(Column.Format, Value, Item) end
+                    if Column.Image then Row.Cells[Number].Image = type(Value) == "number" and "rbxassetid://" .. Value or tostring(Value or "")
+                    else Row.Cells[Number].Text = Value == nil and "" or tostring(Value) end
+                end
+            end,
+        })
+        Control.View, Control.Scroll = View, Scroll
+        function Control:Refresh()
+            table.clear(self.Filtered)
+            local Query = string.lower(self.Search)
+            for _, Row in self.Rows do
+                local Match = Query == ""
+                for _, Column in Columns do
+                    if string.find(string.lower(tostring(Row[Column.Key] or "")), Query, 1, true) then Match = true; break end
+                end
+                if Match then table.insert(self.Filtered, Row) end
+            end
+            if self.SortKey then
+                table.sort(self.Filtered, function(A, B)
+                    local First, Second = A[self.SortKey], B[self.SortKey]
+                    if First == Second then return tostring(A.Id) < tostring(B.Id) end
+                    if type(First) ~= "number" or type(Second) ~= "number" then First, Second = tostring(First or ""), tostring(Second or "") end
+                    if self.Descending then return First > Second end
+                    return First < Second
+                end)
+            end
+            Empty.Visible = #self.Filtered == 0
+            View:SetCount(#self.Filtered)
+            return self
+        end
+        function Control:SetRows(Rows)
+            assert(type(Rows) == "table", "Expected rows")
+            local Replacement, Seen = {}, {}
+            for Index, Row in ipairs(Rows) do
+                assert(type(Row) == "table", "Each row must be a table")
+                local Item = table.clone(Row); Item.Id = Item.Id or Index
+                assert(not Seen[Item.Id], "Duplicate row ID"); Seen[Item.Id] = true
+                table.insert(Replacement, Item)
+            end
+            self.Rows = Replacement
+            if not Seen[self.SelectedId] then self.SelectedId = nil end
+            return self:Refresh()
+        end
+        function Control:SetSearch(Query) self.Search = tostring(Query); return self:Refresh() end
+        function Control:SetSort(Key, Descending) self.SortKey, self.Descending = Key, Descending == true; return self:Refresh() end
+        function Control:Select(Id, Silent)
+            local Selected
+            for _, Row in self.Rows do if Row.Id == Id then Selected = Row; break end end
+            self.SelectedId = Selected and Selected.Id or nil; View:Refresh()
+            if not Silent then Library:SafeCallback(Info.OnSelected or Info.Callback, Selected) end
+            return Selected
+        end
+        function Control:GetSelected()
+            for _, Row in self.Rows do if Row.Id == self.SelectedId then return Row end end
+            return nil
+        end
+        for Index, Column in Columns do
+            local Button = New("TextButton", { BackgroundTransparency = 1, Text = Column.Text or Column.Key,
+                TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Header })
+            LayoutCell(Button, Index)
+            Button.Activated:Connect(function()
+                if Column.Sortable ~= false then Control:SetSort(Column.Key, Control.SortKey == Column.Key and not Control.Descending) end
+            end)
+        end
+        local Destroy = Control.Destroy
+        function Control:Destroy() View:Destroy(); Destroy(self) end
+        Control:SetRows(Info.Rows or Info.Items or {})
+        return Control
+    end
+
+    function Funcs:AddChart(Idx, Info)
+        Info = Info or {}
+        local Root = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true })
+        local Control = self:AddUIPassthrough(Idx, { Instance = Root, Height = Info.Height or 100, Visible = Info.Visible ~= false })
+        Control.Type, Control.Text, Control.Values = "Chart", Info.Text or tostring(Idx), {}
+        Control.Capacity = math.clamp(math.floor(Info.Capacity or 120), 2, 1000)
+        local Parts = {}
+        function Control:Refresh()
+            if self.Destroyed then return end
+            local Count = #self.Values
+            local Min, Max = Info.Min or 0, Info.Max or 1
+            for _, Value in self.Values do if Info.Min == nil then Min = math.min(Min, Value) end; if Info.Max == nil then Max = math.max(Max, Value) end end
+            local Range = math.max(Max - Min, 0.000001)
+            local Width = math.max(1, Root.AbsoluteSize.X / (Library.DPIScale or 1))
+            local Height = math.max(1, Root.AbsoluteSize.Y / (Library.DPIScale or 1))
+            local Bars = Info.Kind == "Bar"
+            local Needed = Bars and Count or math.max(0, Count - 1)
+            for Index = 1, Needed do
+                local Part = Parts[Index]
+                if not Part then Part = New("Frame", { BorderSizePixel = 0, BackgroundColor3 = Info.Color or "AccentColor", Parent = Root }); Parts[Index] = Part end
+                Part.Visible = true
+                if Bars then
+                    local H = math.clamp((self.Values[Index] - Min) / Range, 0, 1) * Height
+                    Part.Position = UDim2.fromOffset((Index - 1) * Width / Count, Height - H)
+                    Part.Size = UDim2.fromOffset(math.max(1, Width / Count - 2), H); Part.Rotation = 0; Part.AnchorPoint = Vector2.zero
+                else
+                    local X1, X2 = (Index - 1) * Width / math.max(1, Count - 1), Index * Width / math.max(1, Count - 1)
+                    local Y1, Y2 = Height * (1 - math.clamp((self.Values[Index] - Min) / Range, 0, 1)), Height * (1 - math.clamp((self.Values[Index + 1] - Min) / Range, 0, 1))
+                    local DX, DY = X2 - X1, Y2 - Y1
+                    Part.AnchorPoint = Vector2.new(0.5, 0.5)
+                    Part.Position = UDim2.fromOffset((X1 + X2) / 2, (Y1 + Y2) / 2)
+                    Part.Size = UDim2.fromOffset(math.sqrt(DX * DX + DY * DY), Info.Thickness or 2)
+                    Part.Rotation = math.deg(math.atan2(DY, DX))
+                end
+            end
+            for Index = #Parts, Needed + 1, -1 do Parts[Index]:Destroy(); Parts[Index] = nil end
+        end
+        function Control:SetValues(Values)
+            local Result = {}
+            for Index = math.max(1, #Values - self.Capacity + 1), #Values do
+                local Value = Values[Index]
+                assert(type(Value) == "number" and Value == Value and math.abs(Value) < math.huge, "Chart values must be finite")
+                table.insert(Result, Value)
+            end
+            self.Values = Result; self:Refresh(); return self
+        end
+        function Control:Push(Value)
+            assert(type(Value) == "number" and Value == Value and math.abs(Value) < math.huge, "Chart values must be finite")
+            table.insert(self.Values, Value); if #self.Values > self.Capacity then table.remove(self.Values, 1) end
+            if self.Visible and Library.Toggled ~= false then self:Refresh() end
+            return self
+        end
+        table.insert(Control.Connections, Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() Control:Refresh() end))
+        Control:SetValues(Info.Values or {})
+        return Control
+    end
+
+    function Funcs:AddLog(Idx, Info)
+        Info = Info or {}
+        local View = self:AddTable(Idx, { Height = Info.Height, Columns = {
+            { Key = "Time", Width = 1 }, { Key = "Level", Width = 1 }, { Key = "Message", Width = 5 },
+        }, EmptyText = "No log entries" })
+        local Entries, Sequence = {}, 0
+        function View:Append(Level, Message)
+            Sequence += 1
+            table.insert(Entries, { Id = Sequence, Time = os.date("%H:%M:%S"), Level = tostring(Level), Message = tostring(Message) })
+            if #Entries > (Info.Capacity or 500) then table.remove(Entries, 1) end
+            self:SetLevel(self.Level)
+            if Info.AutoScroll ~= false then self.View:ScrollTo(#self.Filtered) end
+        end
+        function View:SetLevel(Level)
+            self.Level = Level
+            local Rows = {}; for _, Entry in Entries do if not Level or Entry.Level == Level then table.insert(Rows, Entry) end end
+            self:SetRows(Rows)
+        end
+        function View:Clear() table.clear(Entries); self:SetRows({}) end
+        function View:CopySelected()
+            local Item = self:GetSelected()
+            if not Item or type(setclipboard) ~= "function" then return false end
+            return pcall(setclipboard, Item.Message)
+        end
+        return View
     end
 
     function Funcs:AddStatRow(Idx, Info)
@@ -13564,7 +14524,7 @@ do
         function Slots:SetVisible(Value)
             Slots.Visible = Value == true
             Holder.Visible = Slots.Visible
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
             return Slots
         end
         for Index, Id in ipairs(Definitions) do
@@ -13588,7 +14548,7 @@ do
             local Columns = math.max(1, math.min(#Definitions, math.floor((Width + 6) / 76)))
             Layout.CellSize = UDim2.fromOffset(math.floor((Width - (Columns - 1) * 6) / Columns), 66)
             Holder.Size = UDim2.new(1, 0, 0, math.ceil(#Definitions / Columns) * 72 - 6)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
         table.insert(Connections, Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(Resize))
         function Slots:Destroy()
@@ -13603,7 +14563,7 @@ do
             Holder:Destroy()
             local Index = table.find(Groupbox.Elements, Slots)
             if Index then table.remove(Groupbox.Elements, Index) end
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
         table.insert(self.Elements, Slots)
         Slots:SetItems(Info.Items or {})
@@ -13753,7 +14713,7 @@ do
             end
 
             DepboxContainer.Size = UDim2.new(1, 0, 0, DepboxList.AbsoluteContentSize.Y / Library.DPIScale)
-            Groupbox:Resize()
+            Library:RequestLayout(Groupbox)
         end
 
         function Depbox:SetVisible(Visible)
@@ -14681,6 +15641,7 @@ function Library:CreateWindow(WindowInfo)
     local NavigationIconSize = Library:GetDesignToken("Size.Icon", 16)
     local NavigationIconX = 12
     local NavigationLabelX = 40
+    local SubTabParents = {}
     local HeaderIconSize = math.clamp(WindowInfo.IconSize.X.Offset > 0 and WindowInfo.IconSize.X.Offset or 24, 18, 28)
     local HeaderControlWidth = WindowInfo.ShowCompactLauncher and 84 or 50
 
@@ -15833,8 +16794,14 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Button.Icon.AnchorPoint = Vector2.new(IsCompact and 0.5 or 0, 0.5)
-            Button.Icon.Position = IsCompact and UDim2.fromScale(0.5, 0.5) or UDim2.new(0, NavigationIconX, 0.5, 0)
+            Button.Icon.Position = IsCompact and UDim2.fromScale(0.5, 0.5) or UDim2.new(0, Button.IconX or NavigationIconX, 0.5, 0)
             Button.Icon.Size = UDim2.fromOffset(NavigationIconSize, NavigationIconSize)
+        end
+
+        for _, ParentTab in SubTabParents do
+            if ParentTab.RefreshExpansion then
+                ParentTab:RefreshExpansion(false)
+            end
         end
     end
 
@@ -16004,7 +16971,7 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Shell.NavigationHeight", 38)),
                 Text = "",
-                LayoutOrder = Order,
+                LayoutOrder = Order * 100,
                 Parent = Tabs,
             })
             New("UICorner", {
@@ -16260,6 +17227,15 @@ function Library:CreateWindow(WindowInfo)
 
             Connections = {},
             Destroyed = false,
+
+            Button = TabButton,
+            Label = TabLabel,
+            IconImage = TabIcon,
+
+            SubTabs = {},
+            Expanded = false,
+            ParentTab = nil,
+            Depth = 0,
 
             Window = Window,
             Canvas = TabCanvas,
@@ -17285,6 +18261,11 @@ function Library:CreateWindow(WindowInfo)
             Tab:Resize(Tab.WarningBox.Visible)
 
             Library.ActiveTab = Tab
+            Library:Emit("TabChanged", Tab)
+
+            if Tab.ParentTab and Tab.ParentTab.SetExpanded then
+                Tab.ParentTab:SetExpanded(true)
+            end
 
             if Library.Searching then
                 Library:UpdateSearch(Library.SearchText)
@@ -17304,6 +18285,8 @@ function Library:CreateWindow(WindowInfo)
 
             Library.ActiveTab = nil
         end
+
+        function Tab:Reset(Confirm) return Library:ResetScope(self, Confirm) end
 
         function Tab:SetVisible(Visible: boolean)
             if Tab.Destroyed then
@@ -17325,7 +18308,15 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:SetOrder(Order: number)
-            TabButton.LayoutOrder = Order
+            Tab.Order = Order
+            if Tab.ParentTab then
+                TabButton.LayoutOrder = Order
+            else
+                TabButton.LayoutOrder = Order * 100
+                if Tab.SubTabHolder then
+                    Tab.SubTabHolder.LayoutOrder = Order * 100 + 1
+                end
+            end
         end
 
         function Tab:Destroy()
@@ -17363,6 +18354,33 @@ function Library:CreateWindow(WindowInfo)
             end
             table.clear(Tab.DependencyGroupboxes)
 
+            for _, SubTab in table.clone(Tab.SubTabs) do
+                if SubTab.Destroy then
+                    SubTab:Destroy()
+                end
+            end
+            table.clear(Tab.SubTabs)
+
+            if Tab.SubTabHolder then
+                Tab.SubTabHolder:Destroy()
+                Tab.SubTabHolder = nil
+            end
+
+            local ExpanderIndex = table.find(SubTabParents, Tab)
+            if ExpanderIndex then
+                table.remove(SubTabParents, ExpanderIndex)
+            end
+
+            if Tab.ParentTab and Tab.ParentTab.SubTabs then
+                local SelfIndex = table.find(Tab.ParentTab.SubTabs, Tab)
+                if SelfIndex then
+                    table.remove(Tab.ParentTab.SubTabs, SelfIndex)
+                end
+                if Tab.ParentTab.RefreshExpansion then
+                    Tab.ParentTab:RefreshExpansion(false)
+                end
+            end
+
             if TabCanvas then
                 TabCanvas:Destroy()
             elseif TabContainer then
@@ -17390,7 +18408,166 @@ function Library:CreateWindow(WindowInfo)
             Library.Tabs[Name] = nil
         end
 
-        
+        local SubTabLayout
+
+        function Tab:IsExpanded()
+            return Tab.Expanded == true
+        end
+
+        function Tab:RefreshExpansion(Animate)
+            if not Tab.SubTabHolder then
+                return
+            end
+
+            local Compact = Window:IsSidebarCompacted()
+            if Tab.SubTabChevron then
+                Tab.SubTabChevron.Visible = (not Compact) and #Tab.SubTabs > 0
+            end
+
+            local Effective = Compact or Tab.Expanded
+            local Target = 0
+            if Effective and SubTabLayout then
+                Target = Library:Snap(SubTabLayout.AbsoluteContentSize.Y)
+            end
+
+            if Animate then
+                Library:PlayTween(Tab.SubTabHolder, "SubTabExpand", Library:GetMotion("Fast"), {
+                    Size = UDim2.new(1, 0, 0, Target),
+                })
+            else
+                Library:CancelTween(Tab.SubTabHolder, "SubTabExpand")
+                Tab.SubTabHolder.Size = UDim2.new(1, 0, 0, Target)
+            end
+
+            if Tab.SubTabChevronIcon then
+                local Rotation = (not Compact and Tab.Expanded) and 90 or 0
+                if Animate then
+                    Library:PlayTween(Tab.SubTabChevronIcon, "SubTabRotate", Library:GetMotion("Fast"), {
+                        Rotation = Rotation,
+                    })
+                else
+                    Library:CancelTween(Tab.SubTabChevronIcon, "SubTabRotate")
+                    Tab.SubTabChevronIcon.Rotation = Rotation
+                end
+            end
+        end
+
+        function Tab:SetExpanded(State)
+            State = State == true
+            if Tab.Expanded == State then
+                return Tab
+            end
+
+            Tab.Expanded = State
+            Tab:RefreshExpansion(true)
+            return Tab
+        end
+
+        local function EnsureExpander()
+            if Tab.SubTabHolder then
+                return
+            end
+
+            Tab.SubTabHolder = New("Frame", {
+                BackgroundTransparency = 1,
+                ClipsDescendants = true,
+                LayoutOrder = (Tab.Order or Order) * 100 + 1,
+                Size = UDim2.new(1, 0, 0, 0),
+                Parent = Tabs,
+            })
+            SubTabLayout = New("UIListLayout", {
+                Padding = UDim.new(0, Library:GetDesignToken("Shell.NavigationGap", 5)),
+                Parent = Tab.SubTabHolder,
+            })
+
+            local ChevronWidth = Library.IsMobile and 44 or 28
+            local ChevronIcon = Library:GetIcon("chevron-right")
+            Tab.SubTabChevron = New("TextButton", {
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, 0, 0.5, 0),
+                Size = UDim2.new(0, ChevronWidth, 1, 0),
+                Text = "",
+                ZIndex = 3,
+                Parent = TabButton,
+            })
+            Tab.SubTabChevronIcon = New("ImageLabel", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundTransparency = 1,
+                Image = ChevronIcon and ChevronIcon.Url or "",
+                ImageColor3 = "FontColor",
+                ImageRectOffset = ChevronIcon and ChevronIcon.ImageRectOffset or Vector2.zero,
+                ImageRectSize = ChevronIcon and ChevronIcon.ImageRectSize or Vector2.zero,
+                ImageTransparency = 0.5,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(16, 16),
+                ZIndex = 3,
+                Parent = Tab.SubTabChevron,
+            })
+
+            if TabLabel then
+                TabLabel.Size = UDim2.new(1, -(NavigationLabelX + 8 + ChevronWidth), 1, 0)
+            end
+
+            if Library.IsMobile then
+                TabButton.Size = UDim2.new(1, 0, 0, math.max(44, Library:GetDesignToken("Shell.NavigationHeight", 38)))
+            end
+
+            Tab.SubTabChevron.MouseButton1Click:Connect(function()
+                Tab:SetExpanded(not Tab.Expanded)
+            end)
+
+            table.insert(SubTabParents, Tab)
+
+            table.insert(
+                Tab.Connections,
+                SubTabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    if Tab.Expanded or Window:IsSidebarCompacted() then
+                        Tab:RefreshExpansion(false)
+                    end
+                end)
+            )
+        end
+
+        function Tab:AddSubTab(...)
+            EnsureExpander()
+
+            local Child = Window:AddTab(...)
+            Child.ParentTab = Tab
+            Child.Depth = (Tab.Depth or 0) + 1
+            table.insert(Tab.SubTabs, Child)
+
+            local ChildButton = Child.Button
+            ChildButton.Parent = Tab.SubTabHolder
+            ChildButton.LayoutOrder = Child.Order or #Tab.SubTabs
+
+            local Indent = 14
+            local ChildHeight = Library.IsMobile and 44
+                or math.max(1, Library:GetDesignToken("Shell.NavigationHeight", 38) - 2)
+            ChildButton.Size = UDim2.new(1, 0, 0, ChildHeight)
+
+            if Child.Label then
+                Child.Label.Position = UDim2.fromOffset(NavigationLabelX + Indent, 0)
+                Child.Label.Size = UDim2.new(1, -(NavigationLabelX + Indent + 8), 1, 0)
+            end
+            if Child.IconImage and not Window:IsSidebarCompacted() then
+                Child.IconImage.Position = UDim2.new(0, NavigationIconX + Indent, 0.5, 0)
+            end
+            for _, Entry in Library.TabButtons do
+                if typeof(Entry) == "table" and Entry.Button == ChildButton then
+                    Entry.IconX = NavigationIconX + Indent
+                    break
+                end
+            end
+
+            Tab:RefreshExpansion(false)
+            if Library.ActiveTab == Child then
+                Tab:SetExpanded(true)
+            end
+            return Child
+        end
+
+
         if not Library.ActiveTab then
             Tab:Show()
         end
@@ -17687,6 +18864,7 @@ function Library:CreateWindow(WindowInfo)
             Tab:RefreshSides()
 
             Library.ActiveTab = Tab
+            Library:Emit("TabChanged", Tab)
 
             if Library.Searching then
                 Library:UpdateSearch(Library.SearchText)
@@ -17706,6 +18884,8 @@ function Library:CreateWindow(WindowInfo)
 
             Library.ActiveTab = nil
         end
+
+        function Tab:Reset(Confirm) return Library:ResetScope(self, Confirm) end
 
         function Tab:SetVisible(Visible: boolean)
             if Tab.Destroyed then
@@ -18358,6 +19538,7 @@ function Library:CreateWindow(WindowInfo)
         return Tab
     end
 
+    function Window:Reset(Confirm) return Library:ResetScope(nil, Confirm) end
     Window.AddPopup = Window.AddDialog
 
     function Window:Toggle(Value: boolean?, Source: string?)
@@ -18377,6 +19558,7 @@ function Library:CreateWindow(WindowInfo)
 
         local TargetState = typeof(Value) == "boolean" and Value or not Library.Toggled
         Library.Toggled = TargetState
+        Library:Emit(TargetState and "Shown" or "Hidden", Window)
         if TargetState then
             Window.LastHideReason = nil
         else
@@ -18685,6 +19867,10 @@ function Library:CreateWindow(WindowInfo)
     end))
 
     Library.Window = Window
+    Library:Emit("Built", Window)
+    Library:GiveSignal(MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        Library:QueueFrame(Window, function() Library:Emit("Resized", MainFrame.AbsoluteSize) end)
+    end))
     return Window
 end
 
@@ -19394,6 +20580,7 @@ function Library:CreateLoading(LoadingInfo)
 end
 
 local DeclarativeElementMethods = {
+    ["table"] = "AddTable", chart = "AddChart", log = "AddLog", statrow = "AddStatRow", progressbar = "AddProgressBar",
     button = "AddButton",
     checkbox = "AddCheckbox",
     divider = "AddDivider",
@@ -19492,6 +20679,7 @@ function Library:Create(AppInfo)
         All = {},
         AllTabs = {},
         AllGroups = {},
+        BuildJobs = {},
     }
     App.Pages = App.Tabs
     App.Sections = App.Groups
@@ -19637,16 +20825,7 @@ function Library:Create(AppInfo)
 
         local TabName = TabInfo.Name or TabInfo.Title or (typeof(TabKey) == "string" and TabKey) or "Tab"
         local TabId = TabInfo.Id or TabInfo.ID or (typeof(TabKey) == "string" and TabKey) or TabName
-        local Tab = Window:AddTab({
-            Name = TabName,
-            Icon = TabInfo.Icon,
-            Description = TabInfo.Description,
-            Order = TabInfo.Order,
-        })
-
-        App.Tabs[TabId] = Tab
-        table.insert(App.AllTabs, Tab)
-
+        local function BuildGroups(Tab)
         local Groups = TabInfo.Groups or TabInfo.Sections
         ForEachDefinition(Groups, function(GroupKey, RawGroup)
             local GroupInfo = if typeof(RawGroup) == "string" then { Name = RawGroup } else CloneDefinition(RawGroup)
@@ -19671,14 +20850,31 @@ function Library:Create(AppInfo)
 
             local Elements = GroupInfo.Elements or GroupInfo.Controls or GroupInfo.Items
             ForEachDefinition(Elements, function(ElementKey, ElementInfo)
-                BuildElement(Group, ElementKey, ElementInfo)
+                if AppInfo.Deferred and not TabInfo.Lazy then
+                    table.insert(App.BuildJobs, Library:QueueBuild(function() if not App.Destroyed then BuildElement(Group, ElementKey, ElementInfo) end end, type(ElementInfo) == "table" and ElementInfo.Id or ElementKey))
+                else BuildElement(Group, ElementKey, ElementInfo) end
             end)
         end)
+        end
+        local Tab
+        if TabInfo.Lazy then
+            Tab = Window:AddLazyTab(TabName, { Icon = TabInfo.Icon, Build = BuildGroups })
+        else
+            Tab = Window:AddTab({ Name = TabName, Icon = TabInfo.Icon, Description = TabInfo.Description, Order = TabInfo.Order })
+            BuildGroups(Tab)
+        end
+        App.Tabs[TabId] = Tab
+        table.insert(App.AllTabs, Tab)
     end)
 
-    if AppInfo.OnReady then
-        Library:SafeCallback(AppInfo.OnReady, App)
+    local function Ready()
+        if App.Destroyed then return end
+        App.BuildErrors = {}
+        for _, Job in App.BuildJobs do if Job.Status == "Failed" then table.insert(App.BuildErrors, { Id = Job.Id, Error = Job.Error }) end end
+        App.Ready = #App.BuildErrors == 0
+        if AppInfo.OnReady then Library:SafeCallback(AppInfo.OnReady, App) end
     end
+    if AppInfo.Deferred then App.Ready = false; Library:QueueBuild(Ready, "AppReady") else Ready() end
 
     return App
 end
@@ -19742,6 +20938,8 @@ function Library:Unload()
     end
 
     Library.Unloaded = true
+    Library:Emit("Unload")
+    Library:DestroyRuntime()
     SearchRequestId += 1
     Library:ClearNotifications()
     if Library.Watermark then Library.Watermark:Destroy() end
@@ -19864,6 +21062,10 @@ Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.GothamMedium)
 Library.DefaultFontError = DefaultFontError
 Library.CurrentFontName = DefaultFontError and "Gotham" or "Inter"
 Library:SetThemeFont(Library.DefaultFont)
+
+Library.TabSwipeEnabled = Library.IsMobile
+Library.HapticsEnabled = Library.IsMobile and Library.Env.Haptics == true
+Library:ApplyDensity()
 
 getgenv().Library = Library
 return Library

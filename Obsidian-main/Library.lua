@@ -5874,8 +5874,9 @@ local function BuildStepIndicator(Parent, Steps)
     local List = NormalizeSteps(Steps)
     local Count = #List
 
-    local IndicatorSize = Library:Metric("Indicator", 16)
-    local PipRow = math.max(IndicatorSize, Library:Metric("Row", 24))
+    local IndicatorSize = math.max(Library:Metric("Indicator", 16), 20)
+    local PipRow = math.max(IndicatorSize + 4, Library:Metric("Row", 24))
+    IndicatorSize = Library:MatchParity(PipRow, IndicatorSize)
     local TextSize = Library:GetDesignToken("Size.Text", 14)
     local CaptionSize = Library:GetDesignToken("Size.Caption", 12)
     local TitleRow = Library:Snap(TextSize + 4)
@@ -5902,6 +5903,7 @@ local function BuildStepIndicator(Parent, Steps)
         BorderSizePixel = 0,
         Position = UDim2.fromOffset(Half, Library:CenterOffset(PipRow, 2)),
         Size = UDim2.new(1, -IndicatorSize, 0, 2),
+        ZIndex = 1,
         Parent = Root,
     })
 
@@ -5946,6 +5948,7 @@ local function BuildStepIndicator(Parent, Steps)
             end,
             Position = UDim2.fromOffset(0, Library:CenterOffset(PipRow, IndicatorSize)),
             Size = UDim2.fromOffset(IndicatorSize, IndicatorSize),
+            ZIndex = 3,
             Parent = Root,
         })
         New("UICorner", { CornerRadius = UDim.new(0, Half), Parent = Pip })
@@ -16682,8 +16685,22 @@ do
         local DepGroupboxList
 
         do
+            if not BoxHolder:FindFirstChildOfClass("UIListLayout") then
+                New("UIListLayout", {
+                    Padding = UDim.new(0, Library:GetDesignToken("Spacing.Small", 6)),
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Parent = BoxHolder,
+                })
+                for _, Existing in BoxHolder:GetChildren() do
+                    if Existing:IsA("GuiObject") then
+                        Existing.LayoutOrder = 1
+                    end
+                end
+            end
+
             DepGroupboxContainer = New("Frame", {
                 BackgroundColor3 = "SurfaceColor",
+                LayoutOrder = 2,
                 Size = UDim2.fromScale(1, 0),
                 Visible = false,
                 Parent = BoxHolder,

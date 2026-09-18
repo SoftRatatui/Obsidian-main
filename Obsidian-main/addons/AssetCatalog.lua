@@ -149,6 +149,8 @@ function AssetCatalog.Create(Library, Info)
     local Gap = math.clamp(math.floor(tonumber(Info.Gap) or Style.Gap), 2, 20)
     local Padding = math.clamp(math.floor(tonumber(Info.Padding) or Style.Padding), 0, 24)
     local ToolbarHeight = math.clamp(math.floor(tonumber(Info.ToolbarHeight) or Style.HeaderHeight), 32, 52)
+    local ShowToolbar = Info.ShowToolbar ~= false
+    local FillParent = Info.Fill == true
     local FooterHeight = 28
     local PreviewRatio = math.clamp(tonumber(Info.PreviewRatio) or Style.PreviewRatio, 0.3, 0.8)
     local ImageScaleType = ResolveScaleType(Info.ScaleType)
@@ -170,7 +172,7 @@ function AssetCatalog.Create(Library, Info)
     Root.BackgroundTransparency = RootTransparency
     Root.BorderSizePixel = 0
     Root.ClipsDescendants = true
-    Root.Size = UDim2.new(1, 0, 0, Height)
+    Root.Size = FillParent and UDim2.fromScale(1, 1) or UDim2.new(1, 0, 0, Height)
     Root.Visible = Info.Visible ~= false
     AddRegistry(Library, Root, { BackgroundColor3 = "BackgroundColor" })
 
@@ -266,10 +268,13 @@ function AssetCatalog.Create(Library, Info)
     local Favorites = ToolbarButton("Saved")
     local Sort = ToolbarButton("Original")
 
+    local BodyTop = ShowToolbar and (ToolbarHeight + Gap) or 0
+    Toolbar.Visible = ShowToolbar
+
     local Body = Instance.new("Frame")
     Body.BackgroundTransparency = 1
-    Body.Position = UDim2.fromOffset(0, ToolbarHeight + Gap)
-    Body.Size = UDim2.new(1, 0, 1, -(ToolbarHeight + Gap))
+    Body.Position = UDim2.fromOffset(0, BodyTop)
+    Body.Size = UDim2.new(1, 0, 1, -BodyTop)
     Body.Parent = Root
 
     local GridPanel = Instance.new("Frame")
@@ -791,8 +796,9 @@ function AssetCatalog.Create(Library, Info)
         local ControlsTop = math.floor((ToolbarHeight - Style.ControlHeight) * 0.5)
         local ActualToolbarHeight = ToolbarHeight + (Compact and (Style.ControlHeight + Gap) or 0)
         Toolbar.Size = UDim2.new(1, 0, 0, ActualToolbarHeight)
-        Body.Position = UDim2.fromOffset(0, ActualToolbarHeight + Gap)
-        Body.Size = UDim2.new(1, 0, 1, -(ActualToolbarHeight + Gap))
+        local BodyOffset = ShowToolbar and (ActualToolbarHeight + Gap) or 0
+        Body.Position = UDim2.fromOffset(0, BodyOffset)
+        Body.Size = UDim2.new(1, 0, 1, -BodyOffset)
         local CategoryWidth = math.min(PreferredCategoryWidth, math.max(48, math.floor(Available * 0.32)))
         Category.Size = UDim2.fromOffset(CategoryWidth, Style.ControlHeight)
         local ActionsWidth = 64 + 76 + Gap
@@ -852,7 +858,8 @@ function AssetCatalog.Create(Library, Info)
             end
             PreviewCanvas.Size = UDim2.new(1, -PreviewPadding * 2, 1, -(PreviewPadding * 2 + 112))
         else
-            local PreviewHeight = math.clamp(math.floor((Height - ActualToolbarHeight) * 0.42), 130, 260)
+            local PreviewHeight =
+                math.clamp(math.floor((Height - (ShowToolbar and ActualToolbarHeight or 0)) * 0.42), 130, 260)
             PreviewPanel.Position = UDim2.fromScale(0, 0)
             PreviewPanel.Size = UDim2.new(1, 0, 0, PreviewHeight)
             GridPanel.AnchorPoint = Vector2.zero
@@ -1797,10 +1804,23 @@ function AssetCatalog.Create(Library, Info)
         return Catalog
     end
 
+    function Catalog:SetToolbarVisible(State)
+        ShowToolbar = State ~= false
+        Toolbar.Visible = ShowToolbar
+        local Top = ShowToolbar and (ToolbarHeight + Gap) or 0
+        Body.Position = UDim2.fromOffset(0, Top)
+        Body.Size = UDim2.new(1, 0, 1, -Top)
+        Catalog.ShowToolbar = ShowToolbar
+        Catalog:Refresh()
+        return Catalog
+    end
+
     function Catalog:SetHeight(Value)
         Catalog.Height = math.clamp(math.floor(tonumber(Value) or Catalog.Height), 260, 900)
         Height = Catalog.Height
-        Root.Size = UDim2.new(1, 0, 0, Catalog.Height)
+        if not FillParent then
+            Root.Size = UDim2.new(1, 0, 0, Catalog.Height)
+        end
         if Catalog.Element then
             Catalog.Element:SetHeight(Catalog.Height)
         end
@@ -1946,6 +1966,31 @@ function AssetCatalog.CreateEmbedded(Library, Groupbox, Idx, Info)
         Height = Catalog.Height,
         Visible = Catalog.Visible,
     })
+    return Catalog
+end
+
+function AssetCatalog.CreateFullTab(Library, Tab, Idx, Info)
+    assert(
+        type(Tab) == "table" and type(Tab.AddFullGroupbox) == "function",
+        "AssetCatalog full tab mode requires a tab with AddFullGroupbox"
+    )
+    Info = table.clone(Info or {})
+    if Info.ShowToolbar == nil then
+        Info.ShowToolbar = false
+    end
+    Info.Fill = true
+    Info.Layout = Info.Layout or "Grid"
+    Info.MinCellWidth = Info.MinCellWidth or 150
+    Info.CellHeight = Info.CellHeight or 150
+
+    local Groupbox = Tab:AddFullGroupbox(Info.Title or "Collection", Info.Icon or "layout-grid")
+    local Catalog = AssetCatalog.Create(Library, Info)
+    Catalog.Element = Groupbox:AddUIPassthrough(Idx or "AssetCatalog", {
+        Instance = Catalog.Root,
+        Height = math.clamp(math.floor(tonumber(Info.Height) or 520), 260, 900),
+        Visible = Catalog.Visible,
+    })
+    Catalog.Groupbox = Groupbox
     return Catalog
 end
 

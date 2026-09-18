@@ -15804,12 +15804,44 @@ do
         Control.SelectedId, Control.Search = nil, ""
         local Weight = 0
         for _, Column in Columns do Weight += math.max(0.01, tonumber(Column.Width) or 1) end
-        local function LayoutCell(Cell, Index)
-            local Start = 0
-            for Number = 1, Index - 1 do Start += math.max(0.01, tonumber(Columns[Number].Width) or 1) end
-            Cell.Position = UDim2.fromScale(Start / Weight, 0)
-            Cell.Size = UDim2.new(math.max(0.01, tonumber(Columns[Index].Width) or 1) / Weight, -8, 1, 0)
+        local ColumnBounds, TrackedCells = {}, {}
+        local function ResolveColumns()
+            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Total = math.floor(Root.AbsoluteSize.X / Scale + 0.5)
+            if Total <= 0 then return false end
+            local Cursor = 0
+            for Index, Column in Columns do
+                local Width
+                if Index == #Columns then
+                    Width = Total - Cursor
+                else
+                    Width = math.floor(Total * math.max(0.01, tonumber(Column.Width) or 1) / Weight + 0.5)
+                end
+                Width = math.max(0, Width)
+                ColumnBounds[Index] = { Cursor, Width }
+                Cursor += Width
+            end
+            return true
         end
+        local function LayoutCell(Cell, Index)
+            TrackedCells[Cell] = Index
+            local Bounds = ColumnBounds[Index]
+            if not Bounds then return end
+            Cell.Position = UDim2.fromOffset(Bounds[1], 0)
+            Cell.Size = UDim2.new(0, math.max(0, Bounds[2] - 8), 1, 0)
+        end
+        local function RelayoutCells()
+            if not ResolveColumns() then return end
+            for Cell, Index in pairs(TrackedCells) do
+                if Cell.Parent then
+                    LayoutCell(Cell, Index)
+                else
+                    TrackedCells[Cell] = nil
+                end
+            end
+        end
+        ResolveColumns()
+        Library:GiveSignal(Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(RelayoutCells))
         local View = Library:CreateVirtualList(Scroll, {
             RowHeight = RowHeight, Count = 0,
             CreateRow = function()

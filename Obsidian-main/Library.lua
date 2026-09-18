@@ -751,7 +751,10 @@ function Library:LoadBundledFont(Name: string): (Font?, string?)
     if not URL then
         URL = Library.BundledFontBaseURL .. Entry.File
     end
-    URL ..= (string.find(URL, "?", 1, true) and "&monhub=" or "?monhub=") .. tostring(Library.ReleaseVersion)
+    URL ..= (string.find(URL, "?", 1, true) and "&monhub=" or "?monhub=")
+        .. tostring(Library.ReleaseVersion)
+        .. "."
+        .. tostring(Library.Revision)
 
     local Loaded, Face, Reason = pcall(Library.LoadCustomFont, Library,
         Entry.Name,
@@ -2405,7 +2408,7 @@ local function RestoreDepbox(Box)
         end
     end
 
-    Box:Resize()
+    Box:QueueResize()
     Box.Holder.Visible = true
 
     for _, Depbox in Box.DependencyBoxes do
@@ -2479,7 +2482,7 @@ local function ApplySearchToTab(Tab, Search)
 
         
         if VisibleElements > 0 then
-            Groupbox:Resize()
+            Groupbox:QueueResize()
             HasVisible = true
         end
         Groupbox.BoxHolder.Visible = VisibleElements > 0
@@ -2545,7 +2548,7 @@ local function ApplySearchToTab(Tab, Search)
                 HasVisible = true
 
                 if Tabbox.ActiveTab == SubTab then
-                    SubTab:Resize()
+                    SubTab:QueueResize()
                 elseif Tabbox.ActiveTab and VisibleElements[Tabbox.ActiveTab] == 0 then
                     SubTab:Show()
                 end
@@ -2582,7 +2585,7 @@ local function ResetTab(Tab)
             RestoreDepbox(Depbox)
         end
 
-        Groupbox:Resize()
+        Groupbox:QueueResize()
         Groupbox.BoxHolder.Visible = Groupbox.Visible ~= false
     end
 
@@ -2610,7 +2613,7 @@ local function ResetTab(Tab)
         end
 
         if Tabbox.ActiveTab then
-            Tabbox.ActiveTab:Resize()
+            Tabbox.ActiveTab:QueueResize()
         end
         Tabbox.BoxHolder.Visible = true
     end
@@ -3924,6 +3927,49 @@ do
     Library.Runtime = Runtime
     Library.Version = Library.ReleaseVersion
     Library.Revision = "2026-09-17.1"
+
+    local function ParseRevision(Value)
+        local Year, Month, Day, Serial = tostring(Value):match("^(%d+)-(%d+)-(%d+)%.?(%d*)$")
+        if not Year then
+            return nil
+        end
+        return { tonumber(Year), tonumber(Month), tonumber(Day), tonumber(Serial) or 0 }
+    end
+
+    function Library:CompareRevision(A, B)
+        local Left, Right = ParseRevision(A), ParseRevision(B)
+        if not Left or not Right then
+            return nil
+        end
+        for Index = 1, 4 do
+            if Left[Index] ~= Right[Index] then
+                return Left[Index] < Right[Index] and -1 or 1
+            end
+        end
+        return 0
+    end
+
+    function Library:GetRevision()
+        return Library.Revision, Library.ReleaseVersion
+    end
+
+    function Library:RequireRevision(Minimum)
+        local Order = Library:CompareRevision(Library.Revision, Minimum)
+        assert(Order ~= nil, "RequireRevision expects a revision like '2026-09-17.1', got " .. tostring(Minimum))
+        if Order < 0 then
+            error(
+                string.format(
+                    "MonHub revision %s (release %s) is older than the required %s; update the library source",
+                    tostring(Library.Revision),
+                    tostring(Library.ReleaseVersion),
+                    tostring(Minimum)
+                ),
+                2
+            )
+        end
+        return true
+    end
+
     Library.Env = {
         Drawing = type(Drawing) == "table" and type(Drawing.new) == "function",
         CustomAsset = type(getcustomasset) == "function", Clipboard = type(setclipboard) == "function",
@@ -5163,6 +5209,63 @@ function Library:CreateAddonWindow(Info)
         Destroyed = false,
     }
 
+    local AutoHeight = Info.AutoHeight == true
+    local MaxContentHeight = math.floor(math.clamp(tonumber(Info.MaxContentHeight) or 400, MinHeight, 900))
+    local ContentResized = New("BindableEvent", {
+        Name = "ContentResized",
+        Parent = Root,
+    })
+    Host.ContentResized = ContentResized
+    local ContentAwaiters = {}
+    local SettleKey = {}
+    local LastContentHeight = -1
+    local SettleQueued = false
+    local ApplyingAutoHeight = false
+
+    local function MeasureContentHeight()
+        local Size = ContentLayout.AbsoluteContentSize
+        return math.max(1, math.ceil((Size and Size.Y or 0) + Style.Padding * 2))
+    end
+
+    local function ResumeAwaiters(ContentHeight)
+        if #ContentAwaiters == 0 then
+            return
+        end
+        local Pending = ContentAwaiters
+        ContentAwaiters = {}
+        for _, Thread in Pending do
+            task.spawn(Thread, ContentHeight)
+        end
+    end
+
+    local function SettleContent()
+        if Host.Destroyed then
+            return
+        end
+        local ContentHeight = MeasureContentHeight()
+        if AutoHeight and not ApplyingAutoHeight then
+            ApplyingAutoHeight = true
+            Host:SetSize(Width, HeaderHeight + math.min(ContentHeight, MaxContentHeight))
+            ApplyingAutoHeight = false
+        end
+        if ContentHeight ~= LastContentHeight then
+            LastContentHeight = ContentHeight
+            ContentResized:Fire(ContentHeight)
+        end
+        ResumeAwaiters(ContentHeight)
+    end
+
+    local function QueueSettle()
+        if SettleQueued or Host.Destroyed then
+            return
+        end
+        SettleQueued = true
+        Library:QueueFrame(SettleKey, function()
+            SettleQueued = false
+            SettleContent()
+        end)
+    end
+
     function Host:SetVisible(Visible, Instant)
         if Host.Destroyed then
             return Host
@@ -5554,11 +5657,27 @@ function Library:CreateAddonWindow(Info)
         return Host
     end
 
+    function Host:GetContentHeight()
+        return MeasureContentHeight()
+    end
+
+    function Host:AwaitContentHeight()
+        if Host.Destroyed then
+            return MeasureContentHeight()
+        end
+        local Thread = coroutine.running()
+        assert(Thread, "AwaitContentHeight must run inside a coroutine")
+        table.insert(ContentAwaiters, Thread)
+        QueueSettle()
+        return coroutine.yield()
+    end
+
     function Host:Destroy()
         if Host.Destroyed then
             return
         end
         Host.Destroyed = true
+        ResumeAwaiters(MeasureContentHeight())
         for Idx in table.clone(Modules) do
             Host:Remove(Idx)
         end
@@ -5584,6 +5703,8 @@ function Library:CreateAddonWindow(Info)
     table.insert(Connections, Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         Host:RefreshLayout()
     end))
+    table.insert(Connections, ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(QueueSettle))
+    QueueSettle()
     if Info.Draggable ~= false then
         Library:MakeDraggable(Root, ShowHeader and Header or Root, true, false)
     end
@@ -9640,12 +9761,14 @@ do
 
             table.insert(ColorPicker.Connections, ResizeGrabber.InputBegan:Connect(function(Input: InputObject)
                 Library.CantDragForced = true
-                local StartMouse = Vector2.new(Mouse.X, Mouse.Y)
+                local Touch = Input.UserInputType == Enum.UserInputType.Touch
+                local StartPointer = Touch and Vector2.new(Input.Position.X, Input.Position.Y) or Vector2.new(Mouse.X, Mouse.Y)
                 local StartWidth = ColorPicker.MapWidth
                 local StartHeight = ColorPicker.MapHeight
 
                 while IsDragInput(Input) and not ColorPicker.Destroyed do
-                    local Delta = Vector2.new(Mouse.X, Mouse.Y) - StartMouse
+                    local Pointer = Touch and Vector2.new(Input.Position.X, Input.Position.Y) or Vector2.new(Mouse.X, Mouse.Y)
+                    local Delta = Pointer - StartPointer
                     UpdateColorMenuSize(StartWidth + Delta.X, StartHeight + Delta.Y)
 
                     RunService.RenderStepped:Wait()
@@ -9966,14 +10089,17 @@ do
         table.insert(ColorPicker.Connections, Holder.MouseButton2Click:Connect(ContextMenu.Toggle))
 
         table.insert(ColorPicker.Connections, SatVipMap.InputBegan:Connect(function(Input: InputObject)
+            local Touch = Input.UserInputType == Enum.UserInputType.Touch
             while IsDragInput(Input) and not ColorPicker.Destroyed do
+                local PointerX = Touch and Input.Position.X or Mouse.X
+                local PointerY = Touch and Input.Position.Y or Mouse.Y
                 local MinX = SatVipMap.AbsolutePosition.X
                 local MaxX = MinX + SatVipMap.AbsoluteSize.X
-                local LocationX = math.clamp(Mouse.X, MinX, MaxX)
+                local LocationX = math.clamp(PointerX, MinX, MaxX)
 
                 local MinY = SatVipMap.AbsolutePosition.Y
                 local MaxY = MinY + SatVipMap.AbsoluteSize.Y
-                local LocationY = math.clamp(Mouse.Y, MinY, MaxY)
+                local LocationY = math.clamp(PointerY, MinY, MaxY)
 
                 local OldSat = ColorPicker.Sat
                 local OldVib = ColorPicker.Vib
@@ -9989,10 +10115,11 @@ do
         end))
 
         table.insert(ColorPicker.Connections, HueSelector.InputBegan:Connect(function(Input: InputObject)
+            local Touch = Input.UserInputType == Enum.UserInputType.Touch
             while IsDragInput(Input) and not ColorPicker.Destroyed do
                 local Min = HueSelector.AbsolutePosition.Y
                 local Max = Min + HueSelector.AbsoluteSize.Y
-                local Location = math.clamp(Mouse.Y, Min, Max)
+                local Location = math.clamp(Touch and Input.Position.Y or Mouse.Y, Min, Max)
 
                 local OldHue = ColorPicker.Hue
                 ColorPicker.Hue = (Location - Min) / (Max - Min)
@@ -10007,10 +10134,11 @@ do
         
         if TransparencySelector then
             table.insert(ColorPicker.Connections, TransparencySelector.InputBegan:Connect(function(Input: InputObject)
+                local Touch = Input.UserInputType == Enum.UserInputType.Touch
                 while IsDragInput(Input) and not ColorPicker.Destroyed do
                     local Min = TransparencySelector.AbsolutePosition.Y
                     local Max = TransparencySelector.AbsolutePosition.Y + TransparencySelector.AbsoluteSize.Y
-                    local Location = math.clamp(Mouse.Y, Min, Max)
+                    local Location = math.clamp(Touch and Input.Position.Y or Mouse.Y, Min, Max)
 
                     local OldTransparency = ColorPicker.Transparency
                     ColorPicker.Transparency = (Location - Min) / (Max - Min)
@@ -10445,6 +10573,8 @@ do
     local Funcs = {}
 
     function Funcs:Reset(Confirm) return Library:ResetScope(self, Confirm) end
+
+    function Funcs:QueueResize() Library:RequestLayout(self) end
 
     function Funcs:AddHidden(Idx, Default, Info)
         if self.Destroyed then return nil end
@@ -15807,7 +15937,7 @@ do
         Control.SelectedId, Control.Search = nil, ""
         local Weight = 0
         for _, Column in Columns do Weight += math.max(0.01, tonumber(Column.Width) or 1) end
-        local ColumnBounds, TrackedCells = {}, {}
+        local ColumnBounds, TrackedCells, Headers = {}, {}, {}
         local function ResolveColumns()
             local Scale = math.max(Library.DPIScale or 1, 0.01)
             local Total = math.floor(Root.AbsoluteSize.X / Scale + 0.5)
@@ -15916,7 +16046,16 @@ do
             return self:Refresh()
         end
         function Control:SetSearch(Query) self.Search = tostring(Query); return self:Refresh() end
-        function Control:SetSort(Key, Descending) self.SortKey, self.Descending = Key, Descending == true; return self:Refresh() end
+        function Control:SetSort(Key, Descending) self.SortKey, self.Descending = Key, Descending == true; self:UpdateSortIndicators(); return self:Refresh() end
+        function Control:UpdateSortIndicators()
+            for _, Entry in Headers do
+                local Active = self.SortKey ~= nil and Entry.Column.Sortable ~= false and Entry.Column.Key == self.SortKey
+                Entry.Arrow.Visible = Active
+                if Active then
+                    Entry.Arrow.Rotation = self.Descending and 180 or 0
+                end
+            end
+        end
         function Control:Select(Id, Silent)
             local Selected
             for _, Row in self.Rows do if Row.Id == Id then Selected = Row; break end end
@@ -15928,14 +16067,46 @@ do
             for _, Row in self.Rows do if Row.Id == self.SelectedId then return Row end end
             return nil
         end
+        function Control:GetRowCount()
+            return #self.Filtered
+        end
+        function Control:ScrollTo(Id)
+            for Index, Row in self.Filtered do
+                if Row.Id == Id then View:ScrollTo(Index); return end
+            end
+        end
+        local SortIcon = Library:GetIcon("chevron-up")
+        local ArrowSize = RowHeight >= 40 and 16 or 12
+        local ArrowGutter = ArrowSize + 4
         for Index, Column in Columns do
+            local Align = Column.Align == "Right" and Enum.TextXAlignment.Right or Column.Align == "Center" and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
+            local RightSide = Align ~= Enum.TextXAlignment.Right
             local Button = New("TextButton", { BackgroundTransparency = 1, Text = Column.Text or Column.Key,
-                TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Header })
+                TextSize = 13, TextXAlignment = Align, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Header })
+            New("UIPadding", {
+                PaddingLeft = UDim.new(0, RightSide and 0 or ArrowGutter),
+                PaddingRight = UDim.new(0, RightSide and ArrowGutter or 0),
+                Parent = Button,
+            })
+            local Arrow = New("ImageLabel", {
+                AnchorPoint = Vector2.new(RightSide and 1 or 0, 0),
+                BackgroundTransparency = 1,
+                Image = SortIcon and SortIcon.Url or "",
+                ImageColor3 = "AccentColor",
+                ImageRectOffset = SortIcon and SortIcon.ImageRectOffset or Vector2.zero,
+                ImageRectSize = SortIcon and SortIcon.ImageRectSize or Vector2.zero,
+                Position = UDim2.new(RightSide and 1 or 0, RightSide and (ArrowGutter - 2) or -(ArrowGutter - 2), 0, Library:CenterOffset(RowHeight, ArrowSize)),
+                Size = UDim2.fromOffset(ArrowSize, ArrowSize),
+                Visible = false,
+                Parent = Button,
+            })
             LayoutCell(Button, Index)
+            Headers[Index] = { Button = Button, Arrow = Arrow, Column = Column }
             Button.Activated:Connect(function()
                 if Column.Sortable ~= false then Control:SetSort(Column.Key, Control.SortKey == Column.Key and not Control.Descending) end
             end)
         end
+        Control:UpdateSortIndicators()
         local Destroy = Control.Destroy
         function Control:Destroy() View:Destroy(); Destroy(self) end
         Control:SetRows(Info.Rows or Info.Items or {})
@@ -15949,6 +16120,24 @@ do
         Control.Type, Control.Text, Control.Values = "Chart", Info.Text or tostring(Idx), {}
         Control.Capacity = math.clamp(math.floor(Info.Capacity or 120), 2, 1000)
         local Parts = {}
+        local Fill = New("Frame", { BorderSizePixel = 0, BackgroundColor3 = Info.Color or "AccentColor", Visible = false, Parent = Root })
+        New("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1),
+        }), Parent = Fill })
+        local Baseline = New("Frame", { BorderSizePixel = 0, BackgroundColor3 = "MutedFontColor", BackgroundTransparency = 0.4, Visible = false, Parent = Root })
+        local function MakeLabel(Alignment)
+            return New("TextLabel", { BackgroundTransparency = 1, TextColor3 = "MutedFontColor",
+                TextSize = math.max(9, math.floor(Library:GetDesignToken("Typography.Caption", 12))),
+                TextXAlignment = Alignment, TextTruncate = Enum.TextTruncate.AtEnd, Visible = false, Parent = Root })
+        end
+        local MaxLabel = MakeLabel(Enum.TextXAlignment.Left); MaxLabel.TextYAlignment = Enum.TextYAlignment.Top
+        local MinLabel = MakeLabel(Enum.TextXAlignment.Left); MinLabel.TextYAlignment = Enum.TextYAlignment.Bottom
+        local CurrentLabel = MakeLabel(Enum.TextXAlignment.Left)
+        local function FormatValue(Value)
+            if Info.Format then return tostring(Library:SafeCallback(Info.Format, Value)) end
+            if Value == math.floor(Value) then return tostring(math.floor(Value)) end
+            return string.format("%.2f", Value)
+        end
         function Control:Refresh()
             if self.Destroyed then return end
             local Count = #self.Values
@@ -15958,18 +16147,51 @@ do
             local Width = math.max(1, Root.AbsoluteSize.X / (Library.DPIScale or 1))
             local Height = math.max(1, Root.AbsoluteSize.Y / (Library.DPIScale or 1))
             local Bars = Info.Kind == "Bar"
+            local Caption = math.max(9, math.floor(Library:GetDesignToken("Typography.Caption", 12)))
+            local LineHeight = Caption + 4
+
+            local ShowMinMax = Info.MinMaxLabels == true and Count > 0 and Height >= LineHeight * 2 + 4 and Width >= 70
+            local ShowCurrent = Info.CurrentLabel == true and Count > 0 and Height >= LineHeight and Width >= 90
+            local LeftGutter = ShowMinMax and 34 or 0
+            local RightGutter = ShowCurrent and 46 or 0
+            if Width - LeftGutter - RightGutter < 24 then
+                LeftGutter, RightGutter, ShowMinMax, ShowCurrent = 0, 0, false, false
+            end
+            local PlotLeft = LeftGutter
+            local PlotW = math.max(1, Width - LeftGutter - RightGutter)
+            local PlotH = Height
+            local function ValueY(Value) return PlotH * (1 - math.clamp((Value - Min) / Range, 0, 1)) end
+
+            local BaselineValue = tonumber(Info.BaselineValue) or 0
+            local ShowBaseline = Info.Baseline == true and Count > 0 and BaselineValue >= Min and BaselineValue <= Max
+            Baseline.Visible = ShowBaseline
+            if ShowBaseline then
+                Baseline.Position = UDim2.fromOffset(Library:Snap(PlotLeft), Library:Snap(ValueY(BaselineValue)))
+                Baseline.Size = UDim2.fromOffset(Library:Snap(PlotW), 1)
+            end
+
+            local ShowFill = Info.Fill == true and not Bars and Count >= 2
+            Fill.Visible = ShowFill
+            if ShowFill then
+                local Bottom = ShowBaseline and BaselineValue or Min
+                local Upper = Library:Snap(math.min(ValueY(Max), ValueY(Bottom)))
+                local Lower = Library:Snap(math.max(ValueY(Max), ValueY(Bottom)))
+                Fill.Position = UDim2.fromOffset(Library:Snap(PlotLeft), Upper)
+                Fill.Size = UDim2.fromOffset(Library:Snap(PlotW), math.max(0, Lower - Upper))
+            end
+
             local Needed = Bars and Count or math.max(0, Count - 1)
             for Index = 1, Needed do
                 local Part = Parts[Index]
                 if not Part then Part = New("Frame", { BorderSizePixel = 0, BackgroundColor3 = Info.Color or "AccentColor", Parent = Root }); Parts[Index] = Part end
                 Part.Visible = true
                 if Bars then
-                    local H = math.clamp((self.Values[Index] - Min) / Range, 0, 1) * Height
-                    Part.Position = UDim2.fromOffset((Index - 1) * Width / Count, Height - H)
-                    Part.Size = UDim2.fromOffset(math.max(1, Width / Count - 2), H); Part.Rotation = 0; Part.AnchorPoint = Vector2.zero
+                    local H = math.clamp((self.Values[Index] - Min) / Range, 0, 1) * PlotH
+                    Part.Position = UDim2.fromOffset(PlotLeft + (Index - 1) * PlotW / Count, PlotH - H)
+                    Part.Size = UDim2.fromOffset(math.max(1, PlotW / Count - 2), H); Part.Rotation = 0; Part.AnchorPoint = Vector2.zero
                 else
-                    local X1, X2 = (Index - 1) * Width / math.max(1, Count - 1), Index * Width / math.max(1, Count - 1)
-                    local Y1, Y2 = Height * (1 - math.clamp((self.Values[Index] - Min) / Range, 0, 1)), Height * (1 - math.clamp((self.Values[Index + 1] - Min) / Range, 0, 1))
+                    local X1, X2 = PlotLeft + (Index - 1) * PlotW / math.max(1, Count - 1), PlotLeft + Index * PlotW / math.max(1, Count - 1)
+                    local Y1, Y2 = ValueY(self.Values[Index]), ValueY(self.Values[Index + 1])
                     local DX, DY = X2 - X1, Y2 - Y1
                     Part.AnchorPoint = Vector2.new(0.5, 0.5)
                     Part.Position = UDim2.fromOffset((X1 + X2) / 2, (Y1 + Y2) / 2)
@@ -15978,6 +16200,26 @@ do
                 end
             end
             for Index = #Parts, Needed + 1, -1 do Parts[Index]:Destroy(); Parts[Index] = nil end
+
+            MaxLabel.Visible, MinLabel.Visible = ShowMinMax, ShowMinMax
+            if ShowMinMax then
+                MaxLabel.TextSize, MinLabel.TextSize = Caption, Caption
+                MaxLabel.ZIndex, MinLabel.ZIndex = Root.ZIndex + 2, Root.ZIndex + 2
+                MaxLabel.Text, MinLabel.Text = FormatValue(Max), FormatValue(Min)
+                MaxLabel.Position = UDim2.fromOffset(0, 0)
+                MaxLabel.Size = UDim2.fromOffset(math.max(1, LeftGutter - 4), LineHeight)
+                MinLabel.Position = UDim2.fromOffset(0, Library:Snap(PlotH - LineHeight))
+                MinLabel.Size = UDim2.fromOffset(math.max(1, LeftGutter - 4), LineHeight)
+            end
+            CurrentLabel.Visible = ShowCurrent
+            if ShowCurrent then
+                CurrentLabel.TextSize = Caption
+                CurrentLabel.ZIndex = Root.ZIndex + 2
+                CurrentLabel.Text = FormatValue(self.Values[Count])
+                local Y = math.clamp(ValueY(self.Values[Count]) - LineHeight / 2, 0, math.max(0, Height - LineHeight))
+                CurrentLabel.Position = UDim2.fromOffset(Library:Snap(PlotLeft + PlotW + 2), Library:Snap(Y))
+                CurrentLabel.Size = UDim2.fromOffset(math.max(1, RightGutter - 4), LineHeight)
+            end
         end
         function Control:SetValues(Values)
             local Result = {}
@@ -16472,7 +16714,7 @@ do
         function Group:SetVisible(Value)
             Group.Visible = Value == true
             Holder.Visible = Group.Visible
-            Owner:Resize()
+            Owner:QueueResize()
             return Group
         end
         local function Resize()
@@ -16485,7 +16727,7 @@ do
                 Cell.Size = UDim2.fromOffset(CellWidth, 50)
             end
             Holder.Size = UDim2.new(1, 0, 0, math.ceil(#Fields / Columns) * 56 - 6)
-            Owner:Resize()
+            Owner:QueueResize()
         end
         local Connection = Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(Resize)
         function Group:Destroy()
@@ -16497,7 +16739,7 @@ do
             Holder:Destroy()
             local Index = table.find(Owner.Elements, Group)
             if Index then table.remove(Owner.Elements, Index) end
-            Owner:Resize()
+            Owner:QueueResize()
         end
         table.insert(self.Elements, Group)
         Resize()
@@ -16554,7 +16796,7 @@ do
                 if not Visible then Library:ClosePopupsUnder(Depbox.BoxHolder or Depbox.Holder) end
             Depbox.RequestedVisible = Visible == true
             Depbox:Update()
-            Depbox:Resize()
+            Depbox:QueueResize()
             return Depbox
         end
 
@@ -16592,9 +16834,7 @@ do
             Depbox.Visible = true
             DepboxContainer.Visible = true
             if not Library.Searching then
-                task.defer(function()
-                    Depbox:Resize()
-                end)
+                Depbox:QueueResize()
             elseif not CancelSearch then
                 Library:UpdateSearch(Library.SearchText)
             end
@@ -16605,7 +16845,7 @@ do
                 return
             end
 
-            Depbox:Resize()
+            Depbox:QueueResize()
         end)
 
         function Depbox:SetupDependencies(Dependencies)
@@ -16620,7 +16860,7 @@ do
         end
 
         DepboxContainer:GetPropertyChangedSignal("Visible"):Connect(function()
-            Depbox:Resize()
+            Depbox:QueueResize()
         end)
 
         setmetatable(Depbox, BaseGroupbox)
@@ -16755,7 +16995,7 @@ do
                 if not Visible then Library:ClosePopupsUnder(DepGroupbox.BoxHolder or DepGroupbox.Holder) end
             DepGroupbox.RequestedVisible = Visible == true
             DepGroupbox:Update()
-            DepGroupbox:Resize()
+            DepGroupbox:QueueResize()
             return DepGroupbox
         end
 
@@ -16793,7 +17033,7 @@ do
             DepGroupbox.Visible = true
             if not Library.Searching then
                 DepGroupboxContainer.Visible = true
-                DepGroupbox:Resize()
+                DepGroupbox:QueueResize()
             elseif not CancelSearch then
                 Library:UpdateSearch(Library.SearchText)
             end
@@ -16869,15 +17109,45 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
-        local Values = {}
-        if typeof(Info.Values) == "table" then
-            for _, Value in Info.Values do
-                if #Values < 4 then
-                    table.insert(Values, Value)
+        local function NormalizeEntries(Raw)
+            local List = {}
+            if typeof(Raw) == "table" then
+                for _, Item in Raw do
+                    if #List >= 4 then
+                        break
+                    end
+                    if typeof(Item) == "table" and Item.Value ~= nil then
+                        table.insert(List, { Value = Item.Value, Disabled = Item.Disabled == true })
+                    else
+                        table.insert(List, { Value = Item, Disabled = false })
+                    end
                 end
             end
+            return List
         end
-        assert(#Values >= 2, "AddSegmented requires 2 to 4 values")
+
+        local function ResolveSelection(Candidate, List)
+            if Candidate == nil then
+                return List[1]
+            end
+            for _, Existing in List do
+                if Existing == Candidate then
+                    return Existing
+                end
+            end
+            if typeof(Candidate) == "number" and List[Candidate] ~= nil then
+                return List[Candidate]
+            end
+            return List[1]
+        end
+
+        local Entries = NormalizeEntries(Info.Values)
+        assert(#Entries >= 2, "AddSegmented requires 2 to 4 values")
+
+        local Values = {}
+        for Index, Entry in Entries do
+            Values[Index] = Entry.Value
+        end
 
         local Segmented = {
             Connections = {},
@@ -16948,29 +17218,7 @@ do
         })
 
         local Segments = {}
-        for Index, Value in Values do
-            local Button = New("TextButton", {
-                Active = not Segmented.Disabled,
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(Inset, Inset),
-                Size = UDim2.fromOffset(0, InnerHeight),
-                Text = "",
-                ZIndex = 2,
-                Parent = Track,
-            })
-            local SegmentLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 1),
-                Text = tostring(Value),
-                TextColor3 = "MutedFontColor",
-                TextSize = Library:GetDesignToken("Size.Text", 14),
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                ZIndex = 2,
-                Parent = Button,
-            })
-            Segments[Index] = { Button = Button, Label = SegmentLabel, Value = Value }
-        end
+        local SegmentConnections = {}
 
         local function GetIndex()
             for Index, Segment in Segments do
@@ -16981,15 +17229,6 @@ do
             return nil
         end
 
-        for Index, Segment in Segments do
-            Library:AddToRegistry(Segment.Label, {
-                TextColor3 = function()
-                    return Index == GetIndex() and Library:GetContrastColor(Library.Scheme.AccentColor)
-                        or Library.Scheme.MutedFontColor
-                end,
-            })
-        end
-
         function Segmented:Recolor()
             local Selected = GetIndex()
             for Index, Segment in Segments do
@@ -16997,8 +17236,93 @@ do
                 local Color = IsSelected and Library:GetContrastColor(Library.Scheme.AccentColor)
                     or Library.Scheme.MutedFontColor
                 Segment.Label.TextColor3 = Color
-                Segment.Label.TextTransparency = Segmented.Disabled and 0.6 or (IsSelected and 0 or 0.2)
+                local Muted = Segmented.Disabled or Segment.Disabled
+                Segment.Label.TextTransparency = Muted and 0.6 or (IsSelected and 0 or 0.2)
             end
+        end
+
+        local function ApplySegmentStates()
+            for _, Segment in Segments do
+                local Muted = Segmented.Disabled or Segment.Disabled
+                Segment.Button.Active = not Muted
+                Segment.Button.Selectable = not Muted
+            end
+            Segmented:Recolor()
+        end
+
+        local function BuildSegments(EntryList)
+            for _, Connection in SegmentConnections do
+                Connection:Disconnect()
+            end
+            table.clear(SegmentConnections)
+
+            for _, Segment in Segments do
+                Library:RemoveFromRegistry(Segment.Label)
+                Segment.Button:Destroy()
+            end
+            table.clear(Segments)
+            table.clear(Segmented.Values)
+
+            for Index, Entry in EntryList do
+                local Value = Entry.Value
+                Segmented.Values[Index] = Value
+
+                local Muted = Segmented.Disabled or Entry.Disabled
+
+                local Button = New("TextButton", {
+                    Active = not Muted,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.fromOffset(Inset, Inset),
+                    Selectable = not Muted,
+                    Size = UDim2.fromOffset(0, InnerHeight),
+                    Text = "",
+                    ZIndex = 2,
+                    Parent = Track,
+                })
+                local SegmentLabel = New("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.fromScale(1, 1),
+                    Text = tostring(Value),
+                    TextColor3 = "MutedFontColor",
+                    TextSize = Library:GetDesignToken("Size.Text", 14),
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    ZIndex = 2,
+                    Parent = Button,
+                })
+
+                local Segment = { Button = Button, Label = SegmentLabel, Value = Value, Disabled = Entry.Disabled == true }
+                Segments[Index] = Segment
+
+                Library:AddToRegistry(SegmentLabel, {
+                    TextColor3 = function()
+                        return Index == GetIndex() and Library:GetContrastColor(Library.Scheme.AccentColor)
+                            or Library.Scheme.MutedFontColor
+                    end,
+                })
+
+                table.insert(SegmentConnections, Button.Activated:Connect(function()
+                    if Segmented.Disabled or Segment.Disabled then
+                        return
+                    end
+                    Segmented:SetValue(Segment.Value)
+                    Library:Vibrate("Light")
+                end))
+                table.insert(SegmentConnections, Button.MouseEnter:Connect(function()
+                    if Segmented.Disabled or Segment.Disabled or GetIndex() == Index then
+                        return
+                    end
+                    Segment.Label.TextTransparency = 0
+                end))
+                table.insert(SegmentConnections, Button.MouseLeave:Connect(function()
+                    if Segmented.Disabled or Segment.Disabled or GetIndex() == Index then
+                        return
+                    end
+                    Segment.Label.TextTransparency = 0.2
+                end))
+            end
+
+            ApplySegmentStates()
         end
 
         local function MoveSelector(Animate)
@@ -17035,6 +17359,7 @@ do
             if Inner <= 0 then return end
 
             local Count = #Segments
+            if Count == 0 then return end
             local Base = math.floor(Inner / Count)
             local Remainder = Inner - Base * Count
             local X = Inset
@@ -17087,14 +17412,63 @@ do
 
         function Segmented:SetDisabled(Disabled: boolean)
             Segmented.Disabled = Disabled == true
-            for _, Segment in Segments do
-                Segment.Button.Active = not Segmented.Disabled
-            end
             Track.BackgroundTransparency = Segmented.Disabled and 0.4 or 0
             TrackStroke.Transparency = Segmented.Disabled and 0.7
                 or Library:GetDesignToken("Stroke.ControlTransparency", 0.38)
             Selector.BackgroundTransparency = Segmented.Disabled and 0.5 or 0
+            ApplySegmentStates()
+        end
+
+        function Segmented:SetSegmentDisabled(IndexOrValue, State)
+            local Target
+            for _, Segment in Segments do
+                if Segment.Value == IndexOrValue then
+                    Target = Segment
+                    break
+                end
+            end
+            if not Target and typeof(IndexOrValue) == "number" and Segments[IndexOrValue] then
+                Target = Segments[IndexOrValue]
+            end
+            if not Target then
+                return Segmented
+            end
+
+            Target.Disabled = State == true
+            ApplySegmentStates()
+            return Segmented
+        end
+
+        function Segmented:SetValues(NewValues, KeepSelection)
+            if Segmented.Destroyed then
+                return Segmented
+            end
+
+            local NewEntries = NormalizeEntries(NewValues)
+            assert(#NewEntries >= 2, "AddSegmented requires 2 to 4 values")
+
+            local Previous = Segmented.Value
+            BuildSegments(NewEntries)
+
+            local Selection
+            if KeepSelection ~= false and Previous ~= nil then
+                for _, Value in Segmented.Values do
+                    if Value == Previous then
+                        Selection = Previous
+                        break
+                    end
+                end
+            end
+            Segmented.Value = Selection ~= nil and Selection or Segmented.Values[1]
+
             Segmented:Recolor()
+            Library:QueueFrame(Segmented, function()
+                if not Segmented.Destroyed then
+                    Segmented:Layout()
+                end
+            end)
+            Library:RequestLayout(Groupbox)
+            return Segmented
         end
 
         function Segmented:SetVisible(Visible: boolean)
@@ -17117,28 +17491,6 @@ do
             Segmented:SetValue(Segmented.Default)
         end
 
-        for Index, Segment in Segments do
-            table.insert(Segmented.Connections, Segment.Button.Activated:Connect(function()
-                if Segmented.Disabled then
-                    return
-                end
-                Segmented:SetValue(Segment.Value)
-                Library:Vibrate("Light")
-            end))
-            table.insert(Segmented.Connections, Segment.Button.MouseEnter:Connect(function()
-                if Segmented.Disabled or GetIndex() == Index then
-                    return
-                end
-                Segment.Label.TextTransparency = 0
-            end))
-            table.insert(Segmented.Connections, Segment.Button.MouseLeave:Connect(function()
-                if Segmented.Disabled or GetIndex() == Index then
-                    return
-                end
-                Segment.Label.TextTransparency = 0.2
-            end))
-        end
-
         table.insert(Segmented.Connections, Track:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             Library:QueueFrame(Segmented, function()
                 if not Segmented.Destroyed then
@@ -17147,15 +17499,8 @@ do
             end)
         end))
 
-        local DefaultValue = Info.Default
-        local HasDefault = false
-        for _, Existing in Values do
-            if Existing == DefaultValue then
-                HasDefault = true
-                break
-            end
-        end
-        Segmented.Value = HasDefault and DefaultValue or Values[1]
+        BuildSegments(Entries)
+        Segmented.Value = ResolveSelection(Info.Default, Segmented.Values)
 
         Segmented:Recolor()
         task.defer(function()
@@ -17193,6 +17538,11 @@ do
                 Connection:Disconnect()
             end
             table.clear(Segmented.Connections)
+
+            for _, Connection in SegmentConnections do
+                Connection:Disconnect()
+            end
+            table.clear(SegmentConnections)
 
             if Holder then
                 Holder:Destroy()
@@ -21516,8 +21866,14 @@ function Library:CreateWindow(WindowInfo)
                 )
                 Library:AddOutline(TabboxHolder)
 
-                TabboxButtons = New("Frame", {
+                TabboxButtons = New("ScrollingFrame", {
+                    AutomaticCanvasSize = Enum.AutomaticSize.X,
                     BackgroundTransparency = 1,
+                    CanvasSize = UDim2.new(),
+                    ClipsDescendants = false,
+                    ScrollBarThickness = 0,
+                    ScrollingDirection = Enum.ScrollingDirection.X,
+                    ScrollingEnabled = false,
                     Size = UDim2.new(1, 0, 0, 34),
                     Parent = TabboxHolder,
                 })
@@ -21527,43 +21883,130 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            local function ResizeTabboxButtons()
+            local HeaderButtons = {}
+            local ShowIcons = Info.ShowIcons ~= false
+
+            local IconSpacing = 8
+            local EdgePad = 12
+            local MinButtonWidth = 40
+
+            local function ConfigureButton(Entry, Mode)
+                local Icon, Label, Content = Entry.Icon, Entry.Label, Entry.Content
+                if not Entry.HasLabelText then
+                    if Icon then
+                        Icon.Visible = true
+                    end
+                    return
+                end
+
+                if Mode == "truncate" then
+                    if Icon then
+                        Icon.Visible = false
+                    end
+                    Content.AutomaticSize = Enum.AutomaticSize.None
+                    Content.Size = UDim2.new(1, 0, 0, 16)
+                    Label.AutomaticSize = Enum.AutomaticSize.None
+                    Label.TextTruncate = Enum.TextTruncate.AtEnd
+                    Label.Size = UDim2.new(1, -8, 0, 16)
+                else
+                    if Icon then
+                        Icon.Visible = Mode == "full"
+                    end
+                    Content.AutomaticSize = Enum.AutomaticSize.X
+                    Content.Size = UDim2.fromOffset(0, 16)
+                    Label.AutomaticSize = Enum.AutomaticSize.X
+                    Label.TextTruncate = Enum.TextTruncate.None
+                    Label.Size = UDim2.fromOffset(0, 16)
+                end
+            end
+
+            local function VisibleButtons()
+                local List = {}
+                for _, Entry in HeaderButtons do
+                    if Entry.Button.Parent == TabboxButtons and Entry.Button.Visible then
+                        table.insert(List, Entry)
+                    end
+                end
+                return List
+            end
+
+            local function LayoutHeader()
                 if not TabboxButtons then
                     return
                 end
 
-                local Buttons = {}
-                for _, Child in TabboxButtons:GetChildren() do
-                    if Child:IsA("GuiObject") and Child.Visible then
-                        table.insert(Buttons, Child)
-                    end
-                end
-
+                local Buttons = VisibleButtons()
                 local Count = #Buttons
                 if Count == 0 then
                     return
                 end
 
-                local Total = math.floor(TabboxButtons.AbsoluteSize.X)
-                if Total <= 0 then
-                    for _, Child in Buttons do
-                        Child.Size = UDim2.new(1 / Count, 0, 1, 0)
+                local Scale = math.max(Library.DPIScale or 1, 0.01)
+                local Viewport = TabboxButtons.AbsoluteWindowSize.X
+                if Viewport <= 0 then
+                    Viewport = TabboxButtons.AbsoluteSize.X
+                end
+                local Available = math.floor(Viewport / Scale)
+                if Available <= 0 then
+                    for _, Entry in Buttons do
+                        ConfigureButton(Entry, ShowIcons and "full" or "labels")
+                        Entry.Button.Size = UDim2.new(1 / Count, 0, 1, 0)
                     end
                     return
                 end
 
-                local Share = math.max(1, math.floor(Total / Count))
-                for Index, Child in Buttons do
-                    local Width = Index == Count and (Total - Share * (Count - 1)) or Share
-                    Child.Size = UDim2.new(0, Width, 1, 0)
+                local Font = Library.Scheme.Font
+                local WidestFull, WidestLabel = 0, 0
+                for _, Entry in Buttons do
+                    local LabelW = 0
+                    if Entry.HasLabelText then
+                        local Bounds = Library:GetTextBounds(Entry.Name, Font, 15)
+                        LabelW = math.ceil(Bounds)
+                    end
+                    local IconPart = (ShowIcons and Entry.Icon) and (18 + IconSpacing) or 0
+                    Entry.FullWidth = (Entry.HasLabelText and (IconPart + LabelW) or 18) + EdgePad
+                    Entry.LabelWidth = (Entry.HasLabelText and LabelW or 18) + EdgePad
+                    WidestFull = math.max(WidestFull, Entry.FullWidth)
+                    WidestLabel = math.max(WidestLabel, Entry.LabelWidth)
+                end
+
+                local Share = math.floor(Available / Count)
+
+                local Mode
+                if ShowIcons and WidestFull <= Share then
+                    Mode = "full"
+                elseif WidestLabel <= Share then
+                    Mode = "labels"
+                elseif Share >= MinButtonWidth then
+                    Mode = "truncate"
+                else
+                    Mode = "scroll"
+                end
+
+                if Mode == "scroll" then
+                    TabboxButtons.ClipsDescendants = true
+                    TabboxButtons.ScrollingEnabled = true
+                    for _, Entry in Buttons do
+                        ConfigureButton(Entry, "scroll")
+                        Entry.Button.Size = UDim2.new(0, math.max(MinButtonWidth, Entry.LabelWidth), 1, 0)
+                    end
+                    return
+                end
+
+                TabboxButtons.ClipsDescendants = false
+                TabboxButtons.ScrollingEnabled = false
+                local Base = math.floor(Available / Count)
+                local Remainder = Available - Base * Count
+                for Index, Entry in Buttons do
+                    ConfigureButton(Entry, Mode)
+                    local Width = Base + (Index <= Remainder and 1 or 0)
+                    Entry.Button.Size = UDim2.new(0, Width, 1, 0)
                 end
             end
 
-            if TabboxButtons then
-                TabboxButtons:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeTabboxButtons)
-                TabboxButtons.ChildAdded:Connect(function()
-                    task.defer(ResizeTabboxButtons)
-                end)
+            local Header = { Destroyed = false }
+            function Header:Resize()
+                LayoutHeader()
             end
 
             local TotalTabs = 0
@@ -21580,6 +22023,15 @@ function Library:CreateWindow(WindowInfo)
                 Holder = TabboxHolder,
                 Tabs = {}
             }
+
+            if TabboxButtons then
+                table.insert(Tabbox.Connections, TabboxButtons:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    Library:RequestLayout(Header)
+                end))
+                table.insert(Tabbox.Connections, TabboxButtons.ChildAdded:Connect(function()
+                    Library:RequestLayout(Header)
+                end))
+            end
 
             function Tabbox:SetVisible(Visible)
                 if not Visible then Library:ClosePopupsUnder(Tabbox.BoxHolder or Tabbox.Holder) end
@@ -21652,9 +22104,9 @@ function Library:CreateWindow(WindowInfo)
                     Parent = ButtonContent,
                 })
 
-                local ButtonIcon                
+                local ButtonIcon
                 local BoxIcon = Library:GetCustomIcon(IconName)
-                if BoxIcon then
+                if BoxIcon and (ShowIcons or IsNameEmpty) then
                     ButtonIcon = New("ImageLabel", {
                         Image = BoxIcon.Url,
                         ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
@@ -21678,6 +22130,16 @@ function Library:CreateWindow(WindowInfo)
                         Parent = ButtonContent,
                     })
                 end
+
+                local HeaderEntry = {
+                    Button = Button,
+                    Content = ButtonContent,
+                    Icon = ButtonIcon,
+                    Label = ButtonLabel,
+                    Name = IsNameEmpty and "" or Name,
+                    HasLabelText = not IsNameEmpty,
+                }
+                table.insert(HeaderButtons, HeaderEntry)
 
                 local Line = Library:MakeLine(Button, {
                     AnchorPoint = Vector2.new(0, 1),
@@ -21821,6 +22283,11 @@ function Library:CreateWindow(WindowInfo)
                     end
                     table.clear(Tab.DependencyBoxes)
 
+                    local EntryIndex = table.find(HeaderButtons, HeaderEntry)
+                    if EntryIndex then
+                        table.remove(HeaderButtons, EntryIndex)
+                    end
+
                     if Container then
                         Container:Destroy()
                     end
@@ -21828,14 +22295,16 @@ function Library:CreateWindow(WindowInfo)
                     if Button then
                         Button:Destroy()
                     end
+
+                    Library:RequestLayout(Header)
                 end
 
-                
+
                 if not Tabbox.ActiveTab then
                     Tab:Show()
                 end
 
-                Button.MouseButton1Click:Connect(Tab.Show)
+                table.insert(Tab.Connections, Button.MouseButton1Click:Connect(Tab.Show))
 
                 setmetatable(Tab, BaseGroupbox)
 
@@ -21851,6 +22320,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 Tabbox.Destroyed = true
+                Header.Destroyed = true
 
                 if Tabbox.Connections then
                     for _, Connection in Tabbox.Connections do
@@ -21865,6 +22335,7 @@ function Library:CreateWindow(WindowInfo)
                     end
                 end
                 table.clear(Tabbox.Tabs)
+                table.clear(HeaderButtons)
 
                 if TabboxHolder then
                     TabboxHolder:Destroy()
@@ -22033,8 +22504,6 @@ function Library:CreateWindow(WindowInfo)
                 Elements = {}
             }
 
-            local ResizeQueued = false
-
             function Groupbox:Resize()
                 if Groupbox.Destroyed or not GroupboxHolder.Parent then
                     return
@@ -22068,23 +22537,6 @@ function Library:CreateWindow(WindowInfo)
                     Library:CancelTween(GroupboxHolder, "GroupboxSize")
                     GroupboxHolder.Size = TargetSize
                 end
-            end
-
-            function Groupbox:QueueResize()
-                if ResizeQueued or Groupbox.Destroyed then
-                    return
-                end
-
-                ResizeQueued = true
-                task.defer(function()
-                    ResizeQueued = false
-
-                    if Groupbox.Destroyed or not GroupboxHolder.Parent then
-                        return
-                    end
-
-                    Groupbox:Resize()
-                end)
             end
 
             table.insert(Groupbox.Connections, GroupboxList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -22196,7 +22648,7 @@ function Library:CreateWindow(WindowInfo)
             Groupbox.AddTabbox = AddTabbox
             setmetatable(Groupbox, BaseGroupbox)
 
-            Groupbox:Resize()
+            Groupbox:QueueResize()
             Tab.Groupboxes[Info.Name] = Groupbox
 
             if Info.Visible == false then
@@ -22247,7 +22699,7 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Tab:RefreshSides()
-            Tab:Resize()
+            Tab:QueueResize()
             return Tab
         end
 
@@ -23775,6 +24227,7 @@ function Library:CreateWindow(WindowInfo)
         local Threshold = (WindowInfo.MinSidebarWidth + WindowInfo.SidebarCompactWidth) * WindowInfo.SidebarCollapseThreshold
         local StartPos, StartWidth
         local Dragging = false
+        local GestureInput
         local Changed
 
         local SidebarGrabber = New("TextButton", {
@@ -23806,6 +24259,7 @@ function Library:CreateWindow(WindowInfo)
 
             Library.CantDragForced = true
 
+            GestureInput = Input
             StartPos = Input.Position
             StartWidth = Window:GetSidebarWidth()
             Dragging = true
@@ -23840,7 +24294,11 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            if Dragging and IsHoverInput(Input) then
+            if
+                Dragging
+                and IsHoverInput(Input)
+                and (GestureInput.UserInputType ~= Enum.UserInputType.Touch or Input == GestureInput)
+            then
                 local Delta = Input.Position - StartPos
                 local Width = StartWidth + Delta.X
 

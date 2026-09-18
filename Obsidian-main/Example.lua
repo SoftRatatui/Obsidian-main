@@ -15,6 +15,7 @@ assert(type(loadstring) == "function", "This example requires an executor with l
 
 local PRIMARY_REPOSITORY = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local RELEASE_VERSION = "0.0.1-release-3"
+-- Fallback used only when the manifest cannot be read; the manifest revision replaces it below.
 local SOURCE_CACHE_KEY = RELEASE_VERSION .. "-configs-2-" .. tostring(os.time())
 local ExecutorEnvironment = getfenv()
 local SynEnvironment = if type(ExecutorEnvironment) == "table" then rawget(ExecutorEnvironment, "syn") else nil
@@ -124,9 +125,74 @@ local function LoadModule(Path, Required, PreferredBase)
 	return nil
 end
 
+-- Publishing a new revision:
+--   1. Edit the library or addon files that changed.
+--   2. In Library.lua raise Library.Revision to a value that sorts above the current one.
+--      The shipped format is "YYYY-MM-DD.N": use today's date with N = 1, or raise N for a
+--      second publish in one day. Leave ReleaseVersion alone.
+--   3. Set manifest.json "revision" to that same value, and update "modules" if a file was
+--      added or removed.
+--   4. Set manifest.json "release" to the marketing version clients should report. That field
+--      is the single source of truth for the release string; the loader never derives logic
+--      from it, so the differing release-3 / release-12 / release-15 mentions elsewhere are
+--      harmless. Pick one and reconcile the docs when ready.
+--   5. Commit and push. Clients bust their cache automatically because the query string is
+--      built from the revision, and a client still holding an older build is warned by name.
+local function RevisionParts(Revision)
+	if type(Revision) ~= "string" then
+		return nil
+	end
+	local Parts = {}
+	for Number in string.gmatch(Revision, "%d+") do
+		table.insert(Parts, tonumber(Number))
+	end
+	return #Parts > 0 and Parts or nil
+end
+
+local function RevisionOlder(Loaded, Published)
+	local Left, Right = RevisionParts(Loaded), RevisionParts(Published)
+	if not Left or not Right then
+		return false
+	end
+	for Index = 1, math.max(#Left, #Right) do
+		local A, B = Left[Index] or 0, Right[Index] or 0
+		if A ~= B then
+			return A < B
+		end
+	end
+	return false
+end
+
+local function LoadManifest(BaseUrl)
+	-- The manifest is tiny and must never be served stale, so it always busts on os.time().
+	local Downloaded, Source = DownloadSource(BaseUrl .. "manifest.json?monhub=" .. tostring(os.time()))
+	if not Downloaded or type(Source) ~= "string" then
+		return nil
+	end
+	local Ok, Decoded = pcall(function()
+		return game:GetService("HttpService"):JSONDecode(Source)
+	end)
+	return Ok and type(Decoded) == "table" and Decoded or nil
+end
+
+local Manifest = LoadManifest(PRIMARY_REPOSITORY)
+if Manifest and type(Manifest.revision) == "string" then
+	SOURCE_CACHE_KEY = Manifest.revision .. "-configs-2"
+end
+
 local Library, ActiveRepository = LoadModule("Library.lua", true)
 if Library.ReleaseVersion ~= RELEASE_VERSION then
 	warn(string.format("MonHub version notice: expected %s, received %s", RELEASE_VERSION, tostring(Library.ReleaseVersion)))
+end
+if Manifest and type(Manifest.revision) == "string" then
+	local Loaded = Library.Revision
+	if type(Loaded) == "string" and RevisionOlder(Loaded, Manifest.revision) then
+		warn(string.format(
+			"MonHub cache warning: loaded revision %s is older than published revision %s. Your client served a cached copy of the library; clear its HTTP cache or relaunch to pick up the current build.",
+			Loaded,
+			Manifest.revision
+		))
+	end
 end
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)

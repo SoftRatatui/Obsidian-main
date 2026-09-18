@@ -114,6 +114,50 @@ local SpecialValueParser = {
     }
 }
 
+local function DeepEqual(First, Second)
+    if type(First) ~= type(Second) then return false end
+    if type(First) ~= "table" then return First == Second end
+    for Key, Value in First do if not DeepEqual(Value, Second[Key]) then return false end end
+    for Key in Second do if First[Key] == nil then return false end end
+    return true
+end
+
+local KindParser = {
+    value = {
+        Save = function(Control) return { value = Control.Value } end,
+        Load = function(Control, Data)
+            if not DeepEqual(Control.Value, Data.value) then Control:SetValue(Data.value) end
+        end,
+        Validate = function(Option)
+            local ValueType = typeof(Option.value)
+            if ValueType ~= "string" and ValueType ~= "number" and ValueType ~= "boolean" then
+                return false, "expected a scalar value"
+            end
+            return true
+        end,
+    },
+    boolean = {
+        Save = function(Control) return { value = Control.Value == true } end,
+        Load = function(Control, Data)
+            if Control.Value ~= (Data.value == true) then Control:SetValue(Data.value == true) end
+        end,
+        Validate = function(Option)
+            if typeof(Option.value) ~= "boolean" then return false, "expected a boolean value" end
+            return true
+        end,
+    },
+    list = {
+        Save = function(Control) return { value = Control.Value } end,
+        Load = function(Control, Data)
+            if not DeepEqual(Control.Value, Data.value) then Control:SetValue(Data.value) end
+        end,
+        Validate = function(Option)
+            if typeof(Option.value) ~= "table" then return false, "expected a list value" end
+            return true
+        end,
+    },
+}
+
 local ElementParser = {}; do
     local function Equal(First, Second)
         if type(First) ~= type(Second) then return false end
@@ -280,6 +324,21 @@ local ElementParser = {}; do
             end
 
             Element:SetValue(Data.text)
+        end
+    )
+
+    CreateParser(
+        "Segmented", "Options",
+        function(Index: string, Segmented: any)
+            return { value = Segmented.Value }
+        end,
+        function(Element: any?, Data: any)
+            if not Element then return end
+            if Element.Value == Data.value then
+                return
+            end
+
+            Element:SetValue(Data.value)
         end
     )
 
@@ -781,6 +840,8 @@ function SaveManager:SaveJSON(ConfigName)
         } else nil
     }
 
+    local SaveReport = { Skipped = {} }
+
     local function Append(Parser, Index, Value, ...)
         local Success, Data = pcall(Parser.Save, Index, Value, ...)
         if not Success then
@@ -790,26 +851,50 @@ function SaveManager:SaveJSON(ConfigName)
         return true
     end
 
+    local function AppendControl(Index, Control, ...)
+        local Parser = ElementParser[Control.Type]
+        if Parser then
+            return Append(Parser, Index, Control, ...)
+        end
+
+        local Kind = typeof(Control.SaveKind) == "string" and KindParser[Control.SaveKind] or nil
+        if Kind then
+            local Success, Data = pcall(Kind.Save, Control)
+            if not Success then
+                return false, string.format("Failed to save %q: %s", tostring(Index), tostring(Data))
+            end
+            Data.type = Control.Type
+            Data.idx = Index
+            Data.kind = Control.SaveKind
+            Data.version = Control.ConfigVersion
+            table.insert(CurrentData.objects, Data)
+            return true
+        end
+
+        if Control.Save ~= true then
+            return true
+        end
+
+        local Reason = string.format("no parser or SaveKind for control type %q", tostring(Control.Type))
+        table.insert(CurrentData.objects, { type = Control.Type, idx = Index, unsaveable = true, reason = Reason })
+        table.insert(SaveReport.Skipped, { Id = tostring(Index), Reason = Reason })
+        return true
+    end
+
     for Index, Toggle in Library.Toggles do
         if not Toggle.Type or Toggle.Save == false or Toggle.Secret or Toggle.NoSave then continue end
         if IgnoreIndexes[Index] then continue end
 
-        local Parser = ElementParser[Toggle.Type]
-        if not Parser then continue end
-
-        local Success, ErrorMessage = Append(Parser, Index, Toggle)
+        local Success, ErrorMessage = AppendControl(Index, Toggle)
         if not Success then return "", false, ErrorMessage end
     end
 
-    
+
     for Index, Option in Library.Options do
         if not Option.Type or Option.Save == false or Option.Secret or Option.NoSave then continue end
         if IgnoreIndexes[Index] then continue end
 
-        local Parser = ElementParser[Option.Type]
-        if not Parser then continue end
-
-        local Success, ErrorMessage = Append(Parser, Index, Option)
+        local Success, ErrorMessage = AppendControl(Index, Option)
         if not Success then return "", false, ErrorMessage end
     end
 
@@ -837,6 +922,8 @@ function SaveManager:SaveJSON(ConfigName)
     table.sort(CurrentData.objects, function(First, Second)
         return ObjectKey(First) < ObjectKey(Second)
     end)
+
+    SaveManager.LastSaveReport = SaveReport
 
     local SuccessEncode, EncodedData = pcall(HttpService.JSONEncode, HttpService, CurrentData)
     if not SuccessEncode then
@@ -1095,6 +1182,7 @@ function SaveManager:LoadSummary(Report)
     local Extra = {}
     if (Report.Skipped or 0) > 0 then table.insert(Extra, string.format("%d skipped", Report.Skipped)) end
     if (Report.Failed or 0) > 0 then table.insert(Extra, string.format("%d failed", Report.Failed)) end
+    if (Report.Invalid or 0) > 0 then table.insert(Extra, string.format("%d invalid", Report.Invalid)) end
     return string.format("Loaded %d of %d settings%s", Loaded, Report.Total or Loaded,
         #Extra > 0 and (", " .. table.concat(Extra, ", ")) or "")
 end
@@ -1197,6 +1285,20 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
 
         local Parser = ElementParser[Option.type]
         if not Parser then
+            if Option.unsaveable then
+                return true
+            end
+
+            local Kind = typeof(Option.kind) == "string" and KindParser[Option.kind] or nil
+            if Kind then
+                if typeof(Option.idx) ~= "string" and typeof(Option.idx) ~= "number" then
+                    return false, string.format("%s object %s: expected string or number index", Option.type, tostring(ObjectIndex))
+                end
+                local ShapeOK, ShapeError = Kind.Validate(Option)
+                if not ShapeOK then
+                    return false, string.format("%s %q: %s", Option.type, tostring(Option.idx), tostring(ShapeError))
+                end
+            end
             return true
         end
 
@@ -1235,6 +1337,11 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
             if typeof(Option.text) ~= "string" then
                 return false, string.format("Input %q: expected string text", tostring(Option.idx))
             end
+        elseif Option.type == "Segmented" then
+            local ValueType = typeof(Option.value)
+            if ValueType ~= "string" and ValueType ~= "number" and ValueType ~= "boolean" then
+                return false, string.format("Segmented %q: expected a scalar value", tostring(Option.idx))
+            end
         elseif Option.type == "Groupbox" then
             if typeof(Option.idx) ~= "string" or typeof(Option.tabIdx) ~= "string" or Option.collapsed ~= nil and typeof(Option.collapsed) ~= "boolean" then
                 return false, string.format("Groupbox %q: invalid groupbox data", tostring(Option.idx))
@@ -1253,8 +1360,8 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
     end
 
     local LoadReport = {
-        Total = 0, Applied = 0, Unchanged = 0, Skipped = 0, Failed = 0, Missing = 0,
-        MissingIds = {}, SkippedIds = {}, FailedIds = {}, Entries = {}, Errors = {},
+        Total = 0, Applied = 0, Unchanged = 0, Skipped = 0, Failed = 0, Missing = 0, Invalid = 0,
+        MissingIds = {}, SkippedIds = {}, FailedIds = {}, InvalidIds = {}, Entries = {}, Errors = {},
         CallbackTimings = {}, BackgroundCallbacks = {},
     }
     local function RecordSkip(Id, Reason)
@@ -1309,6 +1416,37 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
     local IgnoreIndexes = SaveManager.Ignore
     local LoadErrors = LoadReport.Errors
     local Batch = {}
+    local ValidationTargets = {}
+
+    local function ResolveControl(Index)
+        return (Library.Options and Library.Options[Index]) or (Library.Toggles and Library.Toggles[Index])
+    end
+
+    local function KindFallbackParser(Kind, Type)
+        local Def = KindParser[Kind]
+        return {
+            Save = function(Index, Control)
+                local Data = Def.Save(Control)
+                Data.type = Type
+                Data.idx = Index
+                Data.kind = Kind
+                Data.version = Control.ConfigVersion
+                return Data
+            end,
+            Load = function(Index, Data)
+                local Target = ResolveControl(Index)
+                if not Target then return end
+                local Current = Def.Save(Target)
+                if DeepEqual(Current.value, Data.value) then return false end
+                local WasDisabled = Target.Disabled
+                Target.Disabled = false
+                local Success, ErrorMessage = pcall(Def.Load, Target, Data)
+                Target.Disabled = WasDisabled
+                if not Success then error(ErrorMessage, 0) end
+                return true
+            end,
+        }
+    end
 
     local DefaultOrder = { Input = 1, Dropdown = 2, Slider = 3, ColorPicker = 4, Toggle = 5, KeyPicker = 6, Groupbox = 7, Custom = 8 }
     local function Priority(Option)
@@ -1381,8 +1519,18 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
 
         local Parser = ElementParser[Option.type]
         if not Parser then
-            LoadReport.Skipped += 1
-            continue
+            if Option.unsaveable then
+                RecordSkip(Option.idx, tostring(Option.reason or "control has no save strategy"))
+                continue
+            end
+
+            local Kind = typeof(Option.kind) == "string" and KindParser[Option.kind] or nil
+            if Kind then
+                Parser = KindFallbackParser(Option.kind, Option.type)
+            else
+                RecordSkip(Option.idx, string.format("no parser or SaveKind for control type %q", tostring(Option.type)))
+                continue
+            end
         end
 
         local TargetExists = false
@@ -1490,6 +1638,10 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
         end
         if LoadError == false then LoadReport.Unchanged += 1 else LoadReport.Applied += 1 end
 
+        if Target and Option.type ~= "Groupbox" and Option.type ~= "Custom" and typeof(Target.Validate) == "function" then
+            table.insert(ValidationTargets, { Id = Option.idx, Control = Target })
+        end
+
         if ThemeLoadStarted and IsThemeManagerOption(Option.idx) then
             local SuccessMark, MarkError = pcall(ThemeManager.MarkConfigOptionLoaded, ThemeManager, Option.idx)
             if not SuccessMark then
@@ -1504,6 +1656,20 @@ function SaveManager:LoadJSON(Content: string, Options: any?)
             table.insert(LoadErrors, "theme transaction: " .. tostring(EndResult))
         elseif EndResult == false then
             table.insert(LoadErrors, "theme transaction: " .. tostring(EndError))
+        end
+    end
+
+    for _, Item in ValidationTargets do
+        local Control = Item.Control
+        local Success, Result = pcall(Control.Validate, Control.Value)
+        local ErrorText = if Success then (typeof(Result) == "string" and Result ~= "" and Result or nil) else tostring(Result)
+        if ErrorText then
+            LoadReport.Invalid += 1
+            table.insert(LoadReport.InvalidIds, tostring(Item.Id))
+            table.insert(LoadReport.Entries, { Id = tostring(Item.Id), Status = "Invalid", Reason = ErrorText })
+            if typeof(Control.SetError) == "function" then pcall(Control.SetError, Control, ErrorText) end
+        elseif typeof(Control.ClearError) == "function" then
+            pcall(Control.ClearError, Control)
         end
     end
 

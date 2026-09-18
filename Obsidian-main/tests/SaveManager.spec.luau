@@ -436,5 +436,110 @@ return function(SaveManager, Environment)
     Restarted:SetBackupCount(0)
     print("PASS malformed-entry skip, resilient reporting and backup rotation restore")
 
+    local Segment = Control("Segmented", "A")
+    Segment.Values = { "A", "B", "C" }
+    function Segment:SetValue(Value)
+        if self.Disabled then return end
+        local Found = false
+        for _, Existing in self.Values do
+            if Existing == Value then Found = true break end
+        end
+        if not Found or self.Value == Value then return end
+        self.Value = Value
+        self.ChangedRuns += 1
+    end
+    Library.Options.SegmentedMode = Segment
+    Segment.Value = "B"
+    assert(Restarted:Save("segmented"))
+    local SegmentedJson = Environment.storedJson[Environment.files["MonHub/Tests/settings/place-1/segmented.json"]]
+    local SavedSegment = false
+    for _, Object in SegmentedJson.objects do
+        if Object.idx == "SegmentedMode" then
+            assert(Object.type == "Segmented" and Object.value == "B", "Segmented was not serialized")
+            SavedSegment = true
+        end
+    end
+    assert(SavedSegment, "Segmented control never reached the config")
+    Segment.Value = "A"
+    assert(Restarted:Load("segmented"))
+    assert(Segment.Value == "B", "Segmented value did not round-trip")
+
+    local Stepper = Control("Stepper", 3)
+    Stepper.SaveKind = "value"
+    Library.Options.Stepper = Stepper
+    Stepper.Value = 7
+    assert(Restarted:Save("kind"))
+    local KindJson = Environment.storedJson[Environment.files["MonHub/Tests/settings/place-1/kind.json"]]
+    local SavedKind = false
+    for _, Object in KindJson.objects do
+        if Object.idx == "Stepper" then
+            assert(Object.kind == "value" and Object.value == 7 and Object.type == "Stepper", "Declared SaveKind was not honoured")
+            SavedKind = true
+        end
+    end
+    assert(SavedKind, "Control with a declared SaveKind was not saved")
+    Stepper.Value = 1
+    assert(Restarted:Load("kind"))
+    assert(Stepper.Value == 7, "SaveKind fallback did not restore the value")
+
+    local Ranked = Control("Slider", 20)
+    function Ranked.Validate(Value)
+        if tonumber(Value) > 100 then return "too high" end
+        return nil
+    end
+    Ranked.Valid = true
+    function Ranked:SetError(Text)
+        self.Valid = false
+        self.ErrorText = Text
+    end
+    function Ranked:ClearError()
+        self.Valid = true
+        self.ErrorText = nil
+    end
+    Library.Options.Ranked = Ranked
+    Ranked.Value = 150
+    assert(Restarted:Save("validate"))
+    Ranked.Value = 20
+    Ranked.Valid = true
+    local ValidateOK, ValidateError, ValidateReport = Restarted:Load("validate")
+    assert(ValidateOK, "A restored invalid value must not fail the load: " .. tostring(ValidateError))
+    assert(Ranked.Value == 150, "Restored value was not applied before validation")
+    assert(ValidateReport.Invalid == 1 and ValidateReport.InvalidIds[1] == "Ranked", "Restored invalid value was not reported")
+    assert(Ranked.Valid == false and Ranked.ErrorText == "too high", "Restored invalid value was not flagged in the UI")
+    local SawInvalid = false
+    for _, Entry in ValidateReport.Entries do
+        if Entry.Id == "Ranked" and Entry.Status == "Invalid" then SawInvalid = true end
+    end
+    assert(SawInvalid, "Invalid restored value missing from the report entries")
+    Ranked.Value = 20
+    assert(Restarted:Load("validate"))
+
+    local Widget = Control("Widget", "opaque")
+    Widget.Save = true
+    Library.Options.Widget = Widget
+    assert(Restarted:Save("unsaveable"))
+    local SawSaveSkip = false
+    for _, Entry in Restarted.LastSaveReport.Skipped do
+        if Entry.Id == "Widget" and Entry.Reason then SawSaveSkip = true end
+    end
+    assert(SawSaveSkip, "Unsaveable control was dropped silently at save time")
+    local UnsaveableJson = Environment.storedJson[Environment.files["MonHub/Tests/settings/place-1/unsaveable.json"]]
+    local SawMarker = false
+    for _, Object in UnsaveableJson.objects do
+        if Object.idx == "Widget" then
+            assert(Object.unsaveable == true and type(Object.reason) == "string", "Unsaveable marker was malformed")
+            SawMarker = true
+        end
+    end
+    assert(SawMarker, "Unsaveable control left no record in the config")
+    local UnsaveableOK, UnsaveableError, UnsaveableReport = Restarted:Load("unsaveable")
+    assert(UnsaveableOK, UnsaveableError)
+    local SawLoadSkip = false
+    for _, Entry in UnsaveableReport.Entries do
+        if Entry.Id == "Widget" and Entry.Status == "Skipped" and Entry.Reason then SawLoadSkip = true end
+    end
+    assert(SawLoadSkip, "Unsaveable control was not reported as skipped on load")
+    print("PASS segmented round-trip, declared SaveKind fallback, unsaveable reporting and load-time validation")
+
     print("PASS config round-trip, cross-tab groups, disabled controls, failed-write recovery, restart autoload and resilient partial loads")
 end

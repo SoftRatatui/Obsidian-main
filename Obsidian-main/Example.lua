@@ -2980,6 +2980,592 @@ if SaveManager then
 	end
 end
 
+-- ===========================================================================
+-- Living all-controls demo and layout test (roadmap 127 and 128)
+--
+-- Everything below this line is the smoke test. It builds one tab per topic so
+-- a reader can jump straight to the thing they want to copy:
+--   New Controls  the controls that were missing from the old example
+--   Runtime       Library:State, VisibleWhen, undo, favourites, declarative build
+--   Layout        window width and density switches for eyeballing breakpoints
+--   Recipes       four small hubs (farm, combat, visuals, settings) as sub-tabs
+--
+-- Each section is wrapped in pcall so one broken demo warns instead of stopping
+-- the whole file from loading. Library.lua grows while this runs, so anything
+-- that was not present at build time is skipped rather than called blindly.
+-- ===========================================================================
+
+local DemoTabs = {}
+
+-- Undo and Redo record control changes once history is on. Turn it on before
+-- any demo control is built so the buttons further down have something to walk.
+pcall(function()
+	if Library.EnableHistory then
+		Library:EnableHistory(100)
+	end
+	if Library.EnableCommandKeys then
+		Library:EnableCommandKeys()
+	end
+end)
+
+-- ---------------------------------------------------------------------------
+-- New Controls: one live example of every control the audit flagged as absent.
+-- ---------------------------------------------------------------------------
+local NewControlsOk, NewControlsError = pcall(function()
+	local Tab = Window:AddTab("New Controls", "shapes")
+	DemoTabs.NewControls = Tab
+
+	local FormGroup = Tab:AddLeftGroupbox("Form controls", "text-cursor-input")
+
+	FormGroup:AddCheckbox("Demo_Checkbox", {
+		Text = "Standalone checkbox",
+		Default = true,
+		Tooltip = "AddCheckbox is a toggle pinned to the checkbox layout.",
+		Callback = function(Value)
+			print("[MonHub] Demo checkbox:", Value)
+		end,
+	})
+
+	FormGroup:AddInput("Demo_ValidatedInput", {
+		Text = "Server slot",
+		Placeholder = "1 to 100",
+		Numeric = true,
+		Finished = true,
+		Clearable = true,
+		Copyable = true,
+		Prefix = "#",
+		Validate = function(Text)
+			local Number = tonumber(Text)
+			if not Number then
+				return "Enter a number"
+			end
+			if Number < 1 or Number > 100 then
+				return "Use 1 to 100"
+			end
+			-- Return nothing to clear the error and accept the value.
+		end,
+		Callback = function(Value)
+			print("[MonHub] Server slot:", Value)
+		end,
+	})
+
+	FormGroup:AddInput("Demo_MultilineInput", {
+		Text = "Notes",
+		Placeholder = "Multiline, grows as you type",
+		Multiline = true,
+		Finished = true,
+	})
+
+	FormGroup:AddSegmented("Demo_Segmented", {
+		Text = "Fire mode",
+		Values = { "Off", "Single", "Auto" },
+		Default = "Single",
+		Callback = function(Value)
+			print("[MonHub] Fire mode:", Value)
+		end,
+	})
+
+	FormGroup:AddDropdown("Demo_ChipDropdown", {
+		Text = "Targets",
+		Values = { "Head", "Torso", "Legs", "Arms" },
+		Default = { Head = true, Torso = true },
+		Multi = true,
+		Chips = true,
+		Tooltip = "Multi dropdown with removable chips.",
+	})
+
+	FormGroup:AddSplitButton("Demo_SplitButton", {
+		Text = "Teleport to spawn",
+		Callback = function()
+			Notify("Teleport", "Primary split action fired.", 3)
+		end,
+		Options = {
+			{
+				Text = "Teleport to safe zone",
+				Icon = "shield",
+				Callback = function()
+					Notify("Teleport", "Safe zone option fired.", 3)
+				end,
+			},
+			{
+				Text = "Teleport to last death",
+				Icon = "skull",
+				Callback = function()
+					Notify("Teleport", "Last death option fired.", 3)
+				end,
+			},
+		},
+	})
+
+	-- Button:SetState walks Idle, Loading, then Success or Error.
+	local StatefulButton
+	StatefulButton = FormGroup:AddButton({
+		Text = "Save profile",
+		Func = function()
+			if not StatefulButton then
+				return
+			end
+			StatefulButton:SetState("Loading", "Saving...")
+			task.delay(1, function()
+				if StatefulButton and not StatefulButton.Destroyed then
+					StatefulButton:SetState("Success", "Saved")
+				end
+			end)
+		end,
+	})
+
+	local PresentationGroup = Tab:AddRightGroupbox("Presentation", "layout-panel-top")
+
+	PresentationGroup:AddBadge("Demo_Badge", {
+		Label = "Session status",
+		Text = "Live",
+		Variant = "Success",
+	})
+
+	local StepsControl = PresentationGroup:AddSteps("Demo_Steps", {
+		Steps = {
+			{ Title = "Connect", Text = "Join the server" },
+			{ Title = "Configure", Text = "Pick your options" },
+			{ Title = "Run", Text = "Start the hub" },
+		},
+	})
+	if StepsControl and StepsControl.SetCurrent then
+		StepsControl:SetCurrent(1)
+	end
+
+	local StepIndex = 1
+	PresentationGroup:AddButton({
+		Text = "Advance step",
+		Func = function()
+			StepIndex = StepIndex % 3 + 1
+			if StepsControl and StepsControl.SetCurrent then
+				StepsControl:SetCurrent(StepIndex)
+			end
+		end,
+	})
+
+	PresentationGroup:AddDetailList("Demo_DetailList", {
+		Items = {
+			{ Icon = "user", Title = "Owner", Text = "SoftRatatui" },
+			{ Icon = "clock", Title = "Uptime", Text = "12 minutes" },
+			{ Icon = "activity", Title = "State", Text = "Running" },
+		},
+	})
+
+	PresentationGroup:AddSettingsCard("Demo_SettingsCard", {
+		Title = "Auto rejoin",
+		Text = "Rejoin the server after a disconnect.",
+		Control = {
+			Type = "Toggle",
+			Text = "Enabled",
+			Default = false,
+		},
+	})
+
+	-- A skeleton stands in while data loads; toggle it to compare states.
+	local SkeletonControl = PresentationGroup:AddSkeleton("Demo_Skeleton", {
+		Rows = 3,
+	})
+	local SkeletonRunning = true
+	if SkeletonControl and SkeletonControl.Start then
+		SkeletonControl:Start()
+	end
+	PresentationGroup:AddButton({
+		Text = "Toggle skeleton",
+		Func = function()
+			if not SkeletonControl then
+				return
+			end
+			SkeletonRunning = not SkeletonRunning
+			SkeletonControl:SetVisible(SkeletonRunning)
+		end,
+	})
+
+	PresentationGroup:AddEmptyState("Demo_EmptyState", {
+		Icon = "inbox",
+		Title = "No saved configs",
+		Text = "Create one to see it listed here.",
+		ActionText = "Create config",
+		Callback = function()
+			Notify("Empty state", "Action button fired.", 3)
+		end,
+	})
+
+	-- AddDependencyGroupbox is a full card that only shows while its master is on.
+	local DepMasterGroup = Tab:AddLeftGroupbox("Dependency card", "workflow")
+	local DepMaster = DepMasterGroup:AddToggle("Demo_DepMaster", {
+		Text = "Show extra options",
+		Default = false,
+	})
+	local DepBox = DepMasterGroup:AddDependencyGroupbox()
+	DepBox:AddToggle("Demo_DepChild", {
+		Text = "Extra option",
+		Default = true,
+	})
+	DepBox:AddSlider("Demo_DepSlider", {
+		Text = "Extra amount",
+		Min = 0,
+		Max = 100,
+		Default = 50,
+		Rounding = 0,
+	})
+	DepBox:SetupDependencies({ { DepMaster, true } })
+end)
+if not NewControlsOk then
+	warn("[MonHub Example] New Controls tab skipped: " .. tostring(NewControlsError))
+end
+
+-- ---------------------------------------------------------------------------
+-- Runtime: the reactive and control-management API, none of which had a demo.
+-- ---------------------------------------------------------------------------
+local RuntimeOk, RuntimeError = pcall(function()
+	local Tab = Window:AddTab("Runtime", "cpu")
+	DemoTabs.Runtime = Tab
+
+	-- One Library:State bound to two toggles. Flip either and the other follows.
+	local StateGroup = Tab:AddLeftGroupbox("Shared state", "share-2")
+	StateGroup:AddLabel("Both toggles share a single Library:State. Flip one.", true)
+	local SyncState = Library:State(true)
+	StateGroup:AddToggle("Demo_SyncA", {
+		Text = "Mirror A",
+		Default = true,
+		State = SyncState,
+	})
+	StateGroup:AddToggle("Demo_SyncB", {
+		Text = "Mirror B",
+		Default = true,
+		State = SyncState,
+	})
+
+	-- VisibleWhen and EnabledWhen react to a state instead of a dependency box.
+	local ReactiveGroup = Tab:AddRightGroupbox("Conditional controls", "eye")
+	local AdvancedState = Library:State(false)
+	ReactiveGroup:AddToggle("Demo_ShowAdvanced", {
+		Text = "Show advanced",
+		Default = false,
+		Callback = function(Value)
+			AdvancedState:Set(Value)
+		end,
+	})
+	ReactiveGroup:AddSlider("Demo_AdvancedSlider", {
+		Text = "Advanced power",
+		Min = 0,
+		Max = 100,
+		Default = 25,
+		Rounding = 0,
+		VisibleWhen = function()
+			return AdvancedState:Get()
+		end,
+	})
+	ReactiveGroup:AddToggle("Demo_GatedToggle", {
+		Text = "Only usable while advanced is on",
+		Default = false,
+		EnabledWhen = function()
+			return AdvancedState:Get()
+		end,
+	})
+
+	-- GetControl reads one control by id, ForEach walks every control.
+	local BulkGroup = Tab:AddLeftGroupbox("Bulk operations", "list-checks")
+	BulkGroup:AddButton({
+		Text = "Count controls with ForEach",
+		Func = function()
+			local Total, Toggles = 0, 0
+			Library:ForEach(function(Control)
+				Total += 1
+				if Control.Type == "Toggle" then
+					Toggles += 1
+				end
+			end)
+			Notify("ForEach", string.format("%d controls, %d of them toggles.", Total, Toggles), 4)
+		end,
+	})
+	BulkGroup:AddButton({
+		Text = "Flip Mirror A with GetControl",
+		Func = function()
+			local Control = Library:GetControl("Demo_SyncA")
+			if Control and Control.SetValue then
+				Control:SetValue(not Control.Value)
+			end
+		end,
+	})
+
+	-- ResetScope on a groupbox returns just that group's controls to default.
+	local ResetGroup = Tab:AddRightGroupbox("Reset a scope", "rotate-ccw")
+	ResetGroup:AddSlider("Demo_ResetSlider", {
+		Text = "Sensitivity",
+		Min = 0,
+		Max = 100,
+		Default = 30,
+		Rounding = 0,
+	})
+	ResetGroup:AddToggle("Demo_ResetToggle", {
+		Text = "Snap lines",
+		Default = false,
+	})
+	ResetGroup:AddButton({
+		Text = "Reset this group",
+		Func = function()
+			-- Confirm false skips the dialog and resets straight away.
+			ResetGroup:Reset(false)
+		end,
+	})
+
+	-- Undo and Redo replay the recorded change history.
+	local HistoryGroup = Tab:AddLeftGroupbox("Undo and redo", "history")
+	HistoryGroup:AddLabel("Change a control above, then step the history.", true)
+	HistoryGroup:AddButton({
+		Text = "Undo",
+		Func = function()
+			Library:Undo()
+		end,
+	})
+	HistoryGroup:AddButton({
+		Text = "Redo",
+		Func = function()
+			Library:Redo()
+		end,
+	})
+
+	-- The command palette needs an on-screen entry because Ctrl+K is not on a phone.
+	local CommandGroup = Tab:AddRightGroupbox("Command palette", "command")
+	if Library.RegisterCommand then
+		Library:RegisterCommand("demo_notify", "Say hello", function()
+			Notify("Command", "Ran the demo command.", 3)
+		end)
+		Library:RegisterCommand("demo_advanced", "Toggle advanced", function()
+			AdvancedState:Set(not AdvancedState:Get())
+		end)
+	end
+	CommandGroup:AddButton({
+		Text = "Open command palette",
+		Func = function()
+			Library:OpenCommandPalette()
+		end,
+	})
+	-- Favourites feed the favourites-only view of the same palette.
+	pcall(function()
+		Library:SetFavorite("Demo_SyncA", true)
+		Library:SetFavorite("Demo_ResetSlider", true)
+	end)
+	CommandGroup:AddButton({
+		Text = "Open favourites",
+		Func = function()
+			Library:OpenCommandPalette(true)
+		end,
+	})
+
+	-- The same three controls built two ways: by hand, then from a table.
+	local ImperativeGroup = Tab:AddLeftGroupbox("Built imperatively", "wrench")
+	ImperativeGroup:AddToggle("Demo_ImpToggle", { Text = "Enabled", Default = true })
+	ImperativeGroup:AddSlider("Demo_ImpSlider", {
+		Text = "Amount",
+		Min = 0,
+		Max = 100,
+		Default = 40,
+		Rounding = 0,
+	})
+	ImperativeGroup:AddDropdown("Demo_ImpDropdown", {
+		Text = "Target",
+		Values = { "Nearest", "Farthest", "Random" },
+		Default = "Nearest",
+	})
+
+	local DeclarativeGroup = Tab:AddRightGroupbox("Built from a table", "code")
+	DeclarativeGroup:AddLabel("Same controls, described as data and built by Library:BuildElementInto.", true)
+	if Library.BuildElementInto then
+		local Spec = {
+			{ Id = "Demo_DeclToggle", Type = "Toggle", Text = "Enabled", Default = true },
+			{ Id = "Demo_DeclSlider", Type = "Slider", Text = "Amount", Min = 0, Max = 100, Default = 40, Rounding = 0 },
+			{ Id = "Demo_DeclDropdown", Type = "Dropdown", Text = "Target", Values = { "Nearest", "Farthest", "Random" }, Default = "Nearest" },
+		}
+		for _, Element in Spec do
+			local Id = Element.Id
+			Element.Id = nil
+			Library:BuildElementInto(DeclarativeGroup, Id, Element)
+		end
+	end
+end)
+if not RuntimeOk then
+	warn("[MonHub Example] Runtime tab skipped: " .. tostring(RuntimeError))
+end
+
+-- ---------------------------------------------------------------------------
+-- Layout: switches for watching the responsive breakpoints and density presets.
+-- ---------------------------------------------------------------------------
+local LayoutOk, LayoutError = pcall(function()
+	local Tab = Window:AddTab("Layout", "layout-template")
+	DemoTabs.Layout = Tab
+
+	local WidthGroup = Tab:AddLeftGroupbox("Window width", "move-horizontal")
+	WidthGroup:AddLabel("Resize the window through the breakpoints. Below the single column width the two columns stack and the sidebar compacts.", true)
+
+	local function SetWindowWidth(Width)
+		if not Window.Frame then
+			return
+		end
+		local Height = Window.Frame.Size.Y.Offset
+		Window.Frame.Size = UDim2.fromOffset(Width, Height)
+		Window.Frame.Position = UDim2.new(
+			0.5,
+			-math.floor(Width / 2),
+			Window.Frame.Position.Y.Scale,
+			Window.Frame.Position.Y.Offset
+		)
+		if Window.RefreshResponsiveLayout then
+			Window:RefreshResponsiveLayout()
+		end
+	end
+
+	WidthGroup:AddSegmented("Demo_WidthPreset", {
+		Text = "Preset",
+		Values = { "Phone", "Tablet", "Desktop" },
+		Default = "Desktop",
+		Callback = function(Value)
+			local Width = 900
+			if Value == "Phone" then
+				Width = 500
+			elseif Value == "Tablet" then
+				Width = 700
+			end
+			SetWindowWidth(Width)
+		end,
+	})
+
+	local DensityGroup = Tab:AddRightGroupbox("Density", "rows-3")
+	DensityGroup:AddLabel("Compare the spacing presets live. Touch is picked for you on mobile.", true)
+	DensityGroup:AddSegmented("Demo_DensityPreset", {
+		Text = "Preset",
+		Values = { "Comfortable", "Compact", "Touch" },
+		Default = "Comfortable",
+		Callback = function(Value)
+			Library:SetDensity(Value)
+		end,
+	})
+
+	-- A progress pair so density and width changes have something to reflow.
+	local SampleGroup = Tab:AddLeftGroupbox("Sample content", "gauge")
+	local Determinate = SampleGroup:AddProgressBar("Demo_Progress", {
+		Text = "Download",
+		Value = 0,
+		Segments = 10,
+	})
+	if Determinate and Determinate.SetValue then
+		local Progress = 0
+		Library:GiveSignal(RunService.Heartbeat:Connect(function(Delta)
+			Progress = (Progress + Delta * 12) % 100
+			Determinate:SetValue(math.floor(Progress))
+		end))
+	end
+	local Busy = SampleGroup:AddProgressBar("Demo_ProgressBusy", {
+		Text = "Working",
+		Value = 0,
+	})
+	if Busy and Busy.SetIndeterminate then
+		Busy:SetIndeterminate(true)
+	end
+end)
+if not LayoutOk then
+	warn("[MonHub Example] Layout tab skipped: " .. tostring(LayoutError))
+end
+
+-- ---------------------------------------------------------------------------
+-- Recipes: four small hubs as sub-tabs under one parent. The parent is
+-- collapsed by default, shows a chevron, and auto-expands when a child opens.
+-- Copy any one of these as a starting point for a real menu.
+-- ---------------------------------------------------------------------------
+local RecipesOk, RecipesError = pcall(function()
+	local Parent = Window:AddTab("Recipes", "book-open")
+	DemoTabs.Recipes = Parent
+	Parent:AddLeftGroupbox("Recipes", "book-open")
+		:AddLabel("Expand this tab in the sidebar to open a ready-made hub layout.", true)
+
+	-- Farm recipe.
+	local Farm = Parent:AddSubTab("Farm", "sprout")
+	local FarmBox = Farm:AddLeftGroupbox("Auto farm", "sprout")
+	FarmBox:AddToggle("Recipe_FarmEnabled", { Text = "Enable auto farm", Default = false })
+	FarmBox:AddDropdown("Recipe_FarmTarget", {
+		Text = "Target",
+		Values = { "Nearest mob", "Boss", "Ore" },
+		Default = "Nearest mob",
+	})
+	FarmBox:AddSlider("Recipe_FarmRange", {
+		Text = "Range",
+		Min = 10,
+		Max = 500,
+		Default = 120,
+		Suffix = " studs",
+		Rounding = 0,
+	})
+	FarmBox:AddToggle("Recipe_FarmAutoSell", { Text = "Auto sell when full", Default = true })
+
+	-- Combat recipe. Tab:SetBadge tags the sidebar entry.
+	local Combat = Parent:AddSubTab("Combat", "swords")
+	if Combat.SetBadge then
+		Combat:SetBadge("PVP")
+	end
+	local CombatBox = Combat:AddLeftGroupbox("Aim assist", "swords")
+	CombatBox:AddToggle("Recipe_CombatEnabled", { Text = "Enable aim assist", Default = false })
+	CombatBox:AddSlider("Recipe_CombatSmoothing", {
+		Text = "Smoothing",
+		Min = 0,
+		Max = 100,
+		Default = 35,
+		Rounding = 0,
+	})
+	CombatBox:AddSegmented("Recipe_CombatBone", {
+		Text = "Target bone",
+		Values = { "Head", "Torso", "Random" },
+		Default = "Head",
+	})
+	-- KeyPicker attaches to a control, so hang it off a label.
+	CombatBox:AddLabel("Hold to aim"):AddKeyPicker("Recipe_CombatKey", {
+		Text = "Hold to aim",
+		Default = "E",
+		Mode = "Hold",
+	})
+
+	-- Visuals recipe.
+	local Visuals = Parent:AddSubTab("Visuals", "eye")
+	local VisualsBox = Visuals:AddLeftGroupbox("ESP", "eye")
+	VisualsBox:AddToggle("Recipe_VisualBoxes", { Text = "Boxes", Default = true })
+	VisualsBox:AddToggle("Recipe_VisualNames", { Text = "Names", Default = true })
+	VisualsBox:AddToggle("Recipe_VisualTracers", { Text = "Tracers", Default = false })
+	-- ColorPicker attaches to a control, so hang it off a label.
+	VisualsBox:AddLabel("ESP colour"):AddColorPicker("Recipe_VisualColor", {
+		Title = "ESP colour",
+		Default = Color3.fromRGB(80, 200, 255),
+		Transparency = 0,
+	})
+
+	-- Settings recipe.
+	local SettingsRecipe = Parent:AddSubTab("Settings", "settings")
+	local SettingsBox = SettingsRecipe:AddLeftGroupbox("Preferences", "settings")
+	SettingsBox:AddToggle("Recipe_SettingNotify", { Text = "Show notifications", Default = true })
+	SettingsBox:AddSlider("Recipe_SettingUiScale", {
+		Text = "UI scale",
+		Min = 80,
+		Max = 130,
+		Default = 100,
+		Suffix = "%",
+		Rounding = 0,
+	})
+	SettingsBox:AddInput("Recipe_SettingConfigName", {
+		Text = "Config name",
+		Placeholder = "default",
+		Finished = true,
+	})
+	SettingsBox:AddButton({
+		Text = "Save",
+		Func = function()
+			Notify("Settings", "Recipe settings saved.", 3)
+		end,
+	})
+end)
+if not RecipesOk then
+	warn("[MonHub Example] Recipes tab skipped: " .. tostring(RecipesError))
+end
+
 Notify(
 	"MonHub started",
 	"Loaded from the custom repository. Press RightShift to toggle the interface.",
@@ -2990,6 +3576,7 @@ return {
 	Library = Library,
 	Window = Window,
 	Tabs = Tabs,
+	DemoTabs = DemoTabs,
 	SaveManager = SaveManager,
 	ThemeManager = ThemeManager,
 	ESPPreview = ESPPreview,

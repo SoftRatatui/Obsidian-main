@@ -272,6 +272,19 @@ function Mock.Library()
     function Library:SafeCallback(Callback, ...)
         return Callback(...)
     end
+    Library.StreamerMode = false
+    Library.SoundEnabled = false
+    Library.SoundVolume = 0.5
+    Library.NotificationAnchor = "Screen"
+    Library.NotificationGroups = {}
+    Library.NotificationHistory = {}
+    Library.NotificationHistoryLimit = 100
+    function Library:PlaySound()
+        return Library
+    end
+    function Library:Sanitize(Text)
+        return Text
+    end
     return Library
 end
 

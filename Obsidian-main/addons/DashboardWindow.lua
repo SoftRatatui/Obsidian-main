@@ -64,9 +64,11 @@ function DashboardWindow.Create(Library, Info)
         Sections = {},
         Dynamic = {},
         Connections = {},
-        SchedulerRunning = false,
-        SchedulerRevision = 0,
+        TickKey = {},
+        TickQueued = false,
         VisibilityRevision = 0,
+        WidgetSequence = 0,
+        ChartHost = type(Info.ChartHost) == "table" and Info.ChartHost or nil,
         SectionOrder = 0,
         DefaultSection = nil,
         Style = Style,
@@ -74,13 +76,12 @@ function DashboardWindow.Create(Library, Info)
         Element = nil,
     }
 
-    local Holder = Instance.new("CanvasGroup")
+    local Holder = Instance.new("Frame")
     Holder.Name = "MonHubDashboardWindow"
     Holder.Active = true
     Holder.BackgroundColor3 = Library.Scheme.BackgroundColor
     Holder.BorderSizePixel = 0
     Holder.ClipsDescendants = true
-    Holder.GroupTransparency = Dashboard.Visible and 0 or 1
     Holder.Size = Embedded and UDim2.new(1, 0, 0, Dashboard.Height) or UDim2.fromOffset(Dashboard.Width, Dashboard.Height)
     Holder.Visible = Dashboard.Visible
     Holder.ZIndex = Embedded and Info.Parent.ZIndex or 40
@@ -111,6 +112,13 @@ function DashboardWindow.Create(Library, Info)
     Header.Parent = Holder
     Dashboard.Header = Header
     Library:AddToRegistry(Header, { BackgroundColor3 = "TopBarColor" })
+
+    local HeaderCorner = Instance.new("UICorner")
+    HeaderCorner.TopLeftRadius = UDim.new(0, Style.Radius)
+    HeaderCorner.TopRightRadius = UDim.new(0, Style.Radius)
+    HeaderCorner.BottomLeftRadius = UDim.new(0, 0)
+    HeaderCorner.BottomRightRadius = UDim.new(0, 0)
+    HeaderCorner.Parent = Header
 
     local HeaderLine = Instance.new("Frame")
     HeaderLine.AnchorPoint = Vector2.new(0, 1)
@@ -253,7 +261,7 @@ function DashboardWindow.Create(Library, Info)
     end
 
     local function ClampToViewport()
-        if Dashboard.Destroyed or not Holder.Parent then
+        if Dashboard.Destroyed or Dashboard.Fading or not Holder.Parent then
             return
         end
         local Viewport = GetViewportSize()
@@ -313,28 +321,34 @@ function DashboardWindow.Create(Library, Info)
         end
     end
 
-    local function EnsureScheduler()
-        if Dashboard.Destroyed or not Dashboard.Visible or Dashboard.SchedulerRunning or next(Dashboard.Dynamic) == nil then
+    local function IsActive()
+        return not Dashboard.Destroyed and Dashboard.Visible and Library.Toggled ~= false
+    end
+    Dashboard.IsActive = IsActive
+
+    local ScheduleTick
+    local function RunTick()
+        Dashboard.TickQueued = false
+        if not IsActive() or next(Dashboard.Dynamic) == nil then
             return
         end
-        Dashboard.SchedulerRunning = true
-        Dashboard.SchedulerRevision += 1
-        local Revision = Dashboard.SchedulerRevision
-        task.spawn(function()
-            while not Dashboard.Destroyed and Dashboard.Visible and Dashboard.SchedulerRevision == Revision and next(Dashboard.Dynamic) ~= nil do
-                for Widget, State in Dashboard.Dynamic do
-                    ApplyDynamic(Widget, State, false)
-                end
-                task.wait(0.1)
+        local Now = os.clock()
+        for Widget, State in Dashboard.Dynamic do
+            if Now >= State.NextUpdate then
+                ApplyDynamic(Widget, State, false)
             end
-            if Dashboard.SchedulerRevision == Revision then
-                Dashboard.SchedulerRunning = false
-                if not Dashboard.Destroyed and Dashboard.Visible and next(Dashboard.Dynamic) ~= nil then
-                    EnsureScheduler()
-                end
-            end
-        end)
+        end
+        ScheduleTick()
     end
+
+    function ScheduleTick()
+        if Dashboard.TickQueued or not IsActive() or next(Dashboard.Dynamic) == nil then
+            return
+        end
+        Dashboard.TickQueued = true
+        Library:QueueFrame(Dashboard.TickKey, RunTick)
+    end
+    Dashboard.ScheduleTick = ScheduleTick
 
     local function RegisterDynamic(Widget, Provider, Interval, Apply, ErrorText)
         UnregisterDynamic(Widget)
@@ -349,7 +363,7 @@ function DashboardWindow.Create(Library, Info)
             ErrorText = NormalizeText(ErrorText, "Unavailable"),
         }
         ApplyDynamic(Widget, Dashboard.Dynamic[Widget], true)
-        EnsureScheduler()
+        ScheduleTick()
     end
 
     local function AttachWidgetLifecycle(Section, Widget, Root)
@@ -382,6 +396,9 @@ function DashboardWindow.Create(Library, Info)
                 end
             end
             table.clear(Widget.Connections)
+            if type(Widget.OnDestroy) == "function" then
+                pcall(Widget.OnDestroy, Widget)
+            end
             local Index = table.find(Section.Widgets, Widget)
             if Index then
                 table.remove(Section.Widgets, Index)
@@ -391,6 +408,65 @@ function DashboardWindow.Create(Library, Info)
         end
 
         return Widget
+    end
+
+    local function DeriveChartHost(Container)
+        local Source = Dashboard.ChartHost
+        if type(Source) ~= "table" or Source.Destroyed then
+            return nil
+        end
+        local Meta = getmetatable(Source)
+        if type(Meta) ~= "table" then
+            return nil
+        end
+        return setmetatable({
+            Container = Container,
+            Elements = {},
+            Tab = Source.Tab,
+            Destroyed = false,
+            Resize = function() end,
+        }, Meta)
+    end
+
+    local function NextWidgetId(Prefix)
+        Dashboard.WidgetSequence += 1
+        return string.format("Dashboard/%s/%d", Prefix, Dashboard.WidgetSequence)
+    end
+
+    local ActiveFader
+    local function ClearFader()
+        local Fader = ActiveFader
+        if not Fader then
+            return
+        end
+        ActiveFader = nil
+        Dashboard.Fading = false
+        Library:CancelTween(Fader, "DashboardFade")
+        if Holder.Parent == Fader then
+            Holder.Parent = Fader.Parent
+            Holder.Position = Fader.Position
+        end
+        Fader:Destroy()
+    end
+
+    local function BeginFade(FromTransparency)
+        ClearFader()
+        local Fader = Instance.new("CanvasGroup")
+        Fader.Name = "DashboardFade"
+        Fader.Active = false
+        Fader.BackgroundTransparency = 1
+        Fader.BorderSizePixel = 0
+        Fader.ClipsDescendants = false
+        Fader.Position = Holder.Position
+        Fader.Size = Holder.Size
+        Fader.ZIndex = Holder.ZIndex
+        Fader.GroupTransparency = FromTransparency
+        Fader.Parent = Holder.Parent
+        Holder.Position = UDim2.fromOffset(0, 0)
+        Holder.Parent = Fader
+        ActiveFader = Fader
+        Dashboard.Fading = true
+        return Fader
     end
 
     local function UpdateSectionHeaders()
@@ -775,6 +851,265 @@ function DashboardWindow.Create(Library, Info)
             return AttachWidgetLifecycle(Section, Widget, Row)
         end
 
+        local function MakeHostWidget(Prefix, RowHeight, Order, Build)
+            local Widget = {}
+            local Row = Instance.new("Frame")
+            Row.BackgroundTransparency = 1
+            Row.ClipsDescendants = true
+            Row.LayoutOrder = tonumber(Order) or Section:NextOrder()
+            Row.Size = UDim2.new(1, 0, 0, RowHeight)
+            Row.ZIndex = 43
+            Row.Parent = Body
+
+            local Host = DeriveChartHost(Row)
+            local Control = Host and Build(Host, NextWidgetId(Prefix)) or nil
+            if not Control then
+                local Notice = Instance.new("TextLabel")
+                Notice.BackgroundTransparency = 1
+                Notice.FontFace = Library.Scheme.Font
+                Notice.Size = UDim2.fromScale(1, 1)
+                Notice.Text = "Chart unavailable"
+                Notice.TextColor3 = Library.Scheme.MutedFontColor
+                Notice.TextSize = 12
+                Notice.TextTruncate = Enum.TextTruncate.AtEnd
+                Notice.TextXAlignment = Enum.TextXAlignment.Left
+                Notice.ZIndex = 44
+                Notice.Parent = Row
+                Library:AddToRegistry(Notice, { FontFace = "Font", TextColor3 = "MutedFontColor" })
+                return AttachWidgetLifecycle(Section, Widget, Row), nil
+            end
+            Widget.Control = Control
+            function Widget.OnDestroy()
+                if type(Control.Destroy) == "function" then
+                    pcall(Control.Destroy, Control)
+                end
+            end
+            AttachWidgetLifecycle(Section, Widget, Row)
+            return Widget, Control
+        end
+
+        function Section:AddChart(Value)
+            local ChartInfo = type(Value) == "table" and Value or {}
+            local RowHeight = math.floor(math.clamp(tonumber(ChartInfo.Height) or (Library.IsMobile and 120 or 100), 24, 480))
+            local Widget, Control = MakeHostWidget("Chart", RowHeight, ChartInfo.Order, function(Host, Id)
+                return Host:AddChart(Id, {
+                    Kind = ChartInfo.Kind == "Bar" and "Bar" or "Line",
+                    Height = RowHeight,
+                    Capacity = ChartInfo.Capacity,
+                    Color = ChartInfo.Color,
+                    Min = ChartInfo.Min,
+                    Max = ChartInfo.Max,
+                    Thickness = ChartInfo.Thickness,
+                    Values = type(ChartInfo.Values) == "table" and ChartInfo.Values or nil,
+                })
+            end)
+            if not Control then
+                return Widget
+            end
+            local function Apply(Sample)
+                if type(Sample) == "table" then
+                    Control:SetValues(Sample)
+                elseif type(Sample) == "number" and Sample == Sample and math.abs(Sample) < math.huge then
+                    Control:Push(Sample)
+                end
+            end
+            function Widget:Push(Sample)
+                UnregisterDynamic(Widget)
+                Apply(Sample)
+                return Widget
+            end
+            function Widget:SetValues(Values)
+                UnregisterDynamic(Widget)
+                if type(Values) == "table" then
+                    Control:SetValues(Values)
+                end
+                return Widget
+            end
+            function Widget:SetProvider(Provider, Interval)
+                RegisterDynamic(Widget, Provider, Interval or ChartInfo.Interval, Apply, ChartInfo.ErrorText)
+                return Widget
+            end
+            local Provider = ChartInfo.Provider or ChartInfo.Value
+            if type(Provider) == "function" then
+                Widget:SetProvider(Provider, ChartInfo.Interval)
+            end
+            return Widget
+        end
+
+        function Section:AddBarChart(Value)
+            local ChartInfo = type(Value) == "table" and table.clone(Value) or {}
+            ChartInfo.Kind = "Bar"
+            return Section:AddChart(ChartInfo)
+        end
+
+        function Section:AddSparkline(Value)
+            local ChartInfo = type(Value) == "table" and table.clone(Value) or {}
+            ChartInfo.Kind = "Line"
+            ChartInfo.Height = math.floor(math.clamp(tonumber(ChartInfo.Height) or (Library.IsMobile and 44 or 34), 24, 120))
+            ChartInfo.Thickness = tonumber(ChartInfo.Thickness) or 2
+            return Section:AddChart(ChartInfo)
+        end
+
+        function Section:AddStat(Value)
+            local StatInfo = type(Value) == "table" and Value or { Text = tostring(Value) }
+            local RowHeight = math.floor(math.clamp(tonumber(StatInfo.Height) or (Library.IsMobile and 30 or 24), 18, 80))
+            local Widget, Control = MakeHostWidget("Stat", RowHeight, StatInfo.Order, function(Host, Id)
+                return Host:AddStatRow(Id, {
+                    Text = StatInfo.Label or StatInfo.Text,
+                    Value = "",
+                    Height = RowHeight,
+                    LabelRatio = StatInfo.LabelRatio,
+                })
+            end)
+            if not Control then
+                return Widget
+            end
+            local function Apply(StatValue)
+                if type(StatInfo.Format) == "function" then
+                    local Ok, Formatted = pcall(StatInfo.Format, StatValue, Widget, Dashboard)
+                    if Ok then
+                        StatValue = Formatted
+                    end
+                end
+                Control:SetValue(NormalizeText(StatValue, StatInfo.Fallback or "-"))
+            end
+            function Widget:SetLabel(Text)
+                Control:SetText(NormalizeText(Text, "Value"))
+                return Widget
+            end
+            function Widget:SetValue(StatValue)
+                UnregisterDynamic(Widget)
+                Apply(StatValue)
+                return Widget
+            end
+            function Widget:SetProvider(Provider, Interval)
+                RegisterDynamic(Widget, Provider, Interval or StatInfo.Interval, Apply, StatInfo.ErrorText)
+                return Widget
+            end
+            local Provider = StatInfo.Provider
+            if Provider == nil then
+                Provider = StatInfo.Value
+            end
+            if type(Provider) == "function" then
+                Widget:SetProvider(Provider, StatInfo.Interval)
+            elseif Provider ~= nil then
+                Apply(Provider)
+            end
+            return Widget
+        end
+
+        function Section:AddProgress(Value)
+            local ProgressInfo = type(Value) == "table" and Value or {}
+            local RowHeight = math.floor(math.clamp(tonumber(ProgressInfo.Height) or (Library.IsMobile and 38 or 30), 22, 80))
+            local Widget, Control = MakeHostWidget("Progress", RowHeight, ProgressInfo.Order, function(Host, Id)
+                return Host:AddProgressBar(Id, {
+                    Text = ProgressInfo.Label or ProgressInfo.Text,
+                    Min = ProgressInfo.Min,
+                    Max = ProgressInfo.Max,
+                    Value = tonumber(ProgressInfo.Value),
+                    Color = ProgressInfo.Color,
+                    Height = RowHeight,
+                    LabelRatio = ProgressInfo.LabelRatio,
+                    ShowValue = ProgressInfo.ShowValue,
+                })
+            end)
+            if not Control then
+                return Widget
+            end
+            local function Apply(ProgressValue)
+                local Number = tonumber(ProgressValue)
+                if Number and Number == Number and math.abs(Number) < math.huge then
+                    Control:SetValue(Number)
+                end
+            end
+            function Widget:SetLabel(Text)
+                Control:SetText(NormalizeText(Text, "Progress"))
+                return Widget
+            end
+            function Widget:SetRange(Min, Max)
+                Control:SetRange(Min, Max)
+                return Widget
+            end
+            function Widget:SetValue(ProgressValue)
+                UnregisterDynamic(Widget)
+                Apply(ProgressValue)
+                return Widget
+            end
+            function Widget:SetProvider(Provider, Interval)
+                RegisterDynamic(Widget, Provider, Interval or ProgressInfo.Interval, Apply, ProgressInfo.ErrorText)
+                return Widget
+            end
+            local Provider = ProgressInfo.Provider or ProgressInfo.Value
+            if type(Provider) == "function" then
+                Widget:SetProvider(Provider, ProgressInfo.Interval)
+            end
+            return Widget
+        end
+
+        function Section:AddLog(Value)
+            local LogInfo = type(Value) == "table" and Value or {}
+            local RowHeight = math.floor(math.clamp(tonumber(LogInfo.Height) or (Library.IsMobile and 160 or 120), 40, 480))
+            local DefaultLevel = NormalizeText(LogInfo.Level, "Info")
+            local Widget, Control = MakeHostWidget("Log", RowHeight, LogInfo.Order, function(Host, Id)
+                return Host:AddLog(Id, {
+                    Height = RowHeight,
+                    Capacity = LogInfo.Capacity,
+                    AutoScroll = LogInfo.AutoScroll,
+                })
+            end)
+            if not Control then
+                return Widget
+            end
+            local function AppendOne(Entry)
+                if type(Entry) == "table" then
+                    Control:Append(Entry.Level or DefaultLevel, Entry.Message or Entry.Text or "")
+                elseif Entry ~= nil then
+                    Control:Append(DefaultLevel, tostring(Entry))
+                end
+            end
+            local function Apply(Sample)
+                if Sample == nil then
+                    return
+                end
+                if type(Sample) == "table" and Sample.Message == nil and Sample.Text == nil and Sample.Level == nil then
+                    for _, Line in Sample do
+                        AppendOne(Line)
+                    end
+                else
+                    AppendOne(Sample)
+                end
+            end
+            function Widget:Append(Level, Message)
+                if Message == nil then
+                    AppendOne(Level)
+                else
+                    Control:Append(NormalizeText(Level, DefaultLevel), NormalizeText(Message, ""))
+                end
+                return Widget
+            end
+            function Widget:Clear()
+                Control:Clear()
+                return Widget
+            end
+            function Widget:SetLevel(Level)
+                Control:SetLevel(Level)
+                return Widget
+            end
+            function Widget:SetProvider(Provider, Interval)
+                RegisterDynamic(Widget, Provider, Interval or LogInfo.Interval, Apply, LogInfo.ErrorText)
+                return Widget
+            end
+            local Provider = LogInfo.Provider or LogInfo.Value
+            if type(Provider) == "function" then
+                Widget:SetProvider(Provider, LogInfo.Interval)
+            elseif type(LogInfo.Entries) == "table" then
+                for _, Line in LogInfo.Entries do
+                    AppendOne(Line)
+                end
+            end
+            return Widget
+        end
+
         function Section:Add(Value)
             if type(Value) == "string" or type(Value) == "function" then
                 return Section:AddText(Value)
@@ -787,6 +1122,18 @@ function DashboardWindow.Create(Library, Info)
                 return Section:AddButton(Value)
             elseif Kind == "custom" or Kind == "instance" then
                 return Section:AddCustom(Value)
+            elseif Kind == "chart" or Kind == "line" or Kind == "linechart" then
+                return Section:AddChart(Value)
+            elseif Kind == "bar" or Kind == "barchart" then
+                return Section:AddBarChart(Value)
+            elseif Kind == "sparkline" or Kind == "spark" then
+                return Section:AddSparkline(Value)
+            elseif Kind == "statrow" or Kind == "staterow" then
+                return Section:AddStat(Value)
+            elseif Kind == "progress" or Kind == "progressbar" then
+                return Section:AddProgress(Value)
+            elseif Kind == "log" or Kind == "logs" then
+                return Section:AddLog(Value)
             end
             return Section:AddText(Value)
         end
@@ -859,6 +1206,30 @@ function DashboardWindow.Create(Library, Info)
         return Dashboard:GetDefaultSection():AddCustom(Value)
     end
 
+    function Dashboard:AddChart(Value)
+        return Dashboard:GetDefaultSection():AddChart(Value)
+    end
+
+    function Dashboard:AddBarChart(Value)
+        return Dashboard:GetDefaultSection():AddBarChart(Value)
+    end
+
+    function Dashboard:AddSparkline(Value)
+        return Dashboard:GetDefaultSection():AddSparkline(Value)
+    end
+
+    function Dashboard:AddStat(Value)
+        return Dashboard:GetDefaultSection():AddStat(Value)
+    end
+
+    function Dashboard:AddProgress(Value)
+        return Dashboard:GetDefaultSection():AddProgress(Value)
+    end
+
+    function Dashboard:AddLog(Value)
+        return Dashboard:GetDefaultSection():AddLog(Value)
+    end
+
     function Dashboard:SetTitle(Value)
         if not Dashboard.Destroyed then
             Title.Text = NormalizeText(Value, "Dashboard")
@@ -883,45 +1254,56 @@ function DashboardWindow.Create(Library, Info)
         end
         Dashboard.VisibilityRevision += 1
         local Revision = Dashboard.VisibilityRevision
-        local Animate = Style.Motion ~= false and Library.Animations and Library.Animations.ToggleWindow
+        local Animate = Style.Motion ~= false and not Dashboard.Embedded and Library.Animations and Library.Animations.ToggleWindow
         if NewVisible then
+            ClearFader()
             Holder.Visible = true
             if Animate then
-                Holder.GroupTransparency = 1
-                Library:PlayTween(Holder, "DashboardVisibility", Library.WindowOpenAnimationInfo or Library.TweenInfo, {
+                local Fader = BeginFade(1)
+                local Tween = Library:PlayTween(Fader, "DashboardFade", Library:GetMotion("Fast"), {
                     GroupTransparency = 0,
                 })
-            else
-                Library:CancelTween(Holder, "DashboardVisibility")
-                Holder.GroupTransparency = 0
+                if Tween then
+                    Tween.Completed:Once(function()
+                        if ActiveFader == Fader then
+                            ClearFader()
+                            task.defer(ClampToViewport)
+                        end
+                    end)
+                else
+                    ClearFader()
+                end
             end
             if not Dashboard.Embedded then
                 task.defer(ClampToViewport)
             end
             Dashboard:Refresh()
-            EnsureScheduler()
+            ScheduleTick()
         elseif Animate then
-            local Tween = Library:PlayTween(Holder, "DashboardVisibility", Library.WindowCloseAnimationInfo or Library.TweenInfo, {
+            local Fader = BeginFade(0)
+            local function Finish()
+                ClearFader()
+                if not Dashboard.Destroyed and not Dashboard.Visible and Dashboard.VisibilityRevision == Revision then
+                    Holder.Visible = false
+                    if Dashboard.Element then
+                        Dashboard.Element:SetVisible(false)
+                    end
+                end
+            end
+            local Tween = Library:PlayTween(Fader, "DashboardFade", Library:GetMotion("Fast"), {
                 GroupTransparency = 1,
             })
             if Tween then
                 Tween.Completed:Once(function()
-                    if not Dashboard.Destroyed and not Dashboard.Visible and Dashboard.VisibilityRevision == Revision then
-                        Holder.Visible = false
-                        if Dashboard.Element then
-                            Dashboard.Element:SetVisible(false)
-                        end
+                    if ActiveFader == Fader then
+                        Finish()
                     end
                 end)
             else
-                Holder.Visible = false
-                if Dashboard.Element then
-                    Dashboard.Element:SetVisible(false)
-                end
+                Finish()
             end
         else
-            Library:CancelTween(Holder, "DashboardVisibility")
-            Holder.GroupTransparency = 1
+            ClearFader()
             Holder.Visible = false
             if Dashboard.Element then
                 Dashboard.Element:SetVisible(false)
@@ -986,10 +1368,15 @@ function DashboardWindow.Create(Library, Info)
             return
         end
         Dashboard.Destroyed = true
-        Library:CancelTween(Holder, "DashboardVisibility")
+        ClearFader()
         Library:CancelTween(CloseButton, "DashboardCloseHover")
         Library:CancelTween(CloseIcon, "DashboardCloseIconHover")
-        Dashboard.SchedulerRevision += 1
+        Dashboard.TickQueued = false
+        if Dashboard.ToggleDisconnect then
+            local Disconnect = Dashboard.ToggleDisconnect
+            Dashboard.ToggleDisconnect = nil
+            pcall(Disconnect)
+        end
         for _, Section in table.clone(Dashboard.Sections) do
             Section:Destroy()
         end
@@ -1038,7 +1425,13 @@ function DashboardWindow.Create(Library, Info)
 
     if not Embedded and type(Library.MakeDraggable) == "function" then
         Library:MakeDraggable(Holder, Header, true, false, function()
-            return Dashboard.Draggable and Dashboard.Visible
+            return Dashboard.Draggable and Dashboard.Visible and not Dashboard.Fading
+        end)
+    end
+
+    if type(Library.On) == "function" then
+        Dashboard.ToggleDisconnect = Library:On("Shown", function()
+            ScheduleTick()
         end)
     end
 
@@ -1084,6 +1477,7 @@ function DashboardWindow.CreateEmbedded(Library, Groupbox, Idx, Info)
     Holder.BackgroundTransparency = 1
     Holder.Size = UDim2.new(1, 0, 0, tonumber(Info.Height) or 360)
     Info.Parent = Holder
+    Info.ChartHost = Groupbox
     local Dashboard = DashboardWindow.Create(Library, Info)
     Dashboard.Root.Position = UDim2.fromScale(0, 0)
     Dashboard.Root.Size = UDim2.fromScale(1, 1)

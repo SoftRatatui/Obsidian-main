@@ -231,6 +231,7 @@ export type ButtonInfo = {
     Risky: boolean?,
     Disabled: boolean?,
     Visible: boolean?,
+    RevertAfter: number?,
 }
 
 export type ToggleInfo = {
@@ -250,6 +251,7 @@ export type ToggleInfo = {
     ConfirmDanger: boolean?,
     ConfirmTitle: string?,
     ConfirmDescription: string?,
+    Badge: (string | BadgeSpec)?,
     Disabled: boolean?,
     Visible: boolean?,
 }
@@ -272,6 +274,14 @@ export type InputInfo = {
     AllowEmpty: boolean?,
     EmptyReset: string?,
     MaxLength: number?,
+    Multiline: boolean?,
+    MaxLines: number?,
+    Mask: string?,
+    Prefix: string?,
+    Suffix: string?,
+    Clearable: boolean?,
+    Copyable: boolean?,
+    Validate: ((Value: string) -> string?)?,
     Tooltip: string?,
     DisabledTooltip: string?,
     Callback: ((string) -> ())?,
@@ -301,6 +311,7 @@ export type SliderInfo = {
     DisabledTooltip: string?,
     Callback: ((number) -> ())?,
     Changed: ((number) -> ())?,
+    Validate: ((Value: number) -> string?)?,
     Disabled: boolean?,
     Visible: boolean?,
     AllowRightClickInput: boolean?,
@@ -319,6 +330,7 @@ export type DropdownInfo = {
     DisabledValues: { any }?,
     ValueImages: { [any]: string }?,
     Multi: boolean?,
+    Chips: boolean?,
     DragSelect: boolean?,
     MaxVisibleDropdownItems: number?,
     SpecialType: "Player" | "Team"?,
@@ -330,8 +342,10 @@ export type DropdownInfo = {
     FormatListValue: ((any) -> string)?,
     Tooltip: string?,
     DisabledTooltip: string?,
+    Badge: (string | BadgeSpec)?,
     Callback: ((any) -> ())?,
     Changed: ((any) -> ())?,
+    Validate: ((Value: any) -> string?)?,
     Disabled: boolean?,
     Visible: boolean?,
 }
@@ -390,6 +404,66 @@ export type VideoInfo = {
 export type UIPassthroughInfo = {
     Instance: GuiBase2d,
     Height: number?,
+    Visible: boolean?,
+}
+
+export type BadgeStyle = "Dot" | "Counter" | "Label"
+
+export type BadgeSpec = {
+    Text: (string | number)?,
+    Style: BadgeStyle?,
+    Variant: ("Accent" | "Neutral")?,
+}
+
+export type SegmentedInfo = {
+    State: ReactiveState<any>?, VisibleWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?,
+    EnabledWhen: (boolean | ReactiveState<boolean> | (() -> boolean))?, NoSave: boolean?, Secret: boolean?,
+    Save: boolean?,
+    ConfigVersion: number?,
+    ConfigCallbackMode: ("Sync" | "Background")?,
+    Text: string?,
+    Values: { any },
+    Default: any,
+    Badge: (string | BadgeSpec)?,
+    Callback: ((any) -> ())?,
+    Changed: ((any) -> ())?,
+    Disabled: boolean?,
+    Visible: boolean?,
+}
+
+export type BadgeInfo = {
+    Label: string?,
+    Text: (string | number)?,
+    Style: BadgeStyle?,
+    Variant: ("Accent" | "Neutral")?,
+    Visible: boolean?,
+}
+
+export type EmptyStateInfo = {
+    Icon: (string | number)?,
+    Title: string?,
+    Text: string?,
+    ActionText: string?,
+    Callback: (() -> ())?,
+    Visible: boolean?,
+}
+
+export type DetailListItem = {
+    Icon: (string | number)?,
+    Title: string?,
+    Text: string?,
+    Callback: ((DetailListItem) -> ())?,
+}
+
+export type DetailListInfo = {
+    Items: { DetailListItem }?,
+    Visible: boolean?,
+}
+
+export type SettingsCardInfo = {
+    Title: string?,
+    Text: string?,
+    Control: { [string]: any }?,
     Visible: boolean?,
 }
 
@@ -636,6 +710,8 @@ export type Button = {
     SetIcon: (self: Button, Icon: string | number | boolean?, IconColor: Color3?) -> (),
     SetVisible: (self: Button, Visible: boolean) -> (),
     SetText: (self: Button, Text: string) -> (),
+    SetState: (self: Button, State: "Idle" | "Loading" | "Success" | "Error", Text: string?) -> Button,
+    State: string,
     Destroy: (self: Button) -> (),
 }
 
@@ -746,6 +822,9 @@ export type Input = {
     SetDisabled: (self: Input, Disabled: boolean) -> (),
     SetVisible: (self: Input, Visible: boolean) -> (),
     SetText: (self: Input, Text: string) -> (),
+    Valid: boolean,
+    SetError: (self: Input, Text: string) -> (),
+    ClearError: (self: Input) -> (),
     Destroy: (self: Input) -> (),
 }
 
@@ -785,6 +864,9 @@ export type Slider = {
     SetText: (self: Slider, Text: string) -> (),
     SetPrefix: (self: Slider, Prefix: string) -> (),
     SetSuffix: (self: Slider, Suffix: string) -> (),
+    Valid: boolean,
+    SetError: (self: Slider, Text: string) -> (),
+    ClearError: (self: Slider) -> (),
     Destroy: (self: Slider) -> (),
 }
 
@@ -840,6 +922,9 @@ export type Dropdown = {
     RefreshTypography: (self: Dropdown) -> (),
     SetText: (self: Dropdown, Text: string) -> (),
     SetDragSelect: (self: Dropdown, Value: boolean) -> (),
+    Valid: boolean,
+    SetError: (self: Dropdown, Text: string) -> (),
+    ClearError: (self: Dropdown) -> (),
     Destroy: (self: Dropdown) -> (),
 }
 
@@ -962,6 +1047,60 @@ export type Divider = {
     Destroy: (self: Divider) -> (),
 }
 
+export type Badge = {
+    Type: "Badge",
+    Holder: Frame,
+    SetText: (self: Badge, Value: string | number) -> (),
+    GetValue: (self: Badge) -> string?,
+    SetVisible: (self: Badge, Visible: boolean) -> (),
+    Destroy: (self: Badge) -> (),
+}
+
+export type Segmented = {
+    Type: "Segmented",
+    Value: any,
+    Values: { any },
+    Holder: Frame,
+    Container: GuiObject,
+    SetValue: (self: Segmented, Value: any) -> (),
+    GetValue: (self: Segmented) -> any,
+    SetText: (self: Segmented, Text: string) -> (),
+    SetDisabled: (self: Segmented, Disabled: boolean) -> (),
+    SetVisible: (self: Segmented, Visible: boolean) -> (),
+    OnChanged: (self: Segmented, Func: (any) -> ()) -> (),
+    Reset: (self: Segmented) -> (),
+    Destroy: (self: Segmented) -> (),
+}
+
+export type EmptyState = {
+    Type: "EmptyState",
+    Holder: Frame,
+    SetTitle: (self: EmptyState, Text: string) -> (),
+    SetText: (self: EmptyState, Text: string) -> (),
+    SetVisible: (self: EmptyState, Visible: boolean) -> (),
+    Destroy: (self: EmptyState) -> (),
+}
+
+export type DetailList = {
+    Type: "DetailList",
+    Items: { DetailListItem },
+    Holder: Frame,
+    SetItems: (self: DetailList, Items: { DetailListItem }) -> (),
+    GetValue: (self: DetailList) -> { DetailListItem },
+    SetVisible: (self: DetailList, Visible: boolean) -> (),
+    Destroy: (self: DetailList) -> (),
+}
+
+export type SettingsCard = {
+    Type: "SettingsCard",
+    Control: any,
+    Holder: Frame,
+    GetValue: (self: SettingsCard) -> any,
+    SetValue: (self: SettingsCard, Value: any) -> (),
+    SetVisible: (self: SettingsCard, Visible: boolean) -> (),
+    Destroy: (self: SettingsCard) -> (),
+}
+
 export type Element =
     Label
     | Button
@@ -974,6 +1113,11 @@ export type Element =
     | Video
     | UIPassthrough
     | Divider
+    | Badge
+    | Segmented
+    | EmptyState
+    | DetailList
+    | SettingsCard
 export type Hidden = {
     SetSave: (self: Hidden, Enabled: boolean) -> Hidden,
     Type: string,
@@ -1096,15 +1240,71 @@ export type StatRow = {
 export type ProgressBarInfo = {
     Text: string?, Value: number?, Min: number?, Max: number?, ShowValue: boolean?,
     Height: number?, Visible: boolean?, LabelRatio: number?, Color: Color3?,
+    Indeterminate: boolean?, Segments: number?,
 }
 export type ProgressBar = {
     Value: number, Min: number, Max: number, Holder: Frame, Fill: Frame,
+    Indeterminate: boolean, Segments: number?, Filled: number,
     SetText: (self: ProgressBar, Value: string) -> ProgressBar,
     SetValue: (self: ProgressBar, Value: number) -> ProgressBar,
     SetRange: (self: ProgressBar, Min: number, Max: number) -> ProgressBar,
+    SetIndeterminate: (self: ProgressBar, State: boolean) -> ProgressBar,
     SetVisible: (self: ProgressBar, Value: boolean) -> (),
     SetHeight: (self: ProgressBar, Height: number) -> (),
     Destroy: (self: ProgressBar) -> (),
+}
+
+export type SplitButtonOption = {
+    Text: string,
+    Icon: (string | number)?,
+    Callback: (() -> ())?,
+}
+export type SplitButtonInfo = {
+    Text: string?,
+    Callback: (() -> ())?,
+    Options: { SplitButtonOption }?,
+    Disabled: boolean?,
+    Visible: boolean?,
+}
+export type SplitButton = {
+    Type: "SplitButton",
+    Text: string,
+    Holder: Frame,
+    SetText: (self: SplitButton, Text: string) -> (),
+    SetDisabled: (self: SplitButton, Disabled: boolean) -> (),
+    SetVisible: (self: SplitButton, Visible: boolean) -> (),
+    Destroy: (self: SplitButton) -> (),
+}
+
+export type StepEntry = { Title: string?, Text: string? }
+export type StepsInfo = {
+    Steps: { StepEntry }?,
+    Current: number?,
+    Visible: boolean?,
+}
+export type Steps = {
+    Type: "Steps",
+    Holder: Frame,
+    SetCurrent: (self: Steps, Index: number) -> Steps,
+    SetStatus: (self: Steps, Index: number, Status: "Pending" | "Active" | "Done" | "Error") -> Steps,
+    GetCurrent: (self: Steps) -> number,
+    SetVisible: (self: Steps, Visible: boolean) -> (),
+    Destroy: (self: Steps) -> (),
+}
+
+export type SkeletonInfo = {
+    Rows: number?,
+    RowHeight: number?,
+    Shimmer: boolean?,
+    Visible: boolean?,
+}
+export type Skeleton = {
+    Type: "Skeleton",
+    Holder: Frame,
+    Start: (self: Skeleton) -> (),
+    Stop: (self: Skeleton) -> (),
+    SetVisible: (self: Skeleton, Visible: boolean) -> (),
+    Destroy: (self: Skeleton) -> (),
 }
 
 export type BaseGroupbox = {
@@ -1132,6 +1332,14 @@ export type BaseGroupbox = {
     AddInput: (self: Groupbox, Idx: string, Info: InputInfo) -> Input,
     AddSlider: (self: Groupbox, Idx: string, Info: SliderInfo) -> Slider,
     AddDropdown: (self: Groupbox, Idx: string, Info: DropdownInfo) -> Dropdown,
+    AddSegmented: (self: Groupbox, Idx: string, Info: SegmentedInfo) -> Segmented,
+    AddBadge: (self: Groupbox, Idx: string, Info: BadgeInfo) -> Badge,
+    AddEmptyState: (self: Groupbox, Idx: string, Info: EmptyStateInfo) -> EmptyState,
+    AddDetailList: (self: Groupbox, Idx: string, Info: DetailListInfo) -> DetailList,
+    AddSettingsCard: (self: Groupbox, Idx: string, Info: SettingsCardInfo) -> SettingsCard,
+    AddSplitButton: (self: Groupbox, Idx: string, Info: SplitButtonInfo) -> SplitButton,
+    AddSteps: (self: Groupbox, Idx: string, Info: StepsInfo) -> Steps,
+    AddSkeleton: (self: Groupbox, Idx: string, Info: SkeletonInfo) -> Skeleton,
     AddViewport: (self: Groupbox, Idx: string, Info: ViewportInfo) -> Viewport,
     AddImage: (self: Groupbox, Idx: string, Info: ImageInfo) -> Image,
     AddVideo: (self: Groupbox, Idx: string, Info: VideoInfo) -> Video,
@@ -1276,6 +1484,7 @@ export type Tab = {
     ) -> Tab,
     SetExpanded: (self: Tab, Expanded: boolean) -> Tab,
     IsExpanded: (self: Tab) -> boolean,
+    SetBadge: (self: Tab, Text: (string | number)?, Style: (BadgeStyle | BadgeSpec)?) -> Tab,
 }
 
 export type KeyTab = BaseGroupbox & {
@@ -1340,6 +1549,7 @@ export type Loading = {
     SetLoadingIconColor: (self: Loading, Color: Color3) -> (),
     SetCurrentStep: (self: Loading, Step: number) -> (),
     SetTotalSteps: (self: Loading, Steps: number) -> (),
+    SetStepCaptions: (self: Loading, Captions: { StepEntry }) -> Loading,
     SetWindowHeight: (self: Loading, Height: number) -> (),
     SetWindowWidth: (self: Loading, Width: number) -> (),
     SetContentWidth: (self: Loading, Width: number) -> (),
@@ -1425,6 +1635,7 @@ export type Window = {
     SetFooter: (self: Window, Footer: string) -> (),
     SetAlwaysOnTop: (self: Window, Enabled: boolean) -> (),
     SetCornerRadius: (self: Window, Radius: number) -> (),
+    SetInputCapture: (self: Window, Enabled: boolean) -> Window,
     SetAnimations: (
         self: Window,
         Animations: { [string]: boolean }?,
@@ -1556,6 +1767,11 @@ export type Library = {
     LocalPlayer: Player,
     DevicePlatform: Enum.Platform?,
     IsMobile: boolean,
+    Density: string,
+    ActiveDensity: string,
+    TabSwipeEnabled: boolean,
+    HapticsEnabled: boolean,
+    InputCapture: boolean,
     IsRobloxFocused: boolean,
     ScreenGui: ScreenGui?,
     Window: Window?,
@@ -1601,6 +1817,10 @@ export type Library = {
     Toggles: { [string | number]: Toggle },
     Options: { [string | number]: Option },
     NotifySide: "Right" | "Left",
+    NotificationAnchor: "Screen" | "Window" | "Line",
+    StreamerMode: boolean,
+    SoundEnabled: boolean,
+    SoundVolume: number,
     ShowCustomCursor: boolean,
     ForceCheckbox: boolean,
     TooltipsEnabled: boolean,
@@ -1688,6 +1908,12 @@ export type Library = {
     GlyphSize: (self: Library, Box: number, Preferred: number?) -> number,
     GetLuminance: (self: Library, Color: Color3) -> number,
     GetContrastColor: (self: Library, Background: Color3) -> Color3,
+    CreateBadge: (self: Library, Parent: GuiObject, Info: BadgeSpec) -> Badge,
+    GetStepCaption: (self: Library, Steps: { StepEntry }?, Index: number) -> (string, string),
+    ShowSkeleton: (self: Library, Container: GuiObject, Info: SkeletonInfo?) -> any,
+    HideSkeleton: (self: Library, Container: GuiObject) -> (),
+    CreateSkeletonBody: (self: Library, Parent: GuiObject, Info: SkeletonInfo?, Fill: boolean?) -> any,
+    BuildElementInto: (self: Library, Target: any, Id: string, Definition: { [string]: any }) -> any,
     OnThemeChanged: (self: Library, Callback: () -> ()) -> () -> (),
     ApplyTheme: (self: Library) -> (),
     ReleaseRegistryTree: (self: Library, Object: Instance) -> (),
@@ -1700,6 +1926,21 @@ export type Library = {
     RegisterTheme: (self: Library, Name: string, Overrides: { [string]: any }, Base: string?) -> Library,
     ThemeErrors: { { Object: Instance, Property: string, Message: string } },
     SetReducedMotion: (self: Library, Enabled: boolean) -> Library,
+    SetDensity: (self: Library, Mode: ("Comfortable" | "Compact" | "Touch" | "Auto" | string)) -> Library,
+    ResolveDensity: (self: Library, Mode: string?) -> string,
+    ApplyDensity: (self: Library) -> Library,
+    Vibrate: (self: Library, Kind: ("Light" | "Medium" | "Heavy")?) -> (),
+    SetHapticsEnabled: (self: Library, Enabled: boolean) -> Library,
+    PlaySound: (self: Library, Token: string) -> Library,
+    SetSoundEnabled: (self: Library, Enabled: boolean) -> Library,
+    SetSoundVolume: (self: Library, Volume: number) -> Library,
+    Sanitize: (self: Library, Text: string) -> string,
+    SetStreamerMode: (self: Library, Enabled: boolean) -> Library,
+    SetTabSwipeEnabled: (self: Library, Enabled: boolean) -> Library,
+    SetInputCapture: (self: Library, Enabled: boolean) -> Library,
+    ResolveInputCapture: (self: Library, Value: boolean?) -> boolean,
+    GetOrderedTabs: (self: Library) -> { any },
+    SwitchTabRelative: (self: Library, Delta: number, Wrap: boolean?) -> boolean,
     GetAddonStyle: (self: Library, Overrides: { [string]: any }?) -> AddonStyle,
     GiveSignal: (self: Library, Connection: RBXScriptConnection) -> RBXScriptConnection,
     GetIcon: (self: Library, IconName: string) -> Icon?,
@@ -1708,6 +1949,8 @@ export type Library = {
     ResetCursorIcon: (self: Library) -> (),
     ChangeCursorIcon: (self: Library, ImageId: string) -> (),
     ChangeCursorIconSize: (self: Library, Size: UDim2) -> (),
+    SetCursorVariant: (self: Library, Name: string) -> boolean,
+    SetCustomCursorEnabled: (self: Library, Enabled: boolean) -> boolean,
     GetBetterColor: (self: Library, Color: Color3, Add: number) -> Color3,
     GetAccentSurfaceColor: (self: Library, Strength: number?) -> Color3,
     GetSurfaceColor: (self: Library, Level: ("Surface" | "Raised" | "Element" | "Hover" | string)?) -> Color3,
@@ -1815,6 +2058,9 @@ export type Library = {
     SetWatermarkOptions: (self: Library, Info: { [string]: any }) -> Library,
     SetWatermarkStyle: (self: Library, Info: { [string]: any }) -> Library,
     SetWatermarkPreset: (self: Library, Name: "Compact" | "Minimal" | "Classic") -> Library,
+    SetWatermarkFormat: (self: Library, Format: string?) -> Library,
+    RegisterWatermarkToken: (self: Library, Name: string, Getter: () -> any) -> Library,
+    RefreshWatermarkFormat: (self: Library, Immediate: boolean?) -> Library,
     AddContextMenu: (
         self: Library,
         Holder: GuiObject,
@@ -1849,6 +2095,12 @@ export type Library = {
     SetNotifyOptions: (self: Library, Info: { [string]: any }) -> Library,
     ClearNotifications: (self: Library) -> Library,
     UpdateNotificationPositions: (self: Library, Snap: boolean?) -> (),
+    SetNotificationAnchor: (self: Library, Mode: "Screen" | "Window" | "Line") -> Library,
+    ApplyNotificationAnchor: (self: Library) -> (),
+    SetNotificationFilter: (self: Library, Config: ({ Default: ("toast" | "history" | "suppress")?, Categories: { [string]: ("toast" | "history" | "suppress") }?, Priorities: { [string]: ("toast" | "history" | "suppress") }? } | (Category: string, Priority: string) -> any)?) -> Library,
+    GetNotificationHistory: (self: Library) -> { { Text: string, Category: string, Priority: string, Timestamp: number } },
+    ClearNotificationHistory: (self: Library) -> Library,
+    ShowNotificationHistory: (self: Library) -> any,
     Notify: (
         self: Library,
         Info: {
@@ -1875,6 +2127,10 @@ export type Library = {
             Accent: boolean?,
             ShowProgress: boolean?,
             Dismissible: boolean?,
+            Priority: ("Low" | "Normal" | "High" | "Critical")?,
+            Category: string?,
+            Key: string?,
+            Actions: { { Text: string, Icon: (string | number)?, Callback: (() -> any?)?, Primary: boolean? } }?,
         } | string,
         Time: (number | Instance)?,
         SoundId: string | number?

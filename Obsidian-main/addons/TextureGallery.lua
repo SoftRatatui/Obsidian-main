@@ -85,15 +85,24 @@ function TextureGallery.Create(Library, Info)
         CaptionSize = 12,
     }
 
+    local IsMobile = Library.IsMobile == true
+    local Gap = math.clamp(math.floor(tonumber(Info.Gap) or Style.Gap), 2, 14)
+    local CellHeight = math.max(64, IsMobile and 44 or 0)
+
     local Gallery = {
         Height = math.clamp(tonumber(Info.Height) or 292, 210, 520),
         Columns = math.clamp(math.floor(tonumber(Info.Columns) or 2), 1, 3),
         Items = {},
-        Cards = {},
+        Slots = {},
         Selected = nil,
         Visible = Info.Visible ~= false,
         Destroyed = false,
         Connections = {},
+        EffectiveColumns = math.clamp(math.floor(tonumber(Info.Columns) or 2), 1, 3),
+        ColumnWidths = nil,
+        ColumnOffsets = nil,
+        CellHeight = CellHeight,
+        Gap = Gap,
         PreviewTransparency = math.clamp(tonumber(Info.PreviewTransparency) or 0, 0, 1),
         CardTransparency = math.clamp(tonumber(Info.CardTransparency) or 0, 0, 1),
         ImageTransparency = math.clamp(tonumber(Info.ImageTransparency) or 0.04, 0, 1),
@@ -188,10 +197,11 @@ function TextureGallery.Create(Library, Info)
     Grid.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     Grid.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
     Grid.Active = true
-    Grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Grid.AutomaticCanvasSize = Enum.AutomaticSize.None
     Grid.BackgroundTransparency = 1
     Grid.BorderSizePixel = 0
-    Grid.CanvasSize = UDim2.fromScale(0, 0)
+    Grid.CanvasSize = UDim2.fromOffset(0, 0)
+    Grid.CanvasPosition = Vector2.zero
     Grid.Position = UDim2.fromOffset(0, 86)
     Grid.ScrollBarImageColor3 = Library.Scheme.AccentColor
     Grid.ScrollBarImageTransparency = 0.35
@@ -202,54 +212,69 @@ function TextureGallery.Create(Library, Info)
     Grid.Parent = Root
     Library:AddToRegistry(Grid, { ScrollBarImageColor3 = "AccentColor" })
 
-    local GridLayout = Instance.new("UIGridLayout")
-    GridLayout.CellPadding = UDim2.fromOffset(Style.Gap, Style.Gap)
-    GridLayout.CellSize = UDim2.fromOffset(100, 64)
-    GridLayout.FillDirectionMaxCells = Gallery.Columns
-    GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    GridLayout.Parent = Grid
+    local ResolvedCache = {}
+    local ResolvedOrder = {}
+    local function ResolveAsset(Value)
+        if Value == nil or Value == "" then
+            return ""
+        end
+        local Cached = ResolvedCache[Value]
+        if Cached ~= nil then
+            return Cached
+        end
+        local Result = NormalizeAsset(Value)
+        ResolvedCache[Value] = Result
+        table.insert(ResolvedOrder, Value)
+        if #ResolvedOrder > 128 then
+            local Oldest = table.remove(ResolvedOrder, 1)
+            ResolvedCache[Oldest] = nil
+        end
+        return Result
+    end
 
-    local GridPadding = Instance.new("UIPadding")
-    GridPadding.PaddingBottom = UDim.new(0, 2)
-    GridPadding.PaddingTop = UDim.new(0, 1)
-    GridPadding.PaddingLeft = UDim.new(0, 1)
-    GridPadding.PaddingRight = UDim.new(0, 3)
-    GridPadding.Parent = Grid
+    local VirtualView
+
+    local function ItemColors(Item)
+        return typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
+            typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
+    end
 
     local function ResolveGridMetrics()
-        local Width = math.floor(Grid.AbsoluteSize.X / GetGuiScale(Grid)) - 2 - Grid.ScrollBarThickness
-        if Gallery.Destroyed or Width <= 0 then
+        if Gallery.Destroyed then
             return
         end
-        local Count = math.min(Gallery.Columns, math.max(1, math.floor((Width + Style.Gap) / (64 + Style.Gap))))
-        GridLayout.FillDirectionMaxCells = Count
-        local CellWidth = math.max(1, math.floor((Width - Style.Gap * (Count - 1)) / Count))
-        local Remaining = math.max(0, Width - CellWidth * Count - Style.Gap * (Count - 1))
-        GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
-        GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
-        GridLayout.CellSize = UDim2.fromOffset(CellWidth, 64)
-    end
-    local GridConnection = Grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics)
-    local ScrollbarConnection = Grid:GetPropertyChangedSignal("ScrollBarThickness"):Connect(ResolveGridMetrics)
-    ResolveGridMetrics()
-
-    local function DisconnectAll()
-        for _, Connection in Gallery.Connections do
-            if Connection and Connection.Connected then
-                Connection:Disconnect()
-            end
+        local Width = math.floor(Grid.AbsoluteSize.X / GetGuiScale(Grid)) - 2 - Grid.ScrollBarThickness
+        if Width <= 0 then
+            return
         end
-        table.clear(Gallery.Connections)
-    end
+        local MinSide = IsMobile and 44 or 64
+        local Count = math.clamp(Gallery.Columns, 1, math.max(1, math.floor((Width + Gap) / (MinSide + Gap))))
+        Gallery.EffectiveColumns = Count
 
-    local function UpdateSelection()
-        for Item, Card in Gallery.Cards do
-            local Selected = Item == Gallery.Selected
-            Card.Stroke.Color = Selected and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-            Card.Stroke.Transparency = Selected and math.min(0.06, Gallery.OutlineTransparency) or Gallery.OutlineTransparency
-            Card.Name.TextColor3 = Selected and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
+        local Base = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
+        local Remainder = math.max(0, Width - Base * Count - Gap * (Count - 1))
+        local Widths = {}
+        local Offsets = {}
+        local Cursor = 0
+        for Column = 1, Count do
+            local CellWidth = Base + (Column <= Remainder and 1 or 0)
+            Widths[Column] = CellWidth
+            Offsets[Column] = Cursor
+            Cursor += CellWidth + Gap
         end
+        Gallery.ColumnWidths = Widths
+        Gallery.ColumnOffsets = Offsets
+
+        if VirtualView then
+            VirtualView.Columns = Count
+            VirtualView.RowHeight = Gallery.CellHeight + Gap
+            VirtualView:Refresh()
+        end
+    end
+    table.insert(Gallery.Connections, Grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics))
+    table.insert(Gallery.Connections, Grid:GetPropertyChangedSignal("ScrollBarThickness"):Connect(ResolveGridMetrics))
+
+    local function UpdatePreview()
         local Item = Gallery.Selected
         if not Item then
             PreviewImage.Image = ""
@@ -259,38 +284,31 @@ function TextureGallery.Create(Library, Info)
             PreviewTrackGradient.Color = PreviewGradient.Color
             return
         end
-        PreviewImage.Image = NormalizeAsset(Item.Texture or Item.AssetId or Item.Image)
+        PreviewImage.Image = ResolveAsset(Item.Texture or Item.AssetId or Item.Image)
         PreviewScale.Scale = math.clamp(tonumber(Item.PreviewImageScale or Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
         PreviewImage.ImageTransparency = math.clamp(tonumber(Item.PreviewImageTransparency or Item.ImageTransparency) or Gallery.PreviewImageTransparency, 0, 1)
         PreviewImage.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
         PreviewName.Text = tostring(Item.Name or Item.Id or "Texture")
-        local ColorA = typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor
-        local ColorB = typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
+        local ColorA, ColorB = ItemColors(Item)
         PreviewGradient.Color = ColorSequence.new(ColorA, ColorB)
         PreviewTrackGradient.Color = PreviewGradient.Color
     end
 
-    local function ClearCards()
-        DisconnectAll()
-        for _, Card in Gallery.Cards do
-            if Card.Root then
-                RemoveRegistryTree(Library, Card.Root)
-                Card.Root:Destroy()
-            end
-        end
-        table.clear(Gallery.Cards)
-    end
+    local SlotSequence = 0
+    local function CreateSlot()
+        SlotSequence += 1
+        local Index = SlotSequence
+        local ConnectionStart = #Gallery.Connections
 
-    local function CreateCard(Item, Index)
         local Button = Instance.new("TextButton")
         Button.AutoButtonColor = false
         Button.BackgroundColor3 = Library.Scheme.ElementColor
         Button.BackgroundTransparency = Gallery.CardTransparency
         Button.BorderSizePixel = 0
         Button.ClipsDescendants = true
-        Button.LayoutOrder = Index
-        Button.Size = UDim2.fromScale(1, 1)
+        Button.Size = UDim2.fromOffset(100, Gallery.CellHeight)
         Button.Text = ""
+        Button.Visible = false
         Button.Parent = Grid
         ApplyCorner(Button, Style.Radius)
         Library:AddToRegistry(Button, { BackgroundColor3 = "ElementColor" })
@@ -301,11 +319,6 @@ function TextureGallery.Create(Library, Info)
         Stroke.Thickness = Style.StrokeThickness
         Stroke.Transparency = Gallery.OutlineTransparency
         Stroke.Parent = Button
-        Library:AddToRegistry(Stroke, {
-            Color = function()
-                return Gallery.Selected == Item and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-            end,
-        })
 
         local Track = Instance.new("Frame")
         Track.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -317,40 +330,24 @@ function TextureGallery.Create(Library, Info)
         ApplyCorner(Track, 3)
 
         local TrackGradient = Instance.new("UIGradient")
-        TrackGradient.Color = ColorSequence.new(
-            typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
-            typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
-        )
         TrackGradient.Parent = Track
 
         local Image = Instance.new("ImageLabel")
         Image.BackgroundTransparency = 1
-        Image.Image = NormalizeAsset(Item.Texture or Item.AssetId or Item.Image)
+        Image.Image = ""
         Image.ImageColor3 = Color3.new(1, 1, 1)
-        Image.ImageTransparency = math.clamp(tonumber(Item.ImageTransparency or Item.Transparency) or Gallery.ImageTransparency, 0, 1)
+        Image.ImageTransparency = Gallery.ImageTransparency
         Image.Position = UDim2.fromOffset(8, 8)
-        Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+        Image.ScaleType = Gallery.ScaleType
         Image.Size = UDim2.new(1, -16, 0, 28)
         Image.Parent = Button
 
         local ImageScale = Instance.new("UIScale")
-        ImageScale.Scale = math.clamp(tonumber(Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        ImageScale.Scale = Gallery.ImageScale
         ImageScale.Parent = Image
 
         local Gradient = Instance.new("UIGradient")
-        Gradient.Color = ColorSequence.new(
-            typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
-            typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
-        )
         Gradient.Parent = Image
-        Library:AddToRegistry(Gradient, {
-            Color = function()
-                return ColorSequence.new(
-                    typeof(Item.ColorA) == "Color3" and Item.ColorA or Library.Scheme.AccentColor,
-                    typeof(Item.ColorB) == "Color3" and Item.ColorB or Library.Scheme.FontColor
-                )
-            end,
-        })
 
         local Name = Instance.new("TextLabel")
         Name.AnchorPoint = Vector2.new(0, 1)
@@ -358,36 +355,63 @@ function TextureGallery.Create(Library, Info)
         Name.FontFace = Library.Scheme.Font
         Name.Position = UDim2.new(0, 8, 1, -5)
         Name.Size = UDim2.new(1, -16, 0, 17)
-        Name.Text = tostring(Item.Name or Item.Id or "Texture")
+        Name.Text = ""
         Name.TextColor3 = Library.Scheme.MutedFontColor
         Name.TextSize = Style.CaptionSize
         Name.TextTruncate = Enum.TextTruncate.AtEnd
         Name.TextXAlignment = Enum.TextXAlignment.Left
         Name.Parent = Button
+
+        local Slot = {
+            Index = Index,
+            Root = Button,
+            Button = Button,
+            Stroke = Stroke,
+            Track = Track,
+            TrackGradient = TrackGradient,
+            Image = Image,
+            Scale = ImageScale,
+            Gradient = Gradient,
+            Name = Name,
+            Item = nil,
+        }
+        Gallery.Slots[Index] = Slot
+
+        Library:AddToRegistry(Stroke, {
+            Color = function()
+                return Slot.Item ~= nil and Gallery.Selected == Slot.Item and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+            end,
+        })
         Library:AddToRegistry(Name, {
             FontFace = "Font",
             TextColor3 = function()
-                return Gallery.Selected == Item and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
+                return Slot.Item ~= nil and Gallery.Selected == Slot.Item and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
             end,
         })
-
-        Gallery.Cards[Item] = {
-            Root = Button,
-            Stroke = Stroke,
-            Image = Image,
-            Scale = ImageScale,
-            Name = Name,
-        }
-
-        if type(Library.BindAddonStyle) == "function" then
-            Library:BindAddonStyle(Button, Style, Info)
-        end
+        Library:AddToRegistry(Gradient, {
+            Color = function()
+                if not Slot.Item then
+                    return ColorSequence.new(Library.Scheme.AccentColor, Library.Scheme.FontColor)
+                end
+                local ColorA, ColorB = ItemColors(Slot.Item)
+                return ColorSequence.new(ColorA, ColorB)
+            end,
+        })
+        Library:AddToRegistry(TrackGradient, {
+            Color = function()
+                if not Slot.Item then
+                    return ColorSequence.new(Library.Scheme.AccentColor, Library.Scheme.FontColor)
+                end
+                local ColorA, ColorB = ItemColors(Slot.Item)
+                return ColorSequence.new(ColorA, ColorB)
+            end,
+        })
 
         table.insert(Gallery.Connections, Button.MouseEnter:Connect(function()
             if Gallery.Destroyed then
                 return
             end
-            Library:PlayTween(Button, "TextureHover", Library.HoverTweenInfo or Library.TweenInfo, {
+            Library:PlayTween(Button, "TextureHover" .. Index, Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.HoverColor,
             })
         end))
@@ -395,28 +419,120 @@ function TextureGallery.Create(Library, Info)
             if Gallery.Destroyed then
                 return
             end
-            Library:PlayTween(Button, "TextureHover", Library.HoverTweenInfo or Library.TweenInfo, {
+            Library:PlayTween(Button, "TextureHover" .. Index, Library.HoverTweenInfo or Library.TweenInfo, {
                 BackgroundColor3 = Library.Scheme.ElementColor,
             })
         end))
         table.insert(Gallery.Connections, Button.Activated:Connect(function()
-            Gallery:Select(Item)
+            if Gallery.Destroyed or not Slot.Item then
+                return
+            end
+            Gallery:Select(Slot.Item)
         end))
+
+        local SlotConnections = {}
+        for Number = ConnectionStart + 1, #Gallery.Connections do
+            table.insert(SlotConnections, Gallery.Connections[Number])
+        end
+        function Slot:Reset()
+            self.Item = nil
+            self.Image.Image = ""
+            self.Name.Text = ""
+        end
+        function Slot:Destroy()
+            for _, Connection in SlotConnections do
+                pcall(function()
+                    Connection:Disconnect()
+                end)
+                local Found = table.find(Gallery.Connections, Connection)
+                if Found then
+                    table.remove(Gallery.Connections, Found)
+                end
+            end
+            if type(Library.CancelTween) == "function" then
+                Library:CancelTween(Button, "TextureHover" .. Index)
+            end
+            RemoveRegistryTree(Library, Button)
+            Button:Destroy()
+            Gallery.Slots[Index] = nil
+        end
+        return Slot
+    end
+
+    local function RenderSlot(Slot, Item)
+        Slot.Item = Item
+        Slot.Button.Visible = Item ~= nil
+        if not Item then
+            Slot.Image.Image = ""
+            Slot.Name.Text = ""
+            return
+        end
+        Slot.Image.Image = ResolveAsset(Item.Texture or Item.AssetId or Item.Image)
+        Slot.Image.ImageTransparency = math.clamp(tonumber(Item.ImageTransparency or Item.Transparency) or Gallery.ImageTransparency, 0, 1)
+        Slot.Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+        Slot.Scale.Scale = math.clamp(tonumber(Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        Slot.Name.Text = tostring(Item.Name or Item.Id or "Texture")
+        local ColorA, ColorB = ItemColors(Item)
+        local Colors = ColorSequence.new(ColorA, ColorB)
+        Slot.Gradient.Color = Colors
+        Slot.TrackGradient.Color = Colors
+        local Selected = Gallery.Selected == Item
+        Slot.Stroke.Color = Selected and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+        Slot.Stroke.Transparency = Selected and math.min(0.06, Gallery.OutlineTransparency) or Gallery.OutlineTransparency
+        Slot.Name.TextColor3 = Selected and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
+        Slot.Button.BackgroundTransparency = Gallery.CardTransparency
+    end
+
+    local function PlaceSlot(Slot, Index)
+        local Count = Gallery.EffectiveColumns
+        local Column = (Index - 1) % Count
+        local Widths = Gallery.ColumnWidths
+        local Offsets = Gallery.ColumnOffsets
+        local RowIndex = math.floor((Index - 1) / Count)
+        if Widths and Offsets and Widths[Column + 1] then
+            Slot.Button.Position = UDim2.fromOffset(Offsets[Column + 1], RowIndex * (Gallery.CellHeight + Gap))
+            Slot.Button.Size = UDim2.fromOffset(Widths[Column + 1], Gallery.CellHeight)
+        end
+        RenderSlot(Slot, Gallery.Items[Index])
+    end
+
+    VirtualView = Library and type(Library.CreateVirtualList) == "function" and Library:CreateVirtualList(Grid, {
+        Count = 0,
+        Columns = Gallery.EffectiveColumns,
+        RowHeight = Gallery.CellHeight + Gap,
+        Gap = Gap,
+        Scale = function()
+            return GetGuiScale(Grid)
+        end,
+        CreateRow = function()
+            return CreateSlot()
+        end,
+        RenderRow = function(Slot, Index)
+            PlaceSlot(Slot, Index)
+        end,
+    }) or nil
+    Gallery.VirtualView = VirtualView
+
+    local function Refresh(ResetScroll)
+        if Gallery.Destroyed then
+            return
+        end
+        if ResetScroll then
+            Grid.CanvasPosition = Vector2.zero
+        end
+        if VirtualView then
+            VirtualView:SetCount(#Gallery.Items)
+        end
     end
 
     function Gallery:SetItems(Items)
         if Gallery.Destroyed then
             return Gallery
         end
-        ClearCards()
         Gallery.Items = type(Items) == "table" and table.clone(Items) or {}
         Gallery.Selected = nil
-        for Index, Item in Gallery.Items do
-            if type(Item) == "table" then
-                CreateCard(Item, Index)
-            end
-        end
-        UpdateSelection()
+        UpdatePreview()
+        Refresh(true)
         return Gallery
     end
 
@@ -439,7 +555,10 @@ function TextureGallery.Create(Library, Info)
             return nil
         end
         Gallery.Selected = Item
-        UpdateSelection()
+        UpdatePreview()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
         if not Silent and type(Info.OnSelected) == "function" then
             Library:SafeCallback(Info.OnSelected, Item, Gallery)
         end
@@ -461,29 +580,28 @@ function TextureGallery.Create(Library, Info)
 
     function Gallery:SetColumns(Columns)
         Gallery.Columns = math.clamp(math.floor(tonumber(Columns) or Gallery.Columns), 1, 3)
-        GridLayout.FillDirectionMaxCells = Gallery.Columns
         ResolveGridMetrics()
         return Gallery
     end
 
     function Gallery:SetImageTransparency(Value)
         Gallery.ImageTransparency = math.clamp(tonumber(Value) or Gallery.ImageTransparency, 0, 1)
-        for Item, Card in Gallery.Cards do
-            Card.Image.ImageTransparency = math.clamp(tonumber(Item.ImageTransparency or Item.Transparency) or Gallery.ImageTransparency, 0, 1)
+        if VirtualView then
+            VirtualView:Refresh()
         end
         return Gallery
     end
 
     function Gallery:SetPreviewImageTransparency(Value)
         Gallery.PreviewImageTransparency = math.clamp(tonumber(Value) or Gallery.PreviewImageTransparency, 0, 1)
-        UpdateSelection()
+        UpdatePreview()
         return Gallery
     end
 
     function Gallery:SetCardTransparency(Value)
         Gallery.CardTransparency = math.clamp(tonumber(Value) or Gallery.CardTransparency, 0, 1)
-        for _, Card in Gallery.Cards do
-            Card.Root.BackgroundTransparency = Gallery.CardTransparency
+        for _, Slot in Gallery.Slots do
+            Slot.Button.BackgroundTransparency = Gallery.CardTransparency
         end
         return Gallery
     end
@@ -497,24 +615,26 @@ function TextureGallery.Create(Library, Info)
     function Gallery:SetOutlineTransparency(Value)
         Gallery.OutlineTransparency = math.clamp(tonumber(Value) or Gallery.OutlineTransparency, 0, 1)
         PreviewStroke.Transparency = Gallery.OutlineTransparency
-        UpdateSelection()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
         return Gallery
     end
 
     function Gallery:SetScaleType(Value)
         Gallery.ScaleType = ResolveScaleType(Value)
-        for Item, Card in Gallery.Cards do
-            Card.Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+        UpdatePreview()
+        if VirtualView then
+            VirtualView:Refresh()
         end
-        UpdateSelection()
         return Gallery
     end
 
     function Gallery:SetImageScale(Value)
         Gallery.ImageScale = math.clamp(tonumber(Value) or Gallery.ImageScale, 0.1, 4)
         PreviewScale.Scale = Gallery.ImageScale
-        for Item, Card in Gallery.Cards do
-            Card.Scale.Scale = math.clamp(tonumber(Item.ImageScale or Item.Zoom) or Gallery.ImageScale, 0.1, 4)
+        if VirtualView then
+            VirtualView:Refresh()
         end
         return Gallery
     end
@@ -545,13 +665,25 @@ function TextureGallery.Create(Library, Info)
             return
         end
         Gallery.Destroyed = true
+        if VirtualView then
+            VirtualView:Destroy()
+            VirtualView = nil
+            Gallery.VirtualView = nil
+        end
         if Gallery.StyleController then
             Gallery.StyleController:Destroy()
             Gallery.StyleController = nil
         end
-        GridConnection:Disconnect()
-        ScrollbarConnection:Disconnect()
-        ClearCards()
+        for _, Connection in Gallery.Connections do
+            pcall(function()
+                Connection:Disconnect()
+            end)
+        end
+        table.clear(Gallery.Connections)
+        table.clear(Gallery.Slots)
+        table.clear(Gallery.Items)
+        table.clear(ResolvedCache)
+        table.clear(ResolvedOrder)
         RemoveRegistryTree(Library, Root)
         if Gallery.Element and Gallery.Element.Destroy then
             Gallery.Element:Destroy()
@@ -564,6 +696,7 @@ function TextureGallery.Create(Library, Info)
     if typeof(Info.Parent) == "Instance" and Info.Parent:IsA("GuiBase2d") then
         Gallery:Mount(Info.Parent, Gallery.Height)
     end
+    ResolveGridMetrics()
     Gallery:SetItems(Info.Items or TextureGallery.DefaultItems)
     if Info.Selected ~= nil then
         Gallery:Select(Info.Selected, true)

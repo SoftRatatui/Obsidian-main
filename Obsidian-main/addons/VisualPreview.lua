@@ -81,6 +81,25 @@ local function ResolveCharacter(Source, Seen, Depth)
     return nil
 end
 
+local function PrepareClone(Clone)
+    if not IsClass(Clone, "Instance") then
+        return Clone
+    end
+    for _, Object in Clone:GetDescendants() do
+        if Object:IsA("Script") or Object:IsA("LocalScript") or Object:IsA("ModuleScript") then
+            Object:Destroy()
+        elseif Object:IsA("BasePart") then
+            Object.Anchored = true
+            Object.CanCollide = false
+            Object.CastShadow = false
+        elseif Object:IsA("Humanoid") then
+            Object.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+            Object.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+        end
+    end
+    return Clone
+end
+
 local function CloneCharacter(Source)
     local Character = ResolveCharacter(Source)
     if not Character or not IsLiveInstance(Character) then
@@ -103,19 +122,7 @@ local function CloneCharacter(Source)
         return nil
     end
 
-    for _, Object in Clone:GetDescendants() do
-        if Object:IsA("Script") or Object:IsA("LocalScript") or Object:IsA("ModuleScript") then
-            Object:Destroy()
-        elseif Object:IsA("BasePart") then
-            Object.Anchored = true
-            Object.CanCollide = false
-            Object.CastShadow = false
-        elseif Object:IsA("Humanoid") then
-            Object.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-            Object.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-        end
-    end
-
+    PrepareClone(Clone)
     return Clone
 end
 
@@ -133,6 +140,224 @@ local function FocusCamera(Object, Camera, Yaw, Pitch, Zoom)
         Camera.CFrame = CFrame.lookAt(Position - Rotation.LookVector * Distance, Position)
     end)
 end
+
+local DescriptionAssetFields = {
+    "BackAccessory",
+    "FaceAccessory",
+    "FrontAccessory",
+    "HairAccessory",
+    "HatAccessory",
+    "NeckAccessory",
+    "ShouldersAccessory",
+    "WaistAccessory",
+    "Face",
+    "Head",
+    "LeftArm",
+    "LeftLeg",
+    "RightArm",
+    "RightLeg",
+    "Torso",
+    "GraphicTShirt",
+    "Pants",
+    "Shirt",
+}
+
+local DescriptionColorFields = {
+    "HeadColor",
+    "LeftArmColor",
+    "LeftLegColor",
+    "RightArmColor",
+    "RightLegColor",
+    "TorsoColor",
+}
+
+local DescriptionScaleFields = {
+    "BodyTypeScale",
+    "DepthScale",
+    "HeadScale",
+    "HeightScale",
+    "ProportionScale",
+    "WidthScale",
+}
+
+local function FingerprintDescription(Description)
+    if not IsClass(Description, "HumanoidDescription") then
+        return nil
+    end
+    local Success, Result = pcall(function()
+        local Parts = {}
+        for _, Field in DescriptionAssetFields do
+            Parts[#Parts + 1] = tostring(Description[Field])
+        end
+        for _, Field in DescriptionColorFields do
+            local Color = Description[Field]
+            if typeof(Color) == "Color3" then
+                Parts[#Parts + 1] = string.format(
+                    "%d,%d,%d",
+                    math.floor(Color.R * 255 + 0.5),
+                    math.floor(Color.G * 255 + 0.5),
+                    math.floor(Color.B * 255 + 0.5)
+                )
+            else
+                Parts[#Parts + 1] = "?"
+            end
+        end
+        for _, Field in DescriptionScaleFields do
+            Parts[#Parts + 1] = string.format("%.3f", tonumber(Description[Field]) or 0)
+        end
+        return table.concat(Parts, "|")
+    end)
+    return Success and Result or nil
+end
+
+local function FingerprintCharacter(Character)
+    if not IsClass(Character, "Model") then
+        return nil
+    end
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if not IsClass(Humanoid, "Humanoid") then
+        return nil
+    end
+    local Success, Description = pcall(Humanoid.GetAppliedDescription, Humanoid)
+    if not Success or not IsClass(Description, "HumanoidDescription") then
+        return nil
+    end
+    local Result = FingerprintDescription(Description)
+    if Description.Parent == nil then
+        pcall(function()
+            Description:Destroy()
+        end)
+    end
+    return Result
+end
+
+local function CreateCache(Options)
+    Options = type(Options) == "table" and Options or {}
+    local Cache = {
+        Entries = {},
+        Order = {},
+        Limit = math.max(1, tonumber(Options.Limit) or 6),
+        Detach = Options.Detach ~= false,
+        RequireParented = Options.RequireParented == true,
+    }
+
+    function Cache:Evict()
+        while #self.Order > self.Limit do
+            local Key = table.remove(self.Order, 1)
+            local Cached = self.Entries[Key]
+            self.Entries[Key] = nil
+            if typeof(Cached) == "Instance" then
+                pcall(function()
+                    Cached:Destroy()
+                end)
+            end
+        end
+    end
+
+    function Cache:Take(Key)
+        if Key == nil then
+            return nil
+        end
+        local Cached = self.Entries[Key]
+        self.Entries[Key] = nil
+        local Index = table.find(self.Order, Key)
+        if Index then
+            table.remove(self.Order, Index)
+        end
+        if typeof(Cached) ~= "Instance" then
+            return nil
+        end
+        if self.RequireParented and Cached.Parent == nil then
+            pcall(function()
+                Cached:Destroy()
+            end)
+            return nil
+        end
+        return Cached
+    end
+
+    function Cache:Store(Key, Model)
+        if typeof(Model) ~= "Instance" then
+            return
+        end
+        if Key == nil then
+            pcall(function()
+                Model:Destroy()
+            end)
+            return
+        end
+        local Existing = self.Entries[Key]
+        if typeof(Existing) == "Instance" and Existing ~= Model then
+            pcall(function()
+                Existing:Destroy()
+            end)
+            local Index = table.find(self.Order, Key)
+            if Index then
+                table.remove(self.Order, Index)
+            end
+        end
+        if self.Detach then
+            pcall(function()
+                Model.Parent = nil
+            end)
+        end
+        self.Entries[Key] = Model
+        table.insert(self.Order, Key)
+        self:Evict()
+    end
+
+    function Cache:Flush()
+        for Key, Model in self.Entries do
+            if typeof(Model) == "Instance" then
+                pcall(function()
+                    Model:Destroy()
+                end)
+            end
+            self.Entries[Key] = nil
+        end
+        table.clear(self.Order)
+    end
+
+    return Cache
+end
+
+local CloneCache = CreateCache({ Limit = 6, Detach = true })
+
+local function KeyForTarget(Source, Character)
+    local Fingerprint = FingerprintCharacter(Character)
+    if not Fingerprint then
+        return nil
+    end
+    local UserId
+    if IsClass(Source, "Player") then
+        UserId = Source.UserId
+    elseif IsClass(Character, "Model") then
+        local Player = Players:GetPlayerFromCharacter(Character)
+        UserId = Player and Player.UserId
+    end
+    return string.format("%s|%s", tostring(UserId or "model"), Fingerprint)
+end
+
+local SharedRenderer = {
+    Cache = CloneCache,
+    CreateCache = CreateCache,
+    FingerprintDescription = FingerprintDescription,
+    FingerprintCharacter = FingerprintCharacter,
+    KeyForTarget = KeyForTarget,
+    Prepare = PrepareClone,
+    Frame = FocusCamera,
+    Take = function(Key)
+        return CloneCache:Take(Key)
+    end,
+    Store = function(Key, Model)
+        CloneCache:Store(Key, Model)
+    end,
+    Flush = function()
+        CloneCache:Flush()
+    end,
+}
+
+VisualPreview.SharedRenderer = SharedRenderer
 
 local function CreateText(Parent, Position, Size, ZIndex, FontFace)
     local Label = Instance.new("TextLabel")
@@ -434,9 +659,15 @@ function VisualPreview.Create(Library, Tab, Info)
         Pitch = 0,
         Zoom = 1.9,
         Connections = {},
+        ModelKey = nil,
+        NeedsBuild = false,
+        HideToken = 0,
     }
     local UpdateRenderer = function() end
     local SetRendererVisible = function() end
+    local BuildDisplayModel
+    local ClearDisplayModel
+    local IsDisplayable
 
     if Overlay.InfoTop then
         Library:AddToRegistry(Overlay.InfoTop, {
@@ -705,39 +936,57 @@ function VisualPreview.Create(Library, Tab, Info)
         end
     end
 
-    function Preview:SetTarget(Source)
-        if Preview.Destroyed then
-            return false
-        end
-
-        if Preview.TargetConnection then
-            pcall(function()
-                Preview.TargetConnection:Disconnect()
-            end)
-            Preview.TargetConnection = nil
-        end
-
-        if Model then
-            pcall(function()
-                Model:Destroy()
-            end)
-            Model = nil
-        end
-        Preview.Model = nil
-        Preview.Bounds = nil
+    ClearDisplayModel = function(AllowCache)
         if IsClass(Chams, "Highlight") then
             pcall(function()
                 Chams.Adornee = nil
                 Chams.Enabled = false
             end)
         end
+        if Model then
+            if AllowCache and Preview.ModelKey then
+                SharedRenderer.Store(Preview.ModelKey, Model)
+            else
+                pcall(function()
+                    Model:Destroy()
+                end)
+            end
+        end
+        Model = nil
+        Preview.Model = nil
+        Preview.ModelKey = nil
+        Preview.Bounds = nil
+    end
+
+    BuildDisplayModel = function(Source)
+        if Preview.Destroyed then
+            return false
+        end
 
         local Character = ResolveCharacter(Source)
-        local Clone = CloneCharacter(Character)
         Preview.Target = Source
         Preview.SourceCharacter = Character
+
+        local Key = SharedRenderer.KeyForTarget(Source, Character)
+        if Model and IsLiveInstance(Model) and Key and Preview.ModelKey == Key then
+            Preview.NeedsBuild = false
+            UpdateCamera()
+            UpdateTargetInfo(Character)
+            return true
+        end
+
+        ClearDisplayModel(true)
+
+        local Clone = SharedRenderer.Take(Key)
+        if not IsClass(Clone, "Model") then
+            Clone = CloneCharacter(Character)
+        end
+
         Preview.Model = Clone
         Model = Clone
+        Preview.ModelKey = Clone and Key or nil
+        Preview.NeedsBuild = false
+
         if IsClass(Chams, "Highlight") then
             pcall(function()
                 Chams.Adornee = Clone
@@ -752,9 +1001,12 @@ function VisualPreview.Create(Library, Tab, Info)
             if Success then
                 UpdateCamera()
             else
-                Clone:Destroy()
+                pcall(function()
+                    Clone:Destroy()
+                end)
                 Model = nil
                 Preview.Model = nil
+                Preview.ModelKey = nil
                 if IsClass(Chams, "Highlight") then
                     pcall(function()
                         Chams.Adornee = nil
@@ -765,6 +1017,22 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         UpdateTargetInfo(Character)
+        return Model ~= nil
+    end
+
+    function Preview:SetTarget(Source)
+        if Preview.Destroyed then
+            return false
+        end
+
+        if Preview.TargetConnection then
+            pcall(function()
+                Preview.TargetConnection:Disconnect()
+            end)
+            Preview.TargetConnection = nil
+        end
+
+        Preview.Target = Source
 
         if IsClass(Source, "Player") and IsLiveInstance(Source) then
             local Success, Connection = pcall(function()
@@ -777,17 +1045,31 @@ function VisualPreview.Create(Library, Tab, Info)
             end
         end
 
+        if IsDisplayable() then
+            BuildDisplayModel(Source)
+        else
+            ClearDisplayModel(true)
+            Preview.SourceCharacter = nil
+            Preview.NeedsBuild = true
+            UpdateTargetInfo(nil)
+        end
+
         return Model ~= nil
     end
 
     local function RefreshTarget()
-        if Preview.Destroyed then
+        if Preview.Destroyed or not IsDisplayable() then
             return
         end
 
         local Character = ResolveCharacter(Preview.Target)
-        if Character ~= Preview.SourceCharacter or (Model and not IsLiveInstance(Model)) then
-            Preview:SetTarget(Preview.Target)
+        if
+            Preview.NeedsBuild
+            or (not Model and Character)
+            or (Model and not IsLiveInstance(Model))
+            or Character ~= Preview.SourceCharacter
+        then
+            BuildDisplayModel(Preview.Target)
             return
         end
 
@@ -910,7 +1192,7 @@ function VisualPreview.Create(Library, Tab, Info)
         return Success and Visible
     end
 
-    local function IsDisplayable()
+    IsDisplayable = function()
         local TabMatches = not BindToTab or Library.ActiveTab == Tab
         local MenuMatches = not BindToMenu or Library.Toggled and IsMainVisible()
         return Preview.Enabled and TabMatches and MenuMatches and IsTabVisible()
@@ -981,6 +1263,26 @@ function VisualPreview.Create(Library, Tab, Info)
         end
     end
 
+    local TeardownGrace = 2
+    local function ScheduleTeardown()
+        if not Model then
+            Preview.NeedsBuild = true
+            return
+        end
+        Preview.HideToken += 1
+        local Token = Preview.HideToken
+        task.delay(TeardownGrace, function()
+            if Preview.Destroyed or Token ~= Preview.HideToken then
+                return
+            end
+            if IsDisplayable() then
+                return
+            end
+            ClearDisplayModel(true)
+            Preview.NeedsBuild = true
+        end)
+    end
+
     local function UpdateVisibility()
         if Preview.Destroyed or not Holder.Parent then
             return
@@ -992,6 +1294,7 @@ function VisualPreview.Create(Library, Tab, Info)
         SetRendererVisible(Visible)
 
         if Visible then
+            Preview.HideToken += 1
             if Preview.EmbeddedElement and Preview.EmbeddedElement.Visible ~= true then
                 Preview.EmbeddedElement:SetVisible(true)
             end
@@ -1015,11 +1318,13 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         if not Holder.Visible then
+            ScheduleTeardown()
             return
         end
 
         Rotating = false
         LastPointerPosition = nil
+        ScheduleTeardown()
 
         if Style.Motion == false then
             Library:CancelTween(AnimationScale, "VisualPreviewVisibility")
@@ -1480,6 +1785,7 @@ function VisualPreview.Create(Library, Tab, Info)
         end
 
         Preview.Destroyed = true
+        Preview.HideToken += 1
         if type(Library.CancelTween) == "function" then
             Library:CancelTween(AnimationScale, "VisualPreviewVisibility")
         end
@@ -1519,6 +1825,7 @@ function VisualPreview.Create(Library, Tab, Info)
             Model = nil
             Preview.Model = nil
         end
+        Preview.ModelKey = nil
         Preview.Target = nil
         Preview.SourceCharacter = nil
         RemoveRegistryTree(Library, Holder)
@@ -1536,6 +1843,7 @@ function VisualPreview.Create(Library, Tab, Info)
 
     Library:OnUnload(function()
         Preview:Destroy()
+        SharedRenderer.Flush()
     end)
 
     if RendererAdapter then

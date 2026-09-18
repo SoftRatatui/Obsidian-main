@@ -77,6 +77,7 @@ function FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, I
         Renderer = Info.Renderer,
         OwnsRenderer = false,
         SourceModel = nil,
+        ModelKey = nil,
         Connections = {},
         Refreshing = false,
     }
@@ -94,32 +95,79 @@ function FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, I
         Controller.OwnsRenderer = true
     end
 
-    local function BuildModel()
-        local Description = GetDescription(Controller.Player)
-        local Model = CreateR6Model(Description)
-        if Description and Description.Parent == nil then
-            Description:Destroy()
+    local SharedRenderer = type(VisualPreview) == "table" and VisualPreview.SharedRenderer or nil
+
+    local function KeyForDescription(Description)
+        if not SharedRenderer or type(SharedRenderer.FingerprintDescription) ~= "function" then
+            return nil
         end
+        local Fingerprint = SharedRenderer.FingerprintDescription(Description)
+        if not Fingerprint then
+            return nil
+        end
+        local UserId = Controller.Player and Controller.Player.UserId or "model"
+        return string.format("%s|%s", tostring(UserId), Fingerprint)
+    end
+
+    local ModelCache = SharedRenderer
+        and type(SharedRenderer.CreateCache) == "function"
+        and SharedRenderer.CreateCache({ Limit = 4, Detach = false, RequireParented = true })
+        or nil
+
+    local function CacheTake(Key)
+        if not ModelCache then
+            return nil
+        end
+        return ModelCache:Take(Key)
+    end
+
+    local function CacheStore(Key, Model)
+        if ModelCache then
+            ModelCache:Store(Key, Model)
+        elseif typeof(Model) == "Instance" then
+            pcall(function()
+                Model:Destroy()
+            end)
+        end
+    end
+
+    local function BuildFromDescription(Description)
+        local Model = CreateR6Model(Description)
         if not Model then
             return nil
         end
-        Model.Name = "MonHubRealR6Preview"
-        Model.Parent = SourceFolder
-        for _, Object in Model:GetDescendants() do
-            if Object:IsA("BasePart") then
-                Object.Anchored = true
-                Object.CanCollide = false
-                Object.CanQuery = false
-                Object.CanTouch = false
-                Object.CastShadow = false
-            elseif Object:IsA("Script") or Object:IsA("LocalScript") or Object:IsA("ModuleScript") then
-                Object:Destroy()
+        local Success = pcall(function()
+            Model.Name = "MonHubRealR6Preview"
+            Model.Parent = SourceFolder
+            for _, Object in Model:GetDescendants() do
+                if Object:IsA("BasePart") then
+                    Object.Anchored = true
+                    Object.CanCollide = false
+                    Object.CanQuery = false
+                    Object.CanTouch = false
+                    Object.CastShadow = false
+                elseif Object:IsA("Script") or Object:IsA("LocalScript") or Object:IsA("ModuleScript") then
+                    Object:Destroy()
+                end
             end
+        end)
+        if not Success then
+            pcall(function()
+                Model:Destroy()
+            end)
+            return nil
         end
         return Model
     end
 
-    Controller.SourceModel = BuildModel()
+    local InitialDescription = GetDescription(Controller.Player)
+    Controller.ModelKey = KeyForDescription(InitialDescription)
+    Controller.SourceModel = BuildFromDescription(InitialDescription)
+    if InitialDescription and InitialDescription.Parent == nil then
+        pcall(function()
+            InitialDescription:Destroy()
+        end)
+    end
     assert(Controller.SourceModel, "Unable to create the R6 preview model")
 
     Controller.Preview = VisualPreview.Create(Library, Tab, {
@@ -194,20 +242,48 @@ function FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, I
             return false
         end
         Controller.Refreshing = true
-        local Model = BuildModel()
+
+        local Description = GetDescription(Controller.Player)
+        local Key = KeyForDescription(Description)
+
+        if Key and Controller.ModelKey == Key and Controller.SourceModel and Controller.SourceModel.Parent then
+            if Description and Description.Parent == nil then
+                pcall(function()
+                    Description:Destroy()
+                end)
+            end
+            Controller.Refreshing = false
+            return true
+        end
+
+        local Model = CacheTake(Key)
+        if not Model then
+            Model = BuildFromDescription(Description)
+        end
+        if Description and Description.Parent == nil then
+            pcall(function()
+                Description:Destroy()
+            end)
+        end
         Controller.Refreshing = false
+
         if not Model then
             return false
         end
         if Controller.Destroyed then
-            Model:Destroy()
+            pcall(function()
+                Model:Destroy()
+            end)
             return false
         end
+
         local Previous = Controller.SourceModel
+        local PreviousKey = Controller.ModelKey
         Controller.SourceModel = Model
+        Controller.ModelKey = Key
         Controller.Preview:SetTarget(Model)
-        if Previous then
-            Previous:Destroy()
+        if Previous and Previous ~= Model then
+            CacheStore(PreviousKey, Previous)
         end
         return true
     end
@@ -234,7 +310,11 @@ function FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, I
         if SourceFolder then
             SourceFolder:Destroy()
         end
+        if ModelCache then
+            ModelCache:Flush()
+        end
         Controller.SourceModel = nil
+        Controller.ModelKey = nil
     end
 
     if Controller.Player and Info.AutoRefresh ~= false then

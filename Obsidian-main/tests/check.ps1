@@ -561,4 +561,71 @@ try {
 } finally {
     Remove-Item -LiteralPath $taskSaveGenerated -ErrorAction SilentlyContinue
 }
+$taskGeomStart = $taskLibrarySource.IndexOf('function Library:GetDesignToken(')
+$taskGeomEnd = $taskLibrarySource.IndexOf('function Library:GetMotion(', $taskGeomStart)
+$taskGeomCode = $taskLibrarySource.Substring($taskGeomStart, $taskGeomEnd - $taskGeomStart)
+$taskGlyphStart = $taskLibrarySource.IndexOf('function Library:GlyphSize(')
+$taskGlyphEnd = $taskLibrarySource.IndexOf('function Library:GetLuminance(', $taskGlyphStart)
+$taskGlyphCode = $taskLibrarySource.Substring($taskGlyphStart, $taskGlyphEnd - $taskGlyphStart)
+$taskDensityStart = $taskLibrarySource.IndexOf('Library.DensityPresets = {')
+$taskDensityEnd = $taskLibrarySource.IndexOf('local HapticAmplitudes = {', $taskDensityStart)
+$taskDensityCode = $taskLibrarySource.Substring($taskDensityStart, $taskDensityEnd - $taskDensityStart)
+$taskSidesStart = $taskLibrarySource.IndexOf('        function Tab:RefreshSides()')
+$taskSidesEnd = $taskLibrarySource.IndexOf('        table.insert(Tab.Connections, TabContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()', $taskSidesStart)
+$taskSidesCode = $taskLibrarySource.Substring($taskSidesStart, $taskSidesEnd - $taskSidesStart)
+$taskTypeSource = [IO.File]::ReadAllText((Join-Path $taskRoot 'Library.d.luau'))
+$taskApiSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Api.spec.luau'))
+$taskLayoutSpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Layout.spec.luau'))
+$taskApiSource = "local Mock = (function()`n$taskMock`nend)()`n"
+foreach ($taskGlobal in @('game', 'Instance', 'Enum', 'UDim', 'UDim2', 'Vector2', 'Color3', 'Font', 'TweenInfo', 'typeof', 'task')) {
+    $taskApiSource += "local $taskGlobal = Mock.$taskGlobal`n"
+}
+$taskApiSource += @'
+local function BuildGeometry()
+    local Library = { Design = { Grid = {}, Size = {}, Shell = {}, Radius = {} }, Tabs = {}, DesignRevision = 0 }
+    function Library:UpdateColorsUsingRegistry() end
+    function Library:RefreshThemeState() end
+'@
+$taskApiSource += "`n$taskGeomCode`n$taskGlyphCode`n$taskDensityCode`nreturn Library`nend`n"
+$taskApiSource += @'
+local function BuildTabSides()
+    local Vector2 = Mock.Vector2
+    local UDim2 = Mock.UDim2
+    local TabContainer = Mock.Instance.new("Frame")
+    local TabCanvas = Mock.Instance.new("Frame")
+    TabCanvas.Parent = Mock.Instance.new("ScreenGui")
+    local TabLeft = Mock.Instance.new("Frame")
+    local TabRight = Mock.Instance.new("Frame")
+    local WarningBoxHolder = { Visible = false }
+    local WarningBox = { Size = { Y = { Offset = 0 } } }
+    local ColumnGap = 12
+    local ColumnOffset = 6
+    local IsNarrowLayout = false
+    local Tab = { Destroyed = false, FullWidth = false, Connections = {} }
+'@
+$taskApiSource += "`n$taskSidesCode`n"
+$taskApiSource += @'
+    return {
+        Tab = Tab,
+        Left = TabLeft,
+        Right = TabRight,
+        Container = TabContainer,
+        SetNarrow = function(Value) IsNarrowLayout = Value end,
+    }
+end
+'@
+$taskApiSource += "`nlocal ApiLibrarySource = [==[`n$taskLibrarySource`n]==]`n"
+$taskApiSource += "local ApiTypeSource = [==[`n$taskTypeSource`n]==]`n"
+$taskApiSource += "local RunApi = (function()`n$taskApiSpec`nend)()`nRunApi(ApiLibrarySource, ApiTypeSource)`n"
+$taskApiSource += "local RunLayout = (function()`n$taskLayoutSpec`nend)()`nRunLayout(BuildGeometry, BuildTabSides, Mock, ApiLibrarySource)`n"
+$taskApiGenerated = Join-Path ([IO.Path]::GetTempPath()) ("monhub-api-" + [guid]::NewGuid().ToString() + '.luau')
+try {
+    [IO.File]::WriteAllText($taskApiGenerated, $taskApiSource)
+    & $Runtime $taskApiGenerated
+    if ($LASTEXITCODE -ne 0) {
+        throw 'API and layout regression tests failed'
+    }
+} finally {
+    Remove-Item -LiteralPath $taskApiGenerated -ErrorAction SilentlyContinue
+}
 Write-Output "Compiled $($taskFiles.Count) Luau files"

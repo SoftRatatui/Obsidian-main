@@ -120,13 +120,16 @@ function ImageGallery.Create(Library, Info)
         CaptionSize = 12,
         Motion = true,
     }
+    local IsMobile = Library and Library.IsMobile == true
     local HeaderHeight = math.clamp(math.floor(tonumber(Style.HeaderHeight) or 38), 32, 46)
     local ControlHeight = math.clamp(math.floor(tonumber(Style.ControlHeight) or 28), 22, 32)
-    local FooterHeight = 28
+    if IsMobile then
+        ControlHeight = math.max(ControlHeight, 30)
+    end
     local Height = math.clamp(math.floor(tonumber(Info.Height) or 344), 180, 780)
     local Columns = math.clamp(math.floor(tonumber(Info.Columns) or 5), 1, 10)
-    local PageSize = math.clamp(math.floor(tonumber(Info.PageSize) or 15), Columns, 60)
-    local CellHeight = math.clamp(math.floor(tonumber(Info.CellHeight) or 78), 52, 150)
+    local MinCellSide = IsMobile and 44 or 48
+    local CellHeight = math.max(math.clamp(math.floor(tonumber(Info.CellHeight) or 78), 52, 150), MinCellSide)
     local Gap = math.clamp(math.floor(tonumber(Info.Gap) or Style.Gap), 2, 14)
     local ScaleType = ResolveScaleType(Info.ScaleType)
     local BackgroundTransparency = math.clamp(tonumber(Info.BackgroundTransparency) or Style.BackgroundTransparency or 0, 0, 1)
@@ -247,8 +250,9 @@ function ImageGallery.Create(Library, Info)
     local GridHolder = Instance.new("ScrollingFrame")
     GridHolder.BackgroundTransparency = 1
     GridHolder.BorderSizePixel = 0
-    GridHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    GridHolder.AutomaticCanvasSize = Enum.AutomaticSize.None
     GridHolder.CanvasSize = UDim2.fromOffset(0, 0)
+    GridHolder.CanvasPosition = Vector2.zero
     GridHolder.ScrollBarThickness = 2
     GridHolder.VerticalScrollBarInset = Enum.ScrollBarInset.Always
     GridHolder.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
@@ -257,92 +261,15 @@ function ImageGallery.Create(Library, Info)
     GridHolder.ScrollingDirection = Enum.ScrollingDirection.Y
     GridHolder.ClipsDescendants = true
     GridHolder.Position = UDim2.fromOffset(Style.Padding, HeaderHeight + Style.Gap)
-    GridHolder.Size = UDim2.new(1, -Style.Padding * 2, 1, -(HeaderHeight + FooterHeight + Style.Gap * 2))
+    GridHolder.Size = UDim2.new(1, -Style.Padding * 2, 1, -(HeaderHeight + Style.Gap * 2))
     GridHolder.Parent = Root
     AddRegistry(Library, GridHolder, { ScrollBarImageColor3 = "AccentColor" })
-
-    local Grid = Instance.new("UIGridLayout")
-    Grid.CellPadding = UDim2.fromOffset(Gap, Gap)
-    Grid.CellSize = UDim2.fromOffset(100, CellHeight)
-    Grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    Grid.FillDirectionMaxCells = Columns
-    Grid.SortOrder = Enum.SortOrder.LayoutOrder
-    Grid.Parent = GridHolder
-    local GridPadding = Instance.new("UIPadding")
-    GridPadding.PaddingTop = UDim.new(0, 1)
-    GridPadding.PaddingBottom = UDim.new(0, 1)
-    GridPadding.Parent = GridHolder
-
-    local Footer = Instance.new("Frame")
-    Footer.AnchorPoint = Vector2.new(0, 1)
-    Footer.BackgroundColor3 = Library and (Library.Scheme.RaisedColor or Library.Scheme.SurfaceColor) or Color3.fromRGB(22, 24, 29)
-    Footer.BorderSizePixel = 0
-    Footer.Position = UDim2.fromScale(0, 1)
-    Footer.Size = UDim2.new(1, 0, 0, FooterHeight)
-    Footer.Parent = Root
-    AddRegistry(Library, Footer, {
-        BackgroundColor3 = function()
-            return Library.Scheme.RaisedColor or Library.Scheme.SurfaceColor
-        end,
-    })
-
-    local FooterLine = Instance.new("Frame")
-    FooterLine.BackgroundColor3 = Library and Library.Scheme.OutlineColor or Color3.fromRGB(52, 57, 66)
-    FooterLine.BorderSizePixel = 0
-    FooterLine.Size = UDim2.new(1, 0, 0, 1)
-    FooterLine.BackgroundTransparency = Library and type(Library.GetDesignToken) == "function" and Library:GetDesignToken("Opacity.Divider", 0.56) or 0.56
-    FooterLine.Parent = Footer
-    AddRegistry(Library, FooterLine, { BackgroundColor3 = "OutlineColor" })
-
-    local PreviousButton = Instance.new("TextButton")
-    PreviousButton.AutoButtonColor = false
-    PreviousButton.BackgroundTransparency = 1
-    PreviousButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
-    PreviousButton.Size = UDim2.fromOffset(44, 26)
-    PreviousButton.Text = "Prev"
-    PreviousButton.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    PreviousButton.TextSize = 11
-    PreviousButton.Parent = Footer
-    AddRegistry(Library, PreviousButton, {
-        FontFace = "Font",
-        TextColor3 = "MutedFontColor",
-    })
-
-    local PageLabel = Instance.new("TextLabel")
-    PageLabel.BackgroundTransparency = 1
-    PageLabel.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
-    PageLabel.Position = UDim2.new(0, 44, 0, 0)
-    PageLabel.Size = UDim2.new(1, -88, 1, 0)
-    PageLabel.Text = "1 / 1"
-    PageLabel.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    PageLabel.TextSize = 11
-    PageLabel.Parent = Footer
-    AddRegistry(Library, PageLabel, {
-        FontFace = "Font",
-        TextColor3 = "MutedFontColor",
-    })
-
-    local NextButton = Instance.new("TextButton")
-    NextButton.AnchorPoint = Vector2.new(1, 0)
-    NextButton.AutoButtonColor = false
-    NextButton.BackgroundTransparency = 1
-    NextButton.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
-    NextButton.Position = UDim2.fromScale(1, 0)
-    NextButton.Size = UDim2.fromOffset(44, 26)
-    NextButton.Text = "Next"
-    NextButton.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
-    NextButton.TextSize = 11
-    NextButton.Parent = Footer
-    AddRegistry(Library, NextButton, {
-        FontFace = "Font",
-        TextColor3 = "MutedFontColor",
-    })
 
     local Empty = Instance.new("TextLabel")
     Empty.BackgroundTransparency = 1
     Empty.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
     Empty.Position = UDim2.fromOffset(Style.Padding + 4, HeaderHeight + Style.Gap)
-    Empty.Size = UDim2.new(1, -(Style.Padding + 4) * 2, 1, -(HeaderHeight + FooterHeight + Style.Gap * 2))
+    Empty.Size = UDim2.new(1, -(Style.Padding + 4) * 2, 1, -(HeaderHeight + Style.Gap * 2))
     Empty.Text = tostring(Info.EmptyText or "No matching assets")
     Empty.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(143, 149, 158)
     Empty.TextSize = Style.CaptionSize
@@ -357,8 +284,6 @@ function ImageGallery.Create(Library, Info)
         Root = Root,
         SearchBox = Search,
         CategoryButton = CategoryButton,
-        PageLabel = PageLabel,
-        Grid = Grid,
         Slots = {},
         Items = {},
         Filtered = {},
@@ -373,10 +298,13 @@ function ImageGallery.Create(Library, Info)
         Category = "All",
         Page = 1,
         PageCount = 1,
-        PageSize = PageSize,
         Columns = Columns,
+        EffectiveColumns = Columns,
+        ColumnWidths = nil,
+        ColumnOffsets = nil,
         Height = Height,
         CellHeight = CellHeight,
+        Gap = Gap,
         ScaleType = ScaleType,
         BackgroundTransparency = BackgroundTransparency,
         ContainerOutlineTransparency = ContainerOutlineTransparency,
@@ -399,27 +327,65 @@ function ImageGallery.Create(Library, Info)
         OnSelected = Info.OnSelected or Info.Callback,
     }
 
+    local ResolvedCache = {}
+    local ResolvedOrder = {}
+    local function ResolveAsset(Value)
+        if Value == nil or Value == "" then
+            return ""
+        end
+        local Cached = ResolvedCache[Value]
+        if Cached ~= nil then
+            return Cached
+        end
+        local Result = NormalizeAsset(Value)
+        ResolvedCache[Value] = Result
+        table.insert(ResolvedOrder, Value)
+        if #ResolvedOrder > 128 then
+            local Oldest = table.remove(ResolvedOrder, 1)
+            ResolvedCache[Oldest] = nil
+        end
+        return Result
+    end
+
+    local VirtualView
     local AutoColumns = Info.Columns == nil
-    local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 112), 48, 400)
+    local MinCellWidth = math.max(math.clamp(math.floor(tonumber(Info.MinCellWidth) or 112), 48, 400), MinCellSide)
+
     local function ResolveGridMetrics()
-        local Width = math.floor(GridHolder.AbsoluteSize.X / GetGuiScale(GridHolder)) - GridHolder.ScrollBarThickness - 2
-        if Width <= 0 or Gallery.Destroyed then
+        if Gallery.Destroyed then
             return
         end
-        local Maximum = math.max(1, math.floor((Width + Gap) / (48 + Gap)))
+        local Width = math.floor(GridHolder.AbsoluteSize.X / GetGuiScale(GridHolder)) - GridHolder.ScrollBarThickness - 2
+        if Width <= 0 then
+            return
+        end
+        local Maximum = math.max(1, math.floor((Width + Gap) / (MinCellSide + Gap)))
         local Count = AutoColumns and math.floor((Width + Gap) / (MinCellWidth + Gap)) or Gallery.Columns
         Count = math.clamp(Count, 1, math.min(8, Maximum))
         Gallery.EffectiveColumns = Count
-        Grid.FillDirectionMaxCells = Count
-        local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
-        local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
-        GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
-        GridPadding.PaddingRight = UDim.new(0, 1 + math.ceil(Remaining / 2))
-        Grid.CellSize = UDim2.fromOffset(CellWidth, Gallery.CellHeight)
+
+        local Base = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
+        local Remainder = math.max(0, Width - Base * Count - Gap * (Count - 1))
+        local Widths = {}
+        local Offsets = {}
+        local Cursor = 0
+        for Column = 1, Count do
+            local CellWidth = Base + (Column <= Remainder and 1 or 0)
+            Widths[Column] = CellWidth
+            Offsets[Column] = Cursor
+            Cursor += CellWidth + Gap
+        end
+        Gallery.ColumnWidths = Widths
+        Gallery.ColumnOffsets = Offsets
+
+        if VirtualView then
+            VirtualView.Columns = Count
+            VirtualView.RowHeight = Gallery.CellHeight + Gap
+            VirtualView:Refresh()
+        end
     end
-    for _, Property in { "AbsoluteSize", "ScrollBarThickness" } do
-        table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal(Property):Connect(ResolveGridMetrics))
-    end
+    table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResolveGridMetrics))
+    table.insert(Gallery.Connections, GridHolder:GetPropertyChangedSignal("ScrollBarThickness"):Connect(ResolveGridMetrics))
 
     local LocalTweens = {}
     local function Play(Object, Key, Properties)
@@ -593,14 +559,18 @@ function ImageGallery.Create(Library, Info)
         end
     end
 
-    for Index = 1, PageSize do
+    local SlotSequence = 0
+    local function CreateSlot()
+        SlotSequence += 1
+        local Index = SlotSequence
+        local ConnectionStart = #Gallery.Connections
+
         local Button = Instance.new("TextButton")
         Button.AutoButtonColor = false
         Button.BackgroundColor3 = Library and Library.Scheme.ElementColor or Color3.fromRGB(27, 30, 35)
         Button.BackgroundTransparency = Gallery.CellTransparency
         Button.BorderSizePixel = 0
         Button.ClipsDescendants = true
-        Button.LayoutOrder = Index
         Button.Text = ""
         Button.Visible = false
         Button.Parent = GridHolder
@@ -666,6 +636,7 @@ function ImageGallery.Create(Library, Info)
 
         local Slot = {
             Index = Index,
+            Root = Button,
             Button = Button,
             Corner = Corner,
             Viewport = ImageViewport,
@@ -718,12 +689,103 @@ function ImageGallery.Create(Library, Info)
                 return
             end
             Gallery.SelectedId = Slot.Item.Id
-            for _, Other in Gallery.Slots do
-                UpdateSlotState(Other, true)
+            if VirtualView then
+                VirtualView:Refresh()
             end
             EmitSelection(Slot.Item)
         end))
+
+        local SlotConnections = {}
+        for Number = ConnectionStart + 1, #Gallery.Connections do
+            table.insert(SlotConnections, Gallery.Connections[Number])
+        end
+        function Slot:Reset()
+            self.Item = nil
+            self.Hovered = false
+            self.Selected = false
+            self.Image.Image = ""
+            self.Name.Text = ""
+        end
+        function Slot:Destroy()
+            for _, Connection in SlotConnections do
+                pcall(function()
+                    Connection:Disconnect()
+                end)
+                local Found = table.find(Gallery.Connections, Connection)
+                if Found then
+                    table.remove(Gallery.Connections, Found)
+                end
+            end
+            if Library and type(Library.CancelTween) == "function" then
+                Library:CancelTween(Button, "ImageGallery" .. Index)
+            end
+            RemoveRegistryTree(Library, Button)
+            Button:Destroy()
+            Gallery.Slots[Index] = nil
+        end
+        return Slot
     end
+
+    local function RenderSlot(Slot, Item)
+        Slot.Item = Item
+        Slot.Hovered = false
+        Slot.Button.Visible = Item ~= nil
+        if Item then
+            Slot.Button.Active = not Item.Disabled
+            Slot.Image.Image = ResolveAsset(Item.Thumbnail)
+            Slot.Image.ImageColor3 = Item.Color or Color3.new(1, 1, 1)
+            local ItemTransparency = math.clamp(tonumber(Item.ImageTransparency) or Gallery.ImageTransparency, 0, 1)
+            if Item.Disabled then
+                ItemTransparency = math.max(ItemTransparency, 0.58)
+            end
+            Slot.Image.ImageTransparency = ItemTransparency
+            Slot.Viewport.BackgroundTransparency = math.clamp(tonumber(Item.ImageBackgroundTransparency) or Gallery.ImageBackgroundTransparency, 0, 1)
+            Slot.Image.ScaleType = Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
+            Slot.Image.Size = Item.ImageSize or Gallery.ImageSize
+            Slot.Image.Position = Item.ImagePosition or Gallery.ImagePosition
+            Slot.Image.AnchorPoint = Item.ImageAnchorPoint or Gallery.ImageAnchorPoint
+            Slot.Scale.Scale = math.clamp(tonumber(Item.ImageScale) or Gallery.ImageScale, 0.1, 4)
+            Slot.Image.TileSize = Item.TileSize or Gallery.TileSize
+            Slot.Image.Rotation = Item.Rotation or Gallery.Rotation
+            Slot.Image.ImageRectOffset = Item.RectOffset or Vector2.zero
+            Slot.Image.ImageRectSize = Item.RectSize or Vector2.zero
+            Slot.Name.Text = Item.Name
+        else
+            Slot.Image.Image = ""
+            Slot.Name.Text = ""
+        end
+        UpdateSlotState(Slot, false)
+    end
+
+    local function PlaceSlot(Slot, Index)
+        local Count = Gallery.EffectiveColumns
+        local Column = (Index - 1) % Count
+        local Widths = Gallery.ColumnWidths
+        local Offsets = Gallery.ColumnOffsets
+        local RowIndex = math.floor((Index - 1) / Count)
+        if Widths and Offsets and Widths[Column + 1] then
+            Slot.Button.Position = UDim2.fromOffset(Offsets[Column + 1], RowIndex * (Gallery.CellHeight + Gap))
+            Slot.Button.Size = UDim2.fromOffset(Widths[Column + 1], Gallery.CellHeight)
+        end
+        RenderSlot(Slot, Gallery.Filtered[Index])
+    end
+
+    VirtualView = Library and type(Library.CreateVirtualList) == "function" and Library:CreateVirtualList(GridHolder, {
+        Count = 0,
+        Columns = Gallery.EffectiveColumns,
+        RowHeight = Gallery.CellHeight + Gap,
+        Gap = Gap,
+        Scale = function()
+            return GetGuiScale(GridHolder)
+        end,
+        CreateRow = function()
+            return CreateSlot()
+        end,
+        RenderRow = function(Slot, Index)
+            PlaceSlot(Slot, Index)
+        end,
+    }) or nil
+    Gallery.VirtualView = VirtualView
 
     local function RebuildCategories()
         local Seen = { All = true }
@@ -741,7 +803,7 @@ function ImageGallery.Create(Library, Info)
         CategoryButton.Text = Gallery.Category
     end
 
-    local function Refresh()
+    local function Refresh(ResetScroll)
         if Gallery.Destroyed then
             return
         end
@@ -755,47 +817,21 @@ function ImageGallery.Create(Library, Info)
             end
         end
 
-        Gallery.PageCount = math.max(1, math.ceil(#Gallery.Filtered / Gallery.PageSize))
-        Gallery.Page = math.clamp(Gallery.Page, 1, Gallery.PageCount)
-        PageLabel.Text = string.format("%d / %d  ·  %d", Gallery.Page, Gallery.PageCount, #Gallery.Filtered)
+        Gallery.PageCount = 1
+        Gallery.Page = 1
         Empty.Visible = #Gallery.Filtered == 0
         GridHolder.Visible = #Gallery.Filtered > 0
 
-        local Start = (Gallery.Page - 1) * Gallery.PageSize
-        for SlotIndex, Slot in Gallery.Slots do
-            local Item = Gallery.Filtered[Start + SlotIndex]
-            Slot.Item = Item
-            Slot.Hovered = false
-            Slot.Button.Visible = Item ~= nil
-            Slot.Image.Image = Item and NormalizeAsset(Item.Thumbnail) or ""
-            Slot.Image.ImageColor3 = Item and Item.Color or Color3.new(1, 1, 1)
-            local ItemTransparency = Item and math.clamp(tonumber(Item.ImageTransparency) or Gallery.ImageTransparency, 0, 1) or 1
-            if Item and Item.Disabled then
-                ItemTransparency = math.max(ItemTransparency, 0.58)
-            end
-            Slot.Image.ImageTransparency = ItemTransparency
-            Slot.Viewport.BackgroundTransparency = Item and math.clamp(tonumber(Item.ImageBackgroundTransparency) or Gallery.ImageBackgroundTransparency, 0, 1) or 1
-            Slot.Image.ScaleType = Item and Item.ScaleType ~= nil and ResolveScaleType(Item.ScaleType) or Gallery.ScaleType
-            Slot.Image.Size = Item and Item.ImageSize or Gallery.ImageSize
-            Slot.Image.Position = Item and Item.ImagePosition or Gallery.ImagePosition
-            Slot.Image.AnchorPoint = Item and Item.ImageAnchorPoint or Gallery.ImageAnchorPoint
-            Slot.Scale.Scale = Item and math.clamp(tonumber(Item.ImageScale) or Gallery.ImageScale, 0.1, 4) or Gallery.ImageScale
-            Slot.Image.TileSize = Item and Item.TileSize or Gallery.TileSize
-            Slot.Image.Rotation = Item and (Item.Rotation or Gallery.Rotation) or Gallery.Rotation
-            Slot.Image.ImageRectOffset = Item and (Item.RectOffset or Vector2.zero) or Vector2.zero
-            Slot.Image.ImageRectSize = Item and (Item.RectSize or Vector2.zero) or Vector2.zero
-            Slot.Name.Text = Item and Item.Name or ""
-            UpdateSlotState(Slot, false)
+        if ResetScroll then
+            GridHolder.CanvasPosition = Vector2.zero
         end
-
-        local HasPrevious = Gallery.Page > 1
-        local HasNext = Gallery.Page < Gallery.PageCount
-        PreviousButton.TextTransparency = HasPrevious and 0 or 0.55
-        NextButton.TextTransparency = HasNext and 0 or 0.55
+        if VirtualView then
+            VirtualView:SetCount(#Gallery.Filtered)
+        end
     end
 
     function Gallery:Refresh()
-        Refresh()
+        Refresh(false)
     end
 
     function Gallery:SetItems(Items)
@@ -827,8 +863,7 @@ function ImageGallery.Create(Library, Info)
             BindPreview(Selected)
         end
         RebuildCategories()
-        Gallery.Page = 1
-        Refresh()
+        Refresh(true)
     end
 
     function Gallery:AddItem(Item)
@@ -852,7 +887,7 @@ function ImageGallery.Create(Library, Info)
         end
         table.insert(Gallery.Items, Normalized)
         RebuildCategories()
-        Refresh()
+        Refresh(true)
         return Normalized
     end
 
@@ -868,7 +903,7 @@ function ImageGallery.Create(Library, Info)
                     EmitSelection(nil)
                 end
                 RebuildCategories()
-                Refresh()
+                Refresh(true)
                 return true
             end
         end
@@ -883,8 +918,7 @@ function ImageGallery.Create(Library, Info)
         if Search.Text ~= Gallery.Search then
             Search.Text = Gallery.Search
         end
-        Gallery.Page = 1
-        Refresh()
+        Refresh(true)
     end
 
     function Gallery:SetCategory(Value)
@@ -894,24 +928,24 @@ function ImageGallery.Create(Library, Info)
         local Requested = tostring(Value or "All")
         Gallery.Category = table.find(Gallery.Categories, Requested) and Requested or "All"
         CategoryButton.Text = Gallery.Category
-        Gallery.Page = 1
-        Refresh()
+        Refresh(true)
     end
 
-    function Gallery:SetPage(Value)
+    function Gallery:SetPage()
         if Gallery.Destroyed then
             return
         end
-        Gallery.Page = math.clamp(math.floor(tonumber(Value) or Gallery.Page), 1, Gallery.PageCount)
-        Refresh()
+        if VirtualView then
+            VirtualView:ScrollTo(1)
+        end
     end
 
     function Gallery:NextPage()
-        Gallery:SetPage(Gallery.Page + 1)
+        Gallery:SetPage()
     end
 
     function Gallery:PreviousPage()
-        Gallery:SetPage(Gallery.Page - 1)
+        Gallery:SetPage()
     end
 
     function Gallery:SetColumns(Value)
@@ -919,13 +953,12 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.Columns = math.clamp(math.floor(tonumber(Value) or Gallery.Columns), 1, 10)
-        Grid.FillDirectionMaxCells = Gallery.Columns
         AutoColumns = Value == nil
         ResolveGridMetrics()
     end
 
     function Gallery:SetMinCellWidth(Value)
-        MinCellWidth = math.clamp(math.floor(tonumber(Value) or MinCellWidth), 48, 400)
+        MinCellWidth = math.max(math.clamp(math.floor(tonumber(Value) or MinCellWidth), 48, 400), MinCellSide)
         AutoColumns = true
         ResolveGridMetrics()
     end
@@ -934,13 +967,13 @@ function ImageGallery.Create(Library, Info)
         if Gallery.Destroyed then
             return
         end
-        Gallery.CellHeight = math.clamp(math.floor(tonumber(Value) or Gallery.CellHeight), 52, 150)
+        Gallery.CellHeight = math.max(math.clamp(math.floor(tonumber(Value) or Gallery.CellHeight), 52, 150), MinCellSide)
         Gallery.ImagePadding = math.min(Gallery.ImagePadding, math.max(0, Gallery.CellHeight - Gallery.LabelHeight - 1))
-        ResolveGridMetrics()
         for _, Slot in Gallery.Slots do
             Slot.Viewport.Position = UDim2.fromOffset(Gallery.ImagePadding, Gallery.ImagePadding)
             Slot.Viewport.Size = UDim2.new(1, -Gallery.ImagePadding * 2, 1, -(Gallery.LabelHeight + Gallery.ImagePadding))
         end
+        ResolveGridMetrics()
     end
 
     function Gallery:SetScaleType(Value)
@@ -948,7 +981,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.ScaleType = ResolveScaleType(Value)
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetImageTransparency(Value)
@@ -956,7 +991,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.ImageTransparency = math.clamp(tonumber(Value) or Gallery.ImageTransparency, 0, 1)
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetImageBackgroundTransparency(Value)
@@ -964,7 +1001,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.ImageBackgroundTransparency = math.clamp(tonumber(Value) or Gallery.ImageBackgroundTransparency, 0, 1)
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetBackgroundTransparency(Value)
@@ -1033,7 +1072,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.ImageSize = Value
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetImageScale(Value)
@@ -1041,7 +1082,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.ImageScale = math.clamp(tonumber(Value) or Gallery.ImageScale, 0.1, 4)
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetImagePosition(Value, AnchorPoint)
@@ -1055,7 +1098,9 @@ function ImageGallery.Create(Library, Info)
         if AnchorPoint then
             Gallery.ImageAnchorPoint = AnchorPoint
         end
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetTileSize(Value)
@@ -1063,7 +1108,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.TileSize = Value
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetRotation(Value)
@@ -1071,7 +1118,9 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.Rotation = tonumber(Value) or Gallery.Rotation
-        Refresh()
+        if VirtualView then
+            VirtualView:Refresh()
+        end
     end
 
     function Gallery:SetCornerRadius(Value)
@@ -1104,8 +1153,8 @@ function ImageGallery.Create(Library, Info)
             end
         end
         Gallery.SelectedId = Selected and Selected.Id or nil
-        for _, Slot in Gallery.Slots do
-            UpdateSlotState(Slot, true)
+        if VirtualView then
+            VirtualView:Refresh()
         end
         if not Silent then
             EmitSelection(Selected)
@@ -1169,6 +1218,11 @@ function ImageGallery.Create(Library, Info)
             return
         end
         Gallery.Destroyed = true
+        if VirtualView then
+            VirtualView:Destroy()
+            VirtualView = nil
+            Gallery.VirtualView = nil
+        end
         if Gallery.StyleController then
             Gallery.StyleController:Destroy()
             Gallery.StyleController = nil
@@ -1191,6 +1245,8 @@ function ImageGallery.Create(Library, Info)
         table.clear(Gallery.Slots)
         table.clear(Gallery.Items)
         table.clear(Gallery.Filtered)
+        table.clear(ResolvedCache)
+        table.clear(ResolvedOrder)
         RemoveRegistryTree(Library, Root)
         if Gallery.Element then
             Gallery.Element:Destroy()
@@ -1210,8 +1266,7 @@ function ImageGallery.Create(Library, Info)
         task.delay(0.08, function()
             if not Gallery.Destroyed and Sequence == SearchSequence then
                 Gallery.Search = Search.Text
-                Gallery.Page = 1
-                Refresh()
+                Refresh(true)
             end
         end)
     end))
@@ -1224,18 +1279,12 @@ function ImageGallery.Create(Library, Info)
         Index = Index % #Gallery.Categories + 1
         Gallery:SetCategory(Gallery.Categories[Index])
     end))
-    table.insert(Gallery.Connections, PreviousButton.Activated:Connect(function()
-        Gallery:PreviousPage()
-    end))
-    table.insert(Gallery.Connections, NextButton.Activated:Connect(function()
-        Gallery:NextPage()
-    end))
 
     if typeof(Info.Parent) == "Instance" and Info.Parent:IsA("GuiBase2d") then
         Root.Parent = Info.Parent
     end
-    Gallery:SetItems(Info.Items or {})
     ResolveGridMetrics()
+    Gallery:SetItems(Info.Items or {})
     if Info.Category then
         Gallery:SetCategory(Info.Category)
     end

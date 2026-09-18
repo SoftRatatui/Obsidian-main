@@ -115,6 +115,7 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 - [Asset catalog](#asset-catalog), [image gallery and preview](#image-gallery-and-image-preview), [dashboard](#dashboard), and [character preview](#character-preview)
 - [Themes](#themes), [configs](#configs), [notifications](#notifications), and [watermark](#watermark)
 - [Addon recipes](#addon-recipes), [complete API reference](#complete-addon-api-reference), and [release checklist](#release-checklist)
+- [Runtime and advanced API](#runtime-and-advanced-api): reactivity, performance, declarative builder, registry, search, sub-tabs, touch, diagnostics, new controls, and performance numbers
 
 ## Quick start
 
@@ -2480,3 +2481,1016 @@ Library:SetWatermarkStyle({ TextSize = 12, HorizontalPadding = 8 })
 Compact is the default. Minimal removes the outline and rounds no corners. Classic
 restores the previous size and padding. Presets do not replace watermark text or move
 it. Preview contains buttons to compare presets and open a small spectator-list demo.
+
+# Runtime and advanced API
+
+Everything below documents the runtime layer that ships in the same `Library.lua`
+as the controls. None of it needs an addon. It has been in the build for a while
+but had no guide coverage, so this section starts from zero and explains each
+function, its arguments, what it returns, and how it behaves on bad input, on a
+phone, and when the menu is closed.
+
+A note on how this section was written: every function here was read out of
+`Library.lua` before it was documented. Where the source does not contain a
+function that people expect (some notification and sound helpers, for example),
+it is listed under [Not yet in the build](#not-yet-in-the-build) instead of being
+described as if it worked.
+
+## Runtime contents
+
+- [Reactivity and state](#reactivity-and-state)
+- [Performance primitives](#performance-primitives)
+- [The declarative builder](#the-declarative-builder)
+- [Control registry, reset and history](#control-registry-reset-and-history)
+- [Search and navigation](#search-and-navigation)
+- [Sidebar sub-tabs](#sidebar-sub-tabs)
+- [Mobile and touch](#mobile-and-touch)
+- [Errors and diagnostics](#errors-and-diagnostics)
+- [New controls](#new-controls)
+- [Control extensions](#control-extensions)
+- [Configs and profiles](#configs-and-profiles)
+- [Themes: gallery, preview and contrast](#themes-gallery-preview-and-contrast)
+- [Performance numbers](#performance-numbers)
+- [Not yet in the build](#not-yet-in-the-build)
+
+## Reactivity and state
+
+The old way to read a control's value was to reach into `Library.Toggles` or
+`Library.Options` by id and read `.Value`. That still works, but it means your
+code has to know when to re-read. The reactivity layer inverts that: you hold a
+state object, you subscribe to it, and the library tells you when it changes.
+
+### Library:State(default)
+
+`Library:State(Default)` returns a state object holding a deep copy of `Default`.
+The object has three methods.
+
+- `State:Get()` returns a deep copy of the current value. Reading inside an
+  `Observe` callback also records the state as a dependency of that observer.
+- `State:Set(Value)` stores a deep copy of `Value` and notifies subscribers. It
+  returns `false` and does nothing when the new value is deep-equal to the
+  current one, so setting a state to what it already holds is free and does not
+  fire listeners. It also returns `false` if the state was destroyed.
+- `State:Subscribe(Callback, Immediate)` registers `Callback(new, previous)` and
+  returns a disconnect function. Pass `Immediate = true` to fire the callback
+  once right away with the current value.
+- `State:Destroy()` clears listeners and unregisters the state from the runtime.
+
+Values are always copied on the way in and on the way out, so you cannot mutate
+a table you handed to `Set` and have the state change under you, and a subscriber
+cannot corrupt another subscriber's copy.
+
+Set is re-entrant safe. If a subscriber calls `Set` again during dispatch, the
+new value is queued and applied in the same dispatch loop rather than recursing.
+The loop is capped at 100 iterations; if it is still changing after 100 passes it
+stops and reports "Reactive update cycle exceeded 100 changes" through the error
+channel, which is how a feedback loop between two states surfaces instead of
+freezing the client.
+
+```lua
+local Coins = Library:State(0)
+
+Coins:Subscribe(function(New, Old)
+    print(string.format("coins went from %d to %d", Old or 0, New))
+end)
+
+Coins:Set(50)   -- fires the subscriber
+Coins:Set(50)   -- returns false, no subscriber call
+```
+
+Edge behaviour: `Get` after `Destroy` still returns the last copied value, but
+`Set` and `Subscribe` are no-ops (Subscribe asserts). A state you create is
+tracked by the runtime and torn down on `Library:Unload`, so you do not have to
+destroy it yourself unless you want the memory back sooner.
+
+### Library:Observe(callback)
+
+`Library:Observe(Callback)` runs `Callback` immediately, watches every state whose
+`Get` was called during that run, and re-runs `Callback` whenever any of those
+states change. It returns an observer with a `Destroy` method. Dependencies are
+recomputed on every run, so an `if` branch that reads a different state next time
+is tracked correctly.
+
+```lua
+local Enabled = Library:State(false)
+local Mode = Library:State("Aim")
+
+Library:Observe(function()
+    if Enabled:Get() then
+        print("active in", Mode:Get())     -- depends on both states
+    else
+        print("off")                       -- depends only on Enabled
+    end
+end)
+```
+
+When `Enabled` is false the observer does not depend on `Mode`, so changing
+`Mode` does not re-run it. Turn `Enabled` on and the next run reads `Mode` and
+starts tracking it. Errors thrown inside the callback are caught and reported
+through the error channel rather than stopping the observer.
+
+### Binding a control to a state
+
+Instead of reading `Toggles`/`Options` by hand, most controls accept a `State`
+field in their `Info` table. The binding is two-way: when the state changes the
+control updates, and when the user changes the control the state is set from the
+control's value. The library guards against the two sides fighting, so a user
+edit does not bounce back and re-fire.
+
+```lua
+local Flying = Library:State(false)
+
+Tab:AddLeftGroupbox("Movement"):AddToggle("Fly", {
+    Text = "Fly",
+    State = Flying,          -- toggle mirrors this state both ways
+})
+
+Flying:Set(true)            -- flips the toggle in the UI and runs its callback
+```
+
+Color pickers accept either a `Color3` or a `{ Value = Color3, Transparency = n }`
+table from the state. Key pickers and other controls take their normal value
+shape. If applying a state value throws (a bad shape, for instance) the error is
+reported and the control keeps its previous value.
+
+### VisibleWhen and EnabledWhen
+
+`VisibleWhen` and `EnabledWhen` are control options that replace a hand-wired
+dependency box for the common case. Each accepts one of three things:
+
+- a literal `true`/`false`,
+- a function returning a truthy value, or
+- a state object (its `Get` is read).
+
+`VisibleWhen` drives `Control:SetVisible`; `EnabledWhen` drives
+`Control:SetDisabled` with the inverse (true means enabled). Both are wrapped in
+an `Observe`, so when they read a state they re-evaluate automatically. When they
+are plain functions that read other controls, they re-evaluate whenever those
+controls change through the same observer machinery.
+
+```lua
+local Advanced = Group:AddToggle("Advanced", { Text = "Advanced mode" })
+
+Group:AddSlider("Sensitivity", {
+    Text = "Sensitivity",
+    Default = 5, Min = 1, Max = 20,
+    VisibleWhen = function() return Advanced.Value end,
+})
+
+-- or against a state
+local Ready = Library:State(false)
+Group:AddButton({ Text = "Launch", EnabledWhen = Ready, Func = Launch })
+```
+
+If the control does not implement the setter (`SetVisible`/`SetDisabled`) the
+rule is skipped silently. The observer is destroyed with the control's binding
+when the control's holder is destroyed, so these do not leak.
+
+## Performance primitives
+
+These exist because building or updating hundreds of instances in one frame drops
+the client. They let you spread work across frames and reuse instances instead of
+creating and destroying them.
+
+### Library:CreatePool(template, factory)
+
+A pool recycles UI rows. Pass either an `Instance` template to clone or a
+`factory` function that returns a fresh row. It returns a pool with:
+
+- `Acquire(...)` returns a free row or makes a new one (via `factory(template, ...)`
+  or `template:Clone()`), marks it active, and makes its root visible. It asserts
+  that the factory returns a unique row.
+- `Release(Item)` hides the row, calls `Item.Reset` if the row table has one, and
+  returns it to the free list. Returns `false` if the item was not active.
+- `Trim(Keep)` destroys free rows until at most `Keep` remain. It calls
+  `Item.Destroy` if present, otherwise destroys the root instance.
+- `Destroy()` releases everything active, trims to zero, and unregisters the pool.
+
+The pool finds a row's root through `Item` itself if it is an `Instance`, or
+`Item.Root`, `Item.Holder`, or `Item.Button` on a table row, in that order. It
+tracks how many rows it has created in `Pool.Created`, which is what the
+performance tests assert against.
+
+```lua
+local Pool = Library:CreatePool(nil, function()
+    local Row = Instance.new("TextLabel")
+    Row.Size = UDim2.new(1, 0, 0, 24)
+    return Row
+end)
+
+local A = Pool:Acquire()   -- new row, Created == 1
+Pool:Release(A)            -- back to free list
+local B = Pool:Acquire()   -- reuses A, Created still 1
+Pool:Trim(0)               -- destroys the free row
+```
+
+### Library:CreateVirtualList(scroll, info)
+
+A virtual list renders only the rows visible in a `ScrollingFrame` plus a small
+overscan, so a list of thousands of items holds a handful of instances. `Info`:
+
+- `CreateRow` (required): a factory passed to an internal pool, returns one row.
+- `RenderRow(Row, Index)` (required): fills a row with the data for `Index`.
+- `Count` (default 0): how many items the list has.
+- `RowHeight` (default 28): fixed pixel height of every row. Rows must be a fixed
+  height; the list computes offsets from `RowHeight` and does not measure rows.
+- `Columns` (default 1): items per row for a grid.
+- `Overscan` (default 2): extra rows rendered above and below the viewport.
+- `Gap` (default 0): pixel gap subtracted from each cell.
+- `Scale` (optional): a function returning a DPI scale, defaults to `Library.DPIScale`.
+
+It returns a view with `Refresh()`, `SetCount(n)`, `ScrollTo(index)`, and
+`Destroy()`. It sets the scroll frame's `AutomaticCanvasSize` to `None` and drives
+`CanvasSize` itself. It refreshes automatically on `CanvasPosition` and
+`AbsoluteSize` changes and destroys itself when the scroll frame is destroyed.
+
+```lua
+local View = Library:CreateVirtualList(Scroll, {
+    Count = 5000,
+    RowHeight = 28,
+    CreateRow = function()
+        local L = Instance.new("TextLabel"); L.Size = UDim2.new(1, 0, 0, 28); return L
+    end,
+    RenderRow = function(Row, Index) Row.Text = "Row " .. Index end,
+})
+
+View:SetCount(6000)   -- add rows, refreshes in place
+View:ScrollTo(4000)   -- jump to an item
+```
+
+Measured characteristics (from `tests/Runtime.spec.luau`): a 5000-row list in a
+300 by 280 viewport with `RowHeight = 28` and `Overscan = 2` creates at most 14
+pooled rows on first render, and at most 28 after scrolling all the way to the
+bottom. That is the whole point: the pool count tracks the visible window, not
+the item count.
+
+Limitation: `RowHeight` is fixed for the whole list. There is no per-row height
+and no automatic measurement, so a list of variable-height content is not a fit
+for this. Use a fixed row height or pad rows to a common height.
+
+### Library:SetBuildBudget(ms) and Library:QueueBuild(callback, id)
+
+`QueueBuild` defers a build job and runs queued jobs a few at a time, stopping
+each frame once the elapsed time crosses the build budget, then resuming next
+frame. This keeps a large build from blocking one frame. `SetBuildBudget(ms)`
+sets how long a build pass may run per frame; it asserts `0 < ms <= 100` and the
+default is 4ms.
+
+`QueueBuild` returns a job with a `Status` field (`Pending`, `Running`,
+`Completed`, `Failed`, or `Cancelled`), a `Seconds` timing once it runs, and a
+`Cancel()` method that only works while still pending. Failed jobs report their
+error through the error channel with the id you passed, and every run is recorded
+in a rolling sample buffer that `Library:GetProfile()` reads.
+
+```lua
+Library:SetBuildBudget(6)   -- allow 6ms of build per frame
+
+for Index = 1, 400 do
+    Library:QueueBuild(function()
+        Group:AddButton({ Text = "Item " .. Index, Func = function() end })
+    end, "item-" .. Index)
+end
+```
+
+### Library:QueueFrame(key, callback) and Library:RequestLayout(target)
+
+`QueueFrame(Key, Callback)` coalesces work onto the next `Heartbeat`. Calling it
+again with the same `Key` before the frame runs replaces the pending callback, so
+many requests for the same target collapse into one run. This is why a burst of
+changes to a groupbox resizes it once, not once per change.
+
+`RequestLayout(Target)` is the common wrapper: it queues a frame that calls
+`Target:Resize()` unless the target was destroyed. Reach for it after you add,
+remove, or resize elements in a container and want the layout to settle. Layout
+is deferred on purpose so a script that adds twenty controls in a loop pays for
+one resize at the end of the frame instead of twenty mid-loop.
+
+Force a synchronous resize only when you need the final size in the same frame,
+for example when you are about to read `AbsoluteSize` to position something
+relative to it. In that case call `Target:Resize()` directly instead of
+`RequestLayout`.
+
+### Lazy tabs
+
+A lazy tab does not build its contents until it is first shown. `Window:AddLazyTab(Name, { Icon = ..., Build = function(Tab) ... end })`
+returns a tab whose `Build` runs the callback the first time the tab is shown (or
+immediately if it is the active tab at creation). If the build throws, the tab's
+groupboxes and tabboxes are torn down and the error is re-raised, so a broken tab
+does not leave half-built UI behind.
+
+`Library:BuildLazyTabs()` forces every unbuilt lazy tab to build now and returns
+`false, message` on the first failure. Use it before a config load that needs
+every control to exist, since a control inside an unbuilt lazy tab is not
+registered yet.
+
+```lua
+local Heavy = Window:AddLazyTab("Reports", {
+    Icon = "chart-bar",
+    Build = function(Tab)
+        local G = Tab:AddLeftGroupbox("Live")
+        -- expensive setup here, runs on first open
+    end,
+})
+
+Library:BuildLazyTabs()   -- build everything now, before loading a config
+```
+
+## The declarative builder
+
+`Library:Create(AppInfo)` builds an entire window, its tabs, groups, and controls
+from one nested table, and returns an app handle. `Library:Mount(AppInfo)` is an
+alias for it. The imperative API is unchanged; this is a second way to describe
+the same tree.
+
+`AppInfo` fields:
+
+- `Window` (or the top-level table itself): the `CreateWindow` info. `Theme` sets
+  the theme before the window is built.
+- `Tabs` (alias `Pages`): a list or map of tab definitions.
+- `Deferred = true`: build every element through `QueueBuild` instead of inline,
+  so a large app spreads across frames. `OnReady` then fires after the build
+  drains.
+- `OnReady(App)`: called once the tree is built.
+
+A tab definition can be a string (its name) or a table with `Name`/`Title`,
+`Icon`, `Description`, `Order`, `Id`, `Lazy = true`, and `Groups` (alias
+`Sections`). A group can be a string or a table with `Name`, `Side` (1/2 or
+"left"/"right"), `Icon`, `Visible`, `Collapsed`, `DisableCollapsing`, `Id`, and
+`Elements` (aliases `Controls`, `Items`). An element is a string (becomes a label)
+or a table with a `Type` (alias `Kind`) and the same `Info` fields the imperative
+`Add*` methods take, plus `Id` for a ref, `Value` as an alias for `Default`,
+`OnClick`/`OnChanged` as aliases for `Func`/`Callback`, and `Addons` for nested
+key and color pickers.
+
+Element type map (the `Type` string, case-insensitive, with common aliases):
+
+| Type | Builds | Aliases |
+| --- | --- | --- |
+| `label` | AddLabel | `text` |
+| `button` | AddButton | `action` |
+| `checkbox` | AddCheckbox | `check` |
+| `toggle` | AddToggle | |
+| `input` | AddInput | `textbox` |
+| `slider` | AddSlider | |
+| `dropdown` | AddDropdown | `select` |
+| `divider` | AddDivider | `separator` |
+| `image` | AddImage | |
+| `video` | AddVideo | |
+| `viewport` | AddViewport | |
+| `table` | AddTable | |
+| `chart` | AddChart | |
+| `log` | AddLog | |
+| `statrow` | AddStatRow | |
+| `progressbar` | AddProgressBar | |
+| `uipassthrough` | AddUIPassthrough | `ui` |
+| `imagegrid` | AddImageGrid | |
+| `itemslots` | AddItemSlots | |
+| `slidergroup` | AddSliderGroup | |
+| `segmented` | AddSegmented | `segment` |
+| `badge` | AddBadge | `pill` |
+| `emptystate` | AddEmptyState | `empty` |
+| `detaillist` | AddDetailList | `detail` |
+| `settingscard` | AddSettingsCard | `setting` |
+| `splitbutton` | AddSplitButton | `split` |
+| `skeleton` | AddSkeleton | `shimmer` |
+| `steps` | AddSteps | `stepper`, `timeline` |
+
+The app handle has `Refs` (id to element/tab/group), `App:Get(Id)`, `AllTabs`,
+`AllGroups`, `All` (every element), `Tabs`/`Pages` (id to tab), `Groups`/`Sections`,
+`App:Toggle`, `App:Notify`, and `App:Destroy` (which unloads the library). A
+duplicate `Id` anywhere in the tree is an error, so refs are unique.
+
+### The same tab, imperative and declarative
+
+Imperative:
+
+```lua
+local Tab = Window:AddTab({ Name = "Combat", Icon = "swords" })
+local G = Tab:AddLeftGroupbox("Aim")
+G:AddToggle("AimEnabled", { Text = "Enabled", Default = false, Callback = OnAim })
+G:AddSlider("AimSmooth", { Text = "Smoothing", Default = 5, Min = 1, Max = 20 })
+```
+
+Declarative:
+
+```lua
+local App = Library:Create({
+    Window = { Title = "MonHub", Size = UDim2.fromOffset(780, 640) },
+    Tabs = {
+        {
+            Name = "Combat", Icon = "swords",
+            Groups = {
+                {
+                    Name = "Aim", Side = "left",
+                    Elements = {
+                        { Type = "toggle", Id = "AimEnabled", Text = "Enabled",
+                          Default = false, OnChanged = OnAim },
+                        { Type = "slider", Id = "AimSmooth", Text = "Smoothing",
+                          Default = 5, Min = 1, Max = 20 },
+                    },
+                },
+            },
+        },
+    },
+    OnReady = function(App)
+        print("built", App:Get("AimEnabled").Value)
+    end,
+})
+```
+
+Set a tab's `Lazy = true` to build its groups on first open, and set the
+top-level `Deferred = true` to spread the whole build across frames. Nested key
+and color pickers go in an element's `Addons` list, each with its own `Type`
+(`keypicker`/`colorpicker`) and `Id`.
+
+## Control registry, reset and history
+
+Every control registers under its config id. These functions read that registry
+and let you reset or roll back values without knowing where a control lives.
+
+- `Library:GetControl(Id)` returns a control by id. Buttons and labels use the
+  `button:Id` and `label:Id` prefixes; toggles and options resolve by plain id.
+- `Library:GetAll()` returns a map of every live (non-destroyed) control, keyed
+  the same way.
+- `Library:ForEach(Callback)` calls `Callback(Control, Id)` for every live
+  control, each wrapped in `SafeCallback` so one bad callback does not stop the
+  walk.
+- `Library:ResetDefaults(Ids)` restores the listed controls (or every control
+  when `Ids` is nil) to their configured defaults. Returns `true`, or
+  `false, message` if applying a value failed.
+- `Library:ResetScope(Scope, Confirm)` resets a whole subtree. `Scope` can be a
+  control, group, tabbox, or tab; passing `nil` means the whole window. Unless
+  `Confirm == false` it opens a confirmation dialog first. `Window:Reset`,
+  `Tab:Reset`, and `Control:Reset` are thin wrappers over this.
+
+History is opt-in:
+
+- `Library:EnableHistory(Limit)` turns on change recording, clamped to 1..1000
+  entries (100 if you pass nothing).
+- `Library:Undo()` and `Library:Redo()` step through recorded changes. Each
+  returns `true`, or `false, message` such as "History is empty" or "Redo is empty".
+- `Library:GetRecentChanges()` returns a copy of the history buffer, each entry
+  carrying `Id`, `Before`, `After`, and a `Time`.
+
+History does not record changes made during a config load or during undo/redo
+replay, and it skips controls marked `Save = false`. Making a new change clears
+the redo stack, the same as any editor.
+
+```lua
+Library:EnableHistory(200)
+
+-- user toggles some things...
+Library:Undo()   -- revert the last change
+Library:Redo()   -- put it back
+
+for _, Entry in Library:GetRecentChanges() do
+    print(Entry.Id, "->", Entry.After)
+end
+```
+
+## Search and navigation
+
+- `Library:SearchControls(Query, FavoritesOnly)` returns a sorted list of
+  `{ Id, Text, Control }` for controls whose text or id contains `Query`
+  (case-insensitive substring). Pass `FavoritesOnly = true` to search only
+  favorites.
+- `Library:RevealControl(Id)` shows the control: it switches to its tab, expands
+  its group or sub-tab, makes the control visible, scrolls it into view, and runs
+  the reveal-text animation. Returns `false` if the control does not exist or was
+  destroyed.
+- `Library:SetFavorite(Id, Enabled)` marks a control as a favorite (asserts the
+  control exists). `Library:GetFavorites()` returns the sorted favorite ids that
+  still resolve to a live control.
+- `Library:RegisterCommand(Id, Text, Callback)` adds a named action to the
+  command palette and returns a function that removes it.
+- `Library:OpenCommandPalette(FavoritesOnly)` opens a dialog with a search box
+  over controls, tabs, and registered commands. Selecting a control reveals it;
+  selecting a tab shows it; selecting a command runs its callback. It needs a
+  window first and returns `nil, "Create a window first"` otherwise. Pass
+  `FavoritesOnly = true` for a favorites-only palette.
+- `Library:EnableCommandKeys()` binds keyboard chords: Ctrl+K opens the palette,
+  Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and Ctrl+Z / Ctrl+Y undo and
+  redo while the menu is open. The binding ignores input while a text box is
+  focused.
+
+The palette and undo/redo are Ctrl chords. A touch device has no Ctrl key, so on
+a phone `EnableCommandKeys` gives you nothing usable. Give touch users a button
+that calls `Library:OpenCommandPalette()` directly, and wire undo/redo to
+on-screen buttons if you want them there.
+
+```lua
+Library:EnableCommandKeys()   -- desktop chords
+
+Library:RegisterCommand("panic", "Unload menu", function() Library:Unload() end)
+
+-- touch entry point, since there is no Ctrl key on a phone
+Group:AddButton({ Text = "Search", Func = function() Library:OpenCommandPalette() end })
+```
+
+## Sidebar sub-tabs
+
+A tab can hold child tabs in the sidebar under a collapsible chevron.
+
+- `Tab:AddSubTab(...)` takes the same arguments as `Window:AddTab` and returns the
+  child tab. The first call adds a chevron expander to the parent and indents the
+  child in the sidebar. `Tab.SubTabs` holds the children.
+- `Tab:SetExpanded(State)` expands or collapses the group and returns the tab.
+- `Tab:IsExpanded()` reports the current state.
+
+Sub-tabs start collapsed. Selecting a child auto-expands its parent so the active
+tab is always visible. When the sidebar is compacted (the narrow icon rail) the
+group is force-expanded, because a collapsed chevron in a rail with no room for
+the expander would make the children unreachable. On mobile the chevron and child
+rows are sized to 44 pixels so they are tappable.
+
+```lua
+local Settings = Window:AddTab({ Name = "Settings", Icon = "settings" })
+local Audio = Settings:AddSubTab({ Name = "Audio", Icon = "volume-2" })
+local Video = Settings:AddSubTab({ Name = "Video", Icon = "monitor" })
+
+Settings:SetExpanded(true)     -- open the group
+print(Settings:IsExpanded())   -- true
+```
+
+## Mobile and touch
+
+The owner cares about phones, so this is a first-class section. `Library.IsMobile`
+is the switch most of this keys off.
+
+### Density
+
+Density controls the size of rows, tracks, thumbs, indicators, swatches, and the
+navigation height. `Library.DensityPresets` holds three presets:
+
+| Metric | Compact | Comfortable | Touch |
+| --- | --- | --- | --- |
+| Row / Grid.Row | 24 | 30 | 44 |
+| NavigationHeight | 38 | 44 | 44 |
+| TrackRow | 14 | 18 | 20 |
+| Thumb | 10 | 12 | 18 |
+| Indicator | 16 | 18 | 24 |
+| Swatch | 16 | 18 | 24 |
+| RowGap | 9 | 10 | 12 |
+
+- `Library:SetDensity(Mode)` sets the density ("Auto", "Compact", "Comfortable",
+  or "Touch"), applies it, bumps the design revision, refreshes theme state, and
+  resizes every tab. Returns the library.
+- `Library:ResolveDensity(Mode)` returns the density that will actually be used.
+  "Auto" resolves to "Touch" on mobile and "Compact" otherwise, and on a mobile
+  device any non-Touch request is forced up to "Touch".
+- `Library:ApplyDensity()` pushes the resolved preset into the live design tokens.
+
+Because mobile forces Touch, the Touch preset raises Grid.Row to 44, TrackRow to
+20, Thumb to 18, Indicator and Swatch to 24, and NavigationHeight to 44
+automatically when `Library.IsMobile` is true. This is the 44-pixel rule: touch
+targets land on 44 pixels so they are reliably tappable.
+
+### Swipe between tabs, and what the old TabSwipe settings are not
+
+`Library:SetTabSwipeEnabled(Enabled)` turns on a real touch swipe gesture that
+moves between tabs. It works with:
+
+- `Library:GetOrderedTabs()`, which returns the visible top-level tabs in order,
+  and
+- `Library:SwitchTabRelative(Delta, Wrap)`, which moves `Delta` tabs from the
+  active one, optionally wrapping, and returns whether it moved.
+
+Be clear on the naming, because it has misled people: `TabSwipeOffset`,
+`TabSwipeFrom`, and `TabSwipeDirection` are only the tab-enter slide animation,
+the little slide a tab's contents do when it appears. They are not the gesture.
+The gesture is `SetTabSwipeEnabled` plus the two functions above. Setting the
+`TabSwipe*` animation values does nothing for swiping between tabs.
+
+```lua
+Library:SetTabSwipeEnabled(true)          -- real finger swipe between tabs
+Library:SwitchTabRelative(1, true)        -- next tab, wrap at the end
+```
+
+### Input capture
+
+On a phone a tap in the menu can also fire the player's tool or gun underneath.
+Input capture stops that.
+
+- `Library:SetInputCapture(Enabled)` sets the library-wide default.
+- `Library:ResolveInputCapture(Value)` returns the effective setting: the
+  per-control `Value` when it is not nil, otherwise the library default.
+- `Window:SetInputCapture` sets it at the window level.
+- A per-control `Info.CaptureInput` overrides the default for that control.
+
+Controls that host interactive surfaces (viewports, UI passthrough) read
+`ResolveInputCapture(Info.CaptureInput)` to decide whether to swallow the touch.
+Turn it on for a control the player will drag on so the input does not leak to the
+game.
+
+### Haptics
+
+- `Library:Vibrate(Kind)` triggers a short vibration. `Kind` is "Light" (0.25),
+  "Medium" (0.55), or "Heavy" (1); an unknown kind falls back to Light. It does
+  nothing unless `Library.HapticsEnabled` is true and the device reports haptic
+  support through `Library.Env.Haptics`.
+- `Library:SetHapticsEnabled(Enabled)` toggles it.
+
+Haptics are enabled by default only on mobile with a supporting device
+(`Library.HapticsEnabled = Library.IsMobile and Library.Env.Haptics == true`).
+On a desktop or a phone without a vibration motor, `Vibrate` returns quietly.
+
+### Cursor
+
+- `Library:SetCursorVariant(Name)` picks a cursor from `Library.CursorVariants`
+  ("Default", "Pointer", "Hand", and so on). Returns `false` for an unknown name.
+- `Library:SetCustomCursorEnabled(Enabled)` turns the custom cursor on or off and
+  returns the effective state.
+
+The custom cursor stays off on touch: both functions treat `Library.IsMobile` as
+a hard off, since a drawn cursor on a touchscreen is wrong. `SetCustomCursorEnabled(true)`
+returns false on a phone.
+
+### Safe area, scrollbars, truncation
+
+On notched phones the menu keeps clear of the safe-area insets. Scrollbars are
+touch-reactive and auto-hide when a list is idle. Text truncation is UTF-8
+character-safe, so Cyrillic and other multi-byte text is cut on character
+boundaries and no longer corrupts mid-glyph.
+
+## Errors and diagnostics
+
+- `Library:SafeCallback(Func, ...)` runs a callback under `xpcall`, reports any
+  error through the error channel with the owning control's id when it can find
+  it, and optionally notifies. Every internal callback goes through this, which
+  is why one throwing callback does not take down the menu. During a config load
+  it routes callbacks through the load context instead so a throwing callback is
+  isolated to its own entry.
+- `Library:OnError(Callback)` subscribes to error reports and returns a disconnect
+  function. Each report is `{ Message, Id, Source, Time }` where `Source` is
+  "Callback", "State", "Observe", "Build", or "Config".
+- `Library:Diagnose()` returns a live snapshot: counts of tracked resources by
+  kind, connected connections, active tweens, live instances, pooled and active
+  rows, pending builds, a copy of recent errors, and whether the library is
+  unloaded.
+- `Library.Env` is the capability probe, filled once at load: `Drawing`,
+  `CustomAsset` (getcustomasset), `Clipboard` (setclipboard), `Request`
+  (request/http_request), `FPSCap` (setfpscap), and `Haptics`.
+
+Degrade gracefully by checking `Library.Env` before using a capability rather
+than calling the global and catching the failure. For example, a copy button
+should only appear when `Library.Env.Clipboard` is true; the input control's
+`Copyable` option already gates itself on exactly that.
+
+```lua
+Library:OnError(function(Report)
+    warn(string.format("[%s] %s", Report.Source, Report.Message))
+end)
+
+if Library.Env.Clipboard then
+    Group:AddInput("Key", { Text = "Share code", Copyable = true })
+end
+
+print(Library:Diagnose().ActiveRows, "rows in use right now")
+```
+
+## New controls
+
+Quick reference for the controls added this release. Each takes `(Id, Info)` on a
+groupbox unless noted.
+
+| Control | One line |
+| --- | --- |
+| `AddSegmented` | A 2 to 4 option pill selector with a sliding indicator |
+| `AddBadge` | A small pill label, optionally with a leading text label |
+| `AddEmptyState` | An icon, title, body, and optional action for an empty list |
+| `AddDetailList` | A list of icon + title + subtitle rows, each optionally clickable |
+| `AddSettingsCard` | A titled card wrapping one control with a description |
+| `AddSplitButton` | A primary button with a chevron menu of extra actions |
+| `AddSteps` | A step or timeline indicator you advance through |
+| `AddSkeleton` | An animated loading placeholder |
+
+### AddSegmented(id, info)
+
+A segmented control. `Info`:
+
+- `Text` (default "Segmented"): the label above the track, or nil for no label.
+- `Values` (default `{}`): 2 to 4 values. More than 4 are dropped; fewer than 2
+  asserts.
+- `Default`: the initial value.
+- `Callback(Value)` and `Changed(Value)`: run when the selection changes.
+- `Disabled`, `Visible`: initial state.
+
+It exposes `SetValue`, `GetValue`, a `Reset`, and the usual `SetVisible`. Returns
+the segmented control.
+
+```lua
+Group:AddSegmented("Quality", {
+    Text = "Render quality",
+    Values = { "Low", "Medium", "High" },
+    Default = "Medium",
+    Callback = function(V) print("quality", V) end,
+})
+```
+
+### AddBadge(id, info)
+
+A pill. `Info`:
+
+- `Text` (default "Badge"): the pill text.
+- `Style` (default "Label"): the badge style.
+- `Variant` (default "Accent"): the color variant.
+- `Label`: optional text shown to the left, which right-aligns the pill.
+- `Visible`.
+
+Methods: `SetText(Value)`, `GetValue()`, `SetVisible(Visible)`. Returns the badge.
+
+### AddEmptyState(id, info)
+
+The placeholder for an empty list or a not-yet-loaded panel. `Info`:
+
+- `Icon` (default "inbox"): the glyph.
+- `Title` (default "Nothing here").
+- `Text` (default ""): the body line.
+- `ActionText`: when set, shows a button.
+- `Callback`: run when the action button is pressed.
+- `Visible`.
+
+Returns the empty state, which supports `SetVisible`.
+
+### AddDetailList(id, info)
+
+A list of rows, each with an icon, a title, and a subtitle. `Info`:
+
+- `Items` (default `{}`): a list of `{ Icon, Title, Text, Callback }` tables. A
+  row with a `Callback` becomes clickable and highlights on hover, and tapping it
+  fires a light haptic.
+- `Visible`.
+
+Methods: `SetItems(Items)` rebuilds the list and resizes, `GetValue()` returns the
+current items, `SetVisible`. Returns the detail list. Rows are a minimum of 40
+pixels tall.
+
+```lua
+local List = Group:AddDetailList("Servers", { Items = {} })
+List:SetItems({
+    { Icon = "server", Title = "US-East", Text = "42 ms", Callback = Join },
+    { Icon = "server", Title = "EU-West", Text = "89 ms", Callback = Join },
+})
+```
+
+### AddSettingsCard(id, info)
+
+A titled card that wraps one control with a description, and stacks the control
+below the text on a narrow width. `Info`:
+
+- `Title` (default "Setting").
+- `Text` (default ""): the description.
+- `Control`: the control to host.
+- `Visible`.
+
+Returns the settings card.
+
+### AddSteps(id, info)
+
+A step or timeline indicator. `Info`:
+
+- `Steps`: the list of steps.
+- `Current` (default 1): the active step, clamped to the step count.
+- `Visible`.
+
+Methods: `SetCurrent(Index)`, `SetStatus(Index, Status)`, `GetCurrent()`,
+`SetVisible`. Each returns the steps control where it makes sense for chaining.
+
+### AddSkeleton(id, info)
+
+An animated loading placeholder that you show while data loads and hide when it
+arrives. `Info` is passed through to `CreateSkeletonBody` (row shapes and count),
+plus `Visible`. Methods: `Start()`, `Stop()`, and `SetVisible` (which starts the
+animation when shown and stops it when hidden). Returns the skeleton.
+
+```lua
+local Skel = Group:AddSkeleton("Loading", { Visible = true })
+Skel:Start()
+-- when data is ready:
+Skel:SetVisible(false)
+```
+
+### AddSplitButton(id, info)
+
+A primary button with a chevron that opens a menu of secondary actions. `Info`:
+
+- `Text` (default "Button"): the primary label.
+- `Callback` (alias `Func`): the primary action.
+- `Options` (default `{}`): the menu entries.
+- `Disabled`, `Visible`.
+
+Returns the split button. On mobile the primary row and the chevron are sized to
+44 pixels.
+
+## Control extensions
+
+Existing controls gained options this release.
+
+### AddInput
+
+New `Info` fields on `AddInput`:
+
+- `Multiline` (default false): a multi-line box. `MaxLines` (default 4, minimum 2)
+  caps its height.
+- `Mask`: a single non-empty string used as the display mask (for a password-style
+  field).
+- `Prefix` / `Suffix`: non-empty strings shown before or after the value.
+- `Clearable` (default false): shows a clear button.
+- `Copyable` (default false): shows a copy button, but only when
+  `Library.Env.Clipboard` is true. On an executor with no `setclipboard` the
+  option is ignored.
+- `Validate(Value)`: see below.
+
+### Validate, SetError and ClearError
+
+Any control that supports validation takes `Info.Validate`, a function called with
+the control's value after a change. Returning a string marks the control invalid
+and shows that string as a red caption under the control; returning nil clears the
+error. You can also drive it by hand:
+
+- `Control:SetError(Text)` marks the control invalid, shows `Text`, and tints the
+  outline with the danger color.
+- `Control:ClearError()` clears it.
+
+`Control.Valid` reflects the current state. When a control has no `Validate`
+function, `SetError` and `ClearError` are present but do nothing, so calling them
+is always safe.
+
+```lua
+Group:AddInput("Port", {
+    Text = "Port",
+    Numeric = true,
+    Validate = function(Value)
+        local N = tonumber(Value)
+        if not N or N < 1 or N > 65535 then return "Enter 1 to 65535" end
+    end,
+})
+```
+
+### AddDropdown
+
+`Info.Chips` (with `Info.Multi = true`) renders selected values as removable chips
+instead of a joined text summary. Chips only apply to a multi-select dropdown.
+
+### AddButton
+
+`Button:SetState(State, Text)` switches a button between "Idle", "Loading",
+"Success", and "Error", optionally replacing the label. "Loading" locks the button
+and spins a loader icon (unless reduced motion is on); "Idle" restores the
+original label and icon. An invalid state asserts. Use it to show a long action's
+progress on the button itself.
+
+```lua
+Group:AddButton({
+    Text = "Save",
+    Func = function(_, Button)
+        Button:SetState("Loading", "Saving...")
+        local Ok = DoSave()
+        Button:SetState(Ok and "Success" or "Error", Ok and "Saved" or "Failed")
+        task.delay(1.5, function() Button:SetState("Idle") end)
+    end,
+})
+```
+
+### AddProgressBar
+
+- `Info.Indeterminate` (default false): an indeterminate bar that animates instead
+  of showing a fixed fill. `Row:SetIndeterminate(State)` toggles it at runtime.
+- `Info.Segments`: split the bar into 2 to 63 discrete cells. `Row.Segments` holds
+  the count and `Row.Filled` how many are lit.
+
+Indeterminate and segmented are mutually exclusive in behaviour: turning
+indeterminate off on a non-segmented bar restores the normal fill.
+
+## Configs and profiles
+
+The config loader in `addons/SaveManager.lua` was rewritten to be resilient per
+entry. This section explains the contract; the SaveManager reference elsewhere in
+this guide covers the rest of its surface.
+
+### What fails the whole file versus what is skipped
+
+A load fails as a whole only when the file itself cannot be used: it is missing,
+unreadable, or not decodable JSON. Once the file decodes, loading is per entry. A
+malformed object inside it (a control entry that is not a table, or references an
+unknown control) is skipped with a recorded reason, and the rest of the file still
+loads. A callback that throws while applying one entry no longer rolls back the
+whole load; that entry is marked failed and the others keep their applied values.
+Partial loads are kept, not discarded.
+
+### The load report
+
+`SaveManager:LoadSummary(Report)` and `SaveManager:FormatLoadReport(Report)` read
+the report a load produces. The report carries per-category counts: `Applied`,
+`Unchanged`, `Skipped`, `Failed`, and `Missing`, plus a per-entry reason for
+anything that was skipped, failed, or missing. Use it to tell the user "loaded 18,
+skipped 2 (unknown controls)" instead of a bare success or failure.
+
+### Batched apply
+
+`SaveManager:SetApplyMode(Mode)`, `SaveManager:Apply()`, and
+`SaveManager:RunApplyBatch(Batch, Report)` apply a config in batches rather than
+all at once. Batching exists so a large config does not apply every control in one
+frame and stall the client; it spreads the work the same way the build budget does
+for construction.
+
+### Autosave, recovery and backups
+
+- `SaveManager:WriteRecoverySnapshot(Name)` writes a crash-recovery snapshot,
+  debounced so rapid changes do not thrash the disk.
+- `SaveManager:CheckRecovery()` reports whether a snapshot from an unclean exit
+  exists, `SaveManager:RestoreRecovery()` restores it, and
+  `SaveManager:ClearRecovery()` discards it.
+- `SaveManager:SetBackupCount(Count)` sets how many rotated backups to keep,
+  `SaveManager:ListBackups(Name)` lists them, `SaveManager:RotateBackup(Name)`
+  rotates one in, and `SaveManager:RestoreBackup(Name, Index)` restores a specific
+  backup. These return `true` or `false, reason`.
+- `SaveManager:PreviewConfig(Name)` returns a diff preview of what loading that
+  config would change, so you can show it before applying.
+
+Profiles support duplicate and rename through the profile management UI, and the
+diff preview is available before a load so the user is not committing blind.
+
+## Themes: gallery, preview and contrast
+
+The theme manager in `addons/ThemeManager.lua` gained a visual gallery and a
+preview flow.
+
+- `ThemeManager:BuildGallery(Groupbox)` builds the gallery of theme cards, each
+  with real color-swatch previews. `ThemeManager:RebuildGallery(Names)` rebuilds
+  it for a given set of names.
+- `ThemeManager:PreviewTheme(Name)` applies a theme as a preview without
+  committing it. `ThemeManager:ApplyPreview()` commits the previewed theme;
+  `ThemeManager:CancelPreview()` reverts to what was active before the preview.
+- `ThemeManager:UpdateContrast()` runs the contrast check. It compares font
+  against background and warns when the ratio falls below the WCAG AA threshold of
+  4.5:1, and offers a one-tap fix that nudges the colors until they pass.
+
+Theme codes export and import through the theme-code field in the gallery. When
+`Library.Env.Clipboard` is available the export button copies the code to the
+clipboard and the import reads from it; when it is not, the user copies the code
+out of the field or pastes it in by hand.
+
+Three accessibility palettes ship alongside the standard themes: Deuteranopia,
+Protanopia, and High Contrast. They are selectable like any other theme.
+
+```lua
+ThemeManager:PreviewTheme("High Contrast")   -- try it live
+-- keep it:
+ThemeManager:ApplyPreview()
+-- or back out:
+ThemeManager:CancelPreview()
+```
+
+## Performance numbers
+
+Concrete figures, taken from the code and the specs rather than invented. Where a
+number is not sourced, the behaviour is described qualitatively.
+
+- Default build budget: 4ms per frame (`Runtime.BuildBudget = 4`). `QueueBuild`
+  runs jobs until this is crossed, then continues next frame. Raise it with
+  `SetBuildBudget` if you would rather build faster and can spare the frame time.
+- Virtual list, 5000 rows: in a 300 by 280 viewport with `RowHeight = 28` and
+  `Overscan = 2`, the pool creates at most 14 rows on first render and at most 28
+  after scrolling to the end (`tests/Runtime.spec.luau`). The instance count
+  tracks the visible window plus overscan, not the item count.
+- Asset catalog over the same virtual list: a 5000-item catalog keeps its pool
+  under 80 instances across a full scroll (`tests/Runtime.spec.luau`).
+- Layout coalescing: `QueueFrame` collapses repeated requests for the same target
+  into one run per frame, so adding N controls in a loop costs one resize, not N.
+- Text metrics are cached. `Library:GetTextBounds` memoizes measured bounds, and
+  `Library:ClearTextBoundsCache` drops the cache; repeated measurement of the same
+  text and font is a cache hit rather than a re-measure.
+- CanvasGroup cost: a `CanvasGroup` forces the engine to render its subtree to an
+  off-screen buffer, which is more expensive than a plain frame. The rule is to
+  use a CanvasGroup only when you actually need to fade or transform a whole
+  subtree as one unit, and a plain `Frame` otherwise.
+
+Read the live picture at any time with `Library:Diagnose()` for counts, or
+`Library:GetProfile()` for the slowest recent build samples alongside the current
+budget.
+
+## Not yet in the build
+
+These were expected this session but are not present in `Library.lua` as read, so
+they are not documented above. Grep confirmed each is absent:
+
+- Notification actions (`Info.Actions`), grouping with a counter, priorities and
+  categories (`Info.Priority` / `Info.Category`), `Library:GetNotificationHistory`,
+  `Library:ShowNotificationHistory`, `Library:SetNotificationFilter`, and
+  `Library:SetNotificationAnchor`. The current notification surface is `Library:Notify`
+  (with `SoundId` and `Volume`), `Library:SetNotifySide`,
+  `Library:SetNotificationOptions`, and `Library:ClearNotifications`, documented in
+  the Notifications section above.
+- The bottom Line notification mode and its mobile default.
+- Watermark format strings and custom tokens: `Library:SetWatermarkFormat` and
+  `Library:RegisterWatermarkToken`. The current watermark surface is
+  `Library:SetWatermark`, `Library:SetWatermarkVisibility`,
+  `Library:SetWatermarkPreset`, and `Library:SetWatermarkStyle`.
+- Sound tokens: `Library:PlaySound`, `Library:SetSoundEnabled`,
+  `Library:SetSoundVolume`.
+- Streamer mode: `Library:SetStreamerMode`.
+
+When these land, document each the same way as the rest of this section: what it
+is for, the full signature, every `Info` field with types and defaults, the return
+value, and the failure and touch behaviour.

@@ -314,6 +314,50 @@ function AssetCatalog.Create(Library, Info)
     AddRegistry(Library, GridScroll, { ScrollBarImageColor3 = "AccentColor" })
 
     local MinCellWidth = math.clamp(math.floor(tonumber(Info.MinCellWidth) or 132), 64, 400)
+    local ViewMode = string.lower(tostring(Info.ViewMode or "Auto"))
+    if ViewMode ~= "grid" and ViewMode ~= "list" then
+        ViewMode = "auto"
+    end
+    local EffectiveViewMode = ViewMode == "list" and "list" or "grid"
+    local ListRowHeight = math.clamp(
+        math.floor(tonumber(Info.ListRowHeight) or (Library and Library.IsMobile and 52 or 44)),
+        Library and Library.IsMobile and 44 or 32,
+        96
+    )
+
+    local ImageCache = {}
+    local ImageCacheOrder = {}
+    local ImageCacheLimit = math.clamp(math.floor(tonumber(Info.ImageCacheLimit) or 96), 16, 512)
+    local function CacheImage(Key, Value)
+        if ImageCache[Key] == nil then
+            table.insert(ImageCacheOrder, Key)
+            if #ImageCacheOrder > ImageCacheLimit then
+                ImageCache[table.remove(ImageCacheOrder, 1)] = nil
+            end
+        end
+        ImageCache[Key] = Value
+        return Value
+    end
+    local function ResolveImage(Spec)
+        if Spec == nil or Spec == "" then
+            return ""
+        end
+        local Key = (typeof(Spec) == "number" and "n:" or "s:") .. tostring(Spec)
+        local Cached = ImageCache[Key]
+        if Cached ~= nil then
+            return Cached
+        end
+        local Resolved = NormalizeAsset(Spec)
+        if Resolved ~= "" and not string.match(Resolved, "^rbx") and not string.match(Resolved, "^https?://") then
+            if Library and Library.Env and Library.Env.CustomAsset and type(getcustomasset) == "function" then
+                local Ok, Asset = pcall(getcustomasset, Resolved)
+                if Ok and type(Asset) == "string" and Asset ~= "" then
+                    Resolved = Asset
+                end
+            end
+        end
+        return CacheImage(Key, Resolved)
+    end
 
     local VirtualView
     local Virtualized = Info.Virtualized ~= false and Library and type(Library.CreateVirtualList) == "function"
@@ -329,18 +373,47 @@ function AssetCatalog.Create(Library, Info)
     GridPadding.PaddingBottom = UDim.new(0, 1)
     GridPadding.Parent = GridScroll
 
+    local function ResolveViewMode(AutoCount)
+        if ViewMode == "list" then
+            return "list"
+        end
+        if ViewMode == "grid" then
+            return "grid"
+        end
+        if Library and Library.IsMobile and AutoColumns and AutoCount <= 1 then
+            return "list"
+        end
+        return "grid"
+    end
+
     local function ResolveGridMetrics()
         local Width = math.floor(GridScroll.AbsoluteSize.X / GetGuiScale(GridScroll)) - GridScroll.ScrollBarThickness - 2
         if Width <= 0 then
             return
         end
 
-        local Count = Columns
+        local AutoCount = Columns
         if AutoColumns then
-            Count = math.clamp(math.floor((Width + Gap) / (MinCellWidth + Gap)), 1, 8)
+            AutoCount = math.clamp(math.floor((Width + Gap) / (MinCellWidth + Gap)), 1, 8)
+        end
+        AutoCount = math.clamp(AutoCount, 1, math.max(1, math.floor((Width + Gap) / (48 + Gap))))
+
+        EffectiveViewMode = ResolveViewMode(AutoCount)
+
+        if EffectiveViewMode == "list" then
+            GridPadding.PaddingLeft = UDim.new(0, 1)
+            GridPadding.PaddingRight = UDim.new(0, 1)
+            Grid.FillDirectionMaxCells = 1
+            Grid.CellSize = UDim2.fromOffset(Width, ListRowHeight)
+            if VirtualView then
+                VirtualView.Columns = 1
+                VirtualView.RowHeight = ListRowHeight + Gap
+                VirtualView:Refresh()
+            end
+            return
         end
 
-        Count = math.clamp(Count, 1, math.max(1, math.floor((Width + Gap) / (48 + Gap))))
+        local Count = AutoCount
         local CellWidth = math.max(1, math.floor((Width - Gap * (Count - 1)) / Count))
         local Remaining = math.max(0, Width - CellWidth * Count - Gap * (Count - 1))
         GridPadding.PaddingLeft = UDim.new(0, 1 + math.floor(Remaining / 2))
@@ -591,6 +664,9 @@ function AssetCatalog.Create(Library, Info)
         Host = nil,
         Height = Height,
         Layout = LayoutMode,
+        ViewMode = ViewMode,
+        EffectiveViewMode = EffectiveViewMode,
+        ListRowHeight = ListRowHeight,
         PreviewSide = PreviewSide,
         PreviewRatio = PreviewRatio,
         Reveal = Info.Reveal ~= false,
@@ -901,7 +977,7 @@ function AssetCatalog.Create(Library, Info)
             SecondaryAction.TextTransparency = 0.58
             return
         end
-        PreviewImage.Image = NormalizeAsset(Item.PreviewImage)
+        PreviewImage.Image = ResolveImage(Item.PreviewImage)
         PreviewImage.ImageColor3 = Item.Color
         PreviewImage.ImageTransparency = math.clamp(Item.ImageTransparency or Catalog.ImageTransparency, 0, 1)
         PreviewImage.ScaleType = Item.ScaleType and ResolveScaleType(Item.ScaleType) or ImageScaleType
@@ -1031,6 +1107,26 @@ function AssetCatalog.Create(Library, Info)
         StatePadding.PaddingRight = UDim.new(0, 5)
         StatePadding.Parent = State
 
+        local Stripe = Instance.new("Frame")
+        Stripe.BackgroundColor3 = Library and Library.Scheme.AccentColor or Color3.fromRGB(133, 141, 160)
+        Stripe.BorderSizePixel = 0
+        Stripe.Position = UDim2.fromOffset(0, Style.CellRadius)
+        Stripe.Size = UDim2.new(0, 3, 1, -Style.CellRadius * 2)
+        Stripe.Visible = false
+        Stripe.Parent = Button
+
+        local Subtitle = Instance.new("TextLabel")
+        Subtitle.BackgroundTransparency = 1
+        Subtitle.FontFace = Library and Library.Scheme.Font or Font.fromEnum(Enum.Font.GothamMedium)
+        Subtitle.Size = UDim2.fromOffset(0, 16)
+        Subtitle.Text = ""
+        Subtitle.TextColor3 = Library and Library.Scheme.MutedFontColor or Color3.fromRGB(146, 151, 160)
+        Subtitle.TextSize = Style.CaptionSize
+        Subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+        Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+        Subtitle.Visible = false
+        Subtitle.Parent = Button
+
         local Slot = {
             Index = Index,
             Button = Button,
@@ -1040,6 +1136,8 @@ function AssetCatalog.Create(Library, Info)
             ImageScale = ImageScale,
             Name = Name,
             State = State,
+            Stripe = Stripe,
+            Subtitle = Subtitle,
             Item = nil,
             Hovered = false,
             Selected = false,
@@ -1058,6 +1156,13 @@ function AssetCatalog.Create(Library, Info)
         AddRegistry(Library, Canvas, { BackgroundColor3 = "BackgroundColor" })
         AddRegistry(Library, Name, { FontFace = "Font", TextColor3 = "FontColor" })
         AddRegistry(Library, State, { BackgroundColor3 = "AccentSoftColor", FontFace = "Font", TextColor3 = "FontColor" })
+        AddRegistry(Library, Subtitle, { FontFace = "Font", TextColor3 = "MutedFontColor" })
+        AddRegistry(Library, Stripe, {
+            BackgroundColor3 = function()
+                local ItemAccent = Slot.Item and Slot.Item.AccentColor
+                return ItemAccent or (Library and Library.Scheme.AccentColor) or Color3.fromRGB(133, 141, 160)
+            end,
+        })
 
         table.insert(Catalog.Connections, Button.MouseEnter:Connect(function()
             if Catalog.Destroyed or not Slot.Item then
@@ -1080,7 +1185,14 @@ function AssetCatalog.Create(Library, Info)
         end))
         local Connections = {}
         for Number = ConnectionStart + 1, #Catalog.Connections do table.insert(Connections, Catalog.Connections[Number]) end
-        function Slot:Reset() self.Item = nil; self.Hovered = false; self.Selected = false end
+        function Slot:Reset()
+            self.Item = nil
+            self.Hovered = false
+            self.Selected = false
+            self.Image.Image = ""
+            self.State.Visible = false
+            self.Stripe.Visible = false
+        end
         function Slot:Destroy()
             for _, Connection in Connections do
                 Connection:Disconnect()
@@ -1113,13 +1225,59 @@ function AssetCatalog.Create(Library, Info)
         Category.Text = Catalog.Category
     end
 
+    local function ApplySlotLayout(Slot)
+        if EffectiveViewMode == "list" then
+            local RowHeight = ListRowHeight
+            local ThumbPad = math.clamp(ImagePadding, 4, 8)
+            local ThumbSize = math.max(1, RowHeight - ThumbPad * 2)
+            local TextLeft = 3 + ThumbPad + ThumbSize + Gap
+            local TextInset = TextLeft + Gap + 8
+            Slot.Stripe.Visible = true
+            Slot.Canvas.AnchorPoint = Vector2.zero
+            Slot.Canvas.Position = UDim2.fromOffset(3 + ThumbPad, ThumbPad)
+            Slot.Canvas.Size = UDim2.fromOffset(ThumbSize, ThumbSize)
+            Slot.Image.Size = UDim2.new(1, -4, 1, -4)
+            Slot.Name.AnchorPoint = Vector2.zero
+            Slot.Name.TextXAlignment = Enum.TextXAlignment.Left
+            Slot.Name.TextYAlignment = Enum.TextYAlignment.Center
+            local HasSubtitle = Slot.Subtitle.Text ~= ""
+            Slot.Subtitle.Visible = HasSubtitle
+            if HasSubtitle then
+                local Top = math.max(ThumbPad, math.floor((RowHeight - 34) / 2))
+                Slot.Name.Position = UDim2.fromOffset(TextLeft, Top)
+                Slot.Name.Size = UDim2.new(1, -TextInset, 0, 18)
+                Slot.Subtitle.Position = UDim2.fromOffset(TextLeft, Top + 18)
+                Slot.Subtitle.Size = UDim2.new(1, -TextInset, 0, 16)
+            else
+                Slot.Name.Position = UDim2.fromOffset(TextLeft, 0)
+                Slot.Name.Size = UDim2.new(1, -TextInset, 1, 0)
+            end
+            Slot.State.AnchorPoint = Vector2.new(1, 0.5)
+            Slot.State.Position = UDim2.new(1, -Gap, 0.5, 0)
+        else
+            Slot.Stripe.Visible = false
+            Slot.Subtitle.Visible = false
+            Slot.Canvas.AnchorPoint = Vector2.zero
+            Slot.Canvas.Position = UDim2.fromOffset(ImagePadding, ImagePadding)
+            Slot.Canvas.Size = UDim2.new(1, -ImagePadding * 2, 1, -(LabelHeight + ImagePadding))
+            Slot.Image.Size = UDim2.new(1, -ImagePadding * 2, 1, -ImagePadding * 2)
+            Slot.Name.AnchorPoint = Vector2.new(0, 1)
+            Slot.Name.Position = UDim2.fromScale(0, 1)
+            Slot.Name.Size = UDim2.new(1, 0, 0, LabelHeight)
+            Slot.Name.TextXAlignment = Enum.TextXAlignment.Center
+            Slot.Name.TextYAlignment = Enum.TextYAlignment.Center
+            Slot.State.AnchorPoint = Vector2.new(1, 0)
+            Slot.State.Position = UDim2.new(1, -ImagePadding - 4, 0, ImagePadding + 4)
+        end
+    end
+
     local function RenderSlot(Slot, Item)
         Slot.Item = Item
         Slot.Hovered = false
         Slot.Button.Visible = Item ~= nil
         if Item then
             Slot.Button.Active = not Item.Disabled
-            Slot.Image.Image = NormalizeAsset(Item.Thumbnail)
+            Slot.Image.Image = ResolveImage(Item.Thumbnail)
             Slot.Image.ImageColor3 = Item.Color
             local ItemTransparency = math.clamp(Item.ImageTransparency or Catalog.ImageTransparency, 0, 1)
             Slot.Image.ImageTransparency = Item.Disabled and math.max(ItemTransparency, 0.58) or ItemTransparency
@@ -1133,8 +1291,11 @@ function AssetCatalog.Create(Library, Info)
             Slot.Canvas.BackgroundTransparency = math.clamp(Item.BackgroundTransparency or 0.18, 0, 1)
             Slot.Name.Text = Item.Name
             Slot.Name.TextTransparency = Item.Disabled and 0.58 or 0
+            Slot.Subtitle.Text = tostring(Item.Subtitle or "")
+            Slot.Stripe.BackgroundColor3 = Item.AccentColor or (Library and Library.Scheme.AccentColor) or Color3.fromRGB(133, 141, 160)
             Slot.State.Text = Item.Locked and "Locked" or Item.Favorite and "Saved" or tostring(Item.Status or "")
             Slot.State.Visible = Slot.State.Text ~= ""
+            ApplySlotLayout(Slot)
         end
         UpdateSlotState(Slot, false)
     end
@@ -1143,7 +1304,10 @@ function AssetCatalog.Create(Library, Info)
         Grid.Parent = nil
         local Sequence = 0
         VirtualView = Library:CreateVirtualList(GridScroll, {
-            Count = 0, Columns = Grid.FillDirectionMaxCells, RowHeight = CellHeight + Gap, Gap = Gap,
+            Count = 0,
+            Columns = Grid.FillDirectionMaxCells,
+            RowHeight = (EffectiveViewMode == "list" and ListRowHeight or CellHeight) + Gap,
+            Gap = Gap,
             Scale = function() return GetGuiScale(GridScroll) end,
             CreateRow = function() Sequence += 1; return CreateSlot(Sequence) end,
             RenderRow = function(Slot, Index) RenderSlot(Slot, Catalog.Filtered[Index]) end,
@@ -1537,6 +1701,91 @@ function AssetCatalog.Create(Library, Info)
             end
         end
         return false
+    end
+
+    local function FindItem(IdOrIndex)
+        for _, Item in Catalog.Items do
+            if Item.Id == IdOrIndex or Item.Source == IdOrIndex then
+                return Item
+            end
+        end
+        if type(IdOrIndex) == "number" then
+            return Catalog.Items[IdOrIndex]
+        end
+        return nil
+    end
+
+    local function RenderVisibleItem(Item)
+        for _, Slot in Catalog.Slots do
+            if Slot.Item == Item then
+                RenderSlot(Slot, Item)
+                return true
+            end
+        end
+        return false
+    end
+
+    function Catalog:SetViewMode(Value)
+        local Mode = string.lower(tostring(Value or "Auto"))
+        ViewMode = (Mode == "grid" or Mode == "list") and Mode or "auto"
+        Catalog.ViewMode = ViewMode
+        ResolveGridMetrics()
+        Catalog.EffectiveViewMode = EffectiveViewMode
+        if not VirtualView then
+            for _, Slot in Catalog.Slots do
+                if Slot.Item then
+                    RenderSlot(Slot, Slot.Item)
+                end
+            end
+        end
+        return Catalog
+    end
+
+    function Catalog:UpdateItem(IdOrIndex, Patch)
+        assert(type(Patch) == "table", "Item patch must be a table")
+        if Catalog.Destroyed then
+            return false
+        end
+        local Item = FindItem(IdOrIndex)
+        if not Item then
+            return false
+        end
+        local Source = table.clone(Item.Source)
+        for Key, Value in Patch do
+            if Key ~= "Id" then
+                Source[Key] = Value
+            end
+        end
+        Source.Id = Item.Id
+        local Updated = NormalizeItem(Source, Item.Id)
+        for Key in Item do
+            Item[Key] = nil
+        end
+        for Key, Value in Updated do
+            Item[Key] = Value
+        end
+        if Item.Disabled then
+            Catalog.SelectedIds[Item.Id] = nil
+        end
+        if Catalog.SelectedId == Item.Id then
+            SetPreview(Item, false)
+        end
+        RenderVisibleItem(Item)
+        return true
+    end
+
+    function Catalog:RefreshItem(IdOrIndex)
+        if Catalog.Destroyed then
+            return false
+        end
+        local Item = FindItem(IdOrIndex)
+        if not Item then
+            return false
+        end
+        if Catalog.SelectedId == Item.Id then
+            SetPreview(Item, false)
+        end
+        return RenderVisibleItem(Item)
     end
 
     function Catalog:SetVisible(Value)

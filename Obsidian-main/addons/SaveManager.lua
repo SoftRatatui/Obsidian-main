@@ -2115,6 +2115,47 @@ function SaveManager:BuildConfigSection(Tab: any, IconName: string)
         end
     })
 
+    ConfigurationBox:AddButton({
+        Text = "Restore backup",
+        DoubleClick = false,
+
+        Func = function()
+            local ConfigName = ConfigList.Value
+            if IsStringEmpty(ConfigName) then
+                SaveManager:Notify("Please select a config first.")
+                return
+            end
+
+            local Backups = SaveManager:ListBackups(ConfigName)
+            if #Backups == 0 then
+                SaveManager:Notify(string.format("No backups are stored for %q yet.", ConfigName))
+                return
+            end
+
+            ShowDialog(
+                function(): boolean
+                    return true
+                end,
+
+                "SaveManager_RestoreBackup",
+                "Restore backup",
+                string.format("Restore %q from its most recent backup? Your current saved config will be replaced.", ConfigName),
+
+                "Restore",
+                function()
+                    local Success, ErrorMessage = SaveManager:RestoreBackup(ConfigName, Backups[1].Index)
+                    if not Success then
+                        SaveManager:Notify(string.format("Failed to restore backup for %q: %s", ConfigName, ErrorMessage))
+                        return
+                    end
+
+                    SaveManager:Notify(string.format("Restored %q from backup. Load it to apply.", ConfigName))
+                    RefreshList(ConfigName)
+                end
+            )
+        end
+    })
+
     AutoloadConfigLabel = ConfigurationBox:AddLabel("Current autoload config: ...", true);
 
     ConfigurationBox:AddDivider()

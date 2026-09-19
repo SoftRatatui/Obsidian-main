@@ -5965,17 +5965,31 @@ end
 
 local StepStatusSet = { Pending = true, Active = true, Done = true, Error = true }
 
+local function ResolveStepEntry(Step)
+    if typeof(Step) == "string" then
+        return Step, ""
+    end
+    if typeof(Step) ~= "table" then
+        return nil, nil
+    end
+    local Title = Step.Title or Step[1]
+    local Text = Step.Text or Step[2]
+    if typeof(Title) ~= "string" then
+        Title = typeof(Text) == "string" and Text or nil
+    end
+    if typeof(Title) ~= "string" then
+        return nil, nil
+    end
+    return Title, typeof(Text) == "string" and Text or ""
+end
+
 local function NormalizeSteps(Steps)
     local List = {}
     if typeof(Steps) == "table" then
         for _, Step in ipairs(Steps) do
-            if typeof(Step) == "table" then
-                List[#List + 1] = {
-                    Title = tostring(Step.Title or Step.Text or ("Step " .. (#List + 1))),
-                    Text = typeof(Step.Text) == "string" and Step.Text or "",
-                }
-            elseif typeof(Step) == "string" then
-                List[#List + 1] = { Title = Step, Text = "" }
+            local Title, Text = ResolveStepEntry(Step)
+            if Title then
+                List[#List + 1] = { Title = Title, Text = Text }
             end
         end
     end
@@ -5983,6 +5997,29 @@ local function NormalizeSteps(Steps)
 end
 
 function Library:GetStepCaption(Steps, Index)
+    if typeof(Steps) ~= "table" then
+        return "", ""
+    end
+
+    local Title, Text = ResolveStepEntry(Steps[Index])
+    if Title then
+        return Title, Text
+    end
+
+    local Best
+    for Key in pairs(Steps) do
+        local Number = tonumber(Key)
+        if Number and Number <= Index and (not Best or Number > Best) then
+            Best = Number
+        end
+    end
+    if Best then
+        Title, Text = ResolveStepEntry(Steps[Best])
+        if Title then
+            return Title, Text
+        end
+    end
+
     local List = NormalizeSteps(Steps)
     local Step = List[Index]
     if not Step then
@@ -24574,18 +24611,20 @@ function Library:CreateLoading(LoadingInfo)
         })
     end
 
-    local TitleX = Library:GetTextBounds(
-        LoadingInfo.Title,
-        Library.Scheme.Font,
-        20,
-        TitleHolder.AbsoluteSize.X - (LoadingInfo.Icon and (LoadingInfo.IconSize.X.Offset + 6) or 0) - 12
-    )
+    local TitleInset = (LoadingInfo.Icon and (LoadingInfo.IconSize.X.Offset + 6) or 0) + 24
     local _WindowTitle = New("TextLabel", {
+        AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, TitleX, 1, 0),
+        Size = UDim2.new(0, 0, 1, 0),
         Text = LoadingInfo.Title,
         TextSize = 20,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
         Parent = TitleHolder,
+    })
+    New("UISizeConstraint", {
+        MaxSize = Vector2.new(math.max(24, Loading.ContentWidth - TitleInset), math.huge),
+        Parent = _WindowTitle,
     })
 
     Library:MakeLine(Container, {
@@ -24643,68 +24682,90 @@ function Library:CreateLoading(LoadingInfo)
 
     local MessageLabel = New("TextLabel", {
         BackgroundTransparency = 1,
-        AutomaticSize = Loading.AutoResizeHeight and Enum.AutomaticSize.Y or Enum.AutomaticSize.XY,
-        Size = Loading.AutoResizeHeight and UDim2.new(1, -60, 0, 0) or UDim2.fromOffset(0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, -48, 0, 0),
         Text = "",
         TextSize = 18,
-        TextWrapped = Loading.AutoResizeHeight,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center,
         Parent = InnerContent,
     })
 
     local DescriptionLabel = New("TextLabel", {
         BackgroundTransparency = 1,
-        AutomaticSize = Loading.AutoResizeHeight and Enum.AutomaticSize.Y or Enum.AutomaticSize.XY,
-        Size = Loading.AutoResizeHeight and UDim2.new(1, -60, 0, 0) or UDim2.fromOffset(0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, -48, 0, 0),
         Text = "",
         TextSize = 14,
         TextTransparency = 0.5,
-        TextWrapped = Loading.AutoResizeHeight,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center,
         Parent = InnerContent,
     })
 
     
-    local SliderBar = New("Frame", {
-        BackgroundColor3 = "MainColor",
-        Size = UDim2.new(0.7, 0, 0, 15),
+    local TrackHeight = 6
+    local MetaHeight = Library:Snap(Library:GetDesignToken("Size.Caption", 12) + 6)
+    local ProgressInset = 48
+    local ProgressWidth = math.max(120, Library:Snap(Loading.ContentWidth - ProgressInset))
+
+    local ProgressHolder = New("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -ProgressInset, 0, TrackHeight + 6 + MetaHeight),
         Parent = InnerContent,
     })
-    Library:AddOutline(SliderBar)
-    table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius / 2), Parent = SliderBar }))
+
+    local SliderBar = New("Frame", {
+        BackgroundColor3 = "MainColor",
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, TrackHeight),
+        Parent = ProgressHolder,
+    })
+    table.insert(
+        Library.Corners,
+        New("UICorner", { CornerRadius = UDim.new(0, TrackHeight // 2), Parent = SliderBar })
+    )
 
     local SliderFill = New("Frame", {
         BackgroundColor3 = "AccentColor",
         BorderSizePixel = 0,
-        Size = UDim2.fromScale(0, 1),
+        Size = UDim2.fromOffset(0, TrackHeight),
         Parent = SliderBar,
     })
-    table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius / 2), Parent = SliderFill }))
+    table.insert(
+        Library.Corners,
+        New("UICorner", { CornerRadius = UDim.new(0, TrackHeight // 2), Parent = SliderFill })
+    )
 
-    local ProgressLabel = New("TextLabel", {
+    local MetaRow = New("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1),
-        Text = "",
-        TextSize = 14,
-        ZIndex = 2,
-        Parent = SliderBar,
-    })
-    New("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-        Color = "DarkColor",
-        LineJoinMode = Enum.LineJoinMode.Miter,
-        Thickness = 0.5,
-        Transparency = 0.7,
-        Parent = ProgressLabel,
+        Position = UDim2.fromOffset(0, TrackHeight + 6),
+        Size = UDim2.new(1, 0, 0, MetaHeight),
+        Parent = ProgressHolder,
     })
 
     local StepCaption = New("TextLabel", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.7, 0, 0, 16),
+        Size = UDim2.new(1, -56, 1, 0),
         Text = "",
         TextColor3 = "MutedFontColor",
         TextSize = Library:GetDesignToken("Size.Caption", 12),
         TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
         Visible = false,
-        Parent = InnerContent,
+        Parent = MetaRow,
+    })
+
+    local ProgressLabel = New("TextLabel", {
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundTransparency = 1,
+        Position = UDim2.fromScale(1, 0),
+        Size = UDim2.fromOffset(56, MetaHeight),
+        Text = "",
+        TextColor3 = "MutedFontColor",
+        TextSize = Library:GetDesignToken("Size.Caption", 12),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = MetaRow,
     })
 
 
@@ -24919,10 +24980,24 @@ function Library:CreateLoading(LoadingInfo)
     function Loading:SetCurrentStep(Step)
         Loading.CurrentStep = math.clamp(Step, 0, Loading.TotalSteps)
 
-        local Progress = Loading.CurrentStep / Loading.TotalSteps
-        TweenService:Create(SliderFill, Library.TweenInfo, { Size = UDim2.fromScale(Progress, 1) }):Play()
+        local Total = math.max(1, Loading.TotalSteps)
+        local Progress = math.clamp(Loading.CurrentStep / Total, 0, 1)
+        local TrackWidth = Library:Snap(SliderBar.AbsoluteSize.X / math.max(Library.DPIScale or 1, 0.01))
+        if TrackWidth <= 0 then
+            TrackWidth = ProgressWidth
+        end
+        local FillWidth = Library:Snap(TrackWidth * Progress)
+        if Progress > 0 then
+            FillWidth = math.max(FillWidth, TrackHeight)
+        end
+        Library:PlayTween(
+            SliderFill,
+            "LoadingProgress",
+            Library:GetMotion("Control"),
+            { Size = UDim2.fromOffset(FillWidth, TrackHeight) }
+        )
 
-        ProgressLabel.Text = string.format("%d/%d", Loading.CurrentStep, Loading.TotalSteps)
+        ProgressLabel.Text = string.format("%d / %d", Loading.CurrentStep, Loading.TotalSteps)
 
         local Title, Text = Library:GetStepCaption(Loading.StepCaptions, Loading.CurrentStep)
         local Caption = Text ~= "" and (Title .. ": " .. Text) or Title
@@ -24951,6 +25026,12 @@ function Library:CreateLoading(LoadingInfo)
         Loading.WindowWidth = Width
         Loading:UpdateLayout()
     end
+
+    Library:GiveSignal(SliderBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if not Loading.Destroyed then
+            Loading:SetCurrentStep(Loading.CurrentStep)
+        end
+    end))
 
     function Loading:SetContentWidth(Width)
         Loading.ContentWidth = Width

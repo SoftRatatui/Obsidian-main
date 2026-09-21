@@ -455,6 +455,36 @@ local Library = {
             Shadow = 0.44,
             Hover = 0.08,
         },
+        Elevation = {
+            Outline = 0.18,
+            Highlight = {
+                Base = 0,
+                Surface = 0.03,
+                Raised = 0.05,
+                Element = 0.07,
+                Hover = 0.09,
+                Popup = 0.12,
+                Modal = 0.16,
+            },
+            Shadow = {
+                Base = 0,
+                Surface = 0.1,
+                Raised = 0.14,
+                Element = 0.16,
+                Hover = 0.18,
+                Popup = 0.28,
+                Modal = 0.38,
+            },
+            Emphasis = {
+                Primary = 0.87,
+                Secondary = 0.6,
+                Disabled = 0.38,
+            },
+            Edge = {
+                Alpha = 0.1,
+                Thickness = 1,
+            },
+        },
         Shell = {
             SidebarMin = 184,
             SidebarMax = 214,
@@ -531,6 +561,7 @@ local Library = {
         OutlineColor = Color3.fromRGB(52, 57, 66),
         FontColor = Color3.fromRGB(238, 240, 244),
         MutedFontColor = Color3.fromRGB(146, 151, 160),
+        DisabledFontColor = Color3.fromRGB(113, 116, 120),
         ShadowColor = Color3.fromRGB(5, 6, 8),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
 
@@ -544,6 +575,16 @@ local Library = {
 
         BackgroundImage = ""
     },
+
+    Elevation = {
+        Base = Color3.fromRGB(17, 19, 22),
+        Tint = Color3.fromRGB(248, 249, 252),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        Emphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
+    },
+    ElevationDerived = {},
 
 	Registry = {},
 	ThemeListeners = {},
@@ -858,6 +899,7 @@ Library.Themes = {
         OutlineColor = Color3.fromRGB(52, 57, 66),
         FontColor = Color3.fromRGB(238, 240, 244),
         MutedFontColor = Color3.fromRGB(146, 151, 160),
+        DisabledFontColor = Color3.fromRGB(113, 116, 120),
         ShadowColor = Color3.fromRGB(5, 6, 8),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
@@ -867,6 +909,12 @@ Library.Themes = {
         DarkColor = Color3.new(0, 0, 0),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
+        ElevationBase = Color3.fromRGB(17, 19, 22),
+        ElevationTint = Color3.fromRGB(248, 249, 252),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -893,6 +941,12 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(9, 9, 11),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 248, 250),
+        ElevationBase = Color3.fromRGB(14, 14, 18),
+        ElevationTint = Color3.fromRGB(248, 248, 250),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -919,6 +973,12 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(5, 6, 8),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(248, 249, 252),
+        ElevationBase = Color3.fromRGB(10, 13, 18),
+        ElevationTint = Color3.fromRGB(248, 249, 252),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -945,6 +1005,12 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(6, 9, 12),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(246, 249, 251),
+        ElevationBase = Color3.fromRGB(16, 20, 24),
+        ElevationTint = Color3.fromRGB(246, 249, 251),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -971,6 +1037,12 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(7, 10, 8),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(247, 250, 248),
+        ElevationBase = Color3.fromRGB(17, 21, 18),
+        ElevationTint = Color3.fromRGB(247, 250, 248),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -997,6 +1069,92 @@ Library.Themes = {
         DarkColor = Color3.fromRGB(9, 8, 7),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
         WhiteColor = Color3.fromRGB(249, 247, 243),
+        ElevationBase = Color3.fromRGB(18, 16, 14),
+        ElevationTint = Color3.fromRGB(249, 247, 243),
+        HighlightStrength = 1,
+        ShadowStrength = 1,
+        EdgeHighlight = false,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = false,
+    },
+    Onyx = {
+        ElevationBase = Color3.fromRGB(13, 13, 15),
+        ElevationTint = Color3.fromRGB(246, 247, 250),
+        HighlightStrength = 0.95,
+        ShadowStrength = 1.25,
+        EdgeHighlight = true,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
+        AccentColor = Color3.fromRGB(158, 166, 192),
+        WarningColor = Color3.fromRGB(202, 166, 104),
+        DestructiveColor = Color3.fromRGB(186, 80, 94),
+        RedColor = Color3.fromRGB(214, 108, 122),
+        SuccessColor = Color3.fromRGB(120, 184, 146),
+        DangerColor = Color3.fromRGB(214, 108, 122),
+        DarkColor = Color3.fromRGB(2, 2, 3),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(246, 247, 250),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = false,
+    },
+    Graphite = {
+        ElevationBase = Color3.fromRGB(22, 23, 26),
+        ElevationTint = Color3.fromRGB(244, 246, 250),
+        HighlightStrength = 1,
+        ShadowStrength = 1.1,
+        EdgeHighlight = true,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
+        AccentColor = Color3.fromRGB(152, 160, 188),
+        WarningColor = Color3.fromRGB(206, 170, 108),
+        DestructiveColor = Color3.fromRGB(190, 84, 98),
+        RedColor = Color3.fromRGB(218, 112, 126),
+        SuccessColor = Color3.fromRGB(124, 188, 150),
+        DangerColor = Color3.fromRGB(218, 112, 126),
+        DarkColor = Color3.fromRGB(4, 4, 5),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(244, 246, 250),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = false,
+    },
+    Slate = {
+        ElevationBase = Color3.fromRGB(33, 36, 42),
+        ElevationTint = Color3.fromRGB(238, 242, 248),
+        HighlightStrength = 1.15,
+        ShadowStrength = 1,
+        EdgeHighlight = true,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.63, Disabled = 0.38 },
+        AccentColor = Color3.fromRGB(148, 166, 196),
+        WarningColor = Color3.fromRGB(212, 178, 118),
+        DestructiveColor = Color3.fromRGB(206, 100, 114),
+        RedColor = Color3.fromRGB(224, 124, 138),
+        SuccessColor = Color3.fromRGB(134, 196, 160),
+        DangerColor = Color3.fromRGB(224, 124, 138),
+        DarkColor = Color3.fromRGB(6, 6, 8),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(238, 242, 248),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = false,
+    },
+    Pewter = {
+        ElevationBase = Color3.fromRGB(48, 50, 55),
+        ElevationTint = Color3.fromRGB(236, 239, 245),
+        HighlightStrength = 1.45,
+        ShadowStrength = 0.8,
+        EdgeHighlight = true,
+        TextEmphasis = { Primary = 0.87, Secondary = 0.67, Disabled = 0.38 },
+        AccentColor = Color3.fromRGB(170, 184, 214),
+        WarningColor = Color3.fromRGB(222, 190, 132),
+        DestructiveColor = Color3.fromRGB(222, 124, 136),
+        RedColor = Color3.fromRGB(236, 146, 158),
+        SuccessColor = Color3.fromRGB(150, 206, 172),
+        DangerColor = Color3.fromRGB(236, 146, 158),
+        DarkColor = Color3.fromRGB(9, 9, 10),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(236, 239, 245),
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -6408,6 +6566,11 @@ function Library:AddOutline(Frame: GuiObject)
     return OutlineStroke
 end
 
+local function ShadowTransparency(Value: number?): number
+    local Number = math.clamp(tonumber(Value) or Library:GetDesignToken("Opacity.Shadow", 0.48), 0, 1)
+    return math.clamp(1 - (1 - Number) * Library.Elevation.ShadowStrength, 0, 1)
+end
+
 function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparency: number?, Offset: UDim2?)
     local Shadow
     local Success = pcall(function()
@@ -6416,7 +6579,7 @@ function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparen
         Shadow.Color = Library.Scheme.ShadowColor or Library.Scheme.DarkColor
         Shadow.Offset = Offset or UDim2.fromOffset(0, 3)
         Shadow.Spread = UDim2.fromOffset(1, 1)
-        Shadow.Transparency = math.clamp(tonumber(Transparency) or Library:GetDesignToken("Opacity.Shadow", 0.48), 0, 1)
+        Shadow.Transparency = ShadowTransparency(Transparency)
         Shadow.ZIndex = 0
         Shadow.Parent = Frame
     end)
@@ -6431,9 +6594,7 @@ function Library:AddSoftShadow(Frame: GuiObject, BlurRadius: number?, Transparen
     Library:AddToRegistry(Shadow, {
         Color = "ShadowColor",
         Transparency = function()
-            return Library:GetDesignToken("Effects.Shadows", false)
-                and math.clamp(tonumber(Transparency) or Library:GetDesignToken("Opacity.Shadow", 0.48), 0, 1)
-                or 1
+            return Library:GetDesignToken("Effects.Shadows", false) and ShadowTransparency(Transparency) or 1
         end,
     })
     if not Library:GetDesignToken("Effects.Shadows", false) then
@@ -18837,11 +18998,264 @@ do
     end
 end
 
+local ElevationOrder = { "Base", "Surface", "Raised", "Element", "Hover", "Popup", "Modal" }
+local ElevationSurfaceKeys = {
+    BackgroundColor = "Base",
+    SurfaceColor = "Surface",
+    RaisedColor = "Raised",
+    TopBarColor = "Raised",
+    ElementColor = "Element",
+    MainColor = "Element",
+    HoverColor = "Hover",
+}
+local ElevationEmphasisKeys = {
+    FontColor = "Primary",
+    MutedFontColor = "Secondary",
+    DisabledFontColor = "Disabled",
+}
+
+function Library:GetElevationName(Level: (number | string)?): string
+    if typeof(Level) == "number" then
+        return ElevationOrder[math.clamp(math.floor(Level) + 1, 1, #ElevationOrder)]
+    end
+    if typeof(Level) == "string" and table.find(ElevationOrder, Level) then
+        return Level
+    end
+    return "Base"
+end
+
+function Library:GetElevationAlpha(Level: (number | string)?): number
+    local Name = Library:GetElevationName(Level)
+    local Alpha = tonumber(Library:GetDesignToken("Elevation.Highlight." .. Name, 0)) or 0
+    return math.clamp(Alpha * Library.Elevation.HighlightStrength, 0, 1)
+end
+
+function Library:GetElevation(Level: (number | string)?, Base: Color3?): Color3
+    local Surface = Base or Library.Elevation.Base or Library.Scheme.BackgroundColor
+    local Tint = Library.Elevation.Tint or Library.Scheme.WhiteColor or Color3.new(1, 1, 1)
+    return Surface:Lerp(Tint, Library:GetElevationAlpha(Level))
+end
+
+function Library:GetShadowTransparency(Level: (number | string)?): number
+    local Name = Library:GetElevationName(Level)
+    local Alpha = tonumber(Library:GetDesignToken("Elevation.Shadow." .. Name, 0)) or 0
+    return math.clamp(1 - Alpha * Library.Elevation.ShadowStrength, 0, 1)
+end
+
+function Library:GetTextEmphasis(Kind: string?, Surface: Color3?): Color3
+    local Emphasis = Library.Elevation.Emphasis or {}
+    local Fallback = tonumber(Library:GetDesignToken("Elevation.Emphasis." .. tostring(Kind), 0.87)) or 0.87
+    local Ratio = math.clamp(tonumber(Emphasis[Kind]) or Fallback, 0, 1)
+    local Over = Surface or Library.Scheme.ElementColor or Library.Scheme.BackgroundColor
+    local Tint = Library.Elevation.Tint or Library.Scheme.WhiteColor or Color3.new(1, 1, 1)
+    return Over:Lerp(Tint, Ratio)
+end
+
+function Library:ApplyEdgeHighlight(Surface: GuiObject, Info)
+    Info = Info or {}
+    local Existing = Surface:FindFirstChild("EdgeHighlight")
+    if Existing then
+        return Existing
+    end
+
+    local Scale = math.max(0, tonumber(Info.Scale) or 1)
+    local function Inset(): number
+        local Value = Info.Inset
+        if type(Value) == "function" then
+            Value = Value()
+        end
+        return math.max(0, Library:Snap(tonumber(Value) or Library:GetDesignToken("Radius.Card", 6)))
+    end
+    local function Thickness(): number
+        return math.max(1, Library:Snap(tonumber(Info.Thickness) or Library:GetDesignToken("Elevation.Edge.Thickness", 1)))
+    end
+
+    local Line = New("Frame", {
+        Name = "EdgeHighlight",
+        AnchorPoint = Vector2.new(0.5, 0),
+        BackgroundColor3 = function()
+            return Library.Elevation.Tint or Library.Scheme.WhiteColor
+        end,
+        BackgroundTransparency = function()
+            if not Library.Elevation.EdgeHighlight then
+                return 1
+            end
+            local Alpha = tonumber(Library:GetDesignToken("Elevation.Edge.Alpha", 0.1)) or 0.1
+            return math.clamp(1 - Alpha * Library.Elevation.HighlightStrength * Scale, 0, 1)
+        end,
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Size = function()
+            return UDim2.new(1, -Inset() * 2, 0, Thickness())
+        end,
+        ZIndex = math.floor(tonumber(Info.ZIndex) or (Surface.ZIndex + 1)),
+        Parent = Surface,
+    })
+
+    New("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),
+            NumberSequenceKeypoint.new(0.5, 0),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        Parent = Line,
+    })
+
+    return Line
+end
+
+function Library:ResolveThemePalette(ThemeData)
+    assert(type(ThemeData) == "table", "Theme data must be a table")
+
+    local Palette = table.clone(ThemeData)
+    local Base = typeof(ThemeData.ElevationBase) == "Color3" and ThemeData.ElevationBase or ThemeData.BackgroundColor
+    local Tint = typeof(ThemeData.ElevationTint) == "Color3" and ThemeData.ElevationTint
+        or ThemeData.WhiteColor
+        or Color3.new(1, 1, 1)
+    local Emphasis = type(ThemeData.TextEmphasis) == "table" and ThemeData.TextEmphasis or {}
+
+    local State = {
+        Base = Base,
+        Tint = Tint,
+        HighlightStrength = math.clamp(tonumber(ThemeData.HighlightStrength) or 1, 0.25, 2.5),
+        ShadowStrength = math.clamp(tonumber(ThemeData.ShadowStrength) or 1, 0, 2.5),
+        EdgeHighlight = ThemeData.EdgeHighlight == true,
+        Emphasis = {
+            Primary = math.clamp(tonumber(Emphasis.Primary) or 0.87, 0, 1),
+            Secondary = math.clamp(tonumber(Emphasis.Secondary) or 0.6, 0, 1),
+            Disabled = math.clamp(tonumber(Emphasis.Disabled) or 0.38, 0, 1),
+        },
+    }
+
+    local Previous = Library.Elevation
+    Library.Elevation = State
+
+    local Derived = {}
+    if typeof(Base) == "Color3" then
+        for Key, Level in ElevationSurfaceKeys do
+            if typeof(Palette[Key]) ~= "Color3" then
+                Palette[Key] = Library:GetElevation(Level)
+                Derived[Key] = true
+            end
+        end
+
+        if typeof(Palette.OutlineColor) ~= "Color3" then
+            local Alpha = tonumber(Library:GetDesignToken("Elevation.Outline", 0.18)) or 0.18
+            Palette.OutlineColor = Base:Lerp(Tint, math.clamp(Alpha * State.HighlightStrength, 0, 1))
+            Derived.OutlineColor = true
+        end
+        if typeof(Palette.ShadowColor) ~= "Color3" then
+            Palette.ShadowColor = Base:Lerp(Color3.new(0, 0, 0), 0.7)
+            Derived.ShadowColor = true
+        end
+    end
+
+    for Key, Kind in ElevationEmphasisKeys do
+        if typeof(Palette[Key]) ~= "Color3" then
+            Palette[Key] = Library:GetTextEmphasis(Kind, Palette.ElementColor)
+            Derived[Key] = true
+        end
+    end
+
+    if
+        typeof(Palette.AccentSoftColor) ~= "Color3"
+        and typeof(Palette.AccentColor) == "Color3"
+        and typeof(Palette.ElementColor) == "Color3"
+    then
+        Palette.AccentSoftColor = Palette.ElementColor:Lerp(Palette.AccentColor, 0.18)
+        Derived.AccentSoftColor = true
+    end
+
+    Library.Elevation = Previous
+    return Palette, State, Derived
+end
+
+function Library:RelayElevation()
+    local State = Library.Elevation
+    local Derived = Library.ElevationDerived
+
+    if typeof(State.Base) == "Color3" then
+        for Key, Level in ElevationSurfaceKeys do
+            if Derived[Key] then
+                Library.Scheme[Key] = Library:GetElevation(Level)
+            end
+        end
+        if Derived.OutlineColor then
+            local Alpha = tonumber(Library:GetDesignToken("Elevation.Outline", 0.18)) or 0.18
+            Library.Scheme.OutlineColor = State.Base:Lerp(State.Tint, math.clamp(Alpha * State.HighlightStrength, 0, 1))
+        end
+        if Derived.ShadowColor then
+            Library.Scheme.ShadowColor = State.Base:Lerp(Color3.new(0, 0, 0), 0.7)
+        end
+    end
+
+    for Key, Kind in ElevationEmphasisKeys do
+        if Derived[Key] then
+            Library.Scheme[Key] = Library:GetTextEmphasis(Kind, Library.Scheme.ElementColor)
+        end
+    end
+
+    if Derived.AccentSoftColor then
+        Library.Scheme.AccentSoftColor = Library.Scheme.ElementColor:Lerp(Library.Scheme.AccentColor, 0.18)
+    end
+
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
+    return Library
+end
+
+function Library:SetElevation(Options)
+    assert(type(Options) == "table", "Elevation options must be a table")
+
+    local State = Library.Elevation
+    if typeof(Options.Base) == "Color3" then
+        State.Base = Options.Base
+    end
+    if typeof(Options.Tint) == "Color3" then
+        State.Tint = Options.Tint
+    end
+    if Options.HighlightStrength ~= nil then
+        State.HighlightStrength = math.clamp(tonumber(Options.HighlightStrength) or 1, 0.25, 2.5)
+    end
+    if Options.ShadowStrength ~= nil then
+        State.ShadowStrength = math.clamp(tonumber(Options.ShadowStrength) or 1, 0, 2.5)
+    end
+    if Options.EdgeHighlight ~= nil then
+        State.EdgeHighlight = Options.EdgeHighlight == true
+    end
+    if type(Options.Emphasis) == "table" then
+        for Kind, Value in Options.Emphasis do
+            if State.Emphasis[Kind] ~= nil then
+                State.Emphasis[Kind] = math.clamp(tonumber(Value) or State.Emphasis[Kind], 0, 1)
+            end
+        end
+    end
+
+    local DesignOverrides = {}
+    if type(Options.Levels) == "table" then
+        DesignOverrides.Highlight = Options.Levels
+    end
+    if type(Options.Shadows) == "table" then
+        DesignOverrides.Shadow = Options.Shadows
+    end
+    if next(DesignOverrides) then
+        MergeDesign(Library.Design.Elevation, DesignOverrides)
+        Library.DesignRevision += 1
+    end
+
+    return Library:RelayElevation()
+end
+
 local ThemeAliases = {
     default = "Default",
-    graphite = "Default",
     gray = "Default",
     grey = "Default",
+    onyx = "Onyx",
+    nearblack = "Onyx",
+    graphite = "Graphite",
+    charcoal = "Graphite",
+    pewter = "Pewter",
+    midgray = "Pewter",
+    midgrey = "Pewter",
     metal = "Metal",
     material = "Metal",
     purple = "Metal",
@@ -18851,7 +19265,7 @@ local ThemeAliases = {
     night = "Midnight",
     dark = "Midnight",
     steel = "Steel",
-    slate = "Steel",
+    slate = "Slate",
     bluegray = "Steel",
     bluegrey = "Steel",
     sage = "Sage",
@@ -18879,9 +19293,25 @@ function Library:RegisterTheme(Name, Overrides, Base)
     assert(type(Name) == "string" and Name ~= "", "Theme name must be a non-empty string")
     assert(type(Overrides) == "table", "Theme overrides must be a table")
     local Theme = table.clone(Library.Themes[Library:ResolveThemeName(Base or Library.DefaultTheme)])
+    if typeof(Overrides.ElevationBase) == "Color3" then
+        for Key in ElevationSurfaceKeys do
+            if Overrides[Key] == nil then
+                Theme[Key] = nil
+            end
+        end
+        for Key in ElevationEmphasisKeys do
+            if Overrides[Key] == nil then
+                Theme[Key] = nil
+            end
+        end
+        if Overrides.OutlineColor == nil then Theme.OutlineColor = nil end
+        if Overrides.ShadowColor == nil then Theme.ShadowColor = nil end
+        if Overrides.AccentSoftColor == nil then Theme.AccentSoftColor = nil end
+    end
+    local Schema = Library.Themes[Library.DefaultTheme]
     for Key, Value in Overrides do
-        assert(Theme[Key] ~= nil, "Unknown theme property: " .. tostring(Key))
-        assert(typeof(Value) == typeof(Theme[Key]), "Invalid theme property: " .. tostring(Key))
+        assert(Schema[Key] ~= nil, "Unknown theme property: " .. tostring(Key))
+        assert(typeof(Value) == typeof(Schema[Key]), "Invalid theme property: " .. tostring(Key))
         Theme[Key] = Value
     end
     Library.Themes[Name] = Theme
@@ -18907,8 +19337,22 @@ function Library:SetPalette(Overrides)
     if (Overrides.AccentColor or Overrides.ElementColor or Overrides.MainColor) and not Overrides.AccentSoftColor then
         Library.Scheme.AccentSoftColor = Library.Scheme.ElementColor:Lerp(Library.Scheme.AccentColor, 0.18)
     end
-    Library:UpdateColorsUsingRegistry()
-    Library:RefreshThemeState()
+
+    for Key in Overrides do
+        Library.ElevationDerived[Key] = nil
+    end
+    if Overrides.ElementColor or Overrides.MainColor then
+        Library.ElevationDerived.ElementColor = nil
+        Library.ElevationDerived.MainColor = nil
+    end
+    if typeof(Overrides.BackgroundColor) == "Color3" then
+        Library.Elevation.Base = Overrides.BackgroundColor
+    end
+    if typeof(Overrides.WhiteColor) == "Color3" then
+        Library.Elevation.Tint = Overrides.WhiteColor
+    end
+
+    Library:RelayElevation()
     if Library.ThemeManager and Library.ThemeManager.SyncFromLibrary then
         Library.ThemeManager:SyncFromLibrary(Library.CurrentTheme)
     end
@@ -18918,6 +19362,9 @@ end
 function Library:SetTheme(Theme)
     local ThemeName = Library:ResolveThemeName(Theme)
     local ThemeData = Library.Themes[ThemeName] or Library.Themes[Library.DefaultTheme]
+    local Palette, State, Derived = Library:ResolveThemePalette(ThemeData)
+    Library.Elevation = State
+    Library.ElevationDerived = Derived
 
     for _, Index in {
         "BackgroundColor",
@@ -18932,6 +19379,7 @@ function Library:SetTheme(Theme)
         "OutlineColor",
         "FontColor",
         "MutedFontColor",
+        "DisabledFontColor",
         "ShadowColor",
         "RedColor",
         "SuccessColor",
@@ -18941,7 +19389,9 @@ function Library:SetTheme(Theme)
         "DarkColor",
         "WhiteColor",
     } do
-        Library.Scheme[Index] = ThemeData[Index]
+        if typeof(Palette[Index]) == "Color3" then
+            Library.Scheme[Index] = Palette[Index]
+        end
     end
 
     Library.Scheme.Red = nil
@@ -20001,6 +20451,12 @@ function Library:CreateWindow(WindowInfo)
             Position = UDim2.fromOffset(0, TopBarHeight),
             Size = UDim2.new(1, 0, 0, 1),
             Transparency = Library:GetDesignToken("Opacity.Divider", 0.56),
+        })
+        Library:ApplyEdgeHighlight(MainFrame, {
+            Inset = function()
+                return Library.CornerRadius
+            end,
+            ZIndex = 1000,
         })
 
         DividerLine = New("Frame", {

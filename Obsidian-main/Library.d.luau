@@ -16,6 +16,7 @@ export type Scheme = {
     OutlineColor: Color3,
     FontColor: Color3,
     MutedFontColor: Color3,
+    DisabledFontColor: Color3,
     ShadowColor: Color3,
     Font: Font,
     RedColor: Color3,
@@ -36,6 +37,55 @@ export type Design = {
     Typography: { [string]: number },
     Motion: { [string]: any },
     Addon: { [string]: any },
+    Elevation: { [string]: any },
+    Glass: { [string]: any },
+}
+
+export type GlassTier = "UltraThin" | "Thin" | "Regular" | "Thick" | "UltraThick"
+
+export type GlassRole = "Shell" | "Window" | "TopBar" | "Sidebar" | "Footer" | "TitleHolder" | "Content"
+
+export type GlassState = {
+    Enabled: boolean,
+    Tier: GlassTier,
+    Blur: boolean,
+    ReduceTransparency: boolean,
+    Surfaces: { [Instance]: GlassRole },
+}
+
+export type ElevationLevel = number | "Base" | "Surface" | "Raised" | "Element" | "Hover" | "Popup" | "Modal"
+
+export type ElevationEmphasis = {
+    Primary: number,
+    Secondary: number,
+    Disabled: number,
+}
+
+export type ElevationState = {
+    Base: Color3?,
+    Tint: Color3,
+    HighlightStrength: number,
+    ShadowStrength: number,
+    EdgeHighlight: boolean,
+    Emphasis: ElevationEmphasis,
+}
+
+export type ElevationOptions = {
+    Base: Color3?,
+    Tint: Color3?,
+    HighlightStrength: number?,
+    ShadowStrength: number?,
+    EdgeHighlight: boolean?,
+    Emphasis: { [string]: number }?,
+    Levels: { [string]: number }?,
+    Shadows: { [string]: number }?,
+}
+
+export type EdgeHighlightInfo = {
+    Inset: (number | (() -> number))?,
+    Thickness: number?,
+    Scale: number?,
+    ZIndex: number?,
 }
 
 export type AddonStyle = {
@@ -531,8 +581,16 @@ export type ThemePreset = {
     OutlineColor: Color3?,
     FontColor: Color3?,
     MutedFontColor: Color3?,
+    DisabledFontColor: Color3?,
     ShadowColor: Color3?,
     Font: Font | Enum.Font?,
+    ElevationBase: Color3?,
+    ElevationTint: Color3?,
+    HighlightStrength: number?,
+    ShadowStrength: number?,
+    EdgeHighlight: boolean?,
+    TextEmphasis: { [string]: number }?,
+    Glass: (boolean | GlassTier)?,
     RedColor: Color3?,
     WarningColor: Color3?,
     DestructiveColor: Color3?,
@@ -1844,6 +1902,9 @@ export type Library = {
     Design: Design,
     IsLightTheme: boolean,
     Scheme: Scheme,
+    Elevation: ElevationState,
+    ElevationDerived: { [string]: boolean },
+    Glass: GlassState,
     DefaultTheme: string,
     CurrentTheme: string,
     Themes: { [string]: ThemePreset },
@@ -1923,6 +1984,32 @@ export type Library = {
     BindTheme: (self: Library, Object: Instance, Properties: { [string]: any }) -> Instance,
     BindAddonStyle: (self: Library, Root: Instance, Style: { [string]: any }, Info: { [string]: any }?, BindSurface: boolean?) -> AddonStyleController,
     SetPalette: (self: Library, Overrides: { [string]: Color3 }) -> Library,
+    GetElevationName: (self: Library, Level: ElevationLevel?) -> string,
+    GetElevationAlpha: (self: Library, Level: ElevationLevel?) -> number,
+    GetElevation: (self: Library, Level: ElevationLevel?, Base: Color3?) -> Color3,
+    GetShadowTransparency: (self: Library, Level: ElevationLevel?) -> number,
+    GetTextEmphasis: (self: Library, Kind: ("Primary" | "Secondary" | "Disabled" | string)?, Surface: Color3?) -> Color3,
+    ApplyEdgeHighlight: (self: Library, Surface: GuiObject, Info: EdgeHighlightInfo?) -> Frame,
+    ResolveThemePalette: (self: Library, ThemeData: ThemePreset) -> (ThemePreset, ElevationState, { [string]: boolean }),
+    RelayElevation: (self: Library) -> Library,
+    SetElevation: (self: Library, Options: ElevationOptions) -> Library,
+    GetGlassTier: (self: Library) -> GlassTier,
+    IsGlassActive: (self: Library) -> boolean,
+    GetEffectiveContrast: (self: Library, Foreground: Color3, Surface: Color3, Transparency: number?) -> number,
+    GetGlassTransparency: (self: Library, Role: GlassRole?, Raw: boolean?) -> number,
+    GetGlassScrim: (self: Library) -> number,
+    GetGlassMaterial: (self: Library, Role: GlassRole?) -> (Color3, number),
+    GetGlassGradient: (self: Library) -> (ColorSequence, NumberSequence),
+    IsGlassSurface: (self: Library, Object: Instance?) -> boolean,
+    RegisterGlassSurface: (self: Library, Object: GuiObject, Role: GlassRole) -> Instance,
+    UnregisterGlassSurface: (self: Library, Object: Instance?) -> Library,
+    RefreshGlass: (self: Library) -> Library,
+    SetGlass: (self: Library, Value: (boolean | GlassTier)?) -> Library,
+    SetGlassTier: (self: Library, Tier: GlassTier) -> Library,
+    SetReduceTransparency: (self: Library, Enabled: boolean) -> Library,
+    IsBlurActive: (self: Library) -> boolean,
+    RefreshBlur: (self: Library) -> Library,
+    SetBlurEnabled: (self: Library, Enabled: boolean) -> Library,
     RegisterTheme: (self: Library, Name: string, Overrides: { [string]: any }, Base: string?) -> Library,
     ThemeErrors: { { Object: Instance, Property: string, Message: string } },
     SetReducedMotion: (self: Library, Enabled: boolean) -> Library,

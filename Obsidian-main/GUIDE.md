@@ -113,7 +113,7 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 - [Window](#window), [tabs and groupboxes](#tabs-and-groupboxes), [controls](#controls), and [design system](#design-system)
 - [Addon mounting](#addon-mounting), [generic addon windows](#generic-addon-windows), and [collections without UI](#collections-without-ui)
 - [Asset catalog](#asset-catalog), [image gallery and preview](#image-gallery-and-image-preview), [dashboard](#dashboard), and [character preview](#character-preview)
-- [Themes](#themes), [configs](#configs), [notifications](#notifications), and [watermark](#watermark)
+- [Themes](#themes), [theming and depth](#theming-and-depth), [glass](#glass), [configs](#configs), [notifications](#notifications), and [watermark](#watermark)
 - [Addon recipes](#addon-recipes), [complete API reference](#complete-addon-api-reference), and [release checklist](#release-checklist)
 - [Runtime and advanced API](#runtime-and-advanced-api): reactivity, performance, declarative builder, registry, search, sub-tabs, touch, diagnostics, new controls, and performance numbers
 
@@ -1240,7 +1240,426 @@ ThemeManager:ApplyToTab(Tabs.Settings)
 ThemeManager:CreateAppearanceManager(Tabs.Settings:AddRightGroupbox("Appearance", "sliders-horizontal"))
 ```
 
-Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, and `Ash`. Every core surface and every current visual addon registers its palette properties. Theme changes update the top bar, sidebar, content, controls, addon windows, cards, previews, text, and outlines together.
+Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, `Ash`, `Onyx`, `Graphite`, `Slate`, and `Pewter`. Every one of them is dark. There is no light theme and none is planned, because the menu is an overlay on top of somebody else's game and a light panel floats over a dark scene like a torch.
+
+The last four are the grey family, ordered from the darkest base upward: `Onyx` sits near black, `Graphite` is the neutral charcoal most menus want, `Slate` lifts into mid grey with a cool cast, and `Pewter` is the lightest the library goes. They differ by base colour and by how hard their elevation overlay and shadows push; every surface above the base is derived from those two numbers rather than hand-picked. [Theming and depth](#theming-and-depth) explains how to read them and how to author one of your own.
+
+Every core surface and every current visual addon registers its palette properties. Theme changes update the top bar, sidebar, content, controls, addon windows, cards, previews, text, and outlines together.
+
+Theme names resolve through an alias table, so `Library:SetTheme("charcoal")`, `"graphite"`, and `"Graphite"` all land on the same palette. `grey`, `gray`, `nearblack`, `midgrey`, `bluegrey`, `warmgrey`, and `taupe` are also accepted.
+
+## Theming and depth
+
+A dark interface does not get its depth from the same place a light one does. The rules below are not preferences, they come from Material Design's dark theme guidance and Apple's Human Interface Guidelines, and the library is built so that following them is the path of least resistance.
+
+**A shadow does not read on a dark surface.** Black on near-black is invisible. Elevation in a dark theme is expressed by compositing a translucent light tint over the base colour, so a raised surface is a lighter grey, not a shadowed one. Shadows are still drawn, but only as a secondary cue under floating layers.
+
+**A higher surface is always lighter than the one beneath it.** This constraint is absolute. If a popup came out darker than the card it opened from, the stack reads inverted and nothing else will fix it.
+
+**The base is a desaturated grey, never pure black.** Bright content on pure black produces an extreme contrast step that tires the eye and makes the halation around text worse. The darkest base the library ships is `Onyx` at RGB 13, 13, 15.
+
+**Accents are desaturated for dark backgrounds.** A saturated accent picked against white vibrates against a dark grey. Every grey theme's accent sits in the 150 to 190 range on its dominant channel rather than at full chroma.
+
+**Text emphasis runs at roughly 87, 60, and 38 percent.** Primary text is not pure white; it is the tint mixed 87 percent of the way over its surface. Secondary is 60, disabled is 38. Those three ratios are what keeps a dense menu from looking like a wall of equally loud labels.
+
+### The palette keys
+
+A theme is a table of `Color3` values plus the elevation controls. Any surface key you leave out is derived; any key you supply wins and is never recomputed.
+
+| Key | Elevation level | Meaning |
+| --- | --- | --- |
+| `BackgroundColor` | `Base` | The window body, the lowest surface. |
+| `SurfaceColor` | `Surface` | Sidebar and content backing. |
+| `RaisedColor` / `TopBarColor` | `Raised` | Top bar, section headers, cards. |
+| `ElementColor` / `MainColor` | `Element` | Control bodies, rows, buttons. |
+| `HoverColor` | `Hover` | The hovered or pressed state of a control. |
+| `OutlineColor` | derived at `Elevation.Outline` | Strokes. Defaults to the base mixed 18 percent toward the tint. |
+| `ShadowColor` | derived | The base mixed 70 percent toward black. |
+| `FontColor` | emphasis `Primary` | Primary text, 87 percent. |
+| `MutedFontColor` | emphasis `Secondary` | Secondary text, 60 percent. |
+| `DisabledFontColor` | emphasis `Disabled` | Disabled text, 38 percent. |
+| `AccentColor` | not derived | The one tinted colour. Desaturate it. |
+| `AccentSoftColor` | derived | `ElementColor` mixed 18 percent toward the accent. |
+| `WarningColor`, `SuccessColor`, `DestructiveColor`, `DangerColor`, `RedColor` | not derived | Status colours. |
+| `WhiteColor`, `DarkColor` | not derived | The extremes used by contrast helpers. |
+
+Only two extra fields are needed to make the derivation work:
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `ElevationBase` | `Color3` | `BackgroundColor` | The colour every derived surface is lifted from. |
+| `ElevationTint` | `Color3` | `WhiteColor`, then white | The colour surfaces are lifted toward. |
+| `HighlightStrength` | `number` | `1`, clamped 0.25 to 2.5 | Multiplies every highlight alpha. |
+| `ShadowStrength` | `number` | `1`, clamped 0 to 2.5 | Multiplies every shadow alpha. |
+| `EdgeHighlight` | `boolean` | `false` | Draws a one pixel light line along the top edge of raised surfaces. |
+| `TextEmphasis` | `table` | `{ Primary = 0.87, Secondary = 0.6, Disabled = 0.38 }` | The three text ratios. |
+
+### The elevation levels
+
+Seven levels, addressable by name or by index from `0` to `6`. `Design.Elevation.Highlight` holds the tint alpha per level and `Design.Elevation.Shadow` holds the shadow alpha.
+
+| Level | Index | Highlight | Shadow | What it is for |
+| --- | --- | --- | --- | --- |
+| `Base` | 0 | 0.00 | 0.00 | The window body. Nothing sits below it. |
+| `Surface` | 1 | 0.03 | 0.10 | Sidebar, content area, the backing a card rests on. |
+| `Raised` | 2 | 0.05 | 0.14 | Top bar, groupbox and card bodies. |
+| `Element` | 3 | 0.07 | 0.16 | Controls: buttons, rows, inputs, dropdown bodies. |
+| `Hover` | 4 | 0.09 | 0.18 | The hovered or active state of anything at `Element`. |
+| `Popup` | 5 | 0.12 | 0.28 | Dropdown lists, tooltips, context menus, notifications. |
+| `Modal` | 6 | 0.16 | 0.38 | Dialogs and anything with an overlay behind it. |
+
+Pick the level by what the thing *is*, not by how prominent you want it. Two controls at the same job get the same level; if one needs to stand out, tint it or outline it instead of floating it higher.
+
+### Library:GetElevationName(level)
+
+Normalizes whatever you were handed into one of the seven level names. Reach for it when a caller may pass a number, a name, or nothing at all, and you want one canonical string to look tokens up with.
+
+```luau
+Library:GetElevationName(3)          --> "Element"
+Library:GetElevationName("Popup")    --> "Popup"
+Library:GetElevationName("Nonsense") --> "Base"
+Library:GetElevationName(nil)        --> "Base"
+```
+
+`level` is a `number`, a `string`, or `nil`. Numbers are floored and clamped into range, so `9` returns `Modal` and `-1` returns `Base`. Unknown strings and `nil` return `Base` rather than erroring, which means a theme that names a level you have not defined degrades to the flattest option instead of failing to load. Returns a `string`.
+
+### Library:GetElevationAlpha(level)
+
+Returns the tint alpha for a level after the active theme's `HighlightStrength` has been applied. Use it when you are compositing your own surface colour and want the same number the library uses, or when you want to show the multiplier's effect in a readout.
+
+```luau
+local Alpha = Library:GetElevationAlpha("Popup")
+Label.Text = string.format("%d%% overlay", math.round(Alpha * 100))
+```
+
+`level` takes the same values as `GetElevationName`. Returns a `number` in `0` to `1`. A theme with `HighlightStrength = 1.45` turns the `Popup` token of `0.12` into `0.174`; the clamp means an extreme multiplier saturates at 1 rather than wrapping. The value is read fresh on every call, so a slider driving `HighlightStrength` is reflected immediately with no cache to invalidate.
+
+### Library:GetElevation(level, base)
+
+The actual colour of a surface at a level. This is the function to call when you build custom UI and want it to sit in the same stack as the library's own surfaces.
+
+```luau
+local Card = New("Frame", {
+    BackgroundColor3 = function()
+        return Library:GetElevation("Raised")
+    end,
+    Parent = Container,
+})
+```
+
+`level` is a level name, index, or `nil`. `base` is an optional `Color3` to lift from; omit it and the theme's `Elevation.Base` is used, falling back to `Scheme.BackgroundColor`. Returns a `Color3`.
+
+Pass it as a function, as above, rather than calling it once and storing the result. A function is re-evaluated on every theme refresh, so the card follows a theme switch, an elevation slider, and a palette edit without any work on your side. Storing the `Color3` freezes it at whatever the palette was when the frame was built.
+
+### Library:GetShadowTransparency(level)
+
+The transparency a shadow should be drawn at for a level, after `ShadowStrength`. Note that this is a *transparency*, so `1` is invisible and lower is stronger.
+
+```luau
+local Shadow = Library:AddSoftShadow(Window, 24, Library:GetShadowTransparency("Modal"))
+```
+
+`level` takes the usual values. Returns a `number` in `0` to `1`. A theme with `ShadowStrength = 0` returns `1` at every level, which is how a flat theme turns shadows off without touching any call site. `Pewter` ships `0.8` because a lighter base needs less shadow to separate; `Onyx` ships `1.25` because a near-black base gives the overlay less room to work and leans harder on the shadow.
+
+### Library:GetTextEmphasis(kind, surface)
+
+The colour for a tier of text over a given surface. Use it for custom labels so they match the library's own three-tier hierarchy instead of guessing at a grey.
+
+```luau
+local Caption = New("TextLabel", {
+    TextColor3 = function()
+        return Library:GetTextEmphasis("Secondary", Library:GetElevation("Raised"))
+    end,
+    Parent = Card,
+})
+```
+
+`kind` is `"Primary"`, `"Secondary"`, or `"Disabled"`; anything else falls back to the `Design.Elevation.Emphasis` token of that name and then to `0.87`. `surface` is an optional `Color3` the text sits on, defaulting to `Scheme.ElementColor` and then `Scheme.BackgroundColor`. Returns a `Color3`.
+
+Passing the surface matters. The same ratio over a `Popup` surface produces a lighter grey than over `Base`, which is what keeps secondary text equally readable on both instead of vanishing on the darker one.
+
+### Library:ApplyEdgeHighlight(surface, info)
+
+Draws a single horizontal light line along the top edge of a surface, faded out at both ends by a gradient. It is the cheap trick that makes a raised panel read as catching light from above, and it is why the grey themes do not look like flat rectangles stacked on flat rectangles.
+
+```luau
+Library:ApplyEdgeHighlight(Card, {
+    Inset = function()
+        return Library:GetDesignToken("Radius.Card", 6)
+    end,
+    Scale = 0.8,
+})
+```
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `Inset` | `number` or `() -> number` | `Radius.Card`, so `6` | Pixels held back from each end so the line stops before the rounded corner. |
+| `Thickness` | `number` | `Elevation.Edge.Thickness`, so `1` | Line height in whole pixels, floored at 1. |
+| `Scale` | `number` | `1` | Multiplies this line's alpha, for a surface that wants a fainter edge than the token. |
+| `ZIndex` | `number` | `surface.ZIndex + 1` | Where the line sits in the surface's stack. |
+
+Returns the `Frame`, named `EdgeHighlight`. Calling it twice on the same surface returns the existing line rather than stacking a second one, so it is safe inside a rebuild path.
+
+The line's transparency is a bound function, not a fixed value. When the active theme sets `EdgeHighlight = false` it resolves to fully transparent, so the line costs one frame and nothing else on themes that do not want it, and a theme switch turns it on or off with no rebuild. `Inset` may be a function for the same reason: a surface whose corner radius can change at runtime keeps the line correctly short.
+
+### Library:SetElevation(options)
+
+Changes the depth system at runtime and repaints everything derived from it. This is the entry point behind an appearance slider, and the one to reach for when a game's art direction needs a flatter or a punchier menu than the theme shipped with.
+
+```luau
+Library:SetElevation({
+    HighlightStrength = 1.3,
+    ShadowStrength = 0.7,
+    EdgeHighlight = true,
+})
+```
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `Base` | `Color3` | unchanged | The colour surfaces are lifted from. |
+| `Tint` | `Color3` | unchanged | The colour surfaces are lifted toward. |
+| `HighlightStrength` | `number` | unchanged, clamped 0.25 to 2.5 | Global multiplier on every highlight alpha. |
+| `ShadowStrength` | `number` | unchanged, clamped 0 to 2.5 | Global multiplier on every shadow alpha. |
+| `EdgeHighlight` | `boolean` | unchanged | Turns every registered edge line on or off. |
+| `Emphasis` | `table` | unchanged | `Primary`, `Secondary`, `Disabled`, each clamped 0 to 1. |
+| `Levels` | `table` | unchanged | Per-level highlight alpha overrides, merged into `Design.Elevation.Highlight`. |
+| `Shadows` | `table` | unchanged | Per-level shadow alpha overrides, merged into `Design.Elevation.Shadow`. |
+
+Returns `Library`, so calls chain. Omitted fields are left alone; there is no need to pass the whole state to change one number.
+
+Only surfaces the library *derived* are repainted. A theme that supplied `ElementColor` explicitly keeps it through any `SetElevation` call, which is deliberate: a hand-picked colour is a decision and the depth slider should not quietly overrule it. If you want a theme to respond to the slider, leave its surface keys out and let them derive.
+
+`HighlightStrength` is clamped at a floor of `0.25` rather than `0` because a theme with no highlight at all collapses all seven levels onto one colour and the menu stops having a readable stack. `ShadowStrength` may be `0`, since losing shadows still leaves the overlay doing the work.
+
+### Library:RelayElevation()
+
+Recomputes every derived palette key from the current elevation state and pushes the result through the registry. `SetElevation` calls it for you. Call it yourself only after mutating `Library.Elevation` in place, which is rarely what you want.
+
+Returns `Library`. It repaints derived surfaces, the derived outline and shadow colours, the three text tiers, and `AccentSoftColor`, then refreshes theme state. Keys the theme supplied explicitly are skipped.
+
+### Library:ResolveThemePalette(themeData)
+
+Expands a theme table into the full palette the library actually paints with. `SetTheme` and `RegisterTheme` run it for you; call it directly when you want to preview a theme's colours without applying it, for instance to paint swatches in a theme picker.
+
+```luau
+local Palette, State, Derived = Library:ResolveThemePalette(Library.Themes.Graphite)
+Swatch.BackgroundColor3 = Palette.RaisedColor
+```
+
+`themeData` is a theme table. Returns three values: the completed `Palette` table, the `State` table holding `Base`, `Tint`, `HighlightStrength`, `ShadowStrength`, `EdgeHighlight`, and `Emphasis`, and a `Derived` table whose keys mark which palette entries were computed rather than supplied.
+
+It does not touch the live theme. It swaps `Library.Elevation` for the duration of the call and restores it before returning, so it is safe to run against a theme the user is only hovering over in a list.
+
+### Authoring a theme
+
+A grey theme is four numbers and an accent. Everything else derives.
+
+```luau
+Library:RegisterTheme("Basalt", {
+    ElevationBase = Color3.fromRGB(18, 19, 22),
+    ElevationTint = Color3.fromRGB(245, 247, 250),
+    HighlightStrength = 1.05,
+    ShadowStrength = 1.15,
+    EdgeHighlight = true,
+    AccentColor = Color3.fromRGB(154, 168, 190),
+    SuccessColor = Color3.fromRGB(122, 186, 148),
+    WarningColor = Color3.fromRGB(204, 168, 106),
+    DestructiveColor = Color3.fromRGB(188, 82, 96),
+    WhiteColor = Color3.fromRGB(245, 247, 250),
+    CornerRadius = 8,
+    IsLight = false,
+})
+
+Library:SetTheme("Basalt")
+```
+
+Checks worth running against your own theme before shipping it:
+
+- Print `Library:GetElevation(Level)` for all seven levels and confirm the luminance rises monotonically. `Library:GetLuminance(Color)` gives you the number.
+- Confirm `Library:GetEffectiveContrast(Scheme.FontColor, Scheme.ElementColor)` clears `4.5`, and that `MutedFontColor` clears `3`.
+- Raise `HighlightStrength` as the base gets lighter, not as it gets darker. A near-black base has the most room for the overlay to show; a mid grey base has the least, which is why `Pewter` ships `1.45` and `Onyx` ships `0.95`.
+- Lower `ShadowStrength` as the base gets lighter, for the mirror reason.
+
+## Glass
+
+Glass is a frosted material for the window chrome, in the macOS sense: the surface takes on what is behind it instead of sitting flat at a fixed alpha. It is off by default because it only makes sense over some games' scenes.
+
+The rules it enforces come from Apple's Human Interface Guidelines and are not negotiable in the API:
+
+**Glass belongs to the navigation layer only.** The window plate, top bar, sidebar, and footer may be glass. Content may not. Lists, cards, tables, previews and media stay opaque, because a translucent list means the text of one row is competing with whatever is moving behind it.
+
+**Glass is never nested inside glass.** A translucent surface cannot sample another translucent surface; you get a double-darkened patch and the material stops reading as one plane. `RegisterGlassSurface` walks the parent chain and errors rather than letting it happen.
+
+**Below 4.5:1 you add a scrim, not darker text.** When contrast over the material falls short, the library folds a 15 to 25 percent dark scrim in behind the material. Darkening the text instead would fix the ratio and destroy the hierarchy.
+
+**Reduce transparency falls back to solid.** Not to a thicker tier, not to an approximation. Solid.
+
+### The tiers
+
+Five tiers, from most transparent to least. `Regular` is the default and is right for roughly every surface; the thin tiers exist for the rare case where the scene behind is very flat.
+
+| Tier | Surface alpha | Chrome alpha | Gradient depth |
+| --- | --- | --- | --- |
+| `UltraThin` | 0.55 | 0.34 | 0.07 |
+| `Thin` | 0.45 | 0.27 | 0.06 |
+| `Regular` | 0.34 | 0.20 | 0.05 |
+| `Thick` | 0.22 | 0.13 | 0.04 |
+| `UltraThick` | 0.12 | 0.07 | 0.03 |
+
+Every tier is then clamped by `Design.Glass.OpacityFloor`, which is `0.45`, so no tier can make a surface more than 55 percent transparent no matter what is configured. That floor is what stops a menu from becoming unreadable over a bright scene.
+
+### The roles
+
+A glass surface is registered under a role, and the role decides which kind of material it gets.
+
+| Role | Kind | Colour key |
+| --- | --- | --- |
+| `Shell` | opaque host | `BackgroundColor` |
+| `Window` | translucent plate | `BackgroundColor` |
+| `TopBar` | chrome over the plate | `TopBarColor` |
+| `Sidebar` | chrome over the plate | `SurfaceColor` |
+| `Footer` | chrome over the plate | `SurfaceColor` |
+| `Content` | passthrough, stays opaque | `BackgroundColor` |
+
+`Window` is the one surface that is actually translucent against the game. `TopBar`, `Sidebar`, and `Footer` sit on top of it and have their alpha solved so the *composite* lands where the tier asked, rather than each one multiplying the plate's transparency again. That is the single-container rule in practice: one plate, several chrome pieces painted against it.
+
+### Library:SetGlass(value)
+
+Turns glass on or off, optionally choosing a tier in the same call. This is the public switch.
+
+```luau
+Library:SetGlass(true)        -- on, at the current tier
+Library:SetGlass("Thick")     -- on, and switch to Thick
+Library:SetGlass(false)       -- off
+```
+
+`value` is `true`, `false`, `nil`, or a tier name. `nil` and `false` both disable. A tier name is matched case-insensitively, so `"regular"` works; an unrecognized string raises an assertion listing the five valid tiers. Returns `Library`.
+
+Switching it repaints every registered surface through the theme registry, so a menu with an open dropdown or a live addon window changes material in place with no rebuild and no flicker.
+
+### Library:SetGlassTier(tier)
+
+Changes the tier without changing whether glass is enabled. Use it behind a tier dropdown that should be adjustable while glass is off, so the setting persists for when it is turned back on.
+
+```luau
+Library:SetGlassTier("Thin")
+```
+
+`tier` is one of `UltraThin`, `Thin`, `Regular`, `Thick`, `UltraThick`, case-insensitive. An unknown name asserts. Returns `Library`. With glass disabled the tier is stored and every material call still returns opaque, so nothing visibly changes until `SetGlass(true)`.
+
+### Library:GetGlassTier()
+
+Returns the active tier name as a `string`. Falls back to the `Design.Glass.Tier` token and then to `"Regular"` if the stored value is not a recognized tier, so it never returns something the rest of the API would reject. Use it to seed a dropdown's default.
+
+### Library:IsGlassActive()
+
+Returns `true` only when glass is enabled *and* reduce transparency is off. Every material function checks it first. Use it in your own custom chrome so it follows the same switch.
+
+```luau
+if Library:IsGlassActive() then
+    Divider.BackgroundTransparency = 0.6
+end
+```
+
+### Library:SetReduceTransparency(enabled)
+
+Honours a user's reduce-transparency preference. When on, every glass surface falls back to a fully solid background; the tier and the enabled flag are both preserved, so clearing it restores exactly what was there.
+
+```luau
+Library:SetReduceTransparency(true)
+```
+
+`enabled` is coerced to a boolean. Returns `Library`. This is a separate switch from `SetGlass` on purpose: an accessibility preference and a style preference should not overwrite each other, and a user who turns transparency back on should get their tier back rather than a default.
+
+### Library:GetGlassTransparency(role, raw)
+
+The transparency a role's surface should be drawn at. Mostly internal, but useful when you are painting a custom chrome element and want to match.
+
+`role` is a role name; anything unrecognized is treated as `Surface`. `raw` is an optional boolean: pass `true` to get the tier's alpha before the scrim is folded in, which is what the scrim solver itself uses. Returns a `number` in `0` to `1`, and returns `0`, meaning fully opaque, whenever glass is inactive.
+
+### Library:GetGlassScrim()
+
+Solves for the scrim alpha needed to bring primary text over the window plate up to the contrast target. It starts at `Design.Glass.Scrim` (0.15), steps by `Design.Glass.ScrimStep` (0.02), and stops at `Design.Glass.ScrimMax` (0.25) or as soon as `Design.Glass.ContrastTarget` (4.5) is met.
+
+Returns a `number` in `0` to `1`, and `0` when glass is inactive. The solver runs against the worst case of a pure black and a pure white backdrop, so the answer holds over any scene rather than the one the menu happened to open on.
+
+### Library:GetGlassMaterial(role)
+
+Returns the `Color3` and the transparency for a role in one call, which is what `RegisterGlassSurface` binds to.
+
+```luau
+local Color, Transparency = Library:GetGlassMaterial("TopBar")
+```
+
+`role` is a role name. Returns `(Color3, number)`. With glass inactive it returns the role's plain scheme colour, at transparency `1` for `Window` and `0` for everything else, which is exactly the opaque layout the library uses without glass.
+
+### Library:RegisterGlassSurface(object, role)
+
+Binds a `GuiObject` to a glass role so it repaints with the material on every theme, tier, or switch change. Reach for it when you build custom chrome, such as a floating toolbar that should match the window.
+
+```luau
+Library:RegisterGlassSurface(CustomToolbar, "Footer")
+```
+
+`object` must be a `GuiObject` or the call asserts. `role` must be one of the six names or the call asserts naming all six. Returns whatever `Library:BindTheme` returns, and the binding can be released with `Library:RemoveFromRegistry(object)`.
+
+If the role is translucent and any ancestor is already registered as a translucent surface, the call errors with the offending parent's role rather than registering. That is the never-nest rule enforced at the only point where it can be enforced cheaply. Group your translucent pieces as siblings over one plate instead.
+
+### Library:UnregisterGlassSurface(object)
+
+Drops an object from the glass table. Returns `Library`. Passing `nil` is a no-op. The table holds weak keys, so a destroyed surface is collected on its own and calling this is only necessary when you are reusing the instance for something else.
+
+### Library:IsGlassSurface(object)
+
+Returns `true` when the object is currently registered as a glass surface. Useful in a layout pass that needs to skip its own background handling for chrome the glass system already owns.
+
+### Library:GetGlassGradient()
+
+Returns the `ColorSequence` and `NumberSequence` for the subtle top-to-bottom falloff that sells the material as a sheet rather than a flat wash. Depth comes from the active tier's `Gradient` value.
+
+```luau
+local Colors, Transparencies = Library:GetGlassGradient()
+New("UIGradient", { Color = Colors, Transparency = Transparencies, Rotation = 90, Parent = Plate })
+```
+
+Returns `(ColorSequence, NumberSequence)`. Thinner tiers get a deeper gradient, because a more transparent sheet needs more shaping to read as a surface at all.
+
+### Library:SetBlurEnabled(enabled)
+
+Adds a real `BlurEffect` to Lighting behind the menu. It is the one part of the glass system that touches the game's own rendering, which is why it defaults to off and is exposed as its own switch.
+
+```luau
+Library:SetBlurEnabled(true)
+```
+
+`enabled` is coerced to a boolean. Returns `Library`. Blur size comes from `Design.Glass.BlurSize`, which is `18`, clamped to 0 to 56.
+
+The effect is only created when `Library:IsBlurActive()` is true, and that requires all of: blur enabled, glass active, not mobile, reduced motion off, the menu currently toggled open, and the library not unloaded. Closing the menu tears the effect down and reopening it rebuilds it, so a closed menu never leaves the game blurred. The mobile exclusion is not a preference; a full-screen blur is the single most expensive thing this library could ask a phone to do.
+
+Everything is wrapped in `pcall`, including acquiring Lighting through `cloneref`. An executor that blocks either one leaves blur silently off and the rest of the glass system working.
+
+### Library:IsBlurActive()
+
+Returns `true` when all six conditions above hold. Use it to label a blur toggle honestly, for instance to show why the switch is on but nothing is blurred.
+
+### Library:RefreshBlur() and Library:RefreshGlass()
+
+`RefreshBlur` reconciles the `BlurEffect` with the current state, creating, resizing, or destroying it as needed. `RefreshGlass` prunes destroyed surfaces from the weak table, refreshes blur, then repaints the registry and theme state. Both return `Library`. The setters call them; you need them only after mutating `Library.Glass` in place.
+
+### Library:GetEffectiveContrast(foreground, surface, transparency)
+
+The contrast ratio of text over a surface, computed against the worst case rather than a single assumed backdrop. This is the function to check your own colours with.
+
+```luau
+local Ratio = Library:GetEffectiveContrast(Library.Scheme.FontColor, Library.Scheme.ElementColor)
+if Ratio < 4.5 then
+    warn(string.format("contrast %.2f is short of 4.5", Ratio))
+end
+```
+
+`foreground` and `surface` are `Color3`. `transparency` is optional and defaults to `0`; pass the surface's transparency when it is translucent. Returns a `number`, the ratio, where higher is better and 4.5 is the threshold for body text.
+
+It composites the surface over both pure black and pure white and returns the lower of the two ratios. A translucent surface has no single background, so the only honest answer is the worst one it could land on.
 
 ## Configs
 

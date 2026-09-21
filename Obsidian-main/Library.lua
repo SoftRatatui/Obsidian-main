@@ -381,6 +381,8 @@ local Library = {
     NotifyOnError = false,
     ShowCustomCursor = true,
     ForceCheckbox = true,
+    ToggleStyle = "Auto",
+    ToggleStyleTargets = setmetatable({}, { __mode = "k" }),
     TooltipsEnabled = false,
     AppearanceLocked = false,
     ThemeFontOverride = nil,
@@ -485,6 +487,23 @@ local Library = {
                 Thickness = 1,
             },
         },
+        Glass = {
+            Tier = "Regular",
+            Tiers = {
+                UltraThin = { Surface = 0.55, Chrome = 0.34, Gradient = 0.07 },
+                Thin = { Surface = 0.45, Chrome = 0.27, Gradient = 0.06 },
+                Regular = { Surface = 0.34, Chrome = 0.2, Gradient = 0.05 },
+                Thick = { Surface = 0.22, Chrome = 0.13, Gradient = 0.04 },
+                UltraThick = { Surface = 0.12, Chrome = 0.07, Gradient = 0.03 },
+            },
+            OpacityFloor = 0.5,
+            Scrim = 0.15,
+            ScrimMax = 0.25,
+            ScrimStep = 0.02,
+            BorderAlpha = 0.4,
+            ContrastTarget = 4.5,
+            BlurSize = 18,
+        },
         Shell = {
             SidebarMin = 184,
             SidebarMax = 214,
@@ -585,6 +604,14 @@ local Library = {
         Emphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
     },
     ElevationDerived = {},
+
+    Glass = {
+        Enabled = true,
+        Tier = "Regular",
+        Blur = false,
+        ReduceTransparency = false,
+        Surfaces = setmetatable({}, { __mode = "k" }),
+    },
 
 	Registry = {},
 	ThemeListeners = {},
@@ -915,6 +942,7 @@ Library.Themes = {
         ShadowStrength = 1,
         EdgeHighlight = false,
         TextEmphasis = { Primary = 0.87, Secondary = 0.6, Disabled = 0.38 },
+        Glass = "Regular",
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
@@ -1353,6 +1381,7 @@ local Templates = {
     Toggle = {
         Text = "Toggle",
         Default = false,
+        Style = "Auto",
 
         Callback = function() end,
         Changed = function() end,
@@ -1703,6 +1732,7 @@ end
 function Library:SetReducedMotion(Enabled: boolean)
     Library.Design.Motion.Reduced = Enabled == true
     Library:RefreshMotion()
+    Library:RefreshBlur()
     return Library
 end
 
@@ -3821,6 +3851,50 @@ local function GetToggleStrokeColor(Toggle): Color3
     end
 
     return Library.Scheme.OutlineColor:Lerp(Library.Scheme.FontColor, 0.08)
+end
+
+local ToggleStyleNames = {
+    checkbox = "Checkbox",
+    check = "Checkbox",
+    box = "Checkbox",
+    switch = "Switch",
+    pill = "Switch",
+    slider = "Switch",
+}
+
+function Library:NormalizeToggleStyle(Style: string?): string?
+    if typeof(Style) ~= "string" then
+        return nil
+    end
+
+    return ToggleStyleNames[string.lower(Style)]
+end
+
+function Library:GetToggleStyle(): string
+    local Named = Library:NormalizeToggleStyle(Library.ToggleStyle)
+    if Named then
+        return Named
+    end
+
+    return Library.ForceCheckbox == false and "Switch" or "Checkbox"
+end
+
+function Library:SetToggleStyle(Name: string)
+    local Style = Library:NormalizeToggleStyle(Name)
+    if not Style then
+        return Library
+    end
+
+    Library.ToggleStyle = Style
+    Library.ForceCheckbox = Style == "Checkbox"
+
+    for Control, Apply in Library.ToggleStyleTargets do
+        if type(Apply) == "function" and not Control.Destroyed then
+            pcall(Apply, Style)
+        end
+    end
+
+    return Library
 end
 
 local function GetKeybindToggleSurfaceColor(Active: boolean): Color3
@@ -11835,12 +11909,9 @@ do
         return Button
     end
 
-    function Funcs:AddCheckbox(Idx, Info)
-        if self.Destroyed then return nil end
-
+    local function BuildToggleControl(Groupbox, Idx, Info, ForcedStyle)
         Info = Library:Validate(Info, Templates.Toggle)
 
-        local Groupbox = self
         local Container = Groupbox.Container
 
         local Toggle = {
@@ -11865,8 +11936,10 @@ do
             ConfirmationDialog = nil,
             Disabled = Info.Disabled,
             Visible = Info.Visible,
+            Pressed = false,
 
             StyleVariant = NormalizeToggleVariant(Info.Variant, Info.Risky),
+            StyleOverride = Library:NormalizeToggleStyle(Info.Style) or ForcedStyle,
 
             Addons = {},
             AnyKeyPickerPicking = false,
@@ -11875,9 +11948,23 @@ do
             Type = "Toggle",
         }
 
-        local RowHeight = Library:Metric("Row", 24)
-        local IndicatorSize = Library:MatchParity(RowHeight, Library:Metric("Indicator", 16))
-        local LabelInset = IndicatorSize + Library:Metric("IndicatorGap", 9)
+        local function Metrics()
+            local Row = Library:Metric("Row", 24)
+            if Library.IsMobile then
+                Row = math.max(Row, 44)
+            end
+
+            if Toggle.Variant == "Switch" then
+                local Track = Library:MatchParity(Row, Library:Metric("TrackRow", 14))
+                local Knob = Library:MatchParity(Track, math.max(6, Track - 4))
+                return Row, Track + Knob, Track, Knob
+            end
+
+            local Box = Library:MatchParity(Row, Library:Metric("Indicator", 16))
+            return Row, Box, Box, Library:GlyphSize(Box, Box >= 28 and 24 or 12)
+        end
+
+        local RowHeight, IndicatorWidth, IndicatorHeight, InnerSize = Metrics()
 
         local Button = New("TextButton", {
             Active = not Toggle.Disabled,
@@ -11890,369 +11977,10 @@ do
 
         local Label = New("TextLabel", {
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(LabelInset, 0),
-            Size = UDim2.new(1, -LabelInset, 1, 0),
+            Size = UDim2.new(1, 0, 1, 0),
             Text = Toggle.Text,
             TextSize = Library:GetDesignToken("Size.Text", 14),
-            TextTransparency = Library:GetDesignToken("Opacity.MutedText", 0.42),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = Button,
-        })
-
-        New("UIListLayout", {
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            Padding = UDim.new(0, 6),
-            Parent = Label,
-        })
-
-        local Checkbox = New("Frame", {
-            BackgroundColor3 = "MainColor",
-            Position = UDim2.fromOffset(0, Library:CenterOffset(RowHeight, IndicatorSize)),
-            Size = UDim2.fromOffset(IndicatorSize, IndicatorSize),
-            Parent = Button,
-        })
-        New("UICorner", {
-            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
-            Parent = Checkbox,
-        })
-        local CheckboxStroke = New("UIStroke", {
-            Color = "OutlineColor",
-            Transparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18),
-            Parent = Checkbox,
-        })
-
-        local CheckIcon = Library:GetCustomIcon("check")
-        local CheckSize = Library:GlyphSize(IndicatorSize, 14)
-        local Checkmark = New("ImageLabel", {
-            BackgroundTransparency = 1,
-            Image = CheckIcon and CheckIcon.Url or "",
-            ImageColor3 = function()
-                return Library:GetContrastColor(GetToggleSurfaceColor(Toggle))
-            end,
-            ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
-            ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
-            ImageTransparency = Toggle.Value and 0 or 1,
-            Position = UDim2.fromOffset(
-                Library:CenterOffset(IndicatorSize, CheckSize),
-                Library:CenterOffset(IndicatorSize, CheckSize)
-            ),
-            ResampleMode = Enum.ResamplerMode.Default,
-            ScaleType = Enum.ScaleType.Fit,
-            Size = UDim2.fromOffset(CheckSize, CheckSize),
-            Parent = Checkbox,
-        })
-        local CheckRestScale = math.max(1, CheckSize - 2) / CheckSize
-        local CheckmarkScale = New("UIScale", {
-            Scale = Toggle.Value and 1 or CheckRestScale,
-            Parent = Checkmark,
-        })
-
-        local function SetCheckmarkTransparency(Value)
-            Checkmark.ImageTransparency = Value
-        end
-
-        local function TweenCheckmarkTransparency(Value)
-            Library:PlayTween(Checkmark, "CheckboxCheckmark", Library.TweenInfo, {
-                ImageTransparency = Value,
-            })
-        end
-
-        local function CancelCheckmarkTweens()
-            Library:CancelTween(Checkmark, "CheckboxCheckmark")
-        end
-
-        RegisterToggleTheme(Toggle, Checkbox, CheckboxStroke, Label)
-        Library:AddToRegistry(Checkmark, {
-            ImageColor3 = function()
-                return Library:GetContrastColor(GetToggleSurfaceColor(Toggle))
-            end,
-        })
-
-        function Toggle:UpdateColors()
-            Toggle:Display()
-        end
-
-        function Toggle:Display()
-            if Library.Unloaded then
-                return
-            end
-
-            local BackgroundColor = GetToggleSurfaceColor(Toggle)
-            local StrokeColor = GetToggleStrokeColor(Toggle)
-            local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
-
-            Checkmark.ImageColor3 = Library:GetContrastColor(BackgroundColor)
-
-            if Toggle.Disabled then
-                Library:CancelTween(Checkbox, "CheckboxColor")
-                Library:CancelTween(CheckboxStroke, "CheckboxStroke")
-                Library:CancelTween(Label, "CheckboxLabelColor")
-                Library:CancelTween(Label, "CheckboxLabelTransparency")
-                CancelCheckmarkTweens()
-                Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
-                Label.TextColor3 = LabelColor
-                Label.TextTransparency = 0.8
-                Checkbox.BackgroundColor3 = BackgroundColor
-                Checkbox.BackgroundTransparency = 0.35
-                CheckboxStroke.Color = StrokeColor
-                CheckboxStroke.Transparency = 0.65
-                SetCheckmarkTransparency(Toggle.Value and 0.58 or 1)
-
-                return
-            end
-
-            Checkbox.BackgroundTransparency = 0
-            CheckboxStroke.Transparency = Toggle.Value and 0.04 or 0.18
-
-            Library:PlayTween(Checkbox, "CheckboxColor", Library.TweenInfo, {
-                BackgroundColor3 = BackgroundColor,
-            })
-            Library:PlayTween(CheckboxStroke, "CheckboxStroke", Library.TweenInfo, {
-                Color = StrokeColor,
-            })
-            Library:PlayTween(Label, "CheckboxLabelColor", Library.TweenInfo, {
-                TextColor3 = LabelColor,
-            })
-            Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
-            })
-            TweenCheckmarkTransparency(Toggle.Value and 0 or 1)
-            Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
-                Scale = Toggle.Value and 1 or CheckRestScale,
-            })
-        end
-
-        function Toggle:OnChanged(Func)
-            Toggle.Changed = Func
-        end
-
-        function Toggle:RunChanged()
-            Library:SafeCallback(Toggle.Callback, Toggle.Value)
-            Library:SafeCallback(Toggle.Changed, Toggle.Value)
-        end
-
-        function Toggle:SetValue(Value)
-            if Toggle.Disabled then
-                return
-            end
-
-            Value = Value == true
-            if Toggle.Value == Value then
-                return
-            end
-
-            if Toggle.ConfirmationPending then
-                CancelToggleConfirmation(Toggle)
-            end
-
-            Toggle.Value = Value
-            Toggle:Display()
-
-            for _, Addon in Toggle.Addons do
-                if Addon.Type == "KeyPicker" and Addon.SyncToggleState then
-                    Addon.Toggled = Toggle.Value
-                    Addon:Update()
-                end
-            end
-
-            Library:QueueDependencyUpdate()
-
-            if not Toggle.AnyKeyPickerPicking then
-                Toggle:RunChanged()
-            end
-        end
-
-        function Toggle:SetDisabled(Disabled: boolean)
-            if Toggle.Disabled == Disabled then
-                return
-            end
-
-            if Disabled then
-                CancelToggleConfirmation(Toggle)
-            end
-
-            Toggle.Disabled = Disabled
-
-            if Toggle.TooltipTable then
-                Toggle.TooltipTable.Disabled = Toggle.Disabled
-            end
-
-            for _, Addon in Toggle.Addons do
-                if Addon.Type == "KeyPicker" and Addon.SyncToggleState then
-                    Addon:Update()
-                end
-            end
-
-            Button.Active = not Toggle.Disabled
-            Toggle:Display()
-        end
-
-        function Toggle:SetVariant(Variant: string)
-            CancelToggleConfirmation(Toggle)
-            Toggle.StyleVariant = NormalizeToggleVariant(Variant, Toggle.Risky)
-            Toggle:Display()
-        end
-
-        function Toggle:SetVisible(Visible: boolean)
-            if Toggle.Visible == Visible then
-                return
-            end
-
-            Toggle.Visible = Visible
-
-            if not Toggle.Visible then
-                CancelToggleConfirmation(Toggle)
-            end
-
-            Button.Visible = Toggle.Visible
-            Library:RequestLayout(Groupbox)
-        end
-
-        function Toggle:SetText(Text: string)
-            Toggle.Text = Text
-            Label.Text = Text
-        end
-
-        table.insert(Toggle.Connections, Button.Activated:Connect(function()
-            if Toggle.Disabled then
-                return
-            end
-
-            RequestToggleValue(Toggle, Groupbox, not Toggle.Value)
-        end))
-
-        if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
-            Toggle.TooltipTable = Library:AddTooltip(Toggle.Tooltip, Toggle.DisabledTooltip, Button)
-            Toggle.TooltipTable.Disabled = Toggle.Disabled
-        end
-
-        Toggle:Display()
-        Library:RequestLayout(Groupbox)
-
-        Toggle.TextLabel = Label
-        Toggle.Checkbox = Checkbox
-        Toggle.Checkmark = Checkmark
-        Toggle.Container = Container
-        setmetatable(Toggle, BaseAddons)
-
-        Toggle.Holder = Button
-        table.insert(Groupbox.Elements, Toggle)
-
-        Toggle.Default = Toggle.Value
-
-        Library:RegisterConfigOption(Toggle, Info, Idx)
-        Toggles[Idx] = Toggle
-
-        function Toggle:Destroy()
-            if Toggle.Destroyed then
-                return
-            end
-
-            CancelToggleConfirmation(Toggle)
-            Toggle.Destroyed = true
-
-            Library:CancelTween(Checkbox, "CheckboxColor")
-            Library:CancelTween(CheckboxStroke, "CheckboxStroke")
-            Library:CancelTween(Label, "CheckboxLabelColor")
-            Library:CancelTween(Label, "CheckboxLabelTransparency")
-            CancelCheckmarkTweens()
-            Library:CancelTween(CheckmarkScale, "CheckboxCheckmarkScale")
-
-            if Toggle.Connections then
-                for _, Connection in Toggle.Connections do
-                    Connection:Disconnect()
-                end
-            end
-
-            if Toggle.TooltipTable then 
-                Toggle.TooltipTable:Destroy() 
-            end
-
-            if Button then 
-                Button:Destroy() 
-            end
-
-            if Toggle.Addons then
-                for Index = #Toggle.Addons, 1, -1 do
-                    local Addon = table.remove(Toggle.Addons, Index)
-                    if Addon and Addon.Destroy then
-                        Addon:Destroy()
-                    end
-                end
-            end
-
-            local ElemIdx = table.find(Groupbox.Elements, Toggle)
-            if ElemIdx then 
-                table.remove(Groupbox.Elements, ElemIdx) 
-            end
-
-            Library:RequestLayout(Groupbox)
-            Toggles[Idx] = nil
-        end
-
-        return Toggle
-    end
-
-    function Funcs:AddToggle(Idx, Info)
-        if self.Destroyed then return nil end
-
-        if Library.ForceCheckbox then
-            return Funcs.AddCheckbox(self, Idx, Info)
-        end
-
-        Info = Library:Validate(Info, Templates.Toggle)
-
-        local Groupbox = self
-        local Container = Groupbox.Container
-
-        local Toggle = {
-            Connections = {},
-            Destroyed = false,
-
-            Text = Info.Text,
-            Value = Info.Default,
-
-            Tooltip = Info.Tooltip,
-            DisabledTooltip = Info.DisabledTooltip,
-            TooltipTable = nil,
-
-            Callback = Info.Callback,
-            Changed = Info.Changed,
-
-            Risky = Info.Risky,
-            ConfirmDanger = Info.ConfirmDanger,
-            ConfirmTitle = Info.ConfirmTitle,
-            ConfirmDescription = Info.ConfirmDescription,
-            ConfirmationPending = false,
-            ConfirmationDialog = nil,
-            Disabled = Info.Disabled,
-            Visible = Info.Visible,
-
-            StyleVariant = NormalizeToggleVariant(Info.Variant, Info.Risky),
-
-            Addons = {},
-            AnyKeyPickerPicking = false,
-
-            Variant = "Switch",
-            Type = "Toggle",
-        }
-
-        local Button = New("TextButton", {
-            Active = not Toggle.Disabled,
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Library:GetDesignToken("Size.Row", 24)),
-            Text = "",
-            Visible = Toggle.Visible,
-            Parent = Container,
-        })
-
-        local Label = New("TextLabel", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, -32, 1, 0),
-            Text = Toggle.Text,
-            TextSize = Library:GetDesignToken("Size.Text", 14),
-            TextTransparency = Library:GetDesignToken("Opacity.MutedText", 0.38),
+            TextTransparency = Library:GetEmphasisTransparency("Secondary"),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = Button,
         })
@@ -12265,51 +11993,140 @@ do
             Parent = Label,
         })
 
-        local Switch = New("Frame", {
-            AnchorPoint = Vector2.new(1, 0.5),
+        local Indicator = New("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundColor3 = function()
                 return GetToggleSurfaceColor(Toggle)
             end,
             ClipsDescendants = true,
-            Position = UDim2.fromScale(1, 0.5),
-            Size = UDim2.fromOffset(24, 14),
+            Size = UDim2.fromOffset(IndicatorWidth, IndicatorHeight),
             Parent = Button,
         })
-        New("UICorner", {
-            CornerRadius = UDim.new(1, 0),
-            Parent = Switch,
+        local IndicatorCorner = New("UICorner", {
+            CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)),
+            Parent = Indicator,
         })
-        local SwitchStroke = New("UIStroke", {
+        local IndicatorStroke = New("UIStroke", {
             Color = function()
                 return GetToggleStrokeColor(Toggle)
             end,
-            Transparency = 0.18,
-            Parent = Switch,
+            Transparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18),
+            Parent = Indicator,
+        })
+        local CheckIcon = Library:GetCustomIcon("check")
+        local Checkmark = New("ImageLabel", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Image = CheckIcon and CheckIcon.Url or "",
+            ImageColor3 = function()
+                return Library:GetContrastColor(GetToggleSurfaceColor(Toggle))
+            end,
+            ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
+            ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
+            ImageTransparency = 1,
+            Position = UDim2.fromScale(0.5, 0.5),
+            ResampleMode = Enum.ResamplerMode.Default,
+            ScaleType = Enum.ScaleType.Fit,
+            Size = UDim2.fromOffset(InnerSize, InnerSize),
+            Parent = Indicator,
+        })
+        local CheckmarkScale = New("UIScale", {
+            Parent = Checkmark,
         })
 
-        local Ball = New("Frame", {
-            AnchorPoint = Vector2.new(0, 0.5),
-            BackgroundColor3 = "FontColor",
-            Position = UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0),
-            Size = UDim2.fromOffset(10, 10),
-            Parent = Switch,
+        local Knob = New("Frame", {
+            BackgroundColor3 = function()
+                return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
+            end,
+            Size = UDim2.fromOffset(InnerSize, InnerSize),
+            Visible = false,
+            Parent = Indicator,
         })
         New("UICorner", {
             CornerRadius = UDim.new(1, 0),
-            Parent = Ball,
+            Parent = Knob,
         })
 
-        RegisterToggleTheme(Toggle, Switch, SwitchStroke, Label)
-        local BallRegistry = Library.Registry[Ball] or {}
-        BallRegistry.BackgroundColor3 = function()
-            return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
+        RegisterToggleTheme(Toggle, Indicator, IndicatorStroke, Label)
+
+        local function MarkRestScale()
+            return math.max(1, InnerSize - 2) / math.max(1, InnerSize)
         end
-        BallRegistry.Position = function()
-            return UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0)
+
+        local function KnobPosition()
+            local Inset = math.round((IndicatorHeight - InnerSize) * 0.5)
+            local X = Toggle.Value and (IndicatorWidth - InnerSize - Inset) or Inset
+            return UDim2.fromOffset(X, Inset)
         end
-        Library.Registry[Ball] = BallRegistry
+
+        local function CancelStateTweens()
+            Library:CancelTween(Indicator, "ToggleSurface")
+            Library:CancelTween(IndicatorStroke, "ToggleStroke")
+            Library:CancelTween(Label, "ToggleLabelColor")
+            Library:CancelTween(Label, "ToggleLabelTransparency")
+            Library:CancelTween(Checkmark, "ToggleMark")
+            Library:CancelTween(CheckmarkScale, "ToggleMarkScale")
+            Library:CancelTween(Knob, "ToggleKnob")
+            Library:CancelTween(Knob, "ToggleKnobColor")
+        end
+
+        local function ApplyGeometry()
+            RowHeight, IndicatorWidth, IndicatorHeight, InnerSize = Metrics()
+
+            local Switching = Toggle.Variant == "Switch"
+            local Gap = Library:Metric("IndicatorGap", 9)
+
+            Button.Size = UDim2.new(1, 0, 0, RowHeight)
+            Indicator.Size = UDim2.fromOffset(IndicatorWidth, IndicatorHeight)
+            IndicatorCorner.CornerRadius = Switching and UDim.new(1, 0)
+                or UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3))
+
+            if Switching then
+                Indicator.Position = UDim2.new(1, -IndicatorWidth * 0.5, 0.5, 0)
+                Label.Position = UDim2.fromOffset(0, 0)
+            else
+                Indicator.Position = UDim2.new(0, IndicatorWidth * 0.5, 0.5, 0)
+                Label.Position = UDim2.fromOffset(IndicatorWidth + Gap, 0)
+            end
+            Label.Size = UDim2.new(1, -(IndicatorWidth + Gap), 1, 0)
+
+            Checkmark.Size = UDim2.fromOffset(InnerSize, InnerSize)
+            Knob.Size = UDim2.fromOffset(InnerSize, InnerSize)
+
+            Library:CancelTween(Knob, "ToggleKnob")
+            Knob.Position = KnobPosition()
+        end
+
+        local Built = false
+
+        local function ApplyStyle(Style)
+            local Resolved = Toggle.StyleOverride or Library:NormalizeToggleStyle(Style) or Library:GetToggleStyle()
+            if Built and Toggle.Variant == Resolved then
+                return
+            end
+
+            Built = true
+            Toggle.Variant = Resolved
+            Checkmark.Visible = Resolved == "Checkbox"
+            Knob.Visible = Resolved == "Switch"
+
+            ApplyGeometry()
+            Toggle:Display()
+            Library:RequestLayout(Groupbox)
+        end
+
+        local function SetPressed(Pressed)
+            Pressed = Pressed == true and not Toggle.Disabled
+            if Toggle.Pressed == Pressed then
+                return
+            end
+
+            Toggle.Pressed = Pressed
+            Toggle:Display()
+        end
 
         function Toggle:UpdateColors()
+            ApplyGeometry()
             Toggle:Display()
         end
 
@@ -12318,51 +12135,75 @@ do
                 return
             end
 
-            local BallPosition = UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0)
-            local SwitchColor = GetToggleSurfaceColor(Toggle)
+            local SurfaceColor = GetToggleSurfaceColor(Toggle)
             local StrokeColor = GetToggleStrokeColor(Toggle)
             local LabelColor = GetToggleLabelColor(Toggle.StyleVariant, Toggle.Value)
+            local LabelTransparency = Library:GetEmphasisTransparency(
+                Toggle.Disabled and "Disabled" or (Toggle.Value and "Primary" or "Secondary")
+            )
+            local MarkTransparency = Toggle.Value
+                    and Library:GetEmphasisTransparency(Toggle.Disabled and "Disabled" or "Primary")
+                or 1
 
-            Switch.BackgroundTransparency = Toggle.Disabled and 0.75 or 0
-            SwitchStroke.Transparency = Toggle.Disabled and 0.75 or (Toggle.Value and 0.04 or 0.18)
+            if Toggle.Pressed and not Toggle.Disabled then
+                local Tint = Library.Elevation.Tint or Library.Scheme.WhiteColor
+                local Alpha = Library:GetElevationAlpha("Hover")
+                SurfaceColor = SurfaceColor:Lerp(Tint, Alpha)
+                StrokeColor = StrokeColor:Lerp(Tint, Alpha)
+            end
+
+            local SurfaceMotion = Toggle.Pressed and Library:GetMotion("Fast") or Library.TweenInfo
+
+            Checkmark.ImageColor3 = Library:GetContrastColor(SurfaceColor)
 
             if Toggle.Disabled then
-                Library:CancelTween(Switch, "SwitchColor")
-                Library:CancelTween(SwitchStroke, "SwitchStroke")
-                Library:CancelTween(Label, "SwitchLabelColor")
-                Library:CancelTween(Label, "SwitchLabelTransparency")
-                Library:CancelTween(Ball, "SwitchBallPosition")
-                Library:CancelTween(Ball, "SwitchBallColor")
-                Switch.BackgroundColor3 = SwitchColor
-                SwitchStroke.Color = StrokeColor
+                CancelStateTweens()
                 Label.TextColor3 = LabelColor
-                Label.TextTransparency = 0.8
-                Ball.Position = BallPosition
-
-                Ball.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
+                Label.TextTransparency = LabelTransparency
+                Indicator.BackgroundColor3 = SurfaceColor
+                Indicator.BackgroundTransparency = 0.35
+                IndicatorStroke.Color = StrokeColor
+                IndicatorStroke.Transparency = 0.65
+                Checkmark.ImageTransparency = MarkTransparency
+                CheckmarkScale.Scale = Toggle.Value and 1 or MarkRestScale()
+                Knob.Position = KnobPosition()
+                Knob.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
 
                 return
             end
 
-            Library:PlayTween(Switch, "SwitchColor", Library.TweenInfo, {
-                BackgroundColor3 = SwitchColor,
+            Indicator.BackgroundTransparency = 0
+            IndicatorStroke.Transparency = Toggle.Value and 0.04
+                or Library:GetDesignToken("Stroke.StrongTransparency", 0.18)
+
+            Library:PlayTween(Indicator, "ToggleSurface", SurfaceMotion, {
+                BackgroundColor3 = SurfaceColor,
             })
-            Library:PlayTween(SwitchStroke, "SwitchStroke", Library.TweenInfo, {
+            Library:PlayTween(IndicatorStroke, "ToggleStroke", SurfaceMotion, {
                 Color = StrokeColor,
             })
-            Library:PlayTween(Label, "SwitchLabelColor", Library.TweenInfo, {
+            Library:PlayTween(Label, "ToggleLabelColor", Library.TweenInfo, {
                 TextColor3 = LabelColor,
             })
-            Library:PlayTween(Label, "SwitchLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
-            })
-            Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
-                Position = BallPosition,
-            })
-            Library:PlayTween(Ball, "SwitchBallColor", Library.TweenInfo, {
-                BackgroundColor3 = Library.Scheme.FontColor,
+            Library:PlayTween(Label, "ToggleLabelTransparency", Library.TweenInfo, {
+                TextTransparency = LabelTransparency,
             })
 
+            if Toggle.Variant == "Switch" then
+                Library:PlayTween(Knob, "ToggleKnob", Library:GetMotion("Fast"), {
+                    Position = KnobPosition(),
+                })
+                Library:PlayTween(Knob, "ToggleKnobColor", Library.TweenInfo, {
+                    BackgroundColor3 = Library.Scheme.FontColor,
+                })
+            else
+                Library:PlayTween(Checkmark, "ToggleMark", Library.TweenInfo, {
+                    ImageTransparency = MarkTransparency,
+                })
+                Library:PlayTween(CheckmarkScale, "ToggleMarkScale", Library.TweenInfo, {
+                    Scale = Toggle.Value and 1 or MarkRestScale(),
+                })
+            end
         end
 
         function Toggle:OnChanged(Func)
@@ -12436,6 +12277,12 @@ do
             Toggle:Display()
         end
 
+        function Toggle:SetStyle(Style: string?)
+            Toggle.StyleOverride = Library:NormalizeToggleStyle(Style)
+            Library.ToggleStyleTargets[Toggle] = Toggle.StyleOverride == nil and ApplyStyle or nil
+            ApplyStyle(Toggle.StyleOverride)
+        end
+
         function Toggle:SetVisible(Visible: boolean)
             if Toggle.Visible == Visible then
                 return
@@ -12461,7 +12308,24 @@ do
                 return
             end
 
+            SetPressed(false)
             RequestToggleValue(Toggle, Groupbox, not Toggle.Value)
+        end))
+
+        table.insert(Toggle.Connections, Button.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+                SetPressed(true)
+            end
+        end))
+
+        table.insert(Toggle.Connections, Button.InputEnded:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+                SetPressed(false)
+            end
+        end))
+
+        table.insert(Toggle.Connections, Button.MouseLeave:Connect(function()
+            SetPressed(false)
         end))
 
         if typeof(Toggle.Tooltip) == "string" or typeof(Toggle.DisabledTooltip) == "string" then
@@ -12469,11 +12333,19 @@ do
             Toggle.TooltipTable.Disabled = Toggle.Disabled
         end
 
-        Toggle:Display()
+        ApplyStyle(Toggle.StyleOverride)
         ApplyControlBadge(Toggle, Label, Info)
-        Library:RequestLayout(Groupbox)
+
+        if Toggle.StyleOverride == nil then
+            Library.ToggleStyleTargets[Toggle] = ApplyStyle
+        end
 
         Toggle.TextLabel = Label
+        Toggle.Indicator = Indicator
+        Toggle.Checkbox = Indicator
+        Toggle.Switch = Indicator
+        Toggle.Checkmark = Checkmark
+        Toggle.Knob = Knob
         Toggle.Container = Container
         setmetatable(Toggle, BaseAddons)
 
@@ -12492,13 +12364,9 @@ do
 
             CancelToggleConfirmation(Toggle)
             Toggle.Destroyed = true
+            Library.ToggleStyleTargets[Toggle] = nil
 
-            Library:CancelTween(Switch, "SwitchColor")
-            Library:CancelTween(SwitchStroke, "SwitchStroke")
-            Library:CancelTween(Label, "SwitchLabelColor")
-            Library:CancelTween(Label, "SwitchLabelTransparency")
-            Library:CancelTween(Ball, "SwitchBallPosition")
-            Library:CancelTween(Ball, "SwitchBallColor")
+            CancelStateTweens()
 
             if Toggle.Connections then
                 for _, Connection in Toggle.Connections do
@@ -12506,12 +12374,12 @@ do
                 end
             end
 
-            if Toggle.TooltipTable then 
-                Toggle.TooltipTable:Destroy() 
+            if Toggle.TooltipTable then
+                Toggle.TooltipTable:Destroy()
             end
 
-            if Button then 
-                Button:Destroy() 
+            if Button then
+                Button:Destroy()
             end
 
             if Toggle.Addons then
@@ -12524,8 +12392,8 @@ do
             end
 
             local ElemIdx = table.find(Groupbox.Elements, Toggle)
-            if ElemIdx then 
-                table.remove(Groupbox.Elements, ElemIdx) 
+            if ElemIdx then
+                table.remove(Groupbox.Elements, ElemIdx)
             end
 
             Library:RequestLayout(Groupbox)
@@ -12533,6 +12401,18 @@ do
         end
 
         return Toggle
+    end
+
+    function Funcs:AddCheckbox(Idx, Info)
+        if self.Destroyed then return nil end
+
+        return BuildToggleControl(self, Idx, Info, "Checkbox")
+    end
+
+    function Funcs:AddToggle(Idx, Info)
+        if self.Destroyed then return nil end
+
+        return BuildToggleControl(self, Idx, Info, nil)
     end
 
     function Funcs:AddInput(Idx, Info)
@@ -19051,6 +18931,16 @@ function Library:GetTextEmphasis(Kind: string?, Surface: Color3?): Color3
     return Over:Lerp(Tint, Ratio)
 end
 
+function Library:GetEmphasisRatio(Kind: string?): number
+    local Emphasis = Library.Elevation.Emphasis or {}
+    local Fallback = tonumber(Library:GetDesignToken("Elevation.Emphasis." .. tostring(Kind), 0.87)) or 0.87
+    return math.clamp(tonumber(Emphasis[Kind]) or Fallback, 0, 1)
+end
+
+function Library:GetEmphasisTransparency(Kind: string?): number
+    return math.clamp(1 - Library:GetEmphasisRatio(Kind), 0, 1)
+end
+
 function Library:ApplyEdgeHighlight(Surface: GuiObject, Info)
     Info = Info or {}
     local Existing = Surface:FindFirstChild("EdgeHighlight")
@@ -19077,7 +18967,7 @@ function Library:ApplyEdgeHighlight(Surface: GuiObject, Info)
             return Library.Elevation.Tint or Library.Scheme.WhiteColor
         end,
         BackgroundTransparency = function()
-            if not Library.Elevation.EdgeHighlight then
+            if not (Library.Elevation.EdgeHighlight or Library:IsGlassActive()) then
                 return 1
             end
             local Alpha = tonumber(Library:GetDesignToken("Elevation.Edge.Alpha", 0.1)) or 0.1
@@ -19243,6 +19133,328 @@ function Library:SetElevation(Options)
     end
 
     return Library:RelayElevation()
+end
+
+local GlassTierOrder = { "UltraThin", "Thin", "Regular", "Thick", "UltraThick" }
+local GlassRoles = {
+    Shell = "Shell",
+    Window = "Surface",
+    TopBar = "Chrome",
+    Sidebar = "Chrome",
+    Footer = "Chrome",
+    TitleHolder = "Passthrough",
+    Content = "Passthrough",
+}
+local GlassRoleColors = {
+    Shell = "BackgroundColor",
+    Window = "BackgroundColor",
+    TopBar = "TopBarColor",
+    Sidebar = "SurfaceColor",
+    Footer = "SurfaceColor",
+    TitleHolder = "TopBarColor",
+    Content = "BackgroundColor",
+}
+local GlassTranslucentKinds = { Surface = true, Chrome = true }
+local GlassRoleNames = "Shell, Window, TopBar, Sidebar, Footer, TitleHolder, Content"
+
+local GlassBlur: BlurEffect? = nil
+local GlassLighting: Lighting? = nil
+
+local function ResolveGlassTier(Value: any): string?
+    if type(Value) ~= "string" then
+        return nil
+    end
+    local Lowered = string.lower(Value)
+    for _, Tier in GlassTierOrder do
+        if string.lower(Tier) == Lowered then
+            return Tier
+        end
+    end
+    return nil
+end
+
+function Library:GetGlassTier(): string
+    return ResolveGlassTier(Library.Glass.Tier) or ResolveGlassTier(Library:GetDesignToken("Glass.Tier", "Regular")) or "Regular"
+end
+
+local function GlassTierData()
+    local Tiers = Library:GetDesignToken("Glass.Tiers", nil)
+    local Data = type(Tiers) == "table" and Tiers[Library:GetGlassTier()] or nil
+    if type(Data) ~= "table" then
+        return { Surface = 0.34, Chrome = 0.2, Gradient = 0.05 }
+    end
+    return Data
+end
+
+function Library:IsGlassActive(): boolean
+    return Library.Glass.Enabled == true
+        and Library.Glass.ReduceTransparency ~= true
+        and Library.IsLightTheme ~= true
+end
+
+local function ContrastRatio(First: number, Second: number): number
+    local High = math.max(First, Second)
+    local Low = math.min(First, Second)
+    return (High + 0.05) / (Low + 0.05)
+end
+
+function Library:GetEffectiveContrast(Foreground: Color3, Surface: Color3, Transparency: number?): number
+    local Alpha = math.clamp(1 - (tonumber(Transparency) or 0), 0, 1)
+    local Text = Library:GetLuminance(Foreground)
+    local Worst = math.huge
+
+    for _, Backdrop in { Color3.new(0, 0, 0), Color3.new(1, 1, 1) } do
+        local Composite = Backdrop:Lerp(Surface, Alpha)
+        Worst = math.min(Worst, ContrastRatio(Text, Library:GetLuminance(Composite)))
+    end
+
+    return Worst
+end
+
+local function FoldScrim(Material: Color3, MaterialAlpha: number, ScrimAlpha: number): (Color3, number)
+    local Alpha = 1 - (1 - MaterialAlpha) * (1 - ScrimAlpha)
+    if Alpha <= 0 then
+        return Material, 0
+    end
+
+    local Weight = (1 - MaterialAlpha) * ScrimAlpha / Alpha
+    return Material:Lerp(Library.Scheme.DarkColor or Color3.new(0, 0, 0), Weight), Alpha
+end
+
+function Library:GetGlassTransparency(Role: string?, Raw: boolean?): number
+    if not Library:IsGlassActive() then
+        return 0
+    end
+
+    local Tier = GlassTierData()
+    local Kind = GlassRoles[tostring(Role)] or "Surface"
+    local Value = Kind == "Chrome" and (tonumber(Tier.Chrome) or 0.2) or (tonumber(Tier.Surface) or 0.34)
+    local Floor = math.clamp(tonumber(Library:GetDesignToken("Glass.OpacityFloor", 0.5)) or 0.5, 0, 1)
+    Value = math.clamp(Value, 0, 1 - Floor)
+
+    if Raw then
+        return Value
+    end
+
+    local _, Alpha = FoldScrim(Library.Scheme.BackgroundColor, 1 - Value, Library:GetGlassScrim())
+    return 1 - Alpha
+end
+
+function Library:GetGlassScrim(): number
+    if not Library:IsGlassActive() then
+        return 0
+    end
+
+    local Base = math.clamp(tonumber(Library:GetDesignToken("Glass.Scrim", 0.15)) or 0.15, 0, 1)
+    local Limit = math.clamp(tonumber(Library:GetDesignToken("Glass.ScrimMax", 0.25)) or 0.25, Base, 1)
+    local Step = math.max(0.01, tonumber(Library:GetDesignToken("Glass.ScrimStep", 0.02)) or 0.02)
+    local Target = tonumber(Library:GetDesignToken("Glass.ContrastTarget", 4.5)) or 4.5
+
+    local Material = Library.Scheme.BackgroundColor
+    local Alpha = 1 - Library:GetGlassTransparency("Window", true)
+    local Text = Library.Scheme.FontColor
+    local Scrim = Base
+
+    while Scrim < Limit do
+        local Color, Composite = FoldScrim(Material, Alpha, Scrim)
+        if Library:GetEffectiveContrast(Text, Color, 1 - Composite) >= Target then
+            return Scrim
+        end
+        Scrim = math.min(Limit, Scrim + Step)
+    end
+
+    return Scrim
+end
+
+function Library:GetGlassMaterial(Role: string?): (Color3, number)
+    local Name = tostring(Role)
+    local Color = Library.Scheme[GlassRoleColors[Name] or "BackgroundColor"] or Library.Scheme.BackgroundColor
+    local Kind = GlassRoles[Name] or "Surface"
+
+    if not Library:IsGlassActive() then
+        return Color, Kind == "Surface" and 1 or 0
+    end
+
+    if Kind == "Shell" then
+        return Color, 1
+    end
+    if Kind == "Passthrough" then
+        return Color, 1
+    end
+
+    local Plate = Library:GetGlassTransparency("Window")
+    if Kind == "Surface" then
+        local Folded = FoldScrim(Color, 1 - Library:GetGlassTransparency("Window", true), Library:GetGlassScrim())
+        return Folded, Plate
+    end
+
+    local Target = Library:GetGlassTransparency(Name)
+    if Plate <= 0 then
+        return Color, math.clamp(Target, 0, 1)
+    end
+    return Color, math.clamp(Target / Plate, 0, 1)
+end
+
+function Library:IsGlassSurface(Object: Instance?): boolean
+    return Object ~= nil and Library.Glass.Surfaces[Object] ~= nil
+end
+
+function Library:RegisterGlassSurface(Object: GuiObject, Role: string)
+    assert(typeof(Object) == "Instance" and Object:IsA("GuiObject"), "Glass surfaces must be GuiObjects")
+
+    local Name = tostring(Role)
+    local Kind = GlassRoles[Name]
+    assert(Kind, "Glass is limited to the chrome layer (" .. GlassRoleNames .. "), got " .. Name)
+
+    if GlassTranslucentKinds[Kind] then
+        local Node = Object.Parent
+        while Node and Node:IsA("GuiObject") do
+            local Owner = Library.Glass.Surfaces[Node]
+            if Owner and GlassTranslucentKinds[GlassRoles[Owner]] then
+                error("Glass cannot nest inside the " .. Owner .. " surface", 2)
+            end
+            Node = Node.Parent
+        end
+    end
+
+    Library.Glass.Surfaces[Object] = Name
+    return Library:BindTheme(Object, {
+        BackgroundColor3 = function()
+            return (Library:GetGlassMaterial(Name))
+        end,
+        BackgroundTransparency = function()
+            return select(2, Library:GetGlassMaterial(Name))
+        end,
+    })
+end
+
+function Library:UnregisterGlassSurface(Object: Instance?)
+    if Object ~= nil then
+        Library.Glass.Surfaces[Object] = nil
+    end
+    return Library
+end
+
+function Library:GetGlassGradient(): (ColorSequence, NumberSequence)
+    local Depth = math.clamp(tonumber(GlassTierData().Gradient) or 0.05, 0, 0.5)
+    local Bottom = 1 - Depth
+    return ColorSequence.new(Color3.new(1, 1, 1), Color3.new(Bottom, Bottom, Bottom)),
+        NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, Depth * 0.5),
+        })
+end
+
+local function ResolveGlassLighting(): Lighting?
+    if GlassLighting then
+        return GlassLighting
+    end
+
+    local Success, Service = pcall(function()
+        return cloneref(game:GetService("Lighting"))
+    end)
+    if Success and Service then
+        GlassLighting = Service
+    end
+    return GlassLighting
+end
+
+local function DestroyGlassBlur()
+    if not GlassBlur then
+        return
+    end
+
+    pcall(function()
+        (GlassBlur :: any):Destroy()
+    end)
+    GlassBlur = nil
+end
+
+function Library:IsBlurActive(): boolean
+    return Library.Glass.Blur == true
+        and Library:IsGlassActive()
+        and not Library.IsMobile
+        and Library.Design.Motion.Reduced ~= true
+        and Library.Toggled == true
+        and Library.Unloaded ~= true
+end
+
+function Library:RefreshBlur()
+    if not Library:IsBlurActive() then
+        DestroyGlassBlur()
+        return Library
+    end
+
+    local Lighting = ResolveGlassLighting()
+    if not Lighting then
+        return Library
+    end
+
+    local Size = math.clamp(tonumber(Library:GetDesignToken("Glass.BlurSize", 18)) or 18, 0, 56)
+    if GlassBlur and GlassBlur.Parent then
+        pcall(function()
+            (GlassBlur :: any).Size = Size
+        end)
+        return Library
+    end
+
+    DestroyGlassBlur()
+    local Success, Effect = pcall(function()
+        local Blur = Instance.new("BlurEffect")
+        Blur.Name = "MonHubGlass"
+        Blur.Size = Size
+        Blur.Parent = Lighting
+        return Blur
+    end)
+    GlassBlur = (Success and Effect or nil) :: any
+
+    return Library
+end
+
+function Library:SetBlurEnabled(Enabled: boolean)
+    Library.Glass.Blur = Enabled == true
+    return Library:RefreshBlur()
+end
+
+function Library:RefreshGlass()
+    for Object in Library.Glass.Surfaces do
+        if typeof(Object) ~= "Instance" or not Object.Parent then
+            Library.Glass.Surfaces[Object] = nil
+        end
+    end
+
+    Library:RefreshBlur()
+    Library:UpdateColorsUsingRegistry()
+    Library:RefreshThemeState()
+    return Library
+end
+
+function Library:SetGlassTier(Tier: string)
+    local Name = ResolveGlassTier(Tier)
+    assert(Name, "Unknown glass tier, expected one of " .. table.concat(GlassTierOrder, ", "))
+
+    Library.Glass.Tier = Name
+    return Library:RefreshGlass()
+end
+
+function Library:SetGlass(Value: (boolean | string)?)
+    if Value == nil or Value == false then
+        Library.Glass.Enabled = false
+    elseif Value == true then
+        Library.Glass.Enabled = true
+    else
+        local Name = ResolveGlassTier(Value)
+        assert(Name, "Unknown glass tier, expected one of " .. table.concat(GlassTierOrder, ", "))
+        Library.Glass.Tier = Name
+        Library.Glass.Enabled = true
+    end
+
+    return Library:RefreshGlass()
+end
+
+function Library:SetReduceTransparency(Enabled: boolean)
+    Library.Glass.ReduceTransparency = Enabled == true
+    return Library:RefreshGlass()
 end
 
 local ThemeAliases = {
@@ -19414,6 +19626,15 @@ function Library:SetTheme(Theme)
     end
     if Library.Window then
         Library.Window:SetBackgroundImage(Library.Scheme.BackgroundImage)
+    end
+
+    if ThemeData.Glass ~= nil then
+        Library.Glass.Enabled = ThemeData.Glass ~= false
+        local Tier = ResolveGlassTier(ThemeData.Glass)
+        if Tier then
+            Library.Glass.Tier = Tier
+        end
+        Library:RefreshBlur()
     end
 
     Library:SetFont(Library.ThemeFontOverride or ThemeData.Font, true)
@@ -20348,6 +20569,7 @@ function Library:CreateWindow(WindowInfo)
 
     local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
     local MainFrame
+    local GlassPlate
     local WindowScale
     local DividerLine
     local TitleHolder
@@ -20441,8 +20663,37 @@ function Library:CreateWindow(WindowInfo)
             Parent = MainFrame,
         })
         table.insert(Library.Scales, WindowScale)
+
+        GlassPlate = New("Frame", {
+            BackgroundTransparency = 1,
+            Name = "GlassPlate",
+            Size = UDim2.fromScale(1, 1),
+            ZIndex = 0,
+            Parent = MainFrame,
+        })
+        New("UIGradient", {
+            Color = function()
+                return (Library:GetGlassGradient())
+            end,
+            Rotation = 90,
+            Transparency = function()
+                return select(2, Library:GetGlassGradient())
+            end,
+            Parent = GlassPlate,
+        })
+        Library:RegisterGlassSurface(MainFrame, "Shell")
+        Library:RegisterGlassSurface(GlassPlate, "Window")
+
         local MainOutline = Library:AddOutline(MainFrame)
-        MainOutline.Transparency = Library:GetDesignToken("Stroke.StrongTransparency", 0.18)
+        Library:BindTheme(MainOutline, {
+            Transparency = function()
+                if not Library:IsGlassActive() then
+                    return Library:GetDesignToken("Stroke.StrongTransparency", 0.18)
+                end
+                local Alpha = math.clamp(tonumber(Library:GetDesignToken("Glass.BorderAlpha", 0.4)) or 0.4, 0, 1)
+                return 1 - Alpha
+            end,
+        })
         Library:AddSoftShadow(MainFrame, 22, Library:GetDesignToken("Opacity.Shadow", 0.44), UDim2.fromOffset(0, 5))
         Library:MakeLine(MainFrame, {
             Color = function()
@@ -20938,6 +21189,12 @@ function Library:CreateWindow(WindowInfo)
 
         Library.WindowContainer = Container
 
+        Library:RegisterGlassSurface(TopBar, "TopBar")
+        Library:RegisterGlassSurface(TitleHolder, "TitleHolder")
+        Library:RegisterGlassSurface(Tabs, "Sidebar")
+        Library:RegisterGlassSurface(BottomBackground, "Footer")
+        Library:RegisterGlassSurface(Container, "Content")
+
         do
             local SwipeThreshold = 60
             local SwipeInput = nil
@@ -21119,29 +21376,27 @@ function Library:CreateWindow(WindowInfo)
         CompactLauncherStroke.Transparency = StrokeTransparency
     end
 
-    local function BindCoreSurface(Instance, Property, Token)
+    local function BindGlassSurface(Instance, Role)
         if not Instance or not Instance.Parent then
             return
         end
 
-        local Properties = Library.Registry[Instance] or {}
-        Properties[Property] = Token
-        Library.Registry[Instance] = Properties
-
-        local Value = Library.Scheme[Token]
-        if Value ~= nil and Instance[Property] ~= Value then
+        local Color, Transparency = Library:GetGlassMaterial(Role)
+        if Instance.BackgroundColor3 ~= Color or Instance.BackgroundTransparency ~= Transparency then
             Library:CancelTween(Instance, "ThemeSurface")
-            Instance[Property] = Value
+            Instance.BackgroundColor3 = Color
+            Instance.BackgroundTransparency = Transparency
         end
     end
 
     function Window:RefreshTheme()
-        BindCoreSurface(MainFrame, "BackgroundColor3", "BackgroundColor")
-        BindCoreSurface(TopBar, "BackgroundColor3", "TopBarColor")
-        BindCoreSurface(TitleHolder, "BackgroundColor3", "TopBarColor")
-        BindCoreSurface(Tabs, "BackgroundColor3", "SurfaceColor")
-        BindCoreSurface(Container, "BackgroundColor3", "BackgroundColor")
-        BindCoreSurface(BottomBackground, "BackgroundColor3", "SurfaceColor")
+        BindGlassSurface(MainFrame, "Shell")
+        BindGlassSurface(GlassPlate, "Window")
+        BindGlassSurface(TopBar, "TopBar")
+        BindGlassSurface(TitleHolder, "TitleHolder")
+        BindGlassSurface(Tabs, "Sidebar")
+        BindGlassSurface(Container, "Content")
+        BindGlassSurface(BottomBackground, "Footer")
         ApplyCompactLauncherStyle(false)
     end
 
@@ -24602,6 +24857,7 @@ function Library:CreateWindow(WindowInfo)
             Window.LastHideReason = Source
         end
         VisibilityChanged:Fire(Library.Toggled)
+        Library:RefreshBlur()
         Window:RefreshCompactLauncher(Library.Animations and Library.Animations.ToggleWindow == true)
 
         WindowAnimationSequence += 1
@@ -26101,6 +26357,8 @@ function Library:Unload()
 
     Library.Unloaded = true
     Library:Emit("Unload")
+    Library:RefreshBlur()
+    table.clear(Library.Glass.Surfaces)
     Library:DestroyRuntime()
     SearchRequestId += 1
     Library:ClearNotifications()

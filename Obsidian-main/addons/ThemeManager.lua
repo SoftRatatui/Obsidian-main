@@ -229,66 +229,6 @@ local HighContrastTheme = {
     FontFace = "GothamMedium",
 }
 
-local GlassThemes = {
-    ["Glass Thin"] = {
-        ElevationBase = { 11, 12, 14 },
-        ElevationTint = { 249, 251, 253 },
-        HighlightStrength = 1.35,
-        ShadowStrength = 1.3,
-        EdgeHighlight = true,
-        AccentColor = { 154, 178, 205 },
-        WarningColor = { 214, 176, 112 },
-        DestructiveColor = { 198, 88, 102 },
-        RedColor = { 226, 118, 132 },
-        SuccessColor = { 128, 192, 156 },
-        DangerColor = { 226, 118, 132 },
-        DarkColor = { 2, 3, 4 },
-        WhiteColor = { 249, 251, 253 },
-    },
-    ["Glass Regular"] = {
-        ElevationBase = { 14, 15, 17 },
-        ElevationTint = { 247, 249, 251 },
-        HighlightStrength = 1.2,
-        ShadowStrength = 1.2,
-        EdgeHighlight = true,
-        AccentColor = { 143, 168, 196 },
-        WarningColor = { 210, 172, 108 },
-        DestructiveColor = { 194, 84, 98 },
-        RedColor = { 222, 114, 128 },
-        SuccessColor = { 124, 188, 152 },
-        DangerColor = { 222, 114, 128 },
-        DarkColor = { 4, 5, 6 },
-        WhiteColor = { 247, 249, 251 },
-    },
-    ["Glass Thick"] = {
-        ElevationBase = { 18, 19, 22 },
-        ElevationTint = { 246, 248, 250 },
-        HighlightStrength = 1.1,
-        ShadowStrength = 1.1,
-        EdgeHighlight = true,
-        AccentColor = { 132, 156, 183 },
-        WarningColor = { 206, 168, 104 },
-        DestructiveColor = { 190, 80, 94 },
-        RedColor = { 218, 110, 124 },
-        SuccessColor = { 120, 184, 148 },
-        DangerColor = { 218, 110, 124 },
-        DarkColor = { 6, 7, 9 },
-        WhiteColor = { 246, 248, 250 },
-    },
-}
-
-local GlassTierOrder = { "UltraThick", "Thick", "Regular", "Thin", "UltraThin" }
-local GlassTierAlpha = { UltraThin = 0.55, Thin = 0.45, Regular = 0.34, Thick = 0.22, UltraThick = 0.12 }
-local GlassTierScrim = { UltraThin = 0.25, Thin = 0.25, Regular = 0.18, Thick = 0.15, UltraThick = 0.12 }
-local GlassTierLabels = {
-    UltraThick = "Ultra thick",
-    Thick = "Thick",
-    Regular = "Regular",
-    Thin = "Thin",
-    UltraThin = "Ultra thin",
-}
-local SolidLabel = "Solid"
-
 local ThemeManager = {
     ReleaseVersion = "0.0.1-release-3",
     Library = nil,
@@ -305,18 +245,7 @@ local ThemeManager = {
     ConfigLoadDepth = 0,
     ConfigLoadOptions = {},
     CustomThemes = {},
-    Material = nil,
-    MaterialWritten = false,
-    WatermarkFollowsMaterial = true,
-    GalleryCards = {},
-    GallerySections = {},
-    GalleryConnections = {},
-    ThemeNames = {
-        "Default", "Metal", "Midnight", "Steel", "Sage", "Ash",
-        "Onyx", "Graphite", "Slate", "Pewter",
-        "Glass Thick", "Glass Regular", "Glass Thin",
-        "Deuteranopia", "Protanopia", "High Contrast",
-    },
+    ThemeNames = { "Default", "Metal", "Midnight", "Steel", "Sage", "Ash", "Deuteranopia", "Protanopia", "High Contrast" },
     BuiltInThemes = {
         Default = { 1, table.clone(DefaultTheme) },
         Metal = { 2, table.clone(MetalTheme) },
@@ -324,48 +253,17 @@ local ThemeManager = {
         Steel = { 4, table.clone(SteelTheme) },
         Sage = { 5, table.clone(SageTheme) },
         Ash = { 6, table.clone(AshTheme) },
-        Onyx = { 7 },
-        Graphite = { 8 },
-        Slate = { 9 },
-        Pewter = { 10 },
-        ["Glass Thick"] = { 11 },
-        ["Glass Regular"] = { 12 },
-        ["Glass Thin"] = { 13 },
-        Deuteranopia = { 14, table.clone(DeuteranopiaTheme) },
-        Protanopia = { 15, table.clone(ProtanopiaTheme) },
-        ["High Contrast"] = { 16, table.clone(HighContrastTheme) },
+        Deuteranopia = { 7, table.clone(DeuteranopiaTheme) },
+        Protanopia = { 8, table.clone(ProtanopiaTheme) },
+        ["High Contrast"] = { 9, table.clone(HighContrastTheme) },
     },
     AccessibilityThemes = {
         { "Deuteranopia", DeuteranopiaTheme },
         { "Protanopia", ProtanopiaTheme },
         { "High Contrast", HighContrastTheme },
     },
-    ThemeGroupOrder = { "Dark", "Grey", "Glass", "Accessibility", "Custom" },
-    ThemeGroups = {
-        Default = "Dark",
-        Metal = "Dark",
-        Midnight = "Dark",
-        Steel = "Dark",
-        Sage = "Dark",
-        Ash = "Dark",
-        Onyx = "Grey",
-        Graphite = "Grey",
-        Slate = "Grey",
-        Pewter = "Grey",
-        ["Glass Thick"] = "Glass",
-        ["Glass Regular"] = "Glass",
-        ["Glass Thin"] = "Glass",
-        Deuteranopia = "Accessibility",
-        Protanopia = "Accessibility",
-        ["High Contrast"] = "Accessibility",
-    },
-    ThemePresets = GlassThemes,
-    ThemeGlass = {
-        ["Glass Thick"] = "Thick",
-        ["Glass Regular"] = "Regular",
-        ["Glass Thin"] = "Thin",
-    },
 }
+
 local function IsValidFolderPath(Value)
     if typeof(Value) ~= "string" then return false end
     local Normalized = Value:match("^%s*(.-)%s*$"):gsub("\\", "/"):gsub("/+", "/"):gsub("^/", ""):gsub("/$", "")
@@ -408,226 +306,10 @@ local ThemeColorKeys = {
     "DestructiveColor", "RedColor", "DarkColor", "WhiteColor",
 }
 
-local ContrastSurfaces = {
-    { Key = "BackgroundColor", Label = "the window backdrop", Glass = true },
-    { Key = "TopBarColor", Label = "the title bar", Glass = true },
-    { Key = "SurfaceColor", Label = "panels", Glass = true },
-    { Key = "MainColor", Label = "content", Glass = false },
-    { Key = "ElementColor", Label = "controls", Glass = false },
-}
+local SwatchColorKeys = { "BackgroundColor", "SurfaceColor", "AccentColor", "FontColor" }
+local ContrastSurfaceKeys = { "BackgroundColor", "SurfaceColor", "MainColor", "ElementColor" }
 local BodyContrastTarget = 4.5
 local CodePrefix = "MONHUB1:"
-local BrightBackdrop = Color3.new(1, 1, 1)
-local BlackScrim = Color3.new(0, 0, 0)
-
-local DefaultMaterial = {
-    Enabled = false,
-    Tier = "Regular",
-    Blur = false,
-    ReduceTransparency = false,
-    Scrim = 0.15,
-    BorderAlpha = 0.4,
-    Highlight = 1,
-    Shadow = 1,
-    EdgeHighlight = false,
-}
-
-local function ClampUnit(Value, Fallback)
-    local Number = tonumber(Value)
-    if not Number or Number ~= Number then return Fallback end
-    return math.clamp(Number, 0, 1)
-end
-
-local function ClampRange(Value, Fallback, Low, High)
-    local Number = tonumber(Value)
-    if not Number or Number ~= Number then return Fallback end
-    return math.clamp(Number, Low, High)
-end
-
-local function ResolveTier(Tier)
-    return typeof(Tier) == "string" and GlassTierAlpha[Tier] and Tier or "Regular"
-end
-
-local function DesignToken(Path, Fallback)
-    local Library = ThemeManager.Library
-    if not (Library and type(Library.GetDesignToken) == "function") then return Fallback end
-    return Library:GetDesignToken(Path, Fallback)
-end
-
-local function NormalizeMaterial(Source)
-    Source = typeof(Source) == "table" and Source or {}
-    return {
-        Enabled = Source.Enabled == true,
-        Tier = ResolveTier(Source.Tier),
-        Blur = Source.Blur == true,
-        ReduceTransparency = Source.ReduceTransparency == true,
-        Scrim = ClampUnit(Source.Scrim, DefaultMaterial.Scrim),
-        BorderAlpha = ClampUnit(Source.BorderAlpha, DefaultMaterial.BorderAlpha),
-        Highlight = ClampRange(Source.Highlight, 1, 0.25, 2.5),
-        Shadow = ClampRange(Source.Shadow, 1, 0, 2.5),
-        EdgeHighlight = Source.EdgeHighlight == true,
-    }
-end
-
-local function ReadMaterial()
-    local Library = ThemeManager.Library
-    if not Library then return table.clone(DefaultMaterial) end
-    local Glass = typeof(Library.Glass) == "table" and Library.Glass or {}
-    local Elevation = typeof(Library.Elevation) == "table" and Library.Elevation or {}
-    return NormalizeMaterial({
-        Enabled = Glass.Enabled,
-        Tier = Glass.Tier,
-        Blur = Glass.Blur,
-        ReduceTransparency = Glass.ReduceTransparency,
-        Scrim = DesignToken("Glass.Scrim", DefaultMaterial.Scrim),
-        BorderAlpha = DesignToken("Glass.BorderAlpha", DefaultMaterial.BorderAlpha),
-        Highlight = Elevation.HighlightStrength,
-        Shadow = Elevation.ShadowStrength,
-        EdgeHighlight = Elevation.EdgeHighlight,
-    })
-end
-
-local GlassFields = { "Enabled", "Tier", "Blur", "ReduceTransparency", "Scrim", "BorderAlpha" }
-local ElevationFields = { "Highlight", "Shadow", "EdgeHighlight" }
-local MaterialFields = { "Enabled", "Tier", "Blur", "ReduceTransparency", "Scrim", "BorderAlpha", "Highlight", "Shadow", "EdgeHighlight" }
-
-local function FieldsMatch(First, Second, Fields)
-    if typeof(First) ~= "table" or typeof(Second) ~= "table" then return false end
-    for _, Key in Fields do
-        if First[Key] ~= Second[Key] then return false end
-    end
-    return true
-end
-
-local function GlassAlpha(Material)
-    if not (Material.Enabled and not Material.ReduceTransparency) then return 0 end
-    local Tier = ResolveTier(Material.Tier)
-    local Fallback = GlassTierAlpha[Tier]
-    return ClampUnit(DesignToken("Glass.Tiers." .. Tier .. ".Surface", Fallback), Fallback)
-end
-
-local function ChromeAlpha(Material)
-    if not (Material.Enabled and not Material.ReduceTransparency) then return 0 end
-    local Tier = ResolveTier(Material.Tier)
-    local Fallback = GlassTierAlpha[Tier] * 0.6
-    return ClampUnit(DesignToken("Glass.Tiers." .. Tier .. ".Chrome", Fallback), Fallback)
-end
-
-local function WriteGlass(Resolved)
-    local Library = ThemeManager.Library
-    local Live = Resolved.Enabled and not Resolved.ReduceTransparency
-    if type(Library.SetGlass) == "function" then
-        pcall(Library.SetGlass, Library, {
-            Enabled = Live,
-            Tier = Resolved.Tier,
-            Blur = Resolved.Blur,
-            ReduceTransparency = Resolved.ReduceTransparency,
-            Scrim = Resolved.Scrim,
-            BorderAlpha = Resolved.BorderAlpha,
-        })
-        return
-    end
-    if typeof(Library.Glass) == "table" then
-        Library.Glass.Enabled = Live
-        Library.Glass.Tier = Resolved.Tier
-        Library.Glass.Blur = Resolved.Blur
-        Library.Glass.ReduceTransparency = Resolved.ReduceTransparency
-    end
-    if type(Library.SetDesign) == "function" then
-        Library:SetDesign({
-            Glass = { Tier = Resolved.Tier, Scrim = Resolved.Scrim, BorderAlpha = Resolved.BorderAlpha },
-        })
-    end
-end
-
-local function WriteMaterial(Source)
-    local Library = ThemeManager.Library
-    if not Library then return false end
-    local Resolved = NormalizeMaterial(Source)
-    local Previous = ThemeManager.MaterialWritten and ThemeManager.Material or nil
-    if Previous and FieldsMatch(Resolved, Previous, MaterialFields) then
-        return true
-    end
-    local GlassChanged = not (Previous and FieldsMatch(Resolved, Previous, GlassFields))
-    local ElevationChanged = not (Previous and FieldsMatch(Resolved, Previous, ElevationFields))
-    ThemeManager.Material = Resolved
-    ThemeManager.MaterialWritten = true
-
-    if GlassChanged then
-        WriteGlass(Resolved)
-    end
-    if ElevationChanged and type(Library.SetElevation) == "function" then
-        Library:SetElevation({
-            HighlightStrength = Resolved.Highlight,
-            ShadowStrength = Resolved.Shadow,
-            EdgeHighlight = Resolved.EdgeHighlight,
-        })
-    end
-    return true
-end
-
-local function ThemeMaterial(Name)
-    local Library = ThemeManager.Library
-    local Material = ReadMaterial()
-    local Source = Library and typeof(Library.Themes) == "table" and Library.Themes[Name]
-    if Source and type(Library.ResolveThemePalette) == "function" then
-        local Expanded, _Palette, State = pcall(Library.ResolveThemePalette, Library, Source)
-        if Expanded and typeof(State) == "table" then
-            Material.Highlight = ClampRange(State.HighlightStrength, Material.Highlight, 0.25, 2.5)
-            Material.Shadow = ClampRange(State.ShadowStrength, Material.Shadow, 0, 2.5)
-            Material.EdgeHighlight = State.EdgeHighlight == true
-        end
-    end
-    local Tier = ThemeManager.ThemeGlass[Name]
-    if not Tier and typeof(Name) == "string" and string.find(string.lower(Name), "glass", 1, true) then
-        Tier = "Regular"
-    end
-    Material.Enabled = Tier ~= nil
-    Material.Tier = ResolveTier(Tier or Material.Tier)
-    if Tier then
-        local Ceiling = ClampUnit(DesignToken("Glass.ScrimMax", 0.25), 0.25)
-        Material.Scrim = math.min(GlassTierScrim[Material.Tier] or Material.Scrim, Ceiling)
-    end
-    return Material
-end
-
-local function EffectiveSurface(Surface, Material)
-    local Alpha = GlassAlpha(Material)
-    if Alpha <= 0 or typeof(Surface) ~= "Color3" then return Surface end
-    local Backdrop = BrightBackdrop:Lerp(BlackScrim, ClampUnit(Material.Scrim, 0))
-    return Surface:Lerp(Backdrop, Alpha)
-end
-
-local function SnapshotWatermark()
-    local Library = ThemeManager.Library
-    local Style = Library and Library.WatermarkStyle
-    if typeof(Style) ~= "table" then return nil end
-    return {
-        BackgroundTransparency = tonumber(Style.BackgroundTransparency) or 0,
-        OutlineTransparency = tonumber(Style.OutlineTransparency) or 0.18,
-    }
-end
-
-local function ApplyWatermark(Style)
-    local Library = ThemeManager.Library
-    if not (Library and typeof(Style) == "table" and type(Library.SetWatermarkOptions) == "function") then return false end
-    return (pcall(Library.SetWatermarkOptions, Library, {
-        BackgroundTransparency = ClampUnit(Style.BackgroundTransparency, 0),
-        OutlineTransparency = ClampUnit(Style.OutlineTransparency, 0.18),
-    }))
-end
-
-local function SyncWatermarkMaterial(Material)
-    Material = typeof(Material) == "table" and Material or ReadMaterial()
-    local Alpha = ThemeManager.WatermarkFollowsMaterial and ChromeAlpha(Material) or 0
-    if Alpha > 0 then
-        ThemeManager.WatermarkRestore = ThemeManager.WatermarkRestore or SnapshotWatermark()
-        return ApplyWatermark({ BackgroundTransparency = Alpha, OutlineTransparency = 1 - Material.BorderAlpha })
-    end
-    local Restore = ThemeManager.WatermarkRestore
-    ThemeManager.WatermarkRestore = nil
-    return Restore ~= nil and ApplyWatermark(Restore)
-end
 
 local function ContrastRatio(First, Second)
     local Library = ThemeManager.Library
@@ -639,23 +321,17 @@ end
 
 local function WorstBodyContrast(Font)
     local Library = ThemeManager.Library
-    if not Library then return 21, nil, false end
-    local Material = ThemeManager.Material or ReadMaterial()
-    local Translucent = GlassAlpha(Material) > 0
-    local Worst, WorstKey, WorstLabel, OverGlass = 21, nil, nil, false
-    for _, Entry in ContrastSurfaces do
-        local Surface = Library.Scheme[Entry.Key]
-        if typeof(Surface) == "Color3" then
-            local Sampled = Entry.Glass and EffectiveSurface(Surface, Material) or Surface
-            local Ratio = ContrastRatio(Font, Sampled)
-            if Ratio < Worst then
-                Worst, WorstKey, WorstLabel = Ratio, Entry.Key, Entry.Label
-                OverGlass = Entry.Glass and Translucent
-            end
+    if not Library then return 21, nil end
+    local Worst, WorstKey = 21, nil
+    for _, Key in ContrastSurfaceKeys do
+        local Ratio = ContrastRatio(Font, Library.Scheme[Key])
+        if Ratio < Worst then
+            Worst, WorstKey = Ratio, Key
         end
     end
-    return Worst, WorstKey, OverGlass, WorstLabel
+    return Worst, WorstKey
 end
+
 local function ThemePaletteColors(Name)
     local Library = ThemeManager.Library
     if not Library then return {} end
@@ -666,10 +342,6 @@ local function ThemePaletteColors(Name)
         Resolved = Library:ResolveThemeName(Name)
         Source = Library.Themes[Resolved]
     end
-    if Source and type(Library.ResolveThemePalette) == "function" then
-        local Expanded, Palette = pcall(Library.ResolveThemePalette, Library, Source)
-        if Expanded and typeof(Palette) == "table" then Source = Palette end
-    end
     Source = Source or Library.Scheme
     local Colors = {}
     for _, Key in ThemeColorKeys do
@@ -678,40 +350,14 @@ local function ThemePaletteColors(Name)
     return Colors
 end
 
-local function SnapshotAppearance()
+local function SnapshotPalette()
     local Library = ThemeManager.Library
-    local Colors = {}
-    if not Library then return { Colors = Colors } end
+    local Snapshot = {}
+    if not Library then return Snapshot end
     for _, Key in ThemeColorKeys do
-        if typeof(Library.Scheme[Key]) == "Color3" then Colors[Key] = Library.Scheme[Key] end
+        if typeof(Library.Scheme[Key]) == "Color3" then Snapshot[Key] = Library.Scheme[Key] end
     end
-    return {
-        Colors = Colors,
-        Derived = typeof(Library.ElevationDerived) == "table" and table.clone(Library.ElevationDerived) or nil,
-        Material = ThemeManager.Material and table.clone(ThemeManager.Material) or ReadMaterial(),
-        Watermark = SnapshotWatermark(),
-        WatermarkRestore = ThemeManager.WatermarkRestore and table.clone(ThemeManager.WatermarkRestore) or nil,
-    }
-end
-
-local function RestoreAppearance(Snapshot)
-    local Library = ThemeManager.Library
-    if not (Library and typeof(Snapshot) == "table") then return false end
-    if typeof(Snapshot.Material) == "table" then
-        WriteMaterial(Snapshot.Material)
-    end
-    ThemeManager.WatermarkRestore = Snapshot.WatermarkRestore
-    if Snapshot.Watermark then
-        ApplyWatermark(Snapshot.Watermark)
-    end
-    if typeof(Snapshot.Colors) == "table" and next(Snapshot.Colors) and type(Library.SetPalette) == "function" then
-        Library:SetPalette(Snapshot.Colors)
-    end
-    if typeof(Snapshot.Derived) == "table" and type(Library.RelayElevation) == "function" then
-        Library.ElevationDerived = Snapshot.Derived
-        Library:RelayElevation()
-    end
-    return true
+    return Snapshot
 end
 
 local function EncodeThemeCode()
@@ -840,12 +486,6 @@ local function ResolveThemeName(Value)
     end
 
     local Name = string.lower(Value):gsub("[%s_%-]", "")
-    for _, Known in ThemeManager.ThemeNames do
-        if string.lower(Known):gsub("[%s_%-]", "") == Name then
-            return Known
-        end
-    end
-
     if Name == "metal" or Name == "purple" or Name == "blackpurple" or Name == "amethyst" then
         return "Metal"
     end
@@ -854,7 +494,7 @@ local function ResolveThemeName(Value)
         return "Midnight"
     end
 
-    if Name == "steel" or Name == "bluegray" or Name == "bluegrey" then
+    if Name == "steel" or Name == "slate" or Name == "bluegray" or Name == "bluegrey" then
         return "Steel"
     end
 
@@ -869,93 +509,27 @@ local function ResolveThemeName(Value)
     return "Default"
 end
 
-local function RegisterPalette(Name, Source)
-    local Library = ThemeManager.Library
-    if Library.Themes[Name] then return false end
-    local Overrides = {}
-    for _, Key in ThemeColorKeys do
-        local Parsed, Color = pcall(Color3.fromHex, Source[Key])
-        if Parsed then Overrides[Key] = Color end
-    end
-    return (pcall(Library.RegisterTheme, Library, Name, Overrides, "Default"))
-end
-
-local function RegisterPreset(Name, Source)
-    local Library = ThemeManager.Library
-    if Library.Themes[Name] then return false end
-    local Overrides = {}
-    for Key, Value in Source do
-        if typeof(Value) == "table" then
-            local Parsed, Color = pcall(Color3.fromRGB, Value[1], Value[2], Value[3])
-            if not Parsed then return false end
-            Overrides[Key] = Color
-        else
-            Overrides[Key] = Value
-        end
-    end
-    return (pcall(Library.RegisterTheme, Library, Name, Overrides, "Default"))
-end
-
-function ThemeManager:RegisterBuiltInThemes()
-    local Library = ThemeManager.Library
-    if not (Library and Library.RegisterTheme and Library.Themes) then return false end
-    for _, Name in ThemeManager.ThemeNames do
-        local Entry = ThemeManager.BuiltInThemes[Name]
-        local Preset = ThemeManager.ThemePresets[Name]
-        if Preset then
-            RegisterPreset(Name, Preset)
-        elseif Entry and typeof(Entry[2]) == "table" then
-            RegisterPalette(Name, Entry[2])
-        end
-    end
-    return true
-end
-
 function ThemeManager:RegisterAccessibilityThemes()
     local Library = ThemeManager.Library
     if not (Library and Library.RegisterTheme and Library.Themes) then return false end
     for _, Entry in ThemeManager.AccessibilityThemes do
-        RegisterPalette(Entry[1], Entry[2])
+        local Name, Source = Entry[1], Entry[2]
+        if not Library.Themes[Name] then
+            local Overrides = {}
+            for _, Key in ThemeColorKeys do
+                local Parsed, Color = pcall(Color3.fromHex, Source[Key])
+                if Parsed then Overrides[Key] = Color end
+            end
+            pcall(Library.RegisterTheme, Library, Name, Overrides, "Default")
+        end
     end
-    return true
-end
-
-function ThemeManager:GetThemeGroup(Name)
-    if typeof(Name) ~= "string" then return "Custom" end
-    local Group = ThemeManager.ThemeGroups[Name]
-    if Group then return Group end
-    local Lower = string.lower(Name)
-    if string.find(Lower, "glass", 1, true) or string.find(Lower, "frost", 1, true) then return "Glass" end
-    if string.find(Lower, "grey", 1, true) or string.find(Lower, "gray", 1, true) then return "Grey" end
-    return "Custom"
-end
-
-function ThemeManager:GetMaterial()
-    return table.clone(ThemeManager.Material or ReadMaterial())
-end
-
-function ThemeManager:SetMaterial(Overrides)
-    if typeof(Overrides) ~= "table" then return false, "Material overrides must be a table" end
-    if not ThemeManager.Library then return false, "Library is not set" end
-    local Merged = table.clone(ThemeManager.Material or ReadMaterial())
-    for _, Key in MaterialFields do
-        if Overrides[Key] ~= nil then Merged[Key] = Overrides[Key] end
-    end
-    if Overrides.Tier ~= nil and Overrides.Enabled == nil then
-        Merged.Enabled = GlassTierAlpha[Overrides.Tier] ~= nil
-    end
-    WriteMaterial(Merged)
-    SyncWatermarkMaterial(ThemeManager.Material)
-    ThemeManager:SyncMaterialControls()
-    ThemeManager:UpdateContrast()
     return true
 end
 
 function ThemeManager:SetLibrary(Library)
     ThemeManager.Library = Library
     Library.ThemeManager = ThemeManager
-    ThemeManager:RegisterBuiltInThemes()
-    ThemeManager.Material = ReadMaterial()
+    ThemeManager:RegisterAccessibilityThemes()
     local InitialTheme = Library.CurrentTheme or Library.DefaultTheme or ThemeManager.FallbackThemeName
     if ThemeManager.FileSystemAvailable then
         ThemeManager:BuildFolderTree()
@@ -1265,16 +839,8 @@ function ThemeManager:ApplyTheme(ThemeName)
     end
 
     ThemeManager.CurrentTheme = Resolved
-    ThemeManager:ApplyThemeMaterial(Resolved)
     ThemeManager:SyncFromLibrary(Resolved)
     ThemeManager:UpdatePreviewControls()
-    return true
-end
-
-function ThemeManager:ApplyThemeMaterial(Name)
-    WriteMaterial(ThemeMaterial(Name))
-    SyncWatermarkMaterial(ThemeManager.Material)
-    ThemeManager:SyncMaterialControls()
     return true
 end
 
@@ -1284,11 +850,10 @@ function ThemeManager:PreviewTheme(Name)
     local Colors = ThemePaletteColors(Name)
     if not next(Colors) then return false, "Theme has no palette" end
     if not ThemeManager.Previewing then
-        ThemeManager.PreviewSnapshot = SnapshotAppearance()
+        ThemeManager.PreviewSnapshot = SnapshotPalette()
     end
     ThemeManager.Previewing = true
     ThemeManager.PreviewName = Name
-    ThemeManager:ApplyThemeMaterial(FindRegisteredTheme(Name) or Name)
     Library:SetPalette(Colors)
     ThemeManager:SetGallerySelection(Name)
     ThemeManager:UpdatePreviewControls()
@@ -1307,8 +872,9 @@ function ThemeManager:CancelPreview()
     ThemeManager.Previewing = false
     ThemeManager.PreviewSnapshot = nil
     ThemeManager.PreviewName = nil
-    RestoreAppearance(Snapshot)
-    ThemeManager:SyncMaterialControls()
+    if Snapshot and next(Snapshot) and Library then
+        Library:SetPalette(Snapshot)
+    end
     ThemeManager:SetGallerySelection(Library and Library.CurrentTheme)
     ThemeManager:UpdatePreviewControls()
     return true
@@ -1335,12 +901,7 @@ end
 
 function ThemeManager:RefreshThemeList()
     if not ThemeManager.Library then return table.clone(ThemeManager.ThemeNames) end
-    local Names = {}
-    for _, Name in ThemeManager.ThemeNames do
-        if ThemeManager.Library.Themes[Name] then
-            table.insert(Names, Name)
-        end
-    end
+    local Names = table.clone(ThemeManager.ThemeNames)
     local Custom = {}
     for Name in ThemeManager.Library.Themes do
         if not table.find(Names, Name) then
@@ -1356,24 +917,12 @@ function ThemeManager:RefreshThemeList()
     return Names
 end
 
-local function GalleryMetrics()
+function ThemeManager:CreateGalleryCard(Name, Order)
     local Library = ThemeManager.Library
-    local CaptionSize = Library:GetDesignToken("Size.Caption", 12)
-    return {
-        CardHeight = Library.IsMobile and 56 or 48,
-        CaptionHeight = Library:Snap(CaptionSize + 4),
-        CaptionGap = Library:GetDesignToken("Spacing.Tiny", 3),
-        Gap = Library:GetDesignToken("Spacing.Small", 6),
-        SectionGap = Library:GetDesignToken("Spacing.Section", 12),
-        MinCardWidth = 150,
-    }
-end
+    local Holder = ThemeManager.GalleryHolder
+    if not (Library and Holder) then return end
 
-function ThemeManager:CreateGalleryCard(Parent, Name, Order)
-    local Library = ThemeManager.Library
-    if not (Library and Parent) then return end
-
-    local Card, Stroke = Library:CreateSurface(Parent, {
+    local Card, Stroke = Library:CreateSurface(Holder, {
         ClassName = "TextButton",
         Role = "Raised",
         RadiusRole = "Card",
@@ -1384,115 +933,50 @@ function ThemeManager:CreateGalleryCard(Parent, Name, Order)
     Card.ClipsDescendants = true
 
     local Colors = ThemePaletteColors(Name)
-    local Material = ThemeMaterial(FindRegisteredTheme(Name) or Name)
-    local Translucent = GlassAlpha(Material)
-    local Chrome = ChromeAlpha(Material)
-    local CardHeight = GalleryMetrics().CardHeight
+    local CardHeight = Library.IsMobile and 56 or 48
     local PreviewSize = 40
-    local Inset = 3
-    local MockSize = PreviewSize - Inset * 2
-
-    local function Tone(Key)
-        return Colors[Key] or Library.Scheme[Key]
-    end
+    local ChipSize = 19
+    local ChipStep = ChipSize + 2
 
     local Preview = Instance.new("Frame")
-    Preview.BackgroundColor3 = Tone("BackgroundColor")
+    Preview.BackgroundColor3 = Colors.BackgroundColor or Library.Scheme.BackgroundColor
     Preview.BorderSizePixel = 0
     Preview.Size = UDim2.fromOffset(PreviewSize, PreviewSize)
     Preview.Position = UDim2.fromOffset(6, Library:CenterOffset(CardHeight, PreviewSize))
-    Preview.ClipsDescendants = true
     Preview.Parent = Card
 
-    local PreviewCorner = Instance.new("UICorner")
-    PreviewCorner.CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3))
-    PreviewCorner.Parent = Preview
-
-    if Translucent > 0 then
-        local Quadrant = PreviewSize // 2
-        for _, Cell in { { 0, 0, true }, { Quadrant, 0, false }, { 0, Quadrant, false }, { Quadrant, Quadrant, true } } do
-            local Tile = Instance.new("Frame")
-            Tile.BackgroundColor3 = Cell[3] and Tone("WhiteColor") or Tone("MutedFontColor")
-            Tile.BorderSizePixel = 0
-            Tile.Size = UDim2.fromOffset(Quadrant, Quadrant)
-            Tile.Position = UDim2.fromOffset(Cell[1], Cell[2])
-            Tile.Parent = Preview
-        end
-    end
-
-    local Mock = Instance.new("Frame")
-    Mock.BackgroundTransparency = 1
-    Mock.BorderSizePixel = 0
-    Mock.Size = UDim2.fromOffset(MockSize, MockSize)
-    Mock.Position = UDim2.fromOffset(Inset, Inset)
-    Mock.ClipsDescendants = true
-    Mock.Parent = Preview
-
-    local BarHeight = 7
-    local RailWidth = 11
-    for _, Part in {
-        { "TopBarColor", 0, 0, MockSize, BarHeight, Chrome },
-        { "SurfaceColor", 0, BarHeight, RailWidth, MockSize - BarHeight, Chrome },
-        { "BackgroundColor", RailWidth, BarHeight, MockSize - RailWidth, MockSize - BarHeight, 0 },
-        { "ElementColor", 13, 10, 19, 8, 0 },
-        { "HoverColor", 13, 21, 19, 5, 0 },
-        { "AccentColor", 2, 2, 3, 3, 0 },
-        { "FontColor", 2, 11, 7, 2, 0 },
-        { "MutedFontColor", 2, 16, 7, 2, 0 },
+    for _, Chip in {
+        { Colors.BackgroundColor, 0, 0 },
+        { Colors.SurfaceColor, ChipStep, 0 },
+        { Colors.AccentColor, 0, ChipStep },
+        { Colors.FontColor, ChipStep, ChipStep },
     } do
-        local Piece = Instance.new("Frame")
-        Piece.BackgroundColor3 = Tone(Part[1])
-        Piece.BackgroundTransparency = Part[6]
-        Piece.BorderSizePixel = 0
-        Piece.Position = UDim2.fromOffset(Part[2], Part[3])
-        Piece.Size = UDim2.fromOffset(Part[4], Part[5])
-        Piece.Parent = Mock
+        local Swatch = Instance.new("Frame")
+        Swatch.BackgroundColor3 = Chip[1] or Library.Scheme.SurfaceColor
+        Swatch.BorderSizePixel = 0
+        Swatch.Size = UDim2.fromOffset(ChipSize, ChipSize)
+        Swatch.Position = UDim2.fromOffset(Chip[2], Chip[3])
+        Swatch.Parent = Preview
     end
-
-    local TextLeft = 6 + PreviewSize + 8
-    local TextWidth = -(TextLeft + 6)
-    local Split = Translucent > 0
-    local LabelHeight = Split and CardHeight // 2 or CardHeight
 
     local Label = Instance.new("TextLabel")
     Label.BackgroundTransparency = 1
     Label.Text = Name
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.TextYAlignment = Split and Enum.TextYAlignment.Bottom or Enum.TextYAlignment.Center
     Label.TextTruncate = Enum.TextTruncate.AtEnd
     Label.TextSize = Library:GetDesignToken("Size.Text", 14)
     Label.FontFace = Library.Scheme.Font
     Label.TextColor3 = Library.Scheme.FontColor
-    Label.Position = UDim2.fromOffset(TextLeft, 0)
-    Label.Size = UDim2.new(1, TextWidth, 0, LabelHeight)
+    Label.Position = UDim2.fromOffset(6 + PreviewSize + 8, 0)
+    Label.Size = UDim2.new(1, -(6 + PreviewSize + 8 + 6), 1, 0)
     Label.Parent = Card
-    Library:AddToRegistry(Label, { TextColor3 = "FontColor", FontFace = "Font" })
+    Library:AddToRegistry(Label, { TextColor3 = "FontColor" })
 
-    local Caption
-    if Split then
-        Caption = Instance.new("TextLabel")
-        Caption.BackgroundTransparency = 1
-        Caption.Text = GlassTierLabels[Material.Tier] or GlassTierLabels.Regular
-        Caption.TextXAlignment = Enum.TextXAlignment.Left
-        Caption.TextYAlignment = Enum.TextYAlignment.Top
-        Caption.TextTruncate = Enum.TextTruncate.AtEnd
-        Caption.TextSize = Library:GetDesignToken("Size.Caption", 12)
-        Caption.FontFace = Library.Scheme.Font
-        Caption.TextColor3 = Library.Scheme.MutedFontColor
-        Caption.Position = UDim2.fromOffset(TextLeft, LabelHeight)
-        Caption.Size = UDim2.new(1, TextWidth, 0, CardHeight - LabelHeight)
-        Caption.Parent = Card
-        Library:AddToRegistry(Caption, { TextColor3 = "MutedFontColor", FontFace = "Font" })
-    end
+    Library:GiveSignal(Card.Activated:Connect(function()
+        ThemeManager:PreviewTheme(Name)
+    end))
 
-    table.insert(
-        ThemeManager.GalleryConnections,
-        Card.Activated:Connect(function()
-            ThemeManager:PreviewTheme(Name)
-        end)
-    )
-
-    ThemeManager.GalleryCards[Name] = { Card = Card, Stroke = Stroke, Label = Label, Caption = Caption }
+    ThemeManager.GalleryCards[Name] = { Card = Card, Stroke = Stroke, Label = Label }
 end
 
 function ThemeManager:RebuildGallery(Names)
@@ -1500,70 +984,14 @@ function ThemeManager:RebuildGallery(Names)
     local Holder = ThemeManager.GalleryHolder
     if not (Library and Holder and Holder.Parent) then return end
     Names = Names or table.clone(ThemeManager.ThemeNames)
-
-    for _, Connection in ThemeManager.GalleryConnections do
-        Connection:Disconnect()
-    end
-    for _, Section in ThemeManager.GallerySections do
-        Library:ReleaseRegistryTree(Section.Root)
-        Section.Root:Destroy()
+    for _, Card in ThemeManager.GalleryCards do
+        Library:ReleaseRegistryTree(Card.Card)
+        Card.Card:Destroy()
     end
     table.clear(ThemeManager.GalleryCards)
-    table.clear(ThemeManager.GalleryConnections)
-    ThemeManager.GallerySections = {}
-
-    local Grouped = {}
-    for _, Name in Names do
-        local Group = ThemeManager:GetThemeGroup(FindRegisteredTheme(Name) or Name)
-        Grouped[Group] = Grouped[Group] or {}
-        table.insert(Grouped[Group], Name)
+    for Order, Name in Names do
+        ThemeManager:CreateGalleryCard(Name, Order)
     end
-
-    local Metrics = GalleryMetrics()
-    local SectionOrder = 0
-
-    for _, Group in ThemeManager.ThemeGroupOrder do
-        local Members = Grouped[Group]
-        if Members and #Members > 0 then
-            SectionOrder += 1
-
-            local Root = Instance.new("Frame")
-            Root.BackgroundTransparency = 1
-            Root.LayoutOrder = SectionOrder
-            Root.Size = UDim2.new(1, 0, 0, Metrics.CaptionHeight + Metrics.CaptionGap + Metrics.CardHeight)
-            Root.Parent = Holder
-
-            local Caption = Instance.new("TextLabel")
-            Caption.BackgroundTransparency = 1
-            Caption.Text = Group
-            Caption.TextXAlignment = Enum.TextXAlignment.Left
-            Caption.TextSize = Library:GetDesignToken("Size.Caption", 12)
-            Caption.FontFace = Library.Scheme.Font
-            Caption.TextColor3 = Library.Scheme.MutedFontColor
-            Caption.Size = UDim2.new(1, 0, 0, Metrics.CaptionHeight)
-            Caption.Parent = Root
-            Library:AddToRegistry(Caption, { TextColor3 = "MutedFontColor", FontFace = "Font" })
-
-            local Grid = Instance.new("Frame")
-            Grid.BackgroundTransparency = 1
-            Grid.Position = UDim2.fromOffset(0, Metrics.CaptionHeight + Metrics.CaptionGap)
-            Grid.Size = UDim2.new(1, 0, 0, Metrics.CardHeight)
-            Grid.Parent = Root
-
-            local Layout = Instance.new("UIGridLayout")
-            Layout.CellPadding = UDim2.fromOffset(Metrics.Gap, Metrics.Gap)
-            Layout.CellSize = UDim2.fromOffset(Metrics.MinCardWidth, Metrics.CardHeight)
-            Layout.SortOrder = Enum.SortOrder.LayoutOrder
-            Layout.Parent = Grid
-
-            for Order, Name in Members do
-                ThemeManager:CreateGalleryCard(Grid, Name, Order)
-            end
-
-            table.insert(ThemeManager.GallerySections, { Root = Root, Grid = Grid, Layout = Layout, Count = #Members })
-        end
-    end
-
     if ThemeManager.GalleryResize then ThemeManager.GalleryResize() end
     ThemeManager:SetGallerySelection(ThemeManager.Previewing and ThemeManager.PreviewName or Library.CurrentTheme)
 end
@@ -1573,16 +1001,6 @@ function ThemeManager:BuildGallery(Groupbox)
     if not (Library and Library.CreateSurface) then return end
     ThemeManager.GalleryGroupbox = Groupbox
     ThemeManager.GalleryCards = {}
-    ThemeManager.GallerySections = {}
-    ThemeManager.GalleryConnections = {}
-    if type(Library.OnUnload) == "function" then
-        Library:OnUnload(function()
-            for _, Connection in ThemeManager.GalleryConnections do
-                Connection:Disconnect()
-            end
-            table.clear(ThemeManager.GalleryConnections)
-        end)
-    end
 
     local Holder = Instance.new("Frame")
     Holder.BackgroundTransparency = 1
@@ -1590,33 +1008,27 @@ function ThemeManager:BuildGallery(Groupbox)
     Holder.Parent = Groupbox.Container
     ThemeManager.GalleryHolder = Holder
 
-    local Layout = Instance.new("UIListLayout")
-    Layout.Padding = UDim.new(0, GalleryMetrics().SectionGap)
-    Layout.FillDirection = Enum.FillDirection.Vertical
+    local CardHeight = Library.IsMobile and 56 or 48
+    local Gap = 6
+    local MinCardWidth = 150
+
+    local Layout = Instance.new("UIGridLayout")
+    Layout.CellPadding = UDim2.fromOffset(Gap, Gap)
+    Layout.CellSize = UDim2.fromOffset(MinCardWidth, CardHeight)
     Layout.SortOrder = Enum.SortOrder.LayoutOrder
     Layout.Parent = Holder
 
     local function Resize()
         if not Holder.Parent then return end
-        local Metrics = GalleryMetrics()
-        Layout.Padding = UDim.new(0, Metrics.SectionGap)
         local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / math.max(Library.DPIScale, 1)))
-        local Total = 0
-        local Visible = 0
-        for _, Section in ThemeManager.GallerySections do
-            local Count = math.max(Section.Count, 1)
-            local Columns = math.max(1, math.min(Count, math.floor((Width + Metrics.Gap) / (Metrics.MinCardWidth + Metrics.Gap))))
-            local CellWidth = math.max(1, math.floor((Width - (Columns - 1) * Metrics.Gap) / Columns))
-            Section.Layout.CellSize = UDim2.fromOffset(CellWidth, Metrics.CardHeight)
-            local Rows = math.ceil(Count / Columns)
-            local GridHeight = Rows * (Metrics.CardHeight + Metrics.Gap) - Metrics.Gap
-            local SectionHeight = Metrics.CaptionHeight + Metrics.CaptionGap + GridHeight
-            Section.Grid.Size = UDim2.new(1, 0, 0, GridHeight)
-            Section.Root.Size = UDim2.new(1, 0, 0, SectionHeight)
-            Total += SectionHeight
-            Visible += 1
-        end
-        Holder.Size = UDim2.new(1, 0, 0, math.max(0, Total + math.max(0, Visible - 1) * Metrics.SectionGap))
+        local Count = 0
+        for _ in ThemeManager.GalleryCards do Count += 1 end
+        Count = math.max(Count, 1)
+        local Columns = math.max(1, math.min(Count, math.floor((Width + Gap) / (MinCardWidth + Gap))))
+        local CellWidth = math.max(1, math.floor((Width - (Columns - 1) * Gap) / Columns))
+        Layout.CellSize = UDim2.fromOffset(CellWidth, CardHeight)
+        local Rows = math.ceil(Count / Columns)
+        Holder.Size = UDim2.new(1, 0, 0, Rows * (CardHeight + Gap) - Gap)
         Library:RequestLayout(Groupbox)
     end
     ThemeManager.GalleryResize = Resize
@@ -1741,43 +1153,12 @@ function ThemeManager:CreateGroupBox(Tab, IconName)
     return Tab:AddLeftGroupbox("Themes", IconName or "palette")
 end
 
-function ThemeManager:SyncMaterialControls()
-    local Controls = ThemeManager.MaterialControls
-    if not (ThemeManager.Library and Controls) then return false end
-    local Material = ThemeManager.Material or ReadMaterial()
-    ThemeManager.SyncingMaterial = true
-    if Controls.Highlight then Controls.Highlight:SetValue(math.round(Material.Highlight * 100)) end
-    if Controls.Shadow then Controls.Shadow:SetValue(math.round(Material.Shadow * 100)) end
-    if Controls.Scrim then Controls.Scrim:SetValue(math.round(Material.Scrim * 100)) end
-    if Controls.Border then Controls.Border:SetValue(math.round(Material.BorderAlpha * 100)) end
-    if Controls.Edge then Controls.Edge:SetValue(Material.EdgeHighlight) end
-    if Controls.Blur then Controls.Blur:SetValue(Material.Blur) end
-    if Controls.Reduce then Controls.Reduce:SetValue(Material.ReduceTransparency) end
-    if Controls.Tier then
-        Controls.Tier:SetValue(Material.Enabled and (GlassTierLabels[Material.Tier] or GlassTierLabels.Regular) or SolidLabel)
-    end
-    ThemeManager.SyncingMaterial = false
-    return true
-end
-
 function ThemeManager:CreateAppearanceManager(Groupbox)
     local Library = ThemeManager.Library
     assert(Library and Library.SetPalette, "Appearance controls require the current MonHub library")
     assert(not ThemeManager.PalettePickers, "Appearance controls already exist")
     ThemeManager.PalettePickers = {}
-    ThemeManager.MaterialControls = {}
-    local Material = ThemeManager.Material or ReadMaterial()
     local Ready = false
-
-    local function Section(Title)
-        if type(Groupbox.AddSection) == "function" then Groupbox:AddSection(Title) end
-    end
-
-    local function Live()
-        return Ready and not ThemeManager.SyncingMaterial and not ThemeManager.SyncingAppearance
-    end
-
-    Section("Palette")
     for _, Field in {
         { "AccentColor", "Accent" },
         { "BackgroundColor", "Background" },
@@ -1813,109 +1194,6 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
         end,
     })
 
-    Section("Depth")
-    for _, Field in {
-        { "Highlight", "Highlight strength", 25, 250 },
-        { "Shadow", "Shadow strength", 0, 250 },
-    } do
-        local Key = Field[1]
-        Groupbox:AddSlider("ThemeManager_Elevation_" .. Key, {
-            Text = Field[2],
-            Default = math.round(Material[Key] * 100),
-            Min = Field[3],
-            Max = Field[4],
-            Rounding = 0,
-            Suffix = "%",
-            CallbackOnRelease = true,
-            Callback = function(Value)
-                if Live() then ThemeManager:SetMaterial({ [Key] = Value / 100 }) end
-            end,
-        })
-        ThemeManager.MaterialControls[Key] = Library.Options["ThemeManager_Elevation_" .. Key]
-    end
-    Groupbox:AddToggle("ThemeManager_Elevation_Edge", {
-        Text = "Edge highlight",
-        Tooltip = "Adds a lit top edge so raised surfaces read without a shadow",
-        Default = Material.EdgeHighlight,
-        Callback = function(Value)
-            if Live() then ThemeManager:SetMaterial({ EdgeHighlight = Value }) end
-        end,
-    })
-    ThemeManager.MaterialControls.Edge = Library.Options.ThemeManager_Elevation_Edge
-
-    Section("Glass")
-    local TierValues = { SolidLabel }
-    local TierFromLabel = {}
-    for _, Tier in GlassTierOrder do
-        table.insert(TierValues, GlassTierLabels[Tier])
-        TierFromLabel[GlassTierLabels[Tier]] = Tier
-    end
-    if type(Groupbox.AddDropdown) == "function" then
-        Groupbox:AddDropdown("ThemeManager_Glass_Tier", {
-            Text = "Window material",
-            Values = TierValues,
-            Default = Material.Enabled and (GlassTierLabels[Material.Tier] or GlassTierLabels.Regular) or SolidLabel,
-            Callback = function(Value)
-                if not Live() then return end
-                local Tier = TierFromLabel[Value]
-                ThemeManager:SetMaterial({ Enabled = Tier ~= nil, Tier = Tier or ThemeManager:GetMaterial().Tier })
-            end,
-        })
-        ThemeManager.MaterialControls.Tier = Library.Options.ThemeManager_Glass_Tier
-    end
-    Groupbox:AddSlider("ThemeManager_Glass_Scrim", {
-        Text = "Glass scrim",
-        Default = math.round(Material.Scrim * 100),
-        Min = 0,
-        Max = math.round(ClampUnit(DesignToken("Glass.ScrimMax", 0.25), 0.25) * 100),
-        Rounding = 0,
-        Suffix = "%",
-        CallbackOnRelease = true,
-        Callback = function(Value)
-            if Live() then ThemeManager:SetMaterial({ Scrim = Value / 100 }) end
-        end,
-    })
-    ThemeManager.MaterialControls.Scrim = Library.Options.ThemeManager_Glass_Scrim
-    Groupbox:AddSlider("ThemeManager_Glass_Border", {
-        Text = "Glass border",
-        Default = math.round(Material.BorderAlpha * 100),
-        Min = 0,
-        Max = 100,
-        Rounding = 0,
-        Suffix = "%",
-        CallbackOnRelease = true,
-        Callback = function(Value)
-            if Live() then ThemeManager:SetMaterial({ BorderAlpha = Value / 100 }) end
-        end,
-    })
-    ThemeManager.MaterialControls.Border = Library.Options.ThemeManager_Glass_Border
-    Groupbox:AddToggle("ThemeManager_Glass_Blur", {
-        Text = "Background blur",
-        Default = Material.Blur,
-        Callback = function(Value)
-            if Live() then ThemeManager:SetMaterial({ Blur = Value }) end
-        end,
-    })
-    ThemeManager.MaterialControls.Blur = Library.Options.ThemeManager_Glass_Blur
-    Groupbox:AddToggle("ThemeManager_Glass_Reduce", {
-        Text = "Reduce transparency",
-        Tooltip = "Falls back to solid surfaces instead of frosted ones",
-        Default = Material.ReduceTransparency,
-        Callback = function(Value)
-            if Live() then ThemeManager:SetMaterial({ ReduceTransparency = Value }) end
-        end,
-    })
-    ThemeManager.MaterialControls.Reduce = Library.Options.ThemeManager_Glass_Reduce
-    Groupbox:AddToggle("ThemeManager_WatermarkMaterial", {
-        Text = "Watermark follows material",
-        Default = ThemeManager.WatermarkFollowsMaterial,
-        Callback = function(Value)
-            ThemeManager.WatermarkFollowsMaterial = Value == true
-            if Ready then SyncWatermarkMaterial(ThemeManager.Material or ReadMaterial()) end
-        end,
-    })
-
-    Section("Geometry")
     for _, Field in { { "Window", "Window corners" }, { "Card", "Panel corners" }, { "Control", "Control corners" }, { "Indicator", "Checkbox corners" } } do
         local Key = Field[1]
         Groupbox:AddSlider("ThemeManager_Radius_" .. Key, {
@@ -1945,8 +1223,6 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
             if Ready then Library:SetDesign({ Shell = { ScrollbarThickness = Value } }) end
         end,
     })
-
-    Section("Effects")
     for _, Field in { { "Shadows", "Window shadows" }, { "Dividers", "Section dividers" }, { "NavigationIndicator", "Navigation accent line" }, { "AccentScrollbars", "Accent scrollbars" } } do
         local Key = Field[1]
         Groupbox:AddToggle("ThemeManager_Effect_" .. Key, {
@@ -1970,7 +1246,6 @@ function ThemeManager:CreateAppearanceManager(Groupbox)
         ThemeManager:ApplyTheme(Library.CurrentTheme)
     end)
     Ready = true
-    ThemeManager:SyncMaterialControls()
     ThemeManager:UpdateContrast()
     return Groupbox
 end
@@ -1978,23 +1253,15 @@ end
 function ThemeManager:UpdateContrast()
     local Library = ThemeManager.Library
     if not (Library and ThemeManager.ContrastLabel) then return end
-    local Worst, _WorstKey, OverGlass, WorstLabel = WorstBodyContrast(Library.Scheme.FontColor)
+    local Worst, WorstKey = WorstBodyContrast(Library.Scheme.FontColor)
     local Below = Worst < BodyContrastTarget
-    if Below and type(ThemeManager.ContrastLabel.SetText) == "function" then
+    if Below then
         ThemeManager.ContrastLabel:SetText(
-            OverGlass
-                and string.format(
-                    "Over a bright game world the glass drops text to %.1f:1 against %s, below the 4.5:1 minimum. Raise the scrim or pick a thicker material.",
-                    Worst,
-                    WorstLabel or "the background"
-                )
-                or string.format("Text contrast is %.1f:1 against %s, below the 4.5:1 minimum for body text.", Worst, WorstLabel or "the background")
+            string.format("Text contrast is %.1f:1 against %s, below the 4.5:1 minimum for body text.", Worst, WorstKey or "the background")
         )
     end
-    if type(ThemeManager.ContrastLabel.SetVisible) == "function" then
-        ThemeManager.ContrastLabel:SetVisible(Below)
-    end
-    if ThemeManager.ContrastFixButton and type(ThemeManager.ContrastFixButton.SetVisible) == "function" then
+    ThemeManager.ContrastLabel:SetVisible(Below)
+    if ThemeManager.ContrastFixButton then
         ThemeManager.ContrastFixButton:SetVisible(Below)
     end
 end

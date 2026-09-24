@@ -1944,6 +1944,14 @@ Run local checks with Luau's compiler and interpreter installed:
 
 ### 0.0.1-release-3
 
+- Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
+- Made the selected sidebar tab fill its row edge to edge with a full-height accent bar, and added `Window:AddTabSeparator` for captioned or plain sidebar sections.
+- Reworked sub-tabs with 28px indented rows, a tree line under the parent icon, the accent bar on that line, and a lit parent while a child is open (`Library:AnimateTabTrail`).
+- Added the `Dusk`, `Dawn` and `Honey` themes and raised the default theme's layer separation and accent saturation.
+- Fixed light themes: contrast picking on the accent, light detection for palette previews, the disabled switch knob, the sidebar divider hover, the white collapse arrow, and over-dimmed resting labels (`Library:GetIdleTransparency`).
+- Added `Library:SetWatermarkSegments` for icon and text segments, kept the watermark refreshing while the menu is closed, made `{fps}` count rendered frames, and added the `{executor}` token.
+- Fixed half-pixel window centring on odd-width viewports.
+
 - Fixed filesystem compatibility by keeping supported extensions on temporary and backup config/theme files; verified backups and recovery now cover partially failing writes.
 - Fixed cross-tab groupbox identity, disabled control restore, numeric multi-select persistence, finite slider validation, and callback error propagation to rollback.
 - Added explicit autoload reports, missing-control diagnostics, structured config messages, immediate selection after config creation, and a fresh request key for script loaders.

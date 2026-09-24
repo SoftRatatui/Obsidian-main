@@ -35,6 +35,108 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-09-24 (version: UNRESOLVED, see the note above)
+
+Denser layout, a reworked sidebar, three new themes, light theme fixes and a
+segmented watermark. Numbers are measured in game unless a line says otherwise.
+
+### Density
+
+- Control rows are 20px instead of 24px in the `Compact` preset, which desktop uses
+  by default. Checkboxes now sit 26px apart instead of 33px, so rows without a
+  slider no longer look looser than rows with one. `Touch` (44px) and
+  `Comfortable` (30px) are unchanged. Checked by geometry only; see Verification.
+- `Grid.RowGap` now sets the gap between controls in a groupbox: 6px in `Compact`,
+  8px in `Comfortable`, 10px in `Touch`. The token existed before, but nothing read
+  it, so switching density never changed the spacing.
+- Groupbox header 38px to 32px, groupbox padding 9px/13px to 6px/9px (top/bottom),
+  top bar 52px to 44px, content padding and column gap 12px to 10px.
+- Sidebar 214px to 184px wide, tab rows 38px to 32px.
+- A groupbox with five toggles went from 216px to 171px tall (computed from the
+  tokens, not measured).
+
+### Sidebar
+
+- The selected tab fills its row from edge to edge, with a full-height 2px accent
+  bar on the left. Tab rows are square (`Shell.NavigationRadius`, default 0) and
+  stack without gaps. The old pill touched both sidebar edges but sat 7px below
+  the divider, which read as crooked.
+- `Window:AddTabSeparator(Text?)` groups tabs: a caption with text, a thin line
+  without. In the compact, icon-only sidebar the caption turns into a line.
+- Sub-tabs: child rows are 28px and indented 16px, a 1px tree line runs under the
+  parent's icon, and the open child's accent bar sits on that line. The parent
+  stays lit while one of its children is open (`Library:AnimateTabTrail`), so the
+  path reads without a second tab strip above the content. The line hides in the
+  compact sidebar.
+
+### Themes
+
+- `Default` separates its layers more (contrast step background to surface 1.057
+  to 1.079, surface to element 1.103 to 1.145) and uses a more saturated accent,
+  `#9A8CF5`, 84% saturation instead of 63%. Body text 15.7:1, muted text 6.4:1.
+- New themes:
+
+  | Theme | Kind | Accent | Body text | Muted text |
+  | --- | --- | --- | --- | --- |
+  | `Dusk` | dark, Rosé Pine based | soft rose `#EBBCBA` | 12.5:1 | 5.1:1 |
+  | `Dawn` | light, warm paper | dusty rose `#BA6679` | 8.3:1 | 4.8:1 |
+  | `Honey` | light, cream | deep amber `#B0701A` | 9.3:1 | 5.1:1 |
+
+  Aliases: `dusk`, `rosepine`, `dawn`, `rose`, `pink`, `light`, `honey`, `amber`.
+  All three are registered in the ThemeManager gallery as built-ins.
+- ThemeManager's own `Default` palette table now matches the library. It still held
+  a grey `#858DA0` accent that the gallery and older code paths read.
+
+### Light theme fixes
+
+- The contrast picker used for checkmarks on the accent could pick light on light,
+  because its dark candidate was the (light) background.
+- `Library.IsLightTheme` is now derived from background brightness, so a light
+  palette previewed through `SetPalette` is treated as light too. Before, only
+  `SetTheme` set it.
+- A disabled switch knob got brighter instead of dimmer on light themes.
+- The sidebar divider hover faded into a light background instead of highlighting.
+- The groupbox collapse arrow was white and disappeared on light themes.
+- Inactive tab labels and unchecked toggle labels fell to about 2.4:1 on light
+  themes. `Library:GetIdleTransparency(Base?)` dims less on light themes, and
+  switching theme reapplies the resting state to rows already built.
+
+### Watermark
+
+- `Library:SetWatermarkSegments(Segments)` draws the watermark as segments, each an
+  optional Lucide icon plus text with `{token}` substitutions, split by thin
+  vertical dividers. `Accent = true` colours a segment, meant for the hub name.
+- The watermark keeps refreshing while the menu is closed. It used to stop together
+  with the menu, which froze FPS and ping during play. Checked with the menu closed:
+  ping 98 ms to 70 ms and FPS 113 to 67 within three seconds.
+- `{fps}` counts rendered frames. It used `workspace:GetRealPhysicsFPS()`, the
+  physics rate, which sits near 60 whatever the real frame rate is. The counter
+  runs only while the watermark is visible and uses `{fps}`.
+- New `{executor}` token, from `identifyexecutor()` when available.
+
+### Fixes
+
+- A centred window on an odd-width viewport landed on a half pixel (x = 275.5 on a
+  1451px viewport), shifting every element inside it by half a pixel. It now
+  centres on whole pixels.
+
+### Not shipped
+
+- The elevation, glass and grey-theme refresh started on 2026-09-21 was reverted
+  before release. It is kept on the git tag `refresh-v2-backup` and in the stash
+  `refresh-v2-uncommitted`.
+
+### Verification
+
+- In game with `Honey` active: 0 of 118 visible objects on fractional positions or
+  sizes. Theme switching takes 4 ms.
+- Sub-tabs in game: tree line at x = 19 over every child row, the accent bar moves
+  between siblings and the parent stays lit, 0 fractional objects.
+- The 20px row change was checked by geometry only (checkbox 16px with 2px margins,
+  switch track 14px, key picker 18px, swatch 16px, all on whole pixels). It has not
+  been seen on screen, because the test client was busy with another script.
+- `tests/check.ps1` was not run; the luau toolchain is not installed here.
+
 ## Session changes (version: UNRESOLVED, see the note above)
 
 Everything below was read back out of the actual code before it was written down. A

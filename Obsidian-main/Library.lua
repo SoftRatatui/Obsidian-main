@@ -424,13 +424,13 @@ local Library = {
             Footer = 22,
             GroupHeader = 32,
             Control = 28,
-            Row = 24,
+            Row = 20,
             Icon = 16,
             Text = 14,
             Caption = 12,
         },
         Grid = {
-            Row = 24,
+            Row = 20,
             RowGap = 6,
             Indicator = 16,
             IndicatorGap = 9,
@@ -1629,10 +1629,10 @@ end
 
 Library.DensityPresets = {
     Compact = {
-        Row = 24,
+        Row = 20,
         NavigationHeight = 32,
         Grid = {
-            Row = 24, RowGap = 6, Indicator = 16, IndicatorGap = 9, Swatch = 16,
+            Row = 20, RowGap = 6, Indicator = 16, IndicatorGap = 9, Swatch = 16,
             LabelRow = 18, TrackRow = 14, Track = 4, Thumb = 10, ThumbHover = 12, ControlGap = 4,
         },
     },

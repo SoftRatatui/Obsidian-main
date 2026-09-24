@@ -401,7 +401,7 @@ local Library = {
         Effects = {
             Shadows = false,
             Dividers = false,
-            NavigationIndicator = false,
+            NavigationIndicator = true,
             AccentScrollbars = false,
             ThemeGeometry = false,
         },
@@ -410,7 +410,7 @@ local Library = {
             Small = 6,
             Medium = 9,
             Large = 13,
-            Section = 12,
+            Section = 10,
         },
         Radius = {
             Window = 8,
@@ -420,9 +420,9 @@ local Library = {
             Indicator = 3,
         },
         Size = {
-            TopBar = 52,
+            TopBar = 44,
             Footer = 22,
-            GroupHeader = 38,
+            GroupHeader = 32,
             Control = 28,
             Row = 24,
             Icon = 16,
@@ -431,7 +431,7 @@ local Library = {
         },
         Grid = {
             Row = 24,
-            RowGap = 9,
+            RowGap = 6,
             Indicator = 16,
             IndicatorGap = 9,
             Swatch = 16,
@@ -456,14 +456,15 @@ local Library = {
             Hover = 0.08,
         },
         Shell = {
-            SidebarMin = 184,
-            SidebarMax = 214,
-            SidebarRatio = 0.255,
-            NavigationHeight = 38,
-            NavigationGap = 5,
-            NavigationPadding = 7,
+            SidebarMin = 156,
+            SidebarMax = 184,
+            SidebarRatio = 0.21,
+            NavigationHeight = 32,
+            NavigationGap = 0,
+            NavigationPadding = 6,
             NavigationInset = 0,
-            ContentPadding = 12,
+            NavigationRadius = 0,
+            ContentPadding = 10,
             SearchHeight = 32,
             HeaderControl = 32,
             HeaderGap = 8,
@@ -519,18 +520,18 @@ local Library = {
     
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(17, 19, 22),
-        MainColor = Color3.fromRGB(31, 34, 39),
-        TopBarColor = Color3.fromRGB(29, 32, 37),
-        SurfaceColor = Color3.fromRGB(23, 25, 29),
-        RaisedColor = Color3.fromRGB(29, 32, 37),
-        ElementColor = Color3.fromRGB(31, 34, 39),
-        HoverColor = Color3.fromRGB(38, 42, 49),
-        AccentColor = Color3.fromRGB(162, 154, 232),
-        AccentSoftColor = Color3.fromRGB(41, 42, 58),
-        OutlineColor = Color3.fromRGB(52, 57, 66),
-        FontColor = Color3.fromRGB(238, 240, 244),
-        MutedFontColor = Color3.fromRGB(146, 151, 160),
+        BackgroundColor = Color3.fromRGB(14, 15, 19),
+        MainColor = Color3.fromRGB(33, 36, 45),
+        TopBarColor = Color3.fromRGB(28, 30, 38),
+        SurfaceColor = Color3.fromRGB(22, 24, 30),
+        RaisedColor = Color3.fromRGB(28, 30, 38),
+        ElementColor = Color3.fromRGB(33, 36, 45),
+        HoverColor = Color3.fromRGB(42, 46, 57),
+        AccentColor = Color3.fromRGB(154, 140, 245),
+        AccentSoftColor = Color3.fromRGB(42, 40, 68),
+        OutlineColor = Color3.fromRGB(50, 54, 66),
+        FontColor = Color3.fromRGB(240, 241, 246),
+        MutedFontColor = Color3.fromRGB(150, 155, 170),
         ShadowColor = Color3.fromRGB(5, 6, 8),
         Font = Font.fromEnum(Enum.Font.GothamMedium),
 
@@ -846,18 +847,18 @@ Library.DefaultTheme = "Default"
 Library.CurrentTheme = "Default"
 Library.Themes = {
     Default = {
-        BackgroundColor = Color3.fromRGB(17, 19, 22),
-        MainColor = Color3.fromRGB(31, 34, 39),
-        TopBarColor = Color3.fromRGB(29, 32, 37),
-        SurfaceColor = Color3.fromRGB(23, 25, 29),
-        RaisedColor = Color3.fromRGB(29, 32, 37),
-        ElementColor = Color3.fromRGB(31, 34, 39),
-        HoverColor = Color3.fromRGB(38, 42, 49),
-        AccentColor = Color3.fromRGB(162, 154, 232),
-        AccentSoftColor = Color3.fromRGB(41, 42, 58),
-        OutlineColor = Color3.fromRGB(52, 57, 66),
-        FontColor = Color3.fromRGB(238, 240, 244),
-        MutedFontColor = Color3.fromRGB(146, 151, 160),
+        BackgroundColor = Color3.fromRGB(14, 15, 19),
+        MainColor = Color3.fromRGB(33, 36, 45),
+        TopBarColor = Color3.fromRGB(28, 30, 38),
+        SurfaceColor = Color3.fromRGB(22, 24, 30),
+        RaisedColor = Color3.fromRGB(28, 30, 38),
+        ElementColor = Color3.fromRGB(33, 36, 45),
+        HoverColor = Color3.fromRGB(42, 46, 57),
+        AccentColor = Color3.fromRGB(154, 140, 245),
+        AccentSoftColor = Color3.fromRGB(42, 40, 68),
+        OutlineColor = Color3.fromRGB(50, 54, 66),
+        FontColor = Color3.fromRGB(240, 241, 246),
+        MutedFontColor = Color3.fromRGB(150, 155, 170),
         ShadowColor = Color3.fromRGB(5, 6, 8),
         WarningColor = Color3.fromRGB(208, 157, 80),
         DestructiveColor = Color3.fromRGB(196, 58, 76),
@@ -1000,6 +1001,84 @@ Library.Themes = {
         BackgroundImage = "",
         CornerRadius = 8,
         IsLight = false,
+    },
+    Dusk = {
+        BackgroundColor = Color3.fromRGB(25, 23, 36),
+        MainColor = Color3.fromRGB(42, 39, 65),
+        TopBarColor = Color3.fromRGB(28, 26, 41),
+        SurfaceColor = Color3.fromRGB(31, 29, 46),
+        RaisedColor = Color3.fromRGB(28, 26, 41),
+        ElementColor = Color3.fromRGB(42, 39, 65),
+        HoverColor = Color3.fromRGB(52, 48, 77),
+        AccentColor = Color3.fromRGB(235, 188, 186),
+        AccentSoftColor = Color3.fromRGB(62, 53, 67),
+        OutlineColor = Color3.fromRGB(64, 61, 82),
+        FontColor = Color3.fromRGB(224, 222, 244),
+        MutedFontColor = Color3.fromRGB(144, 140, 170),
+        ShadowColor = Color3.fromRGB(8, 7, 14),
+        WarningColor = Color3.fromRGB(246, 193, 119),
+        DestructiveColor = Color3.fromRGB(235, 111, 146),
+        RedColor = Color3.fromRGB(235, 111, 146),
+        SuccessColor = Color3.fromRGB(156, 207, 216),
+        DangerColor = Color3.fromRGB(235, 111, 146),
+        DarkColor = Color3.fromRGB(12, 11, 18),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(250, 249, 255),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = false,
+    },
+    Dawn = {
+        BackgroundColor = Color3.fromRGB(239, 230, 222),
+        MainColor = Color3.fromRGB(230, 219, 210),
+        TopBarColor = Color3.fromRGB(233, 223, 214),
+        SurfaceColor = Color3.fromRGB(246, 239, 232),
+        RaisedColor = Color3.fromRGB(233, 223, 214),
+        ElementColor = Color3.fromRGB(230, 219, 210),
+        HoverColor = Color3.fromRGB(221, 209, 199),
+        AccentColor = Color3.fromRGB(186, 102, 121),
+        AccentSoftColor = Color3.fromRGB(239, 220, 221),
+        OutlineColor = Color3.fromRGB(214, 201, 190),
+        FontColor = Color3.fromRGB(74, 67, 88),
+        MutedFontColor = Color3.fromRGB(108, 101, 128),
+        ShadowColor = Color3.fromRGB(107, 90, 80),
+        WarningColor = Color3.fromRGB(192, 130, 42),
+        DestructiveColor = Color3.fromRGB(180, 73, 90),
+        RedColor = Color3.fromRGB(180, 73, 90),
+        SuccessColor = Color3.fromRGB(78, 138, 106),
+        DangerColor = Color3.fromRGB(180, 73, 90),
+        DarkColor = Color3.fromRGB(28, 24, 30),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(255, 252, 249),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = true,
+    },
+    Honey = {
+        BackgroundColor = Color3.fromRGB(238, 230, 216),
+        MainColor = Color3.fromRGB(229, 219, 203),
+        TopBarColor = Color3.fromRGB(232, 223, 208),
+        SurfaceColor = Color3.fromRGB(246, 240, 230),
+        RaisedColor = Color3.fromRGB(232, 223, 208),
+        ElementColor = Color3.fromRGB(229, 219, 203),
+        HoverColor = Color3.fromRGB(219, 208, 189),
+        AccentColor = Color3.fromRGB(176, 112, 26),
+        AccentSoftColor = Color3.fromRGB(240, 225, 198),
+        OutlineColor = Color3.fromRGB(214, 202, 182),
+        FontColor = Color3.fromRGB(70, 62, 51),
+        MutedFontColor = Color3.fromRGB(110, 101, 86),
+        ShadowColor = Color3.fromRGB(110, 90, 64),
+        WarningColor = Color3.fromRGB(191, 106, 42),
+        DestructiveColor = Color3.fromRGB(176, 74, 74),
+        RedColor = Color3.fromRGB(176, 74, 74),
+        SuccessColor = Color3.fromRGB(90, 138, 90),
+        DangerColor = Color3.fromRGB(176, 74, 74),
+        DarkColor = Color3.fromRGB(28, 24, 18),
+        Font = Font.fromEnum(Enum.Font.GothamMedium),
+        WhiteColor = Color3.fromRGB(255, 252, 246),
+        BackgroundImage = "",
+        CornerRadius = 8,
+        IsLight = true,
     },
 }
 
@@ -1551,9 +1630,9 @@ end
 Library.DensityPresets = {
     Compact = {
         Row = 24,
-        NavigationHeight = 38,
+        NavigationHeight = 32,
         Grid = {
-            Row = 24, RowGap = 9, Indicator = 16, IndicatorGap = 9, Swatch = 16,
+            Row = 24, RowGap = 6, Indicator = 16, IndicatorGap = 9, Swatch = 16,
             LabelRow = 18, TrackRow = 14, Track = 4, Thumb = 10, ThumbHover = 12, ControlGap = 4,
         },
     },
@@ -1561,7 +1640,7 @@ Library.DensityPresets = {
         Row = 30,
         NavigationHeight = 44,
         Grid = {
-            Row = 30, RowGap = 10, Indicator = 18, IndicatorGap = 10, Swatch = 18,
+            Row = 30, RowGap = 8, Indicator = 18, IndicatorGap = 10, Swatch = 18,
             LabelRow = 20, TrackRow = 18, Track = 4, Thumb = 12, ThumbHover = 14, ControlGap = 6,
         },
     },
@@ -1569,7 +1648,7 @@ Library.DensityPresets = {
         Row = 44,
         NavigationHeight = 44,
         Grid = {
-            Row = 44, RowGap = 12, Indicator = 24, IndicatorGap = 12, Swatch = 24,
+            Row = 44, RowGap = 10, Indicator = 24, IndicatorGap = 12, Swatch = 24,
             LabelRow = 22, TrackRow = 20, Track = 4, Thumb = 18, ThumbHover = 20, ControlGap = 8,
         },
     },
@@ -2935,6 +3014,11 @@ function Library:UpdateColorsUsingRegistry()
             end
         end
     end
+end
+
+function Library:GetIdleTransparency(Base: number?): number
+    Base = Base or 0.5
+    return Library.IsLightTheme and Base * 0.55 or Base
 end
 
 function Library:OnThemeChanged(Callback)
@@ -5825,6 +5909,10 @@ end
 function Library:GetContrastColor(Background: Color3): Color3
     local Light = Library.Scheme.WhiteColor or Color3.new(1, 1, 1)
     local Dark = Library.Scheme.BackgroundColor or Color3.new(0, 0, 0)
+    local Text = Library.Scheme.FontColor
+    if Text and Library:GetLuminance(Text) < Library:GetLuminance(Dark) then
+        Dark = Text
+    end
     local Base = Library:GetLuminance(Background)
 
     local function Ratio(First: number, Second: number): number
@@ -6584,12 +6672,12 @@ function Library:AnimateTabHover(Button: TextButton, Label: TextLabel, Icon: Ima
         BackgroundTransparency = Hovering and 0.52 or 1,
     })
     Library:PlayTween(Label, "TabHover", Library.TweenInfo, {
-        TextTransparency = Hovering and 0.18 or 0.5,
+        TextTransparency = Hovering and 0.18 or Library:GetIdleTransparency(),
     })
 
     if Icon then
         Library:PlayTween(Icon, "TabHover", Library.TweenInfo, {
-            ImageTransparency = Hovering and 0.18 or 0.5,
+            ImageTransparency = Hovering and 0.18 or Library:GetIdleTransparency(),
         })
     end
 end
@@ -6604,11 +6692,11 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
         BackgroundTransparency = Selected and 0.14 or 1,
     })
     Library:PlayTween(Label, "TabSelection", Library.TweenInfo, {
-        TextTransparency = Selected and 0 or 0.5,
+        TextTransparency = Selected and 0 or Library:GetIdleTransparency(),
     })
     if Icon then
         Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, {
-            ImageTransparency = Selected and 0 or 0.5,
+            ImageTransparency = Selected and 0 or Library:GetIdleTransparency(),
         })
     end
 
@@ -6619,7 +6707,7 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
         if Row <= 0 then
             Row = Library:GetDesignToken("Shell.NavigationHeight", 38)
         end
-        local Height = Library:MatchParity(Row, math.round(Row * 0.44))
+        local Height = Row
         Library:PlayTween(Indicator, "TabIndicator", Library.TweenInfo, {
             BackgroundTransparency = Selected and 0 or 1,
             Size = UDim2.fromOffset(2, Selected and Height or 0),
@@ -8659,7 +8747,7 @@ do
                 end
 
                 local State = KeybindsToggle.DisplayState == true
-                Label.TextTransparency = State and 0 or 0.5
+                Label.TextTransparency = State and 0 or Library:GetIdleTransparency()
                 Switch.BackgroundColor3 = GetKeybindToggleSurfaceColor(State)
                 SwitchStroke.Color = GetKeybindToggleStrokeColor(State)
                 SwitchStroke.Transparency = State and 0.04 or 0.18
@@ -11854,7 +11942,7 @@ do
                 TextColor3 = LabelColor,
             })
             Library:PlayTween(Label, "CheckboxLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
+                TextTransparency = Toggle.Value and 0 or Library:GetIdleTransparency(Library:GetDesignToken("Opacity.MutedText", 0.38)),
             })
             TweenCheckmarkTransparency(Toggle.Value and 0 or 1)
             Library:PlayTween(CheckmarkScale, "CheckboxCheckmarkScale", Library.TweenInfo, {
@@ -12141,7 +12229,7 @@ do
         RegisterToggleTheme(Toggle, Switch, SwitchStroke, Label)
         local BallRegistry = Library.Registry[Ball] or {}
         BallRegistry.BackgroundColor3 = function()
-            return Toggle.Disabled and Library:GetDarkerColor(Library.Scheme.FontColor) or Library.Scheme.FontColor
+            return Toggle.Disabled and Library.Scheme.FontColor:Lerp(Library.Scheme.BackgroundColor, 0.45) or Library.Scheme.FontColor
         end
         BallRegistry.Position = function()
             return UDim2.new(0, Toggle.Value and 12 or 2, 0.5, 0)
@@ -12178,7 +12266,7 @@ do
                 Label.TextTransparency = 0.8
                 Ball.Position = BallPosition
 
-                Ball.BackgroundColor3 = Library:GetDarkerColor(Library.Scheme.FontColor)
+                Ball.BackgroundColor3 = Library.Scheme.FontColor:Lerp(Library.Scheme.BackgroundColor, 0.45)
 
                 return
             end
@@ -12193,7 +12281,7 @@ do
                 TextColor3 = LabelColor,
             })
             Library:PlayTween(Label, "SwitchLabelTransparency", Library.TweenInfo, {
-                TextTransparency = Toggle.Value and 0 or Library:GetDesignToken("Opacity.MutedText", 0.38),
+                TextTransparency = Toggle.Value and 0 or Library:GetIdleTransparency(Library:GetDesignToken("Opacity.MutedText", 0.38)),
             })
             Library:PlayTween(Ball, "SwitchBallPosition", Library.TweenInfo, {
                 Position = BallPosition,
@@ -18838,6 +18926,14 @@ do
 end
 
 local ThemeAliases = {
+    dusk = "Dusk",
+    rosepine = "Dusk",
+    dawn = "Dawn",
+    rose = "Dawn",
+    pink = "Dawn",
+    light = "Dawn",
+    honey = "Honey",
+    amber = "Honey",
     default = "Default",
     graphite = "Default",
     gray = "Default",
@@ -18904,6 +19000,7 @@ function Library:SetPalette(Overrides)
     elseif Overrides.MainColor and not Overrides.ElementColor then
         Library.Scheme.ElementColor = Overrides.MainColor
     end
+    Library.IsLightTheme = Library:GetLuminance(Library.Scheme.BackgroundColor) > 0.45
     if (Overrides.AccentColor or Overrides.ElementColor or Overrides.MainColor) and not Overrides.AccentSoftColor then
         Library.Scheme.AccentSoftColor = Library.Scheme.ElementColor:Lerp(Library.Scheme.AccentColor, 0.18)
     end
@@ -18948,7 +19045,7 @@ function Library:SetTheme(Theme)
     Library.Scheme.Dark = nil
     Library.Scheme.White = nil
     Library.Scheme.BackgroundImage = ThemeData.BackgroundImage or ""
-    Library.IsLightTheme = ThemeData.IsLight == true
+    Library.IsLightTheme = ThemeData.IsLight == true or Library:GetLuminance(Library.Scheme.BackgroundColor) > 0.45
     Library.CurrentTheme = ThemeName
 
     if Library:GetDesignToken("Effects.ThemeGeometry", false) then
@@ -19924,9 +20021,9 @@ function Library:CreateWindow(WindowInfo)
     local TopBarHeight = Library:GetDesignToken("Size.TopBar", 48)
     local BottomBarHeight = Library:GetDesignToken("Size.Footer", 20)
 
-    local SidebarRatio = Library:GetDesignToken("Shell.SidebarRatio", 0.255)
-    local SidebarMin = Library:GetDesignToken("Shell.SidebarMin", 184)
-    local SidebarMax = Library:GetDesignToken("Shell.SidebarMax", 214)
+    local SidebarRatio = Library:GetDesignToken("Shell.SidebarRatio", 0.21)
+    local SidebarMin = Library:GetDesignToken("Shell.SidebarMin", 156)
+    local SidebarMax = Library:GetDesignToken("Shell.SidebarMax", 184)
     local InitialLeftWidth = math.clamp(math.ceil(WindowInfo.Size.X.Offset * SidebarRatio), SidebarMin, SidebarMax)
     local IsCompact = WindowInfo.EnableCompacting and (WindowInfo.SidebarCompacted or Library.IsMobile)
     local LastExpandedWidth = InitialLeftWidth
@@ -20036,7 +20133,12 @@ function Library:CreateWindow(WindowInfo)
         )
 
         if WindowInfo.Center then
-            MainFrame.Position = UDim2.new(0.5, -MainFrame.Size.X.Offset / 2, 0.5, -MainFrame.Size.Y.Offset / 2)
+            local Camera = workspace.CurrentCamera
+            local Viewport = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
+            MainFrame.Position = UDim2.fromOffset(
+                math.max(0, math.floor((Viewport.X - MainFrame.Size.X.Offset) / 2)),
+                math.max(0, math.floor((Viewport.Y - MainFrame.Size.Y.Offset) / 2))
+            )
         end
 
         
@@ -21187,6 +21289,8 @@ function Library:CreateWindow(WindowInfo)
         end
     end
 
+    local TabSeparators = {}
+
     local function ApplyCompact()
         local Compact = Window:GetSidebarWidth() == WindowInfo.SidebarCompactWidth
         if WindowInfo.DisableCompactingSnap then
@@ -21219,6 +21323,13 @@ function Library:CreateWindow(WindowInfo)
         for _, ParentTab in SubTabParents do
             if ParentTab.RefreshExpansion then
                 ParentTab:RefreshExpansion(false)
+            end
+        end
+
+        for _, Entry in TabSeparators do
+            if Entry.Label then
+                Entry.Label.Visible = not IsCompact
+                Entry.Line.Visible = IsCompact
             end
         end
     end
@@ -21350,6 +21461,44 @@ function Library:CreateWindow(WindowInfo)
     end
     local TabSequence = 0
 
+    function Window:AddTabSeparator(Text: string?)
+        local Caption = typeof(Text) == "string" and Text ~= "" and Text or nil
+        local Height = Caption and 26 or 9
+        local Separator = New("Frame", {
+            BackgroundTransparency = 1,
+            LayoutOrder = TabSequence * 100 + 50,
+            Size = UDim2.new(1, 0, 0, Height),
+            Parent = Tabs,
+        })
+        local Line = New("Frame", {
+            BackgroundColor3 = "OutlineColor",
+            BackgroundTransparency = Library:GetDesignToken("Opacity.Divider", 0.62),
+            BorderSizePixel = 0,
+            Position = UDim2.fromOffset(0, math.floor((Height - 1) / 2)),
+            Size = UDim2.new(1, 0, 0, 1),
+            Visible = Caption == nil or IsCompact,
+            Parent = Separator,
+        })
+        local Label
+        if Caption then
+            Label = New("TextLabel", {
+                BackgroundTransparency = 1,
+                Position = UDim2.fromOffset(NavigationIconX, 0),
+                Size = UDim2.new(1, -(NavigationIconX * 2), 1, -4),
+                Text = Caption,
+                TextColor3 = "MutedFontColor",
+                TextSize = Library:GetDesignToken("Typography.Caption", 12),
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextYAlignment = Enum.TextYAlignment.Bottom,
+                Visible = not IsCompact,
+                Parent = Separator,
+            })
+        end
+        table.insert(TabSeparators, { Frame = Separator, Line = Line, Label = Label })
+        return Separator
+    end
+
     function Window:AddTab(...)
         local Name = nil
         local Icon = nil
@@ -21395,7 +21544,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Card", 4)) end,
+                CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Shell.NavigationRadius", 0)) end,
                 Parent = TabButton,
             })
             New("Frame", {
@@ -21415,7 +21564,7 @@ function Library:CreateWindow(WindowInfo)
                 Text = Name,
                 TextSize = Library:GetDesignToken("Typography.Navigation", 14),
                 TextTruncate = Enum.TextTruncate.AtEnd,
-                TextTransparency = 0.5,
+                TextTransparency = Library:GetIdleTransparency(),
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Visible = not IsCompact,
                 Parent = TabButton,
@@ -21428,7 +21577,7 @@ function Library:CreateWindow(WindowInfo)
                     ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
-                    ImageTransparency = 0.5,
+                    ImageTransparency = Library:GetIdleTransparency(),
                     Position = IsCompact and UDim2.fromScale(0.5, 0.5) or UDim2.new(0, NavigationIconX, 0.5, 0),
                     ScaleType = Enum.ScaleType.Fit,
                     Size = UDim2.fromOffset(NavigationIconSize, NavigationIconSize),
@@ -22420,8 +22569,8 @@ function Library:CreateWindow(WindowInfo)
             local GroupboxLine
             local GroupboxHeader
             local GroupboxHeaderHeight = Library:GetDesignToken("Size.GroupHeader", 35)
-            local GroupboxTopPadding = Library:GetDesignToken("Spacing.Medium", 8)
-            local GroupboxBottomPadding = Library:GetDesignToken("Spacing.Large", 12)
+            local GroupboxTopPadding = Library:GetDesignToken("Spacing.Small", 6)
+            local GroupboxBottomPadding = Library:GetDesignToken("Spacing.Medium", 9)
             local GroupboxHorizontalPadding = Library:GetDesignToken("Spacing.Medium", 8)
 
             do
@@ -22490,7 +22639,7 @@ function Library:CreateWindow(WindowInfo)
                 if Info.DisableCollapsing ~= true then
                     GroupboxCollapseArrow = New("ImageButton", {
                         Image = ArrowIcon and ArrowIcon.Url or "",
-                        ImageColor3 = "WhiteColor",
+                        ImageColor3 = "FontColor",
                         ImageRectOffset = ArrowIcon and ArrowIcon.ImageRectOffset or Vector2.zero,
                         ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
                         BackgroundTransparency = 1,
@@ -22511,7 +22660,9 @@ function Library:CreateWindow(WindowInfo)
                 })
 
                 GroupboxList = New("UIListLayout", {
-                    Padding = UDim.new(0, Library:GetDesignToken("Spacing.Medium", 8)),
+                    Padding = function()
+                        return UDim.new(0, Library:GetDesignToken("Grid.RowGap", 6))
+                    end,
                     Parent = GroupboxContainer,
                 })
                 New("UIPadding", {
@@ -23202,7 +23353,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             New("UICorner", {
-                CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Card", 4)),
+                CornerRadius = UDim.new(0, Library:GetDesignToken("Shell.NavigationRadius", 0)),
                 Parent = TabButton,
             })
             TabLabel = New("TextLabel", {
@@ -23212,7 +23363,7 @@ function Library:CreateWindow(WindowInfo)
                 Text = Name,
                 TextSize = 15,
                 TextTruncate = Enum.TextTruncate.AtEnd,
-                TextTransparency = 0.5,
+                TextTransparency = Library:GetIdleTransparency(),
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Visible = not IsCompact,
                 Parent = TabButton,
@@ -23225,7 +23376,7 @@ function Library:CreateWindow(WindowInfo)
                     ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
-                    ImageTransparency = 0.5,
+                    ImageTransparency = Library:GetIdleTransparency(),
                     Position = IsCompact and UDim2.fromScale(0.5, 0.5) or UDim2.new(0, NavigationIconX, 0.5, 0),
                     ScaleType = Enum.ScaleType.Fit,
                     Size = UDim2.fromOffset(NavigationIconSize, NavigationIconSize),
@@ -24277,7 +24428,7 @@ function Library:CreateWindow(WindowInfo)
         })
         SidebarGrabber.MouseEnter:Connect(function()
             Library:PlayTween(DividerLine, "SidebarResizeHover", Library.TweenInfo, {
-                BackgroundColor3 = Library:GetLighterColor(Library.Scheme.OutlineColor),
+                BackgroundColor3 = Library.Scheme.OutlineColor:Lerp(Library.Scheme.AccentColor, 0.5),
             })
         end)
         SidebarGrabber.MouseLeave:Connect(function()
@@ -25774,6 +25925,20 @@ Library:SetThemeFont(Library.DefaultFont)
 Library.TabSwipeEnabled = Library.IsMobile
 Library.HapticsEnabled = Library.IsMobile and Library.Env.Haptics == true
 Library:ApplyDensity()
+
+Library:OnThemeChanged(function()
+    local ActiveButton = Library.ActiveTab and Library.ActiveTab.Button
+    for _, Entry in Library.TabButtons do
+        if Entry.Button and Entry.Label and Entry.Button.Parent then
+            Library:AnimateTabSelection(Entry.Button, Entry.Label, Entry.Icon, Entry.Button == ActiveButton)
+        end
+    end
+    for _, Toggle in Library.Toggles do
+        if type(Toggle) == "table" and type(Toggle.Display) == "function" and not Toggle.Destroyed then
+            pcall(Toggle.Display, Toggle)
+        end
+    end
+end)
 
 getgenv().Library = Library
 return Library

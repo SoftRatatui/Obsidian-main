@@ -1602,6 +1602,7 @@ export type Window = {
     RefreshResponsiveLayout: (self: Window) -> (),
     ShowTabInfo: (self: Window, Name: string, Description: string) -> (),
     HideTabInfo: (self: Window) -> (),
+    AddTabSeparator: (self: Window, Text: string?) -> Frame,
     AddTab: (
         self: Window,
         Info: { Name: string, Icon: string?, Description: string?, Order: number? } | string,
@@ -2059,6 +2060,12 @@ export type Library = {
     SetWatermarkStyle: (self: Library, Info: { [string]: any }) -> Library,
     SetWatermarkPreset: (self: Library, Name: "Compact" | "Minimal" | "Classic") -> Library,
     SetWatermarkFormat: (self: Library, Format: string?) -> Library,
+    SetWatermarkSegments: (
+        self: Library,
+        Segments: { string | { Text: string?, Icon: string?, Accent: boolean? } }?
+    ) -> Library,
+    GetIdleTransparency: (self: Library, Base: number?) -> number,
+    AnimateTabTrail: (self: Library, Button: TextButton, Label: TextLabel, Icon: ImageLabel?, OnTrail: boolean) -> (),
     RegisterWatermarkToken: (self: Library, Name: string, Getter: () -> any) -> Library,
     RefreshWatermarkFormat: (self: Library, Immediate: boolean?) -> Library,
     AddContextMenu: (

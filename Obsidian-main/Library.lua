@@ -6682,6 +6682,28 @@ function Library:AnimateTabHover(Button: TextButton, Label: TextLabel, Icon: Ima
     end
 end
 
+function Library:AnimateTabTrail(Button: TextButton, Label: TextLabel, Icon: ImageLabel?, OnTrail: boolean)
+    if not OnTrail then
+        Library:AnimateTabSelection(Button, Label, Icon, false)
+        return
+    end
+    Library:CancelTween(Button, "TabHover")
+    Library:CancelTween(Label, "TabHover")
+    Library:PlayTween(Button, "TabSelection", Library.TweenInfo, { BackgroundTransparency = 0.6 })
+    Library:PlayTween(Label, "TabSelection", Library.TweenInfo, { TextTransparency = 0 })
+    if Icon then
+        Library:CancelTween(Icon, "TabHover")
+        Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, { ImageTransparency = 0 })
+    end
+    local Indicator = Button:FindFirstChild("Indicator")
+    if Indicator then
+        Library:PlayTween(Indicator, "TabIndicator", Library.TweenInfo, {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(2, 0),
+        })
+    end
+end
+
 function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon: ImageLabel?, Selected: boolean)
     Library:CancelTween(Button, "TabHover")
     Library:CancelTween(Label, "TabHover")
@@ -7591,10 +7613,46 @@ do
     local WatermarkFormat = nil
     local LastWatermarkString = nil
     local WatermarkScheduled = false
+    local WatermarkSegments = nil
+    local SegmentHolder = nil
+    local SegmentViews = {}
+    local FrameCounter = { Count = 0, Since = os.clock(), Value = 0, Connection = nil }
+
+    local function SetFrameCounter(Wanted: boolean)
+        if Wanted and not FrameCounter.Connection then
+            FrameCounter.Count, FrameCounter.Since = 0, os.clock()
+            FrameCounter.Connection = RunService.Heartbeat:Connect(function()
+                FrameCounter.Count += 1
+            end)
+            Library:GiveSignal(FrameCounter.Connection)
+        elseif not Wanted and FrameCounter.Connection then
+            FrameCounter.Connection:Disconnect()
+            FrameCounter.Connection = nil
+            FrameCounter.Value = 0
+        end
+    end
+
     local WatermarkTokens = {
         fps = function()
+            if FrameCounter.Connection then
+                local Now = os.clock()
+                local Elapsed = Now - FrameCounter.Since
+                if Elapsed >= 0.2 then
+                    FrameCounter.Value = math.floor(FrameCounter.Count / Elapsed + 0.5)
+                    FrameCounter.Count, FrameCounter.Since = 0, Now
+                end
+                if FrameCounter.Value > 0 then
+                    return tostring(FrameCounter.Value)
+                end
+            end
             local Ok, Value = pcall(function() return workspace:GetRealPhysicsFPS() end)
             return Ok and tostring(math.floor(Value)) or "0"
+        end,
+        executor = function()
+            local Ok, Name = pcall(function()
+                return identifyexecutor and (identifyexecutor())
+            end)
+            return Ok and Name and tostring(Name) or ""
         end,
         ping = function()
             local Ok, Value = pcall(function()
@@ -7612,6 +7670,30 @@ do
         version = function() return tostring(Library.ReleaseVersion) end,
     }
 
+    local function ResolveTokens(Template: string): string
+        local Result = string.gsub(Template, "{(%w+)}", function(Name)
+            local Getter = WatermarkTokens[string.lower(Name)]
+            if not Getter then
+                return "{" .. Name .. "}"
+            end
+            local Ok, Value = pcall(Getter)
+            return Ok and tostring(Value) or ""
+        end)
+        return Library:Sanitize(Result)
+    end
+
+    local function WatermarkNeedsFps(): boolean
+        if WatermarkFormat and string.find(string.lower(WatermarkFormat), "{fps}", 1, true) then
+            return true
+        end
+        for _, View in SegmentViews do
+            if string.find(string.lower(View.Template), "{fps}", 1, true) then
+                return true
+            end
+        end
+        return false
+    end
+
     local function ComputeWatermarkString()
         local Result = string.gsub(WatermarkFormat, "{(%w+)}", function(Name)
             local Getter = WatermarkTokens[string.lower(Name)]
@@ -7626,8 +7708,8 @@ do
 
     local function WatermarkShouldRun()
         local Label = WatermarkLabel.Label
-        return WatermarkFormat ~= nil and not Library.Unloaded
-            and Label and Label.Parent and Label.Visible and Library.Toggled ~= false
+        return (WatermarkFormat ~= nil or WatermarkSegments ~= nil) and not Library.Unloaded
+            and Label and Label.Parent and Label.Visible
     end
 
     local PumpWatermark
@@ -7647,13 +7729,30 @@ do
 
     function PumpWatermark()
         if not WatermarkShouldRun() then
+            SetFrameCounter(false)
             return
         end
-        local Text = ComputeWatermarkString()
-        if Text ~= LastWatermarkString then
-            LastWatermarkString = Text
-            WatermarkLabel:SetText(Text)
-            QueueWatermarkClamp()
+        SetFrameCounter(WatermarkNeedsFps())
+        if WatermarkSegments then
+            local Changed = false
+            for _, View in SegmentViews do
+                local Text = ResolveTokens(View.Template)
+                if Text ~= View.Last then
+                    View.Last = Text
+                    View.Label.Text = Text
+                    Changed = true
+                end
+            end
+            if Changed then
+                QueueWatermarkClamp()
+            end
+        else
+            local Text = ComputeWatermarkString()
+            if Text ~= LastWatermarkString then
+                LastWatermarkString = Text
+                WatermarkLabel:SetText(Text)
+                QueueWatermarkClamp()
+            end
         end
         ScheduleWatermark()
     end
@@ -7680,8 +7779,118 @@ do
             return Library
         end
         assert(typeof(Format) == "string", "Watermark format must be a string")
+        if WatermarkSegments then
+            Library:SetWatermarkSegments(nil)
+        end
         WatermarkFormat = Format
         Library:RefreshWatermarkFormat(true)
+        return Library
+    end
+
+    function Library:SetWatermarkSegments(Segments)
+        if SegmentHolder then
+            SegmentHolder:Destroy()
+            SegmentHolder = nil
+        end
+        table.clear(SegmentViews)
+
+        if Segments == nil or (typeof(Segments) == "table" and #Segments == 0) then
+            WatermarkSegments = nil
+            SetFrameCounter(false)
+            return Library
+        end
+        assert(typeof(Segments) == "table", "Watermark segments must be a list")
+
+        WatermarkFormat = nil
+        LastWatermarkString = nil
+        WatermarkSegments = Segments
+        WatermarkLabel:SetIcon("")
+        WatermarkLabel:SetText("")
+        Library:SetWatermarkOptions({ Padding = 5, HorizontalPadding = 10, CornerRadius = 5 })
+
+        local RowHeight = 18
+        local IconSize = 16
+        SegmentHolder = New("Frame", {
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundTransparency = 1,
+            Name = "Segments",
+            Size = UDim2.fromOffset(0, RowHeight),
+            Parent = WatermarkLabel.Label,
+        })
+        New("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            Parent = SegmentHolder,
+        })
+
+        for Index, Entry in Segments do
+            if typeof(Entry) == "string" then
+                Entry = { Text = Entry }
+            end
+            if Index > 1 then
+                local Gap = New("Frame", {
+                    BackgroundTransparency = 1,
+                    LayoutOrder = Index * 2 - 1,
+                    Size = UDim2.fromOffset(19, RowHeight),
+                    Parent = SegmentHolder,
+                })
+                New("Frame", {
+                    BackgroundColor3 = "OutlineColor",
+                    BorderSizePixel = 0,
+                    Position = UDim2.fromOffset(9, 3),
+                    Size = UDim2.fromOffset(1, RowHeight - 6),
+                    Parent = Gap,
+                })
+            end
+
+            local Segment = New("Frame", {
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundTransparency = 1,
+                LayoutOrder = Index * 2,
+                Size = UDim2.fromOffset(0, RowHeight),
+                Parent = SegmentHolder,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 6),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Parent = Segment,
+            })
+
+            local IconData = Entry.Icon and Library:GetCustomIcon(Entry.Icon)
+            if IconData then
+                New("ImageLabel", {
+                    BackgroundTransparency = 1,
+                    Image = IconData.Url,
+                    ImageColor3 = Entry.Accent and "AccentColor" or "MutedFontColor",
+                    ImageRectOffset = IconData.ImageRectOffset or Vector2.zero,
+                    ImageRectSize = IconData.ImageRectSize or Vector2.zero,
+                    LayoutOrder = 1,
+                    Size = UDim2.fromOffset(IconSize, IconSize),
+                    Parent = Segment,
+                })
+            end
+
+            local TextLabel = New("TextLabel", {
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundTransparency = 1,
+                LayoutOrder = 2,
+                Size = UDim2.fromOffset(0, RowHeight),
+                Text = "",
+                TextColor3 = Entry.Accent and "AccentColor" or "FontColor",
+                TextSize = 13,
+                Parent = Segment,
+            })
+            local Template = tostring(Entry.Text or "")
+            local Resolved = ResolveTokens(Template)
+            TextLabel.Text = Resolved
+            table.insert(SegmentViews, { Label = TextLabel, Template = Template, Last = Resolved })
+        end
+
+        QueueWatermarkClamp()
+        ScheduleWatermark()
         return Library
     end
 
@@ -7697,7 +7906,10 @@ do
 
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(QueueWatermarkClamp))
     Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("TextBounds"):Connect(QueueWatermarkClamp))
-    Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("Visible"):Connect(QueueWatermarkClamp))
+    Library:GiveSignal(WatermarkLabel.Label:GetPropertyChangedSignal("Visible"):Connect(function()
+        QueueWatermarkClamp()
+        ScheduleWatermark()
+    end))
     Library:GiveSignal(WatermarkLabel.Label.InputEnded:Connect(function(Input)
         if IsMouseInput(Input) then
             QueueWatermarkClamp()
@@ -21311,6 +21523,12 @@ function Library:CreateWindow(WindowInfo)
 
         for _, Button in Library.TabButtons do
             Button.Label.Visible = not IsCompact
+            if Button.Guide then
+                Button.Guide.Visible = not IsCompact
+            end
+            if Button.Indicator and Button.GuideX then
+                Button.Indicator.Position = UDim2.new(0, IsCompact and 0 or Button.GuideX, 0.5, 0)
+            end
             if not Button.Icon then
                 continue
             end
@@ -22952,6 +23170,11 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = Tab
             Library:Emit("TabChanged", Tab)
 
+            local Parent = Tab.ParentTab
+            if Parent and Parent.Button then
+                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
+            end
+
             if Tab.ParentTab and Tab.ParentTab.SetExpanded then
                 Tab.ParentTab:SetExpanded(true)
             end
@@ -22968,6 +23191,11 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
+
+            local Parent = Tab.ParentTab
+            if Parent and Parent.Button then
+                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, false)
+            end
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -23230,10 +23458,27 @@ function Library:CreateWindow(WindowInfo)
             ChildButton.Parent = Tab.SubTabHolder
             ChildButton.LayoutOrder = Child.Order or #Tab.SubTabs
 
-            local Indent = 14
+            local Indent = 16
             local ChildHeight = Library.IsMobile and 44
-                or math.max(1, Library:GetDesignToken("Shell.NavigationHeight", 38) - 2)
+                or math.max(1, Library:GetDesignToken("Shell.NavigationHeight", 32) - 4)
             ChildButton.Size = UDim2.new(1, 0, 0, ChildHeight)
+
+            local GuideX = NavigationIconX + math.floor(NavigationIconSize / 2) - 1
+            local Compacted = Window:IsSidebarCompacted()
+            local Guide = New("Frame", {
+                BackgroundColor3 = "OutlineColor",
+                BorderSizePixel = 0,
+                Name = "TreeGuide",
+                Position = UDim2.fromOffset(GuideX, 0),
+                Size = UDim2.new(0, 1, 1, 0),
+                Visible = not Compacted,
+                Parent = ChildButton,
+            })
+            local Indicator = ChildButton:FindFirstChild("Indicator")
+            if Indicator then
+                Indicator.ZIndex = 2
+                Indicator.Position = UDim2.new(0, Compacted and 0 or GuideX, 0.5, 0)
+            end
 
             if Child.Label then
                 Child.Label.Position = UDim2.fromOffset(NavigationLabelX + Indent, 0)
@@ -23245,6 +23490,9 @@ function Library:CreateWindow(WindowInfo)
             for _, Entry in Library.TabButtons do
                 if typeof(Entry) == "table" and Entry.Button == ChildButton then
                     Entry.IconX = NavigationIconX + Indent
+                    Entry.Guide = Guide
+                    Entry.GuideX = GuideX
+                    Entry.Indicator = Indicator
                     break
                 end
             end
@@ -23598,6 +23846,11 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = Tab
             Library:Emit("TabChanged", Tab)
 
+            local Parent = Tab.ParentTab
+            if Parent and Parent.Button then
+                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
+            end
+
             if Library.Searching then
                 Library:UpdateSearch(Library.SearchText)
             end
@@ -23610,6 +23863,11 @@ function Library:CreateWindow(WindowInfo)
             end
 
             Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
+
+            local Parent = Tab.ParentTab
+            if Parent and Parent.Button then
+                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, false)
+            end
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -25932,6 +26190,10 @@ Library:OnThemeChanged(function()
         if Entry.Button and Entry.Label and Entry.Button.Parent then
             Library:AnimateTabSelection(Entry.Button, Entry.Label, Entry.Icon, Entry.Button == ActiveButton)
         end
+    end
+    local OpenParent = Library.ActiveTab and Library.ActiveTab.ParentTab
+    if OpenParent and OpenParent.Button then
+        Library:AnimateTabTrail(OpenParent.Button, OpenParent.Label, OpenParent.IconImage, true)
     end
     for _, Toggle in Library.Toggles do
         if type(Toggle) == "table" and type(Toggle.Display) == "function" and not Toggle.Destroyed then

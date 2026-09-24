@@ -1240,7 +1240,34 @@ ThemeManager:ApplyToTab(Tabs.Settings)
 ThemeManager:CreateAppearanceManager(Tabs.Settings:AddRightGroupbox("Appearance", "sliders-horizontal"))
 ```
 
-Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, and `Ash`. Every core surface and every current visual addon registers its palette properties. Theme changes update the top bar, sidebar, content, controls, addon windows, cards, previews, text, and outlines together.
+Built-in themes are `Default`, `Metal`, `Midnight`, `Steel`, `Sage`, `Ash`, `Dusk`, `Dawn`, and `Honey`. Every core surface and every current visual addon registers its palette properties. Theme changes update the top bar, sidebar, content, controls, addon windows, cards, previews, text, and outlines together.
+
+### Warm and dusk themes
+
+Three palettes sit beside the dark defaults:
+
+| Theme | Kind | Accent | Body text contrast |
+|---|---|---|---|
+| `Dusk` | dark, violet night | soft rose | 12.5:1 |
+| `Dawn` | light, warm paper | dusty rose | 8.3:1 |
+| `Honey` | light, cream | deep amber | 9.3:1 |
+
+Aliases: `dusk`, `rosepine`, `dawn`, `rose`, `pink`, `light`, `honey`, `amber`.
+
+The light themes follow the rules that keep a light UI calm: text is a soft plum
+or brown rather than black, the background is warm paper rather than white, and
+raised panels are lighter than the window behind them. Muted text stays above
+4.5:1 and the accents above 3:1 against their panels.
+
+A palette whose background is bright is treated as light automatically, whether
+it arrives through `SetTheme` or a `SetPalette` preview. On light themes,
+inactive tab labels and unchecked toggle labels dim less (see
+`Library:GetIdleTransparency`), because dimming dark text toward a light
+background loses contrast much faster than dimming light text on a dark one.
+
+`Library:GetIdleTransparency(Base?)` returns `Base` (default `0.5`) on dark
+themes and `Base * 0.55` on light ones. Use it for any resting-state text or icon
+you dim with transparency.
 
 ## Configs
 
@@ -1347,6 +1374,57 @@ Notice:Destroy()
 ## Watermark
 
 The default watermark is a single compact text strip without an icon or accent. It keeps a subtle outline and independent horizontal and vertical spacing.
+
+### Segmented watermark
+
+`Library:SetWatermarkSegments(Segments)` replaces the single text strip with a
+row of segments, each an optional Lucide icon plus text, split by thin vertical
+dividers.
+
+```luau
+Library:SetWatermarkVisibility(true)
+Library:SetWatermarkSegments({
+    { Icon = "swords", Text = "MonHub", Accent = true },
+    { Icon = "terminal", Text = "{executor}" },
+    { Icon = "wifi", Text = "{ping} ms" },
+    { Icon = "gauge", Text = "{fps} FPS" },
+})
+```
+
+Each segment is a table or a plain string:
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `Text` | string | `""` | Text with `{token}` substitutions, resolved on every refresh |
+| `Icon` | string? | none | Lucide icon name or asset id, drawn at 16px |
+| `Accent` | boolean? | `false` | Draws icon and text in the accent colour; use it for the hub name only |
+
+- Tokens are the same ones `SetWatermarkFormat` uses (`fps`, `ping`, `time`,
+  `date`, `player`, `game`, `version`, `executor`, plus any added with
+  `RegisterWatermarkToken`). Only segments whose text actually changed are
+  rewritten.
+- Setting segments clears any format string, and `SetWatermarkFormat` clears
+  segments. `SetWatermarkSegments(nil)` or an empty list returns to the plain
+  strip.
+- It applies 5px vertical padding, 10px horizontal padding and a 5px radius.
+  Call `SetWatermarkOptions` afterwards to change them.
+- Dragging, side placement and screen clamping work exactly as before, because
+  the segments live inside the same draggable label.
+
+### Refresh behaviour
+
+The watermark refreshes about four times a second while it is visible,
+**including when the menu is closed**, since that is when FPS and ping matter.
+It stops only when the watermark itself is hidden. Earlier builds stopped it
+together with the menu, which froze the numbers during play.
+
+`{fps}` counts rendered frames. A counter runs only while the watermark is
+visible and its text contains `{fps}`, and it is disconnected otherwise. Without
+the counter it falls back to `workspace:GetRealPhysicsFPS()`, which is the
+physics rate and sits near 60 regardless of the real frame rate.
+
+`{executor}` returns `identifyexecutor()` when the executor provides it, and an
+empty string otherwise.
 
 ```luau
 Library:SetWatermarkOptions({
@@ -3011,6 +3089,46 @@ local Video = Settings:AddSubTab({ Name = "Video", Icon = "monitor" })
 Settings:SetExpanded(true)     -- open the group
 print(Settings:IsExpanded())   -- true
 ```
+
+### How nested tabs read
+
+A sub-tab row is 4px shorter than a top-level row and indented 16px. A 1px tree
+line runs down the children under the parent's icon, and the open child's 2px
+accent bar sits on that line rather than at the sidebar edge, so the eye reads
+the depth without a second tab strip above the content.
+
+While a child is open its parent stays lit: full-strength label and icon over a
+faint band, with no accent bar of its own. That keeps the path readable
+(`Farming` then `World Bosses`) while only one row claims the accent. Switching
+between siblings moves the bar and leaves the parent lit. A parent with no
+groupboxes of its own opens its first child when clicked.
+
+In the compact, icon-only sidebar the tree line is hidden and the accent bar
+returns to the sidebar edge, because centred icons would sit on top of the line.
+
+`Library:AnimateTabTrail(Button, Label, Icon, OnTrail)` applies or clears the lit
+parent state. The library calls it for you on every tab switch and theme change;
+call it yourself only if you drive tab visuals by hand.
+
+### Sidebar separators
+
+`Window:AddTabSeparator(Text?)` groups tabs in the sidebar.
+
+```luau
+Window:AddTab("Combat", "crosshair")
+Window:AddTab("Visuals", "eye")
+Window:AddTabSeparator("System")
+Window:AddTab("Settings", "settings")
+```
+
+- With text, it adds a 26px section caption in the muted text colour, aligned
+  with the tab icons and sitting close to the rows it introduces.
+- Without text, it adds a 9px gap holding a full-width 1px line.
+- It lands after the most recently added tab, so call it between the `AddTab`
+  calls it should separate.
+- In the compact sidebar a captioned separator swaps its caption for the line,
+  since a truncated caption in a 48px column reads as noise.
+- Returns the separator frame. It is destroyed with the window.
 
 ## Mobile and touch
 

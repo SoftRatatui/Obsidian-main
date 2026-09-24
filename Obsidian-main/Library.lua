@@ -20771,7 +20771,7 @@ function Library:CreateWindow(WindowInfo)
             PaddingBottom = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
             PaddingLeft = UDim.new(0, Library:GetDesignToken("Shell.NavigationInset", 0)),
             PaddingRight = UDim.new(0, Library:GetDesignToken("Shell.NavigationInset", 0)),
-            PaddingTop = UDim.new(0, Library:GetDesignToken("Shell.NavigationPadding", 7)),
+            PaddingTop = UDim.new(0, 0),
             Parent = Tabs,
         })
         ConfigureAutoScrollbar(Tabs, 0.72, 0.28)
@@ -21523,11 +21523,8 @@ function Library:CreateWindow(WindowInfo)
 
         for _, Button in Library.TabButtons do
             Button.Label.Visible = not IsCompact
-            if Button.Guide then
-                Button.Guide.Visible = not IsCompact
-            end
-            if Button.Indicator and Button.GuideX then
-                Button.Indicator.Position = UDim2.new(0, IsCompact and 0 or Button.GuideX, 0.5, 0)
+            if Button.Branches then
+                Button.Branches.Visible = not IsCompact
             end
             if not Button.Icon then
                 continue
@@ -23174,6 +23171,9 @@ function Library:CreateWindow(WindowInfo)
             if Parent and Parent.Button then
                 Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
             end
+            if Parent and Parent.RefreshBranches then
+                Parent:RefreshBranches()
+            end
 
             if Tab.ParentTab and Tab.ParentTab.SetExpanded then
                 Tab.ParentTab:SetExpanded(true)
@@ -23201,6 +23201,9 @@ function Library:CreateWindow(WindowInfo)
             Window:HideTabInfo()
 
             Library.ActiveTab = nil
+            if Parent and Parent.RefreshBranches then
+                Parent:RefreshBranches()
+            end
         end
 
         function Tab:Reset(Confirm) return Library:ResetScope(self, Confirm) end
@@ -23212,6 +23215,9 @@ function Library:CreateWindow(WindowInfo)
 
             Tab.Visible = Visible == true
             TabButton.Visible = Tab.Visible
+            if Tab.ParentTab and Tab.ParentTab.RebuildBranches then
+                Tab.ParentTab:RebuildBranches()
+            end
             if not Tab.Visible and Library.ActiveTab == Tab then
                 Tab:Hide()
                 local NextTab
@@ -23293,6 +23299,9 @@ function Library:CreateWindow(WindowInfo)
                 if SelfIndex then
                     table.remove(Tab.ParentTab.SubTabs, SelfIndex)
                 end
+                if Tab.ParentTab.RebuildBranches then
+                    Tab.ParentTab:RebuildBranches()
+                end
                 if Tab.ParentTab.RefreshExpansion then
                     Tab.ParentTab:RefreshExpansion(false)
                 end
@@ -23344,7 +23353,18 @@ function Library:CreateWindow(WindowInfo)
             local Effective = Compact or Tab.Expanded
             local Target = 0
             if Effective and SubTabLayout then
-                Target = Library:Snap(SubTabLayout.AbsoluteContentSize.Y)
+                local Count = 0
+                for _, Child in Tab.SubTabs do
+                    local Button = Child.Button
+                    if not Child.Destroyed and Button and Button.Parent == Tab.SubTabHolder and Button.Visible then
+                        Target += Button.Size.Y.Offset
+                        Count += 1
+                    end
+                end
+                Target += math.max(0, Count - 1) * SubTabLayout.Padding.Offset
+            end
+            if Tab.BranchStem then
+                Tab.BranchStem.Instance.Visible = Tab.Expanded and not Compact
             end
 
             if Animate then
@@ -23458,26 +23478,15 @@ function Library:CreateWindow(WindowInfo)
             ChildButton.Parent = Tab.SubTabHolder
             ChildButton.LayoutOrder = Child.Order or #Tab.SubTabs
 
-            local Indent = 16
+            local Indent = 20
             local ChildHeight = Library.IsMobile and 44
                 or math.max(1, Library:GetDesignToken("Shell.NavigationHeight", 32) - 4)
             ChildButton.Size = UDim2.new(1, 0, 0, ChildHeight)
+            Child.RowHeight = ChildHeight
 
-            local GuideX = NavigationIconX + math.floor(NavigationIconSize / 2) - 1
-            local Compacted = Window:IsSidebarCompacted()
-            local Guide = New("Frame", {
-                BackgroundColor3 = "OutlineColor",
-                BorderSizePixel = 0,
-                Name = "TreeGuide",
-                Position = UDim2.fromOffset(GuideX, 0),
-                Size = UDim2.new(0, 1, 1, 0),
-                Visible = not Compacted,
-                Parent = ChildButton,
-            })
             local Indicator = ChildButton:FindFirstChild("Indicator")
             if Indicator then
-                Indicator.ZIndex = 2
-                Indicator.Position = UDim2.new(0, Compacted and 0 or GuideX, 0.5, 0)
+                Indicator:Destroy()
             end
 
             if Child.Label then
@@ -23490,18 +23499,138 @@ function Library:CreateWindow(WindowInfo)
             for _, Entry in Library.TabButtons do
                 if typeof(Entry) == "table" and Entry.Button == ChildButton then
                     Entry.IconX = NavigationIconX + Indent
-                    Entry.Guide = Guide
-                    Entry.GuideX = GuideX
-                    Entry.Indicator = Indicator
+                    Child.NavEntry = Entry
                     break
                 end
             end
 
+            Tab:RebuildBranches()
             Tab:RefreshExpansion(false)
             if Library.ActiveTab == Child then
                 Tab:SetExpanded(true)
             end
             return Child
+        end
+
+        local BranchIndent = 20
+
+        local function MakeBranchPart(Parent, Position, Size)
+            local State = { Lit = false }
+            local Part = New("Frame", {
+                BackgroundColor3 = function()
+                    return State.Lit and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+                end,
+                BorderSizePixel = 0,
+                Position = Position,
+                Size = Size,
+                Parent = Parent,
+            })
+            return { Instance = Part, State = State }
+        end
+
+        function Tab:RebuildBranches()
+            local Visible = {}
+            for _, Child in Tab.SubTabs do
+                if not Child.Destroyed and Child.Visible ~= false and Child.Button then
+                    table.insert(Visible, Child)
+                end
+                if Child.Branches then
+                    Child.Branches:Destroy()
+                    Child.Branches = nil
+                    Child.BranchParts = nil
+                end
+            end
+            if Tab.BranchStem then
+                Tab.BranchStem.Instance:Destroy()
+                Tab.BranchStem = nil
+            end
+
+            local TrunkX = NavigationIconX + math.floor(NavigationIconSize / 2) - 1
+            local BranchStart = TrunkX + 1
+            local BranchEnd = NavigationIconX + BranchIndent - 4
+            local Compacted = Window:IsSidebarCompacted()
+
+            if #Visible > 0 then
+                local RowHeight = TabButton.Size.Y.Offset
+                local StemTop = Library:CenterOffset(RowHeight, NavigationIconSize) + NavigationIconSize + 3
+                Tab.BranchStem = MakeBranchPart(
+                    TabButton,
+                    UDim2.fromOffset(TrunkX, StemTop),
+                    UDim2.fromOffset(1, math.max(0, RowHeight - StemTop))
+                )
+                Tab.BranchStem.Instance.Name = "BranchStem"
+            end
+
+            for Index, Child in Visible do
+                local Height = Child.RowHeight or Child.Button.Size.Y.Offset
+                local Middle = math.floor(Height / 2)
+                local IsLast = Index == #Visible
+
+                local Holder = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Name = "Branches",
+                    Size = UDim2.fromScale(1, 1),
+                    Visible = not Compacted,
+                    Parent = Child.Button,
+                })
+                local Parts = {}
+                Parts.Upper = MakeBranchPart(Holder, UDim2.fromOffset(TrunkX, 0), UDim2.fromOffset(1, Middle + 1))
+                if not IsLast then
+                    Parts.Lower = MakeBranchPart(
+                        Holder,
+                        UDim2.fromOffset(TrunkX, Middle + 1),
+                        UDim2.fromOffset(1, Height - Middle - 1)
+                    )
+                end
+                Parts.Branch = MakeBranchPart(
+                    Holder,
+                    UDim2.fromOffset(BranchStart, Middle),
+                    UDim2.fromOffset(BranchEnd - BranchStart, 1)
+                )
+
+                Child.Branches = Holder
+                Child.BranchParts = Parts
+                if Child.NavEntry then
+                    Child.NavEntry.Branches = Holder
+                end
+            end
+
+            Tab:RefreshExpansion(false)
+            Tab:RefreshBranches(true)
+        end
+
+        function Tab:RefreshBranches(Instant: boolean?)
+            local Visible = {}
+            local ActiveIndex = 0
+            for _, Child in Tab.SubTabs do
+                if Child.BranchParts then
+                    table.insert(Visible, Child)
+                    if Library.ActiveTab == Child then
+                        ActiveIndex = #Visible
+                    end
+                end
+            end
+
+            local function Apply(Part, Lit)
+                if not Part or Part.State.Lit == Lit then
+                    return
+                end
+                Part.State.Lit = Lit
+                local Target = Lit and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+                if Instant then
+                    Part.Instance.BackgroundColor3 = Target
+                else
+                    Library:PlayTween(Part.Instance, "BranchLit", Library.TweenInfo, { BackgroundColor3 = Target })
+                end
+            end
+
+            Apply(Tab.BranchStem, ActiveIndex > 0)
+            for Index, Child in Visible do
+                local Parts = Child.BranchParts
+                Apply(Parts.Upper, ActiveIndex > 0 and Index <= ActiveIndex)
+                Apply(Parts.Lower, ActiveIndex > 0 and Index < ActiveIndex)
+                Apply(Parts.Branch, Index == ActiveIndex)
+            end
         end
 
         local function ChevronReserve()
@@ -23850,6 +23979,9 @@ function Library:CreateWindow(WindowInfo)
             if Parent and Parent.Button then
                 Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
             end
+            if Parent and Parent.RefreshBranches then
+                Parent:RefreshBranches()
+            end
 
             if Library.Searching then
                 Library:UpdateSearch(Library.SearchText)
@@ -23873,6 +24005,9 @@ function Library:CreateWindow(WindowInfo)
             Window:HideTabInfo()
 
             Library.ActiveTab = nil
+            if Parent and Parent.RefreshBranches then
+                Parent:RefreshBranches()
+            end
         end
 
         function Tab:Reset(Confirm) return Library:ResetScope(self, Confirm) end
@@ -23884,6 +24019,9 @@ function Library:CreateWindow(WindowInfo)
 
             Tab.Visible = Visible == true
             TabButton.Visible = Tab.Visible
+            if Tab.ParentTab and Tab.ParentTab.RebuildBranches then
+                Tab.ParentTab:RebuildBranches()
+            end
             if not Tab.Visible and Library.ActiveTab == Tab then
                 Tab:Hide()
                 local NextTab

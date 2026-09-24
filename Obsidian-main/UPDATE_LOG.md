@@ -63,11 +63,18 @@ segmented watermark. Numbers are measured in game unless a line says otherwise.
   the divider, which read as crooked.
 - `Window:AddTabSeparator(Text?)` groups tabs: a caption with text, a thin line
   without. In the compact, icon-only sidebar the caption turns into a line.
-- Sub-tabs: child rows are 28px and indented 16px, a 1px tree line runs under the
-  parent's icon, and the open child's accent bar sits on that line. The parent
-  stays lit while one of its children is open (`Library:AnimateTabTrail`), so the
-  path reads without a second tab strip above the content. The line hides in the
+- Sub-tabs hang off a tree of straight 1px lines: a stem from under the parent's
+  icon, a trunk that stops at the last child, and a branch into each child
+  (`├─`, `└─`). Child rows are 28px and indented 20px. The path to the open child
+  (stem, trunk, its branch) is lit in the accent colour, and the parent row stays
+  lit too (`Library:AnimateTabTrail`), so the path reads without a second tab
+  strip above the content. An earlier draft used thin rounded strokes, which
+  rendered unevenly and left a gap under the parent icon; the tree hides in the
   compact sidebar.
+- The tab list starts flush under the header. It had a 6px empty strip on top.
+- Fixed: at a UI scale other than 100%, an expanded sub-tab group was sized in
+  screen pixels and grew by the scale factor, leaving an empty gap under it (twice
+  the needed height at 200%). The height now comes from the logical row sizes.
 
 ### Themes
 
@@ -130,8 +137,9 @@ segmented watermark. Numbers are measured in game unless a line says otherwise.
 
 - In game with `Honey` active: 0 of 118 visible objects on fractional positions or
   sizes. Theme switching takes 4 ms.
-- Sub-tabs in game: tree line at x = 19 over every child row, the accent bar moves
-  between siblings and the parent stays lit, 0 fractional objects.
+- Sub-tabs in game at 200% scale: the stem and trunk sit in one column with 0 gaps
+  from the parent row through the last child; switching the open child moves the
+  lit path correctly; no empty gap under expanded groups.
 - The 20px row change was checked by geometry only (checkbox 16px with 2px margins,
   switch track 14px, key picker 18px, swatch 16px, all on whole pixels). It has not
   been seen on screen, because the test client was busy with another script.

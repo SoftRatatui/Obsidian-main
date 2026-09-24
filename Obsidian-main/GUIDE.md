@@ -1946,7 +1946,8 @@ Run local checks with Luau's compiler and interpreter installed:
 
 - Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
 - Made the selected sidebar tab fill its row edge to edge with a full-height accent bar, and added `Window:AddTabSeparator` for captioned or plain sidebar sections.
-- Reworked sub-tabs with 28px indented rows, a tree line under the parent icon, the accent bar on that line, and a lit parent while a child is open (`Library:AnimateTabTrail`).
+- Reworked sub-tabs with 28px indented rows hanging off a straight 1px tree (stem under the parent icon, trunk, a branch per child), the path to the open child lit in the accent colour, and a lit parent while a child is open (`Library:AnimateTabTrail`).
+- Started the sidebar tab list flush under the header, and fixed expanded sub-tab groups doubling their height at UI scales other than 100%.
 - Added the `Dusk`, `Dawn` and `Honey` themes and raised the default theme's layer separation and accent saturation.
 - Fixed light themes: contrast picking on the accent, light detection for palette previews, the disabled switch knob, the sidebar divider hover, the white collapse arrow, and over-dimmed resting labels (`Library:GetIdleTransparency`).
 - Added `Library:SetWatermarkSegments` for icon and text segments, kept the watermark refreshing while the menu is closed, made `{fps}` count rendered frames, and added the `{executor}` token.
@@ -3100,19 +3101,32 @@ print(Settings:IsExpanded())   -- true
 
 ### How nested tabs read
 
-A sub-tab row is 4px shorter than a top-level row and indented 16px. A 1px tree
-line runs down the children under the parent's icon, and the open child's 2px
-accent bar sits on that line rather than at the sidebar edge, so the eye reads
-the depth without a second tab strip above the content.
+A sub-tab row is 4px shorter than a top-level row and indented 20px. The children
+hang off a tree drawn from 1px lines:
 
-While a child is open its parent stays lit: full-strength label and icon over a
-faint band, with no accent bar of its own. That keeps the path readable
-(`Farming` then `World Bosses`) while only one row claims the accent. Switching
-between siblings moves the bar and leaves the parent lit. A parent with no
-groupboxes of its own opens its first child when clicked.
+- a short stem drops from 3px below the parent's icon to the bottom of the parent
+  row, so the tree visibly starts at the parent;
+- a trunk continues straight down through every child and stops at the last one;
+- each child gets a straight horizontal branch at the middle of its row, ending
+  4px before its icon (`├─` for middle rows, `└─` for the last).
 
-In the compact, icon-only sidebar the tree line is hidden and the accent bar
-returns to the sidebar edge, because centred icons would sit on top of the line.
+The lines are plain 1px frames, not stroked curves, so they stay the same weight
+at every size and land on whole pixels. The trunk is one continuous column with
+no gap between the stem and the first child or between rows.
+
+The open child is marked by lighting its path in the accent colour: the stem, the
+trunk down to that child, and its branch. Rows below it keep the neutral line
+colour. Switching between siblings shortens or extends the lit path. The parent
+row also stays lit (full-strength label and icon over a faint band) while one of
+its children is open, so `Farming` then `World Bosses` reads at a glance.
+
+A parent with no groupboxes of its own opens its first child when clicked. In the
+compact, icon-only sidebar the tree is hidden, because centred icons would sit on
+top of the trunk.
+
+The group's height comes from the logical row heights, so it stays correct at any
+UI scale. Earlier builds measured it in screen pixels and doubled the gap under an
+expanded group at 200% scale.
 
 `Library:AnimateTabTrail(Button, Label, Icon, OnTrail)` applies or clears the lit
 parent state. The library calls it for you on every tab switch and theme change;

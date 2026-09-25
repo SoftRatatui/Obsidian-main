@@ -1239,12 +1239,12 @@ export type StatRow = {
 }
 export type ProgressBarInfo = {
     Text: string?, Value: number?, Min: number?, Max: number?, ShowValue: boolean?,
-    Height: number?, Visible: boolean?, LabelRatio: number?, Color: Color3?,
+    Height: number?, Visible: boolean?, LabelRatio: number?, Color: (Color3 | string)?,
     Indeterminate: boolean?, Segments: number?,
 }
 export type ProgressBar = {
-    Value: number, Min: number, Max: number, Holder: Frame, Fill: Frame,
-    Indeterminate: boolean, Segments: number?, Filled: number,
+    Value: number, Min: number, Max: number, Holder: Frame, Fill: Frame, Track: Frame,
+    Fraction: number?, Indeterminate: boolean, Segments: number?, Filled: number,
     SetText: (self: ProgressBar, Value: string) -> ProgressBar,
     SetValue: (self: ProgressBar, Value: number) -> ProgressBar,
     SetRange: (self: ProgressBar, Min: number, Max: number) -> ProgressBar,

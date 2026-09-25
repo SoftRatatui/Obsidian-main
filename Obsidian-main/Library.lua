@@ -16686,19 +16686,73 @@ do
         local Value = tonumber(Info.Value) or Min
         assert(Max > Min and math.abs(Min) < math.huge and math.abs(Max) < math.huge, "Invalid progress range")
         assert(Value == Value and math.abs(Value) < math.huge, "Progress value must be finite")
-        local Row = self:AddStatRow(Idx, { Text = Info.Text, Value = "", Height = Info.Height or 30, Visible = Info.Visible, LabelRatio = Info.LabelRatio })
+        local LabelRow = Library:Metric("LabelRow", 18)
+        local TrackRow = Library:Metric("TrackRow", 14)
+        local TrackHeight = Library:MatchParity(TrackRow, Library:Metric("Track", 4))
+        local TrackInset = math.round(Library:MatchParity(TrackRow, Library:Metric("ThumbHover", 12)) * 0.5)
+        local Row = self:AddStatRow(Idx, {
+            Text = Info.Text, Value = "", Height = Info.Height or (LabelRow + TrackRow),
+            Visible = Info.Visible, LabelRatio = Info.LabelRatio,
+        })
         Row.Type = "ProgressBar"
         Row.Min, Row.Max = Min, Max
-        Row:SetTextHeight(20)
+        Row:SetTextHeight(LabelRow)
         Row.ValueLabel.Visible = Info.ShowValue ~= false
-        local Track = New("Frame", { BackgroundColor3 = "MainColor", BorderSizePixel = 0,
-            Position = UDim2.new(0, 0, 1, -5), Size = UDim2.new(1, 0, 0, 4), ClipsDescendants = true, Parent = Row.Instance })
-        local Fill = New("Frame", { BackgroundColor3 = Info.Color or "AccentColor", BorderSizePixel = 0,
-            Size = UDim2.fromScale(0, 1), Parent = Track })
-        Row.Fill = Fill
+        Row.ValueLabel.TextColor3 = Library.Scheme.MutedFontColor
+        if Library.Registry[Row.ValueLabel] then
+            Library.Registry[Row.ValueLabel].TextColor3 = "MutedFontColor"
+        end
 
         local function AccentColor()
-            return typeof(Info.Color) == "Color3" and Info.Color or Library.Scheme.AccentColor
+            if typeof(Info.Color) == "Color3" then return Info.Color end
+            if typeof(Info.Color) == "string" and typeof(Library.Scheme[Info.Color]) == "Color3" then
+                return Library.Scheme[Info.Color]
+            end
+            return Library.Scheme.AccentColor
+        end
+
+        local Track = New("Frame", {
+            BackgroundColor3 = "MainColor", BorderSizePixel = 0, ClipsDescendants = true,
+            Position = UDim2.new(0, TrackInset, 1, -(TrackRow - Library:CenterOffset(TrackRow, TrackHeight))),
+            Size = UDim2.new(1, -TrackInset * 2, 0, TrackHeight), Parent = Row.Instance,
+        })
+        New("UICorner", {
+            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
+            Parent = Track,
+        })
+        local TrackStroke = New("UIStroke", {
+            Color = "OutlineColor",
+            Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
+            Parent = Track,
+        })
+        local Fill = New("Frame", {
+            BackgroundColor3 = AccentColor, BorderSizePixel = 0,
+            Size = UDim2.fromScale(0, 1), Parent = Track,
+        })
+        New("UIGradient", {
+            Color = function()
+                local Base = AccentColor()
+                return ColorSequence.new(Base:Lerp(Library.Scheme.FontColor, 0.12), Base)
+            end,
+            Parent = Fill,
+        })
+        New("UICorner", {
+            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
+            Parent = Fill,
+        })
+        Row.Fill = Fill
+        Row.Track = Track
+
+        local function FillWidth(Fraction)
+            local Width = Library:LogicalSize(Track).X
+            if Width <= 0 then
+                return nil
+            end
+            local Pixels = math.round(Fraction * Width)
+            if Fraction > 0 then
+                Pixels = math.min(math.max(Pixels, TrackHeight), Width)
+            end
+            return UDim2.new(0, Pixels, 1, 0)
         end
 
         local SegmentCount = tonumber(Info.Segments)
@@ -16710,6 +16764,9 @@ do
         local SegmentCells = {}
         if SegmentCount then
             Fill.Visible = false
+            Track.BackgroundTransparency = 1
+            Track.ClipsDescendants = false
+            TrackStroke.Enabled = false
             for Index = 1, SegmentCount do
                 local Cell = New("Frame", {
                     BackgroundColor3 = function()
@@ -16723,13 +16780,17 @@ do
                     CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
                     Parent = Cell,
                 })
+                New("UIStroke", {
+                    Color = "OutlineColor",
+                    Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
+                    Parent = Cell,
+                })
                 SegmentCells[Index] = Cell
             end
 
             local function LayoutSegments()
                 if Row.Destroyed then return end
-                local Scale = Library:GetEffectiveScale(Track)
-                local Total = math.floor(Track.AbsoluteSize.X / Scale)
+                local Total = Library:LogicalSize(Track).X
                 if Total <= 0 then return end
                 local Gap = 2
                 local Inner = Total - Gap * (SegmentCount - 1)
@@ -16739,7 +16800,7 @@ do
                 end
                 local Base = math.floor(Inner / SegmentCount)
                 local Remainder = Inner - Base * SegmentCount
-                local Height = math.floor(Track.AbsoluteSize.Y / Scale)
+                local Height = TrackHeight
                 local X = 0
                 for Index = 1, SegmentCount do
                     local Width = Base + (Index <= Remainder and 1 or 0)
@@ -16833,10 +16894,22 @@ do
                     Cell.BackgroundColor3 = Index <= Row.Filled and AccentColor() or Library.Scheme.MainColor
                 end
             elseif not Row.Indeterminate then
-                Fill.Size = UDim2.fromScale(Fraction, 1)
+                Row.Fraction = Fraction
+                Fill.Position = UDim2.fromScale(0, 0)
+                Fill.Size = FillWidth(Fraction) or UDim2.fromScale(Fraction, 1)
             end
-            self.ValueLabel.Text = string.format("%s / %s", tostring(self.Value), tostring(self.Max))
+            self.ValueLabel.Text = string.format("%s/%s", tostring(self.Value), tostring(self.Max))
             return self
+        end
+
+        if not SegmentCount then
+            table.insert(Row.Connections, Track:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                if Row.Destroyed or Row.Indeterminate or Row.Fraction == nil then return end
+                local Target = FillWidth(Row.Fraction)
+                if Target then
+                    Fill.Size = Target
+                end
+            end))
         end
 
         function Row:SetRange(Min, Max)
@@ -16986,7 +17059,7 @@ do
         end
         local function Resize()
             if Slots.Destroyed then return end
-            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / Library.DPIScale))
+            local Width = math.max(1, Library:LogicalSize(Holder).X)
             local Columns = math.max(1, math.min(#Definitions, math.floor((Width + 6) / 76)))
             Layout.CellSize = UDim2.fromOffset(math.floor((Width - (Columns - 1) * 6) / Columns), 66)
             Holder.Size = UDim2.new(1, 0, 0, math.ceil(#Definitions / Columns) * 72 - 6)
@@ -17085,7 +17158,7 @@ do
         end
         local function Resize()
             if Group.Destroyed then return end
-            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / Library.DPIScale))
+            local Width = math.max(1, Library:LogicalSize(Holder).X)
             local Columns = math.max(1, math.min(#Fields, math.floor((Width + 8) / math.max(64, tonumber(Info.MinCellWidth) or 96))))
             local CellWidth = math.floor((Width - (Columns - 1) * 8) / Columns)
             for Index, Cell in ipairs(Group.Cells) do

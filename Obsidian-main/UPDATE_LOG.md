@@ -78,15 +78,33 @@ UI scale fix. Numbers are measured in game unless a line says otherwise.
 - New defaults: width 280, margin 10, gap 6, padding 10, corner radius 6 (the card
   radius used by the rest of the library), duration 4 s.
 
+### Progress bar
+
+- Redrawn as a slider track without the thumb: label on an 18px row, a 4px rounded
+  track with the soft outline on a 14px row, the same 6px side inset and accent
+  gradient as the slider. In a groupbox with a slider, both tracks start and end on
+  the same pixel. Before, it was a square 4px strip in the groupbox's own colour, so
+  the empty part was nearly invisible and it did not line up with anything.
+- The value reads `531/5100` in the muted colour, like the slider's `40/100`. It used
+  to read `531 / 5100` in the body colour.
+- The fill width is rounded to whole pixels, and any value above zero shows at least
+  a round 4px dot. `Row.Fraction` holds the filled share; the regression test now
+  checks it instead of `Fill.Size.X.Scale`, which is 0 once the fill is sized in
+  pixels.
+- Segmented bars use one small outlined track per cell.
+- `Color` also accepts a scheme key such as `"SuccessColor"`.
+- Default height 30 to 32, the slider's height.
+
 ### UI scale
 
 - Changing the UI scale no longer breaks the menu. Several places read on-screen
   sizes (`AbsoluteSize`, which already includes the scale) and wrote them back as
   offsets, applying the scale twice: the two-column split, key tab boxes, resize
   handles, dividers, addon hosts, slider tracks, and button and tabbox content
-  centring. Another 14 places used the library scale where the element sat under a
-  different one. New helpers: `Library:GetEffectiveScale(Instance)` and
-  `Library:LogicalSize(GuiObject)`.
+  centring. The item slot grid and the field group grid divided by the library
+  scale instead of reading the logical size. Another 14 places used the library
+  scale where the element sat under a different one. New helpers:
+  `Library:GetEffectiveScale(Instance)` and `Library:LogicalSize(GuiObject)`.
 
 ### Verification
 

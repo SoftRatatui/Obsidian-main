@@ -80,7 +80,7 @@ progress:SetRange(0, 200)
 
 StatRow puts the label and value in separate columns and truncates long text instead of allowing overlap. Options: `Text` (defaults to the ID), `Value`, `Height` (22), `LabelRatio` (0.55, clamped to 0.1..0.9), and `Visible` (true). Methods: `SetText`, `SetValue`, `SetVisible`, `SetHeight`, `Destroy`.
 
-ProgressBar adds `Min` (0), `Max` (100), `Value` (Min), `ShowValue` (true), and optional `Color`; its default height is 30. It uses the library font and theme accent unless Color is supplied. `SetValue` clamps finite values to the range; `SetRange(min, max)` requires a finite increasing range and reclamps the current value. Updates are immediate, so frequent progress reports do not accumulate tweens. It also supports `SetText`, `SetVisible`, `SetHeight` and `Destroy`. Both controls display runtime data and are not saved as configuration options.
+ProgressBar adds `Min` (0), `Max` (100), `Value` (Min), `ShowValue` (true), and optional `Color` (a `Color3` or a scheme key such as `"SuccessColor"`). It is drawn exactly like a slider without the thumb: the label on an 18px row, a 4px rounded track with the soft outline on a 14px row below it, the same 6px side inset, and the same accent gradient on the fill, so the two line up when they share a groupbox. The value reads `current/max` in the muted colour, matching the slider. Its default height is 32. The fill width is rounded to whole pixels, and any value above zero shows at least a round 4px dot. `Row.Fraction` holds the filled share from 0 to 1 and `Row.Track` the track frame. `SetValue` clamps finite values to the range; `SetRange(min, max)` requires a finite increasing range and reclamps the current value. Updates are immediate, so frequent progress reports do not accumulate tweens. It also supports `SetText`, `SetVisible`, `SetHeight` and `Destroy`. Both controls display runtime data and are not saved as configuration options.
 
 ## Numeric input and player usernames
 
@@ -2013,6 +2013,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Added live `SetStyle`, `SetMinimal`, and `SetHighlighted` controllers to visual addons.
 - Added per-module `SetModuleStyle`, `GetModuleStyle`, `SetModuleMinimal`, and `SetModuleHighlighted` controls to addon windows, including custom highlight colors.
 - Added `ShowHeader`, `ShowBackground`, `ShowOutline`, and `ShowShadow` style controls for content-only and minimal module layouts.
+- Redrew the progress bar as a slider track without the thumb (same height, inset, outline, radius and accent gradient), with the value in the slider's `current/max` style and the fill on whole pixels.
 - Reworked notifications into plain 280px cards: 13px title, 12px muted description, a 16px status icon only for success, warning and error, a timer that pauses on hover, a short slide-in from the screen edge, even padding at every UI scale, an optional full-width progress line, a four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
 - Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.
@@ -3545,8 +3546,9 @@ Group:AddButton({
 
 - `Info.Indeterminate` (default false): an indeterminate bar that animates instead
   of showing a fixed fill. `Row:SetIndeterminate(State)` toggles it at runtime.
-- `Info.Segments`: split the bar into 2 to 63 discrete cells. `Row.Segments` holds
-  the count and `Row.Filled` how many are lit.
+- `Info.Segments`: split the bar into 2 to 63 discrete cells. Each cell is a small
+  rounded track with the soft outline, 2px apart. `Row.Segments` holds the count and
+  `Row.Filled` how many are lit.
 
 Indeterminate and segmented are mutually exclusive in behaviour: turning
 indeterminate off on a non-segmented bar restores the normal fill.

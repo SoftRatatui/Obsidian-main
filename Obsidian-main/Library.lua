@@ -295,18 +295,18 @@ local Library = {
     NotifyTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     NotifyCloseTweenInfo = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     NotificationStyle = {
-        Width = 260,
-        Margin = 8,
-        Gap = 5,
-        Padding = 7,
-        CornerRadius = 4,
-        TextSize = 12,
-        TitleTextSize = 12,
-        DescriptionTextSize = 11,
+        Width = 280,
+        Margin = 10,
+        Gap = 6,
+        Padding = 10,
+        CornerRadius = 6,
+        TextSize = 13,
+        TitleTextSize = 13,
+        DescriptionTextSize = 12,
         MaxVisible = 4,
-        DefaultDuration = 3.5,
+        DefaultDuration = 4,
         Accent = false,
-        ShowProgress = false,
+        ShowProgress = true,
         Dismissible = false,
     },
     NotificationAnchor = "Screen",
@@ -489,8 +489,8 @@ local Library = {
             WindowClose = { 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
             TabEnter = { 0.09, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
             TabExit = { 0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
-            Notify = { 0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
-            NotifyClose = { 0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.Out },
+            Notify = { 0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
+            NotifyClose = { 0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In },
             TextReveal = { 0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out },
         },
         Sound = {
@@ -1898,8 +1898,10 @@ function Library:GetOrderedTabs(): { any }
 
     local Sequence = {}
     for _, Tab in Roots do
-        table.insert(Sequence, Tab)
-        if Tab.Expanded and Tab.SubTabs and #Tab.SubTabs > 0 then
+        if not (Tab.SubTabs and #Tab.SubTabs > 0) then
+            table.insert(Sequence, Tab)
+        end
+        if Tab.SubTabs and #Tab.SubTabs > 0 then
             local Children = {}
             for _, Child in Tab.SubTabs do
                 if type(Child) == "table" and not Child.Destroyed and Child.Visible ~= false then
@@ -3014,6 +3016,13 @@ function Library:UpdateColorsUsingRegistry()
             end
         end
     end
+end
+
+function Library:GetRestingTransparency(Button: Instance?): number
+    if Button and Button:GetAttribute("GroupHeader") then
+        return Library:GetIdleTransparency(0.62)
+    end
+    return Library:GetIdleTransparency()
 end
 
 function Library:GetIdleTransparency(Base: number?): number
@@ -5730,7 +5739,7 @@ function Library:CreateAddonWindow(Info)
         if FitCount == 0 then return Host end
         local Available = math.max(
             1,
-            math.floor(Content.AbsoluteSize.Y) - Style.Padding * 2 - FixedHeight - math.max(0, VisibleCount - 1) * Style.Gap
+            Library:LogicalSize(Content).Y - Style.Padding * 2 - FixedHeight - math.max(0, VisibleCount - 1) * Style.Gap
         )
         local FitHeight = math.max(1, math.floor(Available / FitCount))
         for Key, Module in Modules do
@@ -5893,6 +5902,25 @@ function Library:GlyphSize(Box: number, Preferred: number?): number
     end
 
     return math.max(1, Target)
+end
+
+function Library:GetEffectiveScale(Target: Instance?): number
+    local Scale = 1
+    local Node = Target
+    while Node and not Node:IsA("LayerCollector") do
+        local UIScale = Node:FindFirstChildOfClass("UIScale")
+        if UIScale then
+            Scale *= UIScale.Scale
+        end
+        Node = Node.Parent
+    end
+    return math.max(Scale, 0.01)
+end
+
+function Library:LogicalSize(Target: GuiObject): Vector2
+    local Scale = Library:GetEffectiveScale(Target)
+    local Size = Target.AbsoluteSize
+    return Vector2.new(math.floor(Size.X / Scale + 0.5), math.floor(Size.Y / Scale + 0.5))
 end
 
 function Library:GetLuminance(Color: Color3): number
@@ -6278,7 +6306,7 @@ local function BuildStepIndicator(Parent, Steps)
         if not Root.Parent then
             return
         end
-        local Scale = math.max(Library.DPIScale or 1, 0.01)
+        local Scale = Library:GetEffectiveScale(Root)
         local Width = math.floor(Root.AbsoluteSize.X / Scale)
         if Width <= 0 then
             return
@@ -6668,16 +6696,17 @@ function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnCo
 end
 
 function Library:AnimateTabHover(Button: TextButton, Label: TextLabel, Icon: ImageLabel?, Hovering: boolean)
+    local IsHeader = Button:GetAttribute("GroupHeader") == true
     Library:PlayTween(Button, "TabHover", Library.HoverTweenInfo, {
-        BackgroundTransparency = Hovering and 0.52 or 1,
+        BackgroundTransparency = Hovering and (IsHeader and 0.74 or 0.52) or 1,
     })
     Library:PlayTween(Label, "TabHover", Library.TweenInfo, {
-        TextTransparency = Hovering and 0.18 or Library:GetIdleTransparency(),
+        TextTransparency = Hovering and (IsHeader and 0.32 or 0.18) or Library:GetRestingTransparency(Button),
     })
 
     if Icon then
         Library:PlayTween(Icon, "TabHover", Library.TweenInfo, {
-            ImageTransparency = Hovering and 0.18 or Library:GetIdleTransparency(),
+            ImageTransparency = Hovering and (IsHeader and 0.32 or 0.18) or Library:GetRestingTransparency(Button),
         })
     end
 end
@@ -6714,11 +6743,11 @@ function Library:AnimateTabSelection(Button: TextButton, Label: TextLabel, Icon:
         BackgroundTransparency = Selected and 0.14 or 1,
     })
     Library:PlayTween(Label, "TabSelection", Library.TweenInfo, {
-        TextTransparency = Selected and 0 or Library:GetIdleTransparency(),
+        TextTransparency = Selected and 0 or Library:GetRestingTransparency(Button),
     })
     if Icon then
         Library:PlayTween(Icon, "TabSelection", Library.TweenInfo, {
-            ImageTransparency = Selected and 0 or Library:GetIdleTransparency(),
+            ImageTransparency = Selected and 0 or Library:GetRestingTransparency(Button),
         })
     end
 
@@ -11056,8 +11085,8 @@ do
             })
         end
         local function LayoutLines()
-            local Width = math.max(0, math.floor(InnerHolder.AbsoluteSize.X))
-            local Top = math.floor(InnerHolder.AbsoluteSize.Y / 2)
+            local Width = math.max(0, Library:LogicalSize(InnerHolder).X)
+            local Top = math.floor(Library:LogicalSize(InnerHolder).Y / 2)
             local Length = Width
             if TextLabel then
                 local TextWidth = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, Width)
@@ -11398,7 +11427,7 @@ do
                 return
             end
 
-            local Total = math.floor(Holder.AbsoluteSize.X)
+            local Total = Library:LogicalSize(Holder).X
             if Total <= 0 then
                 for _, Base in Visible do
                     Base.Size = UDim2.new(1 / Count, 0, 1, 0)
@@ -11456,7 +11485,7 @@ do
             local function CenterButtonContent()
                 Content.Position = UDim2.new(
                     0,
-                    Library:CenterOffset(Base.AbsoluteSize.X, Content.AbsoluteSize.X),
+                    Library:CenterOffset(Library:LogicalSize(Base).X, Library:LogicalSize(Content).X),
                     0.5,
                     0
                 )
@@ -12868,7 +12897,7 @@ do
         end
 
         local function LayoutAffixes()
-            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / math.max(Library.DPIScale or 1, 0.01)))
+            local Width = math.max(1, math.floor(Holder.AbsoluteSize.X / Library:GetEffectiveScale(Holder)))
             local Right = Width
             if CopyButton then
                 CopyButton.Position = UDim2.fromOffset(Right - InputControlHeight, InputLabelRow)
@@ -12915,7 +12944,7 @@ do
             if not Input.Multiline or Input.Destroyed then
                 return
             end
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Box)
             local Available = math.max(1, Box.AbsoluteSize.X / Scale - LeftInset - RightInset)
             local Sample = Box.Text ~= "" and Box.Text or "Ag"
             local _, Height = Library:GetTextBounds(Sample, Box.FontFace, TextSizeToken, Available)
@@ -13544,7 +13573,7 @@ do
 
             local Span = Slider.Max - Slider.Min
             local X = Span ~= 0 and (Slider.Value - Slider.Min) / Span or 0
-            local TrackWidth = Track.AbsoluteSize.X
+            local TrackWidth = Library:LogicalSize(Track).X
             if TrackWidth > 0 then
                 local Offset = math.round(X * TrackWidth)
                 Fill.Size = UDim2.new(0, Offset, 1, 0)
@@ -14309,7 +14338,7 @@ do
             DisplayButton.Text = #Selected == 0 and "None" or ""
             DisplayButton.TextTransparency = #Selected == 0 and (Dropdown.Disabled and 0.8 or 0.5) or 1
 
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(ChipsHolder)
             local Rows = 1
             if #Selected > 0 then
                 local Layout = ChipsHolder:FindFirstChildOfClass("UIListLayout")
@@ -16276,7 +16305,7 @@ do
         for _, Column in Columns do Weight += math.max(0.01, tonumber(Column.Width) or 1) end
         local ColumnBounds, TrackedCells, Headers = {}, {}, {}
         local function ResolveColumns()
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Root)
             local Total = math.floor(Root.AbsoluteSize.X / Scale + 0.5)
             if Total <= 0 then return false end
             local Cursor = 0
@@ -16622,7 +16651,7 @@ do
         })
         local TextHeight = nil
         local function LayoutRow()
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Root)
             local Total = math.floor(Root.AbsoluteSize.X / Scale + 0.5)
             if Total <= 0 then return end
             local Divide = math.floor(Total * Split + 0.5)
@@ -16699,7 +16728,7 @@ do
 
             local function LayoutSegments()
                 if Row.Destroyed then return end
-                local Scale = math.max(Library.DPIScale or 1, 0.01)
+                local Scale = Library:GetEffectiveScale(Track)
                 local Total = math.floor(Track.AbsoluteSize.X / Scale)
                 if Total <= 0 then return end
                 local Gap = 2
@@ -17691,7 +17720,7 @@ do
         function Segmented:Layout()
             if Segmented.Destroyed then return end
 
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Track)
             local Inner = Library:Snap(Track.AbsoluteSize.X / Scale) - Inset * 2
             if Inner <= 0 then return end
 
@@ -18099,7 +18128,7 @@ do
         function EmptyState:Layout()
             if EmptyState.Destroyed then return end
 
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Holder)
             local Width = Library:Snap(Holder.AbsoluteSize.X / Scale)
             if Width <= 0 then return end
 
@@ -18532,7 +18561,7 @@ do
         function SettingsCard:Layout()
             if SettingsCard.Destroyed then return end
 
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Holder)
             local Width = Library:Snap(Holder.AbsoluteSize.X / Scale)
             if Width <= 0 then return end
 
@@ -18930,7 +18959,7 @@ do
         local ItemHeight = Library.IsMobile and 44 or math.max(24, ControlHeight)
 
         local function MenuWidthLogical()
-            local Scale = math.max(Library.DPIScale or 1, 0.01)
+            local Scale = Library:GetEffectiveScale(Holder)
             return math.max(140, math.floor(Holder.AbsoluteSize.X / Scale))
         end
 
@@ -19693,15 +19722,27 @@ function Library:Notify(...)
     Data.TitleColor, Data.DescriptionColor = Info.TitleColor, Info.DescriptionColor
     local AccentColor = Info.AccentColor or ((Data.Variant == "error" or Data.Variant == "danger") and "DestructiveColor"
         or Data.Variant == "warning" and "WarningColor" or Data.Variant == "success" and "SuccessColor" or "AccentColor")
+    local function ResolveAccentColor()
+        if typeof(AccentColor) == "Color3" then return AccentColor end
+        return Library.Scheme[AccentColor] or Library.Scheme.AccentColor
+    end
+    local function ResolveDescriptionColor()
+        local Custom = Info.DescriptionColor
+        if typeof(Custom) == "Color3" then return Custom end
+        if typeof(Custom) == "string" and Library.Scheme[Custom] then return Library.Scheme[Custom] end
+        return Data.Title == "" and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
+    end
+
+    local SlideOffset = Library.NotifySide == "Left" and -14 or 14
     local Root = New("Frame", { BackgroundTransparency = 1, Parent = NotificationArea })
     local Holder = New("CanvasGroup", {
         BackgroundColor3 = "MainColor", ClipsDescendants = true, GroupTransparency = 1,
-        Position = UDim2.fromOffset(0, -3), Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = Root,
+        Position = UDim2.fromOffset(SlideOffset, 0), Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = Root,
     })
     local Corner = New("UICorner", { Parent = Holder })
     local Stroke = Library:AddOutline(Holder)
-    Stroke.Transparency = 0.62
-    local Accent = New("Frame", { BackgroundColor3 = AccentColor, Parent = Holder })
+    Stroke.Transparency = 0.35
+    local Accent = New("Frame", { BackgroundColor3 = AccentColor, BorderSizePixel = 0, Parent = Holder })
     local Title = New("TextLabel", {
         BackgroundTransparency = 1, FontFace = function() return Library.Scheme.Font end,
         RichText = false, Text = Data.Title, TextColor3 = Info.TitleColor or "FontColor",
@@ -19710,33 +19751,46 @@ function Library:Notify(...)
     })
     local Desc = New("TextLabel", {
         BackgroundTransparency = 1, FontFace = function() return Library.Scheme.Font end,
-        RichText = false, Text = Data.Description, TextColor3 = Info.DescriptionColor or "MutedFontColor",
+        RichText = false, Text = Data.Description, TextColor3 = ResolveDescriptionColor,
         TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = Holder,
     })
-    local IconData = (Info.BigIcon or Info.Icon) and Library:GetCustomIcon(Info.BigIcon or Info.Icon)
+
+    local IconName = Info.BigIcon or Info.Icon
+    if IconName == nil then
+        IconName = (Data.Variant == "error" or Data.Variant == "danger") and "circle-x"
+            or Data.Variant == "warning" and "triangle-alert"
+            or Data.Variant == "success" and "circle-check"
+            or "info"
+    end
+    local IconData = IconName and Library:GetCustomIcon(IconName) or nil
+    local IconTile = New("Frame", {
+        BackgroundColor3 = AccentColor, BackgroundTransparency = 0.84, BorderSizePixel = 0,
+        Visible = IconData ~= nil, Parent = Holder,
+    })
+    New("UICorner", { CornerRadius = UDim.new(0, 5), Parent = IconTile })
     local Icon = New("ImageLabel", {
         BackgroundTransparency = 1, Image = IconData and IconData.Url or "",
         ImageRectOffset = IconData and IconData.ImageRectOffset or Vector2.zero,
         ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero,
-        ImageColor3 = Info.IconColor or "MutedFontColor", Visible = IconData ~= nil and IconData ~= false, Parent = Holder,
+        ImageColor3 = Info.IconColor or AccentColor, Parent = IconTile,
     })
     local Close = New("TextButton", { BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = Holder })
     local CloseData = Library:GetIcon("x")
-    New("ImageLabel", {
+    local CloseIcon = New("ImageLabel", {
         BackgroundTransparency = 1, Image = CloseData and CloseData.Url or "",
         ImageRectOffset = CloseData and CloseData.ImageRectOffset or Vector2.zero,
         ImageRectSize = CloseData and CloseData.ImageRectSize or Vector2.zero,
-        ImageColor3 = "MutedFontColor", Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(12, 12), Parent = Close,
+        ImageColor3 = "MutedFontColor", ImageTransparency = 0.3,
+        Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(12, 12), Parent = Close,
     })
-    local Timer = New("Frame", { BackgroundColor3 = "OutlineColor", BackgroundTransparency = 0.6, ClipsDescendants = true, Parent = Holder })
-    local Fill = New("Frame", { BackgroundColor3 = AccentColor, Size = UDim2.fromScale(Data.Steps and 0 or 1, 1), Parent = Timer })
+    local Timer = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 3, Parent = Holder })
+    local Fill = New("Frame", {
+        BackgroundColor3 = AccentColor, BackgroundTransparency = 0.25, BorderSizePixel = 0,
+        Size = UDim2.fromScale(Data.Steps and 0 or 1, 1), ZIndex = 3, Parent = Timer,
+    })
     local Started = os.clock()
-
-    local function ResolveAccentColor()
-        if typeof(AccentColor) == "Color3" then return AccentColor end
-        return Library.Scheme[AccentColor] or Library.Scheme.AccentColor
-    end
+    local Paused, PausedRemaining = false, 0
 
     local CounterPill = New("Frame", { BackgroundColor3 = ResolveAccentColor, Visible = false, ZIndex = 6, Parent = Holder })
     New("UICorner", { CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)), Parent = CounterPill })
@@ -19831,7 +19885,8 @@ function Library:Notify(...)
         local Width = math.min(Data.Width, AvailableWidth)
         local Padding = math.min(Data.Padding, math.max(0, math.floor((Width - 1) / 2)))
         local IconSize = Info.BigIcon and 24 or 16
-        local Left = Padding + (IconData and IconSize + 8 or 0) + (Data.Accent and 4 or 0)
+        local TileSize = IconData and IconSize + 12 or 0
+        local Left = Padding + (IconData and TileSize + 10 or 0) + (Data.Accent and 4 or 0)
         local CounterText = ""
         local CounterWidth = 0
         if Data.Count and Data.Count > 1 then
@@ -19839,13 +19894,15 @@ function Library:Notify(...)
             local CounterBounds = Library:GetTextBounds(CounterText, Library.Scheme.Font, Data.DescriptionTextSize, 999)
             CounterWidth = math.max(14, math.ceil(CounterBounds) + 10)
         end
-        local RightReserve = (Data.Dismissible and 28 or 0) + (CounterWidth > 0 and CounterWidth + 4 or 0)
+        local RightReserve = (Data.Dismissible and 20 or 0) + (CounterWidth > 0 and CounterWidth + 6 or 0)
         local TextWidth = math.max(1, Width - Left - Padding - RightReserve)
         Title.FontFace, Desc.FontFace = Library.Scheme.Font, Library.Scheme.Font
-        Title.TextSize, Desc.TextSize = Data.TitleTextSize, Data.DescriptionTextSize
         Title.Visible, Desc.Visible = Data.Title ~= "", Data.Description ~= ""
+        local DescriptionSize = Title.Visible and Data.DescriptionTextSize or Data.TitleTextSize
+        Title.TextSize, Desc.TextSize = Data.TitleTextSize, DescriptionSize
+        Desc.TextColor3 = ResolveDescriptionColor()
         local _, TitleHeight = Library:GetTextBounds(Data.Title, Library.Scheme.Font, Data.TitleTextSize, TextWidth)
-        local _, DescHeight = Library:GetTextBounds(Data.Description, Library.Scheme.Font, Data.DescriptionTextSize, TextWidth)
+        local _, DescHeight = Library:GetTextBounds(Data.Description, Library.Scheme.Font, DescriptionSize, TextWidth)
         if Data.Destroyed then Resizing = false; return Data end
         TitleHeight = Title.Visible and math.ceil(TitleHeight) or 0
         DescHeight = Desc.Visible and math.ceil(DescHeight) or 0
@@ -19853,39 +19910,43 @@ function Library:Notify(...)
         Timer.Visible = Data.ShowProgress and (Data.Steps ~= nil or (not Data.Persist and typeof(Data.Time) ~= "Instance"))
         if Timer.Visible and not Data.Steps and typeof(Data.Time) == "number" then
             if not TimerTween then
-                local Remaining = math.max(0, Data.Time - (os.clock() - Started))
+                local Remaining = Paused and PausedRemaining or math.max(0, Data.Time - (os.clock() - Started))
                 Fill.Size = UDim2.fromScale(Data.Time > 0 and Remaining / Data.Time or 0, 1)
                 TimerTween = TweenService:Create(Fill, TweenInfo.new(Remaining, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(0, 1) })
-                TimerTween:Play()
+                if not Paused then TimerTween:Play() end
             end
         elseif TimerTween then
             TimerTween:Cancel()
             TimerTween = nil
         end
-        local TimerHeight = Timer.Visible and 8 or 0
-        local MaxTextHeight = math.max(1, AvailableHeight - Padding * 2 - TimerHeight)
+        local MaxTextHeight = math.max(1, AvailableHeight - Padding * 2)
         TitleHeight = math.min(TitleHeight, MaxTextHeight)
         DescHeight = math.min(DescHeight, math.max(0, MaxTextHeight - TitleHeight - Gap))
-        local ContentHeight = math.max(TitleHeight + Gap + DescHeight, IconData and IconSize or 0, Data.Dismissible and 24 or 1)
+        local TextHeight = TitleHeight + Gap + DescHeight
+        local ContentHeight = math.max(TextHeight, TileSize, Data.Dismissible and 12 or 1)
         local ActionCount = #Data.Actions
-        local ActionGap = 6
+        local ActionGap = 8
         local ActionHeight = ActionCount > 0 and math.max(26, Library:Metric("Row", 26)) or 0
         local BottomExtra = ActionHeight > 0 and (ActionHeight + ActionGap) or 0
-        Data.Height = math.min(AvailableHeight, ContentHeight + Padding * 2 + TimerHeight + BottomExtra)
+        Data.Height = math.min(AvailableHeight, ContentHeight + Padding * 2 + BottomExtra)
         Root.Size = UDim2.fromOffset(Width, Data.Height)
         Corner.CornerRadius = UDim.new(0, Data.CornerRadius)
-        Title.Position, Title.Size = UDim2.fromOffset(Left, Padding), UDim2.fromOffset(TextWidth, TitleHeight)
-        Desc.Position, Desc.Size = UDim2.fromOffset(Left, Padding + TitleHeight + Gap), UDim2.fromOffset(TextWidth, DescHeight)
-        Icon.Position, Icon.Size = UDim2.fromOffset(Padding, Padding), UDim2.fromOffset(IconSize, IconSize)
+        local Inset = Padding + (Data.Accent and 4 or 0)
+        local TextTop = Padding + math.max(0, math.floor((ContentHeight - TextHeight) / 2))
+        Title.Position, Title.Size = UDim2.fromOffset(Left, TextTop), UDim2.fromOffset(TextWidth, TitleHeight)
+        Desc.Position, Desc.Size = UDim2.fromOffset(Left, TextTop + TitleHeight + Gap), UDim2.fromOffset(TextWidth, DescHeight)
+        IconTile.Visible = IconData ~= nil
+        IconTile.Position, IconTile.Size = UDim2.fromOffset(Inset, Padding), UDim2.fromOffset(TileSize, TileSize)
+        Icon.Position, Icon.Size = UDim2.fromOffset(6, 6), UDim2.fromOffset(IconSize, IconSize)
         Close.Visible = Data.Dismissible
-        Close.Position, Close.Size = UDim2.fromOffset(math.max(0, Width - Padding - 24), math.max(0, Padding - 3)), UDim2.fromOffset(24, 24)
+        Close.Position, Close.Size = UDim2.fromOffset(math.max(0, Width - Padding - 18), math.max(0, TextTop - 6)), UDim2.fromOffset(24, 24)
         CounterPill.Visible = CounterWidth > 0
         if CounterWidth > 0 then
             local CounterHeight = math.max(14, Data.DescriptionTextSize + 4)
             CounterLabel.TextSize = Data.DescriptionTextSize
             CounterLabel.Text = CounterText
             CounterPill.Size = UDim2.fromOffset(CounterWidth, CounterHeight)
-            CounterPill.Position = UDim2.fromOffset(math.max(Padding, Width - Padding - (Data.Dismissible and 28 or 0) - CounterWidth), Padding)
+            CounterPill.Position = UDim2.fromOffset(math.max(Padding, Width - Padding - (Data.Dismissible and 20 or 0) - CounterWidth), TextTop)
         end
         ActionRow.Visible = ActionCount > 0
         if ActionCount > 0 then
@@ -19917,7 +19978,7 @@ function Library:Notify(...)
         end
         Accent.Visible = Data.Accent
         Accent.Position, Accent.Size = UDim2.fromOffset(0, Padding), UDim2.fromOffset(2, math.max(1, Data.Height - Padding * 2))
-        Timer.Position, Timer.Size = UDim2.fromOffset(Padding, Data.Height - Padding - 2), UDim2.fromOffset(math.max(1, Width - Padding * 2), 2)
+        Timer.Position, Timer.Size = UDim2.fromOffset(0, Data.Height - 2), UDim2.fromOffset(Width, 2)
         Resizing = false
         if Data.ResizePending then
             Data.ResizePending = false
@@ -19957,8 +20018,10 @@ function Library:Notify(...)
         Started = os.clock()
         if TimerTask then pcall(task.cancel, TimerTask); TimerTask = nil end
         if TimerTween then TimerTween:Cancel(); TimerTween = nil end
-        if not Data.Persist then
-            if typeof(Data.Time) ~= "Instance" then
+        if not Data.Persist and typeof(Data.Time) ~= "Instance" then
+            if Paused then
+                PausedRemaining = math.max(0, Data.Time)
+            else
                 TimerTask = task.delay(math.max(0, Data.Time), function()
                     TimerTask = nil
                     Data:Destroy()
@@ -19996,7 +20059,9 @@ function Library:Notify(...)
         end
         Library:UpdateNotificationPositions()
         if Instant or Library.Unloaded then Release(); return Data end
-        Library:CancelTween(Holder, "NotifyEnterPosition")
+        Library:PlayTween(Holder, "NotifyEnterPosition", Library.NotifyCloseTweenInfo, {
+            Position = UDim2.fromOffset(math.round(SlideOffset * 0.6), 0),
+        })
         Library:PlayTween(Holder, "NotifyVisibility", Library.NotifyCloseTweenInfo, { GroupTransparency = 1 })
         CleanupTask = task.delay(Library.NotifyCloseTweenInfo.Time, function() CleanupTask = nil; Release() end)
         return Data
@@ -20004,6 +20069,31 @@ function Library:Notify(...)
     Data.Holder, Data.Root = Holder, Root
     Data:Resize()
     table.insert(Data.Connections, Close.Activated:Connect(function() Data:Destroy() end))
+    table.insert(Data.Connections, Close.MouseEnter:Connect(function()
+        Library:PlayTween(CloseIcon, "NotifyClose", Library.HoverTweenInfo, { ImageTransparency = 0 })
+    end))
+    table.insert(Data.Connections, Close.MouseLeave:Connect(function()
+        Library:PlayTween(CloseIcon, "NotifyClose", Library.HoverTweenInfo, { ImageTransparency = 0.3 })
+    end))
+    table.insert(Data.Connections, Holder.MouseEnter:Connect(function()
+        if Paused or Data.Destroyed or Data.Persist or typeof(Data.Time) ~= "number" or not TimerTask then return end
+        Paused = true
+        PausedRemaining = math.max(0, Data.Time - (os.clock() - Started))
+        pcall(task.cancel, TimerTask)
+        TimerTask = nil
+        if TimerTween then TimerTween:Pause() end
+    end))
+    table.insert(Data.Connections, Holder.MouseLeave:Connect(function()
+        if not Paused or Data.Destroyed then return end
+        Paused = false
+        Started = os.clock() - (Data.Time - PausedRemaining)
+        if TimerTween then TimerTween:Play() end
+        if TimerTask then pcall(task.cancel, TimerTask) end
+        TimerTask = task.delay(PausedRemaining, function()
+            TimerTask = nil
+            Data:Destroy()
+        end)
+    end))
     table.insert(Data.Connections, Title:GetPropertyChangedSignal("FontFace"):Connect(function() Data:Resize() end))
     table.insert(Data.Connections, Desc:GetPropertyChangedSignal("FontFace"):Connect(function() Data:Resize() end))
     table.insert(NotifyOrder, Root)
@@ -21225,7 +21315,7 @@ function Library:CreateWindow(WindowInfo)
     Window.CompactLauncher = CompactLauncher
 
     local function GetContentWidth()
-        local Scale = math.max(Library.DPIScale or 1, 0.01)
+        local Scale = Library:GetEffectiveScale(Container)
         local Width = Container.AbsoluteSize.X / Scale
 
         if Width <= 0 then
@@ -21594,7 +21684,7 @@ function Library:CreateWindow(WindowInfo)
 
         local Margin = 8
         local TopInset = Library.IsMobile and GetTopInset() or 0
-        local Scale = math.max(Library.DPIScale or 1, 0.01)
+        local Scale = Library:GetEffectiveScale(MainFrame)
         local ViewportSize = GetViewportSize()
         local AvailableY = ViewportSize.Y - Margin * 2 - TopInset
         local OverflowX = math.max(0, MainFrame.AbsoluteSize.X - (ViewportSize.X - Margin * 2))
@@ -22156,7 +22246,7 @@ function Library:CreateWindow(WindowInfo)
                     TabRight.Size = RightSize
                 end
             else
-                local Total = math.floor(TabContainer.AbsoluteSize.X)
+                local Total = Library:LogicalSize(TabContainer).X
                 local LeftPosition = UDim2.fromOffset(0, Offset)
                 local RightPosition = UDim2.new(1, 0, 0, Offset)
                 local LeftSize, RightSize
@@ -22342,7 +22432,7 @@ function Library:CreateWindow(WindowInfo)
                     return
                 end
 
-                local Scale = math.max(Library.DPIScale or 1, 0.01)
+                local Scale = Library:GetEffectiveScale(TabboxButtons)
                 local Viewport = TabboxButtons.AbsoluteWindowSize.X
                 if Viewport <= 0 then
                     Viewport = TabboxButtons.AbsoluteSize.X
@@ -22489,7 +22579,7 @@ function Library:CreateWindow(WindowInfo)
                 local function CenterTabboxContent()
                     ButtonContent.Position = UDim2.new(
                         0,
-                        Library:CenterOffset(Button.AbsoluteSize.X, ButtonContent.AbsoluteSize.X),
+                        Library:CenterOffset(Library:LogicalSize(Button).X, Library:LogicalSize(ButtonContent).X),
                         0.5,
                         0
                     )
@@ -22912,7 +23002,7 @@ function Library:CreateWindow(WindowInfo)
                     return
                 end
 
-                local DPIScale = math.max(Library.DPIScale or 1, 0.01)
+                local DPIScale = Library:GetEffectiveScale(GroupboxContainer)
                 local ContentBottom = (GroupboxList.AbsoluteContentSize.Y / DPIScale) + GroupboxTopPadding
                 local ContainerY = GroupboxContainer.AbsolutePosition.Y
 
@@ -23130,7 +23220,7 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            if Tab.SubTabs and #Tab.SubTabs > 0 and not next(Tab.Groupboxes) and not next(Tab.Tabboxes) then
+            if Tab.SubTabs and #Tab.SubTabs > 0 then
                 Tab:SetExpanded(true)
                 for _, Child in Tab.SubTabs do
                     if not Child.Destroyed and Child.Visible ~= false then
@@ -23168,9 +23258,6 @@ function Library:CreateWindow(WindowInfo)
             Library:Emit("TabChanged", Tab)
 
             local Parent = Tab.ParentTab
-            if Parent and Parent.Button then
-                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
-            end
             if Parent and Parent.RefreshBranches then
                 Parent:RefreshBranches()
             end
@@ -23193,9 +23280,6 @@ function Library:CreateWindow(WindowInfo)
             Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
 
             local Parent = Tab.ParentTab
-            if Parent and Parent.Button then
-                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, false)
-            end
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -23364,7 +23448,7 @@ function Library:CreateWindow(WindowInfo)
                 Target += math.max(0, Count - 1) * SubTabLayout.Padding.Offset
             end
             if Tab.BranchStem then
-                Tab.BranchStem.Instance.Visible = Tab.Expanded and not Compact
+                Tab.BranchStem.Visible = Tab.Expanded and not Compact
             end
 
             if Animate then
@@ -23504,8 +23588,16 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
 
+            if not TabButton:GetAttribute("GroupHeader") then
+                TabButton:SetAttribute("GroupHeader", true)
+                Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
+            end
+
             Tab:RebuildBranches()
             Tab:RefreshExpansion(false)
+            if Library.ActiveTab == Tab then
+                Child:Show()
+            end
             if Library.ActiveTab == Child then
                 Tab:SetExpanded(true)
             end
@@ -23513,20 +23605,6 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local BranchIndent = 20
-
-        local function MakeBranchPart(Parent, Position, Size)
-            local State = { Lit = false }
-            local Part = New("Frame", {
-                BackgroundColor3 = function()
-                    return State.Lit and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-                end,
-                BorderSizePixel = 0,
-                Position = Position,
-                Size = Size,
-                Parent = Parent,
-            })
-            return { Instance = Part, State = State }
-        end
 
         function Tab:RebuildBranches()
             local Visible = {}
@@ -23541,31 +23619,29 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
             if Tab.BranchStem then
-                Tab.BranchStem.Instance:Destroy()
+                Tab.BranchStem:Destroy()
                 Tab.BranchStem = nil
             end
 
             local TrunkX = NavigationIconX + math.floor(NavigationIconSize / 2) - 1
-            local BranchStart = TrunkX + 1
-            local BranchEnd = NavigationIconX + BranchIndent - 4
             local Compacted = Window:IsSidebarCompacted()
 
             if #Visible > 0 then
                 local RowHeight = TabButton.Size.Y.Offset
                 local StemTop = Library:CenterOffset(RowHeight, NavigationIconSize) + NavigationIconSize + 3
-                Tab.BranchStem = MakeBranchPart(
-                    TabButton,
-                    UDim2.fromOffset(TrunkX, StemTop),
-                    UDim2.fromOffset(1, math.max(0, RowHeight - StemTop))
-                )
-                Tab.BranchStem.Instance.Name = "BranchStem"
+                Tab.BranchStem = New("Frame", {
+                    BackgroundColor3 = "OutlineColor",
+                    BorderSizePixel = 0,
+                    Name = "BranchStem",
+                    Position = UDim2.fromOffset(TrunkX, StemTop),
+                    Size = UDim2.fromOffset(1, math.max(0, RowHeight - StemTop)),
+                    Parent = TabButton,
+                })
             end
 
             for Index, Child in Visible do
                 local Height = Child.RowHeight or Child.Button.Size.Y.Offset
-                local Middle = math.floor(Height / 2)
                 local IsLast = Index == #Visible
-
                 local Holder = New("Frame", {
                     BackgroundTransparency = 1,
                     Name = "Branches",
@@ -23573,23 +23649,28 @@ function Library:CreateWindow(WindowInfo)
                     Visible = not Compacted,
                     Parent = Child.Button,
                 })
-                local Parts = {}
-                Parts.Upper = MakeBranchPart(Holder, UDim2.fromOffset(TrunkX, 0), UDim2.fromOffset(1, Middle + 1))
-                if not IsLast then
-                    Parts.Lower = MakeBranchPart(
-                        Holder,
-                        UDim2.fromOffset(TrunkX, Middle + 1),
-                        UDim2.fromOffset(1, Height - Middle - 1)
-                    )
-                end
-                Parts.Branch = MakeBranchPart(
-                    Holder,
-                    UDim2.fromOffset(BranchStart, Middle),
-                    UDim2.fromOffset(BranchEnd - BranchStart, 1)
-                )
+                local SegmentSize = UDim2.fromOffset(1, IsLast and math.max(0, Height - 6) or Height)
+                New("Frame", {
+                    BackgroundColor3 = "OutlineColor",
+                    BorderSizePixel = 0,
+                    Name = "Guide",
+                    Position = UDim2.fromOffset(TrunkX, 0),
+                    Size = SegmentSize,
+                    Parent = Holder,
+                })
+                local Marker = New("Frame", {
+                    BackgroundColor3 = "AccentColor",
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    Name = "Marker",
+                    Position = UDim2.fromOffset(TrunkX, 0),
+                    Size = SegmentSize,
+                    ZIndex = 2,
+                    Parent = Holder,
+                })
 
                 Child.Branches = Holder
-                Child.BranchParts = Parts
+                Child.BranchParts = { Marker = Marker, Lit = false }
                 if Child.NavEntry then
                     Child.NavEntry.Branches = Holder
                 end
@@ -23600,36 +23681,23 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:RefreshBranches(Instant: boolean?)
-            local Visible = {}
-            local ActiveIndex = 0
             for _, Child in Tab.SubTabs do
-                if Child.BranchParts then
-                    table.insert(Visible, Child)
-                    if Library.ActiveTab == Child then
-                        ActiveIndex = #Visible
+                local Parts = Child.BranchParts
+                if Parts then
+                    local Lit = Library.ActiveTab == Child
+                    if Instant or Parts.Lit ~= Lit then
+                        Parts.Lit = Lit
+                        local Target = Lit and 0 or 1
+                        if Instant then
+                            Library:CancelTween(Parts.Marker, "BranchMarker")
+                            Parts.Marker.BackgroundTransparency = Target
+                        else
+                            Library:PlayTween(Parts.Marker, "BranchMarker", Library.TweenInfo, {
+                                BackgroundTransparency = Target,
+                            })
+                        end
                     end
                 end
-            end
-
-            local function Apply(Part, Lit)
-                if not Part or Part.State.Lit == Lit then
-                    return
-                end
-                Part.State.Lit = Lit
-                local Target = Lit and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-                if Instant then
-                    Part.Instance.BackgroundColor3 = Target
-                else
-                    Library:PlayTween(Part.Instance, "BranchLit", Library.TweenInfo, { BackgroundColor3 = Target })
-                end
-            end
-
-            Apply(Tab.BranchStem, ActiveIndex > 0)
-            for Index, Child in Visible do
-                local Parts = Child.BranchParts
-                Apply(Parts.Upper, ActiveIndex > 0 and Index <= ActiveIndex)
-                Apply(Parts.Lower, ActiveIndex > 0 and Index < ActiveIndex)
-                Apply(Parts.Branch, Index == ActiveIndex)
             end
         end
 
@@ -23687,7 +23755,13 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
+        TabButton.MouseButton1Click:Connect(function()
+            if Tab.SubTabs and #Tab.SubTabs > 0 then
+                Tab:SetExpanded(not Tab.Expanded)
+                return
+            end
+            Tab:Show()
+        end)
 
         Library.Tabs[Name] = Tab
 
@@ -23829,7 +23903,7 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local function SnapKeyBoxWidth()
-                local Available = math.floor(TabContainer.AbsoluteSize.X)
+                local Available = Library:LogicalSize(TabContainer).X
                 if Available <= 0 then
                     return
                 end
@@ -23976,9 +24050,6 @@ function Library:CreateWindow(WindowInfo)
             Library:Emit("TabChanged", Tab)
 
             local Parent = Tab.ParentTab
-            if Parent and Parent.Button then
-                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, true)
-            end
             if Parent and Parent.RefreshBranches then
                 Parent:RefreshBranches()
             end
@@ -23997,9 +24068,6 @@ function Library:CreateWindow(WindowInfo)
             Library:AnimateTabSelection(TabButton, TabLabel, TabIcon, false)
 
             local Parent = Tab.ParentTab
-            if Parent and Parent.Button then
-                Library:AnimateTabTrail(Parent.Button, Parent.Label, Parent.IconImage, false)
-            end
 
             Library:PlayTabAnimation(TabCanvas, false)
             Window:HideTabInfo()
@@ -24045,7 +24113,13 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
+        TabButton.MouseButton1Click:Connect(function()
+            if Tab.SubTabs and #Tab.SubTabs > 0 then
+                Tab:SetExpanded(not Tab.Expanded)
+                return
+            end
+            Tab:Show()
+        end)
 
         Tab.Container = TabContainer
         setmetatable(Tab, BaseGroupbox)
@@ -25529,7 +25603,7 @@ function Library:CreateLoading(LoadingInfo)
 
         local Total = math.max(1, Loading.TotalSteps)
         local Progress = math.clamp(Loading.CurrentStep / Total, 0, 1)
-        local TrackWidth = Library:Snap(SliderBar.AbsoluteSize.X / math.max(Library.DPIScale or 1, 0.01))
+        local TrackWidth = Library:Snap(SliderBar.AbsoluteSize.X / Library:GetEffectiveScale(SliderBar))
         if TrackWidth <= 0 then
             TrackWidth = ProgressWidth
         end
@@ -26329,10 +26403,7 @@ Library:OnThemeChanged(function()
             Library:AnimateTabSelection(Entry.Button, Entry.Label, Entry.Icon, Entry.Button == ActiveButton)
         end
     end
-    local OpenParent = Library.ActiveTab and Library.ActiveTab.ParentTab
-    if OpenParent and OpenParent.Button then
-        Library:AnimateTabTrail(OpenParent.Button, OpenParent.Label, OpenParent.IconImage, true)
-    end
+
     for _, Toggle in Library.Toggles do
         if type(Toggle) == "table" and type(Toggle.Display) == "function" and not Toggle.Destroyed then
             pcall(Toggle.Display, Toggle)

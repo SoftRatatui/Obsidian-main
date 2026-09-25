@@ -304,6 +304,26 @@ Window:Toggle()
 
 The main window is clamped to the active viewport. The compact launcher is also clamped and appears only when the mouse button hides the window. Hiding through the menu keybind does not create the launcher.
 
+### UI scale
+
+`Library:SetDPIScale(Percent)` scales the whole interface through `UIScale`
+objects. Layout code written in offsets must work in logical pixels, not screen
+pixels: `AbsoluteSize` already includes every `UIScale` above the element, so
+writing it back into an offset applies the scale twice.
+
+- `Library:GetEffectiveScale(Instance)` multiplies every `UIScale` between the
+  instance and its `ScreenGui` and returns the product (at least `0.01`).
+- `Library:LogicalSize(GuiObject)` returns `AbsoluteSize` divided by that scale,
+  rounded to whole pixels.
+
+```luau
+local Width = Library:LogicalSize(Holder).X
+Child.Size = UDim2.fromOffset(math.floor(Width / 2), 20)
+```
+
+Use these instead of `Library.DPIScale` whenever an element may sit under more
+than one `UIScale`, for example inside an addon window with its own scale.
+
 ## Tabs and groupboxes
 
 ```luau
@@ -1269,6 +1289,10 @@ background loses contrast much faster than dimming light text on a dark one.
 themes and `Base * 0.55` on light ones. Use it for any resting-state text or icon
 you dim with transparency.
 
+`Library:GetRestingTransparency(Button?)` is the resting value for a sidebar row:
+`GetIdleTransparency(0.62)` for a group header (a button with the `GroupHeader`
+attribute) and `GetIdleTransparency()` for everything else.
+
 ## Configs
 
 ```luau
@@ -1310,22 +1334,29 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 
 ## Notifications
 
-The default is a small toast with a quiet outline, 12px title, 11px description, and no permanent decoration. Accent bars, progress bars, icons, and close buttons are opt-in. Cards use a short fade and three-pixel vertical movement without scaling the text.
+A card is a 280px panel with an outline, a tinted icon tile on the left, a 13px
+title, a 12px muted description, and a 2px countdown line along its bottom edge.
+The tile and the line take the variant colour. A card with only one line of text
+shows it in the body colour at title size, centred against the tile.
+
+Cards slide in 14px from the screen edge while fading in, and slide back out when
+they close. The countdown pauses while the cursor is over a card and resumes from
+where it stopped, so a message cannot vanish while it is being read.
 
 ```luau
 Library:SetNotificationOptions({
     Side = "Right",
-    Width = 260,
-    Margin = 8,
-    Gap = 5,
-    Padding = 7,
-    CornerRadius = 4,
-    TitleTextSize = 12,
-    DescriptionTextSize = 11,
+    Width = 280,
+    Margin = 10,
+    Gap = 6,
+    Padding = 10,
+    CornerRadius = 6,
+    TitleTextSize = 13,
+    DescriptionTextSize = 12,
     MaxVisible = 4,
-    DefaultDuration = 3.5,
+    DefaultDuration = 4,
     Accent = false,
-    ShowProgress = false,
+    ShowProgress = true,
     Dismissible = false,
 })
 
@@ -1346,11 +1377,20 @@ Library:Notify({
 | `Margin` / `Gap` | Screen margin 0 to 40; stack gap 0 to 24. |
 | `MaxVisible` | 1 to 20. The oldest cards also close when the stack exceeds the viewport height. This includes persistent cards. |
 | `DefaultDuration` | Nonnegative seconds; `Time` overrides this per notification. |
-| `Accent` / `ShowProgress` / `Dismissible` | Enable the leading accent, progress track, or close button. |
+| `Accent` / `ShowProgress` / `Dismissible` | The leading accent bar (off), the bottom countdown line (on), and the close button (off). |
 
 Changes to the library font or global appearance update open cards. Notification text binds directly to `Library.Scheme.Font`; RichText is disabled so content cannot silently replace its weight or styling. A card's explicit `Width`, text sizes, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
 
-`Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`. Warning and error variants choose a corresponding accent palette color; success uses a green accent; use `Icon` and `IconColor` to add an explicit status symbol. `AccentColor`, `TitleColor`, and `DescriptionColor` override colors. `BigIcon` uses a 24px icon instead of the compact 16px icon. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
+`Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`, and picks the colour and the default icon:
+
+| Variant | Colour | Default icon |
+| --- | --- | --- |
+| `Default` | `AccentColor` | `info` |
+| `Success` | `SuccessColor` | `circle-check` |
+| `Warning` | `WarningColor` | `triangle-alert` |
+| `Error`, `Danger` | `DestructiveColor` | `circle-x` |
+
+`Icon` replaces the default icon and `Icon = false` removes the tile. `IconColor` recolours the icon only. `AccentColor`, `TitleColor`, and `DescriptionColor` override colours. `BigIcon` uses a 24px icon in a 36px tile instead of the 16px icon in a 28px tile. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
 
 The returned controller supports `ChangeTitle(text)`, `ChangeDescription(text)`, `ChangeStep(number)` / `SetProgress(number)`, `Resize()`, and `Destroy(instant?)`. A title or description can be added after creation or cleared with an empty string. Calls after destruction do nothing. `Library:ClearNotifications()` also removes cards that are already fading out.
 
@@ -1946,7 +1986,8 @@ Run local checks with Luau's compiler and interpreter installed:
 
 - Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
 - Made the selected sidebar tab fill its row edge to edge with a full-height accent bar, and added `Window:AddTabSeparator` for captioned or plain sidebar sections.
-- Reworked sub-tabs with 28px indented rows hanging off a straight 1px tree (stem under the parent icon, trunk, a branch per child), the path to the open child lit in the accent colour, and a lit parent while a child is open (`Library:AnimateTabTrail`).
+- Reworked sub-tabs: 28px indented rows on a single 1px guide under the header icon, with the open child's guide segment in the accent colour. A tab with children is a group header that toggles its group, rests greyer (`Library:GetRestingTransparency`) and is never highlighted.
+- Fixed the layout breaking at UI scales other than 100%: offsets computed from on-screen sizes were scaled twice. Added `Library:GetEffectiveScale` and `Library:LogicalSize`.
 - Started the sidebar tab list flush under the header, and fixed expanded sub-tab groups doubling their height at UI scales other than 100%.
 - Added the `Dusk`, `Dawn` and `Honey` themes and raised the default theme's layer separation and accent saturation.
 - Fixed light themes: contrast picking on the accent, light detection for palette previews, the disabled switch knob, the sidebar divider hover, the white collapse arrow, and over-dimmed resting labels (`Library:GetIdleTransparency`).
@@ -1964,7 +2005,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Added live `SetStyle`, `SetMinimal`, and `SetHighlighted` controllers to visual addons.
 - Added per-module `SetModuleStyle`, `GetModuleStyle`, `SetModuleMinimal`, and `SetModuleHighlighted` controls to addon windows, including custom highlight colors.
 - Added `ShowHeader`, `ShowBackground`, `ShowOutline`, and `ShowShadow` style controls for content-only and minimal module layouts.
-- Reworked notifications into smaller 260px toasts with 12px titles, 11px descriptions, tighter spacing, shorter motion, four-card limit, and optional close controls.
+- Reworked notifications into 280px cards with a variant-coloured icon tile, 13px titles, 12px descriptions, a bottom countdown line that pauses on hover, a slide-in from the screen edge, a four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
 - Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.
 
@@ -3084,8 +3125,15 @@ A tab can hold child tabs in the sidebar under a collapsible chevron.
 - `Tab:SetExpanded(State)` expands or collapses the group and returns the tab.
 - `Tab:IsExpanded()` reports the current state.
 
+A tab with children becomes a group header rather than a page. Clicking it
+expands or collapses the group and never opens it; `Tab:Show()` on a header opens
+its first visible child instead. Put controls in the children: groupboxes added to
+the header itself are never shown. If the header was the open tab when its first
+child was added, the selection moves to that child.
+
 Sub-tabs start collapsed. Selecting a child auto-expands its parent so the active
-tab is always visible. When the sidebar is compacted (the narrow icon rail) the
+tab is always visible. Swipe and keyboard tab switching skip headers and walk
+every child in order, including children of collapsed groups. When the sidebar is compacted (the narrow icon rail) the
 group is force-expanded, because a collapsed chevron in a rail with no room for
 the expander would make the children unreachable. On mobile the chevron and child
 rows are sized to 44 pixels so they are tappable.
@@ -3101,36 +3149,29 @@ print(Settings:IsExpanded())   -- true
 
 ### How nested tabs read
 
-A sub-tab row is 4px shorter than a top-level row and indented 20px. The children
-hang off a tree drawn from 1px lines:
+A sub-tab row is 4px shorter than a top-level row and indented 20px. A single
+1px guide line runs under the header's icon: it starts 3px below the icon, passes
+through every child row, and stops 6px short of the bottom of the last one.
 
-- a short stem drops from 3px below the parent's icon to the bottom of the parent
-  row, so the tree visibly starts at the parent;
-- a trunk continues straight down through every child and stops at the last one;
-- each child gets a straight horizontal branch at the middle of its row, ending
-  4px before its icon (`├─` for middle rows, `└─` for the last).
+The open child gets the full-width selection band, and its own segment of the
+guide turns the accent colour. The segment has exactly the guide's width and
+position, so the marker never sits half a pixel off the line at any UI scale.
+Switching between siblings fades the colour from one segment to the next.
 
-The lines are plain 1px frames, not stroked curves, so they stay the same weight
-at every size and land on whole pixels. The trunk is one continuous column with
-no gap between the stem and the first child or between rows.
+The header itself stays quiet: its label and icon rest one step greyer than an
+ordinary tab (`Library:GetRestingTransparency`), its hover is fainter, and it
+never shows the selection band, including while one of its children is open.
 
-The open child is marked by lighting its path in the accent colour: the stem, the
-trunk down to that child, and its branch. Rows below it keep the neutral line
-colour. Switching between siblings shortens or extends the lit path. The parent
-row also stays lit (full-strength label and icon over a faint band) while one of
-its children is open, so `Farming` then `World Bosses` reads at a glance.
-
-A parent with no groupboxes of its own opens its first child when clicked. In the
-compact, icon-only sidebar the tree is hidden, because centred icons would sit on
-top of the trunk.
+In the compact, icon-only sidebar the guide is hidden, because centred icons would
+sit on top of it.
 
 The group's height comes from the logical row heights, so it stays correct at any
 UI scale. Earlier builds measured it in screen pixels and doubled the gap under an
 expanded group at 200% scale.
 
-`Library:AnimateTabTrail(Button, Label, Icon, OnTrail)` applies or clears the lit
-parent state. The library calls it for you on every tab switch and theme change;
-call it yourself only if you drive tab visuals by hand.
+`Library:AnimateTabTrail(Button, Label, Icon, OnTrail)` lights a row without the
+accent bar. The library no longer calls it; it is kept for custom sidebars that
+want a lit parent.
 
 ### Sidebar separators
 

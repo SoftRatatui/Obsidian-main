@@ -2065,6 +2065,9 @@ export type Library = {
         Segments: { string | { Text: string?, Icon: string?, Accent: boolean? } }?
     ) -> Library,
     GetIdleTransparency: (self: Library, Base: number?) -> number,
+    GetRestingTransparency: (self: Library, Button: Instance?) -> number,
+    GetEffectiveScale: (self: Library, Target: Instance?) -> number,
+    LogicalSize: (self: Library, Target: GuiObject) -> Vector2,
     AnimateTabTrail: (self: Library, Button: TextButton, Label: TextLabel, Icon: ImageLabel?, OnTrail: boolean) -> (),
     RegisterWatermarkToken: (self: Library, Name: string, Getter: () -> any) -> Library,
     RefreshWatermarkFormat: (self: Library, Immediate: boolean?) -> Library,

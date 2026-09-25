@@ -35,6 +35,63 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-09-25 (version: UNRESOLVED, see the note above)
+
+Group headers in the sidebar, a simpler sub-tab guide, new notifications, and the
+UI scale fix. Numbers are measured in game unless a line says otherwise.
+
+### Sidebar
+
+- A tab with sub-tabs is now a group header, not a page. Clicking it expands or
+  collapses the group and never opens it. Its label and icon rest one step greyer
+  than ordinary tabs (`Library:GetRestingTransparency`) and its hover is fainter.
+  `Tab:Show()` on a header opens its first visible child.
+- The parent row no longer lights up while one of its children is open.
+  `Library:AnimateTabTrail` is kept for custom sidebars, but the library no longer
+  calls it.
+- The sub-tab tree is now a single 1px guide from under the header icon through the
+  children, ending 6px short of the last row. The open child's own segment of the
+  guide turns the accent colour, with the same width and position as the line, so
+  the marker cannot land half a pixel off it. The horizontal branches, the lit path
+  and the separate 2px rounded marker are gone.
+- Swipe and keyboard tab switching skip headers and reach children of collapsed
+  groups.
+
+### Notifications
+
+- Each card has a tinted icon tile in the variant colour: `info` by default,
+  `circle-check` for success, `triangle-alert` for warning, `circle-x` for error and
+  danger. `Icon` replaces it, `Icon = false` removes it.
+- Title 13px in the body colour, description 12px muted. A card with a single line
+  of text shows it in the body colour at title size, centred against the tile.
+- A 2px countdown line runs along the bottom edge in the variant colour
+  (`ShowProgress` now defaults to on). The countdown pauses while the cursor is over
+  the card.
+- Cards slide in 14px from the screen edge while fading in, and slide back out. They
+  used to drop 3px.
+- New defaults: width 280, margin 10, gap 6, padding 10, corner radius 6, duration
+  4 s. The outline is a little stronger and the close icon brightens on hover.
+
+### UI scale
+
+- Changing the UI scale no longer breaks the menu. Several places read on-screen
+  sizes (`AbsoluteSize`, which already includes the scale) and wrote them back as
+  offsets, applying the scale twice: the two-column split, key tab boxes, resize
+  handles, dividers, addon hosts, slider tracks, and button and tabbox content
+  centring. Another 14 places used the library scale where the element sat under a
+  different one. New helpers: `Library:GetEffectiveScale(Instance)` and
+  `Library:LogicalSize(GuiObject)`.
+
+### Verification
+
+- Every visible element recorded at 100% and compared at 150%: 0 of 85 off. At
+  125%: 2 of 195 off by 2px, both text widths, since Roblox rounds font sizes and
+  text cannot scale exactly linearly. Before the fix, 102 of 192 were off at 150%.
+- At 100%, 1 visible object sits on a fractional size, the progress bar fill, which
+  is proportional by design. The guide segments sit in one column (x = 579) with no
+  gaps between rows.
+- Notifications checked on screen at 100% and 200% in all four variants.
+
 ## Update 2026-09-24 (version: UNRESOLVED, see the note above)
 
 Denser layout, a reworked sidebar, three new themes, light theme fixes and a
@@ -140,9 +197,10 @@ segmented watermark. Numbers are measured in game unless a line says otherwise.
 - Sub-tabs in game at 200% scale: the stem and trunk sit in one column with 0 gaps
   from the parent row through the last child; switching the open child moves the
   lit path correctly; no empty gap under expanded groups.
-- The 20px row change was checked by geometry only (checkbox 16px with 2px margins,
-  switch track 14px, key picker 18px, swatch 16px, all on whole pixels). It has not
-  been seen on screen, because the test client was busy with another script.
+- The 20px row change was first checked by geometry only (checkbox 16px with 2px
+  margins, switch track 14px, key picker 18px, swatch 16px, all on whole pixels).
+  It was seen on screen on 2026-09-25 at 100% and 200%: checkbox, key picker and
+  plain rows sit at an even pitch.
 - `tests/check.ps1` was not run; the luau toolchain is not installed here.
 
 ## Session changes (version: UNRESOLVED, see the note above)

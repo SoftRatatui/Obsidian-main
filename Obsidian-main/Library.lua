@@ -306,7 +306,7 @@ local Library = {
         MaxVisible = 4,
         DefaultDuration = 4,
         Accent = false,
-        ShowProgress = true,
+        ShowProgress = false,
         Dismissible = false,
     },
     NotificationAnchor = "Screen",
@@ -19733,7 +19733,7 @@ function Library:Notify(...)
         return Data.Title == "" and Library.Scheme.FontColor or Library.Scheme.MutedFontColor
     end
 
-    local SlideOffset = Library.NotifySide == "Left" and -14 or 14
+    local SlideOffset = Library.NotifySide == "Left" and -10 or 10
     local Root = New("Frame", { BackgroundTransparency = 1, Parent = NotificationArea })
     local Holder = New("CanvasGroup", {
         BackgroundColor3 = "MainColor", ClipsDescendants = true, GroupTransparency = 1,
@@ -19756,24 +19756,20 @@ function Library:Notify(...)
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = Holder,
     })
 
+    local IsStatus = Data.Variant == "success" or Data.Variant == "warning" or Data.Variant == "error" or Data.Variant == "danger"
     local IconName = Info.BigIcon or Info.Icon
-    if IconName == nil then
-        IconName = (Data.Variant == "error" or Data.Variant == "danger") and "circle-x"
+    if IconName == nil and IsStatus then
+        IconName = Data.Variant == "success" and "circle-check"
             or Data.Variant == "warning" and "triangle-alert"
-            or Data.Variant == "success" and "circle-check"
-            or "info"
+            or "circle-x"
     end
     local IconData = IconName and Library:GetCustomIcon(IconName) or nil
-    local IconTile = New("Frame", {
-        BackgroundColor3 = AccentColor, BackgroundTransparency = 0.84, BorderSizePixel = 0,
-        Visible = IconData ~= nil, Parent = Holder,
-    })
-    New("UICorner", { CornerRadius = UDim.new(0, 5), Parent = IconTile })
     local Icon = New("ImageLabel", {
         BackgroundTransparency = 1, Image = IconData and IconData.Url or "",
         ImageRectOffset = IconData and IconData.ImageRectOffset or Vector2.zero,
         ImageRectSize = IconData and IconData.ImageRectSize or Vector2.zero,
-        ImageColor3 = Info.IconColor or AccentColor, Parent = IconTile,
+        ImageColor3 = Info.IconColor or (IsStatus and AccentColor or "FontColor"),
+        Visible = IconData ~= nil, Parent = Holder,
     })
     local Close = New("TextButton", { BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = Holder })
     local CloseData = Library:GetIcon("x")
@@ -19796,12 +19792,12 @@ function Library:Notify(...)
     local Started = os.clock()
     local Paused, PausedRemaining = false, 0
 
-    local CounterPill = New("Frame", { BackgroundColor3 = ResolveAccentColor, Visible = false, ZIndex = 6, Parent = Holder })
+    local CounterPill = New("Frame", { BackgroundColor3 = "ElementColor", BorderSizePixel = 0, Visible = false, ZIndex = 6, Parent = Holder })
     New("UICorner", { CornerRadius = UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)), Parent = CounterPill })
     local CounterLabel = New("TextLabel", {
         BackgroundTransparency = 1, FontFace = function() return Library.Scheme.Font end,
         RichText = false, Text = "", Size = UDim2.fromScale(1, 1),
-        TextColor3 = function() return Library:GetContrastColor(ResolveAccentColor()) end,
+        TextColor3 = "MutedFontColor",
         TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
         ZIndex = 6, Parent = CounterPill,
     })
@@ -19889,8 +19885,8 @@ function Library:Notify(...)
         local Width = math.min(Data.Width, AvailableWidth)
         local Padding = math.min(Data.Padding, math.max(0, math.floor((Width - 1) / 2)))
         local IconSize = Info.BigIcon and 24 or 16
-        local TileSize = IconData and IconSize + 12 or 0
-        local Left = Padding + (IconData and TileSize + 10 or 0) + (Data.Accent and 4 or 0)
+        local Inset = Padding + (Data.Accent and 4 or 0)
+        local Left = Inset + (IconData and IconSize + 8 or 0)
         local CounterText = ""
         local CounterWidth = 0
         if Data.Count and Data.Count > 1 then
@@ -19905,11 +19901,15 @@ function Library:Notify(...)
         local DescriptionSize = Title.Visible and Data.DescriptionTextSize or Data.TitleTextSize
         Title.TextSize, Desc.TextSize = Data.TitleTextSize, DescriptionSize
         Desc.TextColor3 = ResolveDescriptionColor()
-        local _, TitleHeight = Library:GetTextBounds(Data.Title, Library.Scheme.Font, Data.TitleTextSize, TextWidth)
-        local _, DescHeight = Library:GetTextBounds(Data.Description, Library.Scheme.Font, DescriptionSize, TextWidth)
+        local RenderScale = Library:GetEffectiveScale(Holder)
+        local function MeasureHeight(Text, Size, BoxWidth)
+            local _, Height = Library:GetTextBounds(Text, Library.Scheme.Font, Size * RenderScale, BoxWidth * RenderScale)
+            return math.ceil(Height / RenderScale)
+        end
+        local TitleHeight = Title.Visible and MeasureHeight(Data.Title, Data.TitleTextSize, TextWidth) or 0
+        local DescHeight = Desc.Visible and MeasureHeight(Data.Description, DescriptionSize, TextWidth) or 0
+        local FirstLine = MeasureHeight("Ag", Title.Visible and Data.TitleTextSize or DescriptionSize, 999)
         if Data.Destroyed then Resizing = false; return Data end
-        TitleHeight = Title.Visible and math.ceil(TitleHeight) or 0
-        DescHeight = Desc.Visible and math.ceil(DescHeight) or 0
         local Gap = Title.Visible and Desc.Visible and 2 or 0
         Timer.Visible = Data.ShowProgress and (Data.Steps ~= nil or (not Data.Persist and typeof(Data.Time) ~= "Instance"))
         if Timer.Visible and not Data.Steps and typeof(Data.Time) == "number" then
@@ -19927,7 +19927,7 @@ function Library:Notify(...)
         TitleHeight = math.min(TitleHeight, MaxTextHeight)
         DescHeight = math.min(DescHeight, math.max(0, MaxTextHeight - TitleHeight - Gap))
         local TextHeight = TitleHeight + Gap + DescHeight
-        local ContentHeight = math.max(TextHeight, TileSize, Data.Dismissible and 12 or 1)
+        local ContentHeight = math.max(TextHeight, IconData and IconSize or 0, Data.Dismissible and 12 or 1)
         local ActionCount = #Data.Actions
         local ActionGap = 8
         local ActionHeight = ActionCount > 0 and math.max(26, Library:Metric("Row", 26)) or 0
@@ -19935,22 +19935,27 @@ function Library:Notify(...)
         Data.Height = math.min(AvailableHeight, ContentHeight + Padding * 2 + BottomExtra)
         Root.Size = UDim2.fromOffset(Width, Data.Height)
         Corner.CornerRadius = UDim.new(0, Data.CornerRadius)
-        local Inset = Padding + (Data.Accent and 4 or 0)
         local TextTop = Padding + math.max(0, math.floor((ContentHeight - TextHeight) / 2))
+        local function OnFirstLine(Size)
+            return TextTop + math.floor((FirstLine - Size) / 2)
+        end
         Title.Position, Title.Size = UDim2.fromOffset(Left, TextTop), UDim2.fromOffset(TextWidth, TitleHeight)
         Desc.Position, Desc.Size = UDim2.fromOffset(Left, TextTop + TitleHeight + Gap), UDim2.fromOffset(TextWidth, DescHeight)
-        IconTile.Visible = IconData ~= nil
-        IconTile.Position, IconTile.Size = UDim2.fromOffset(Inset, Padding), UDim2.fromOffset(TileSize, TileSize)
-        Icon.Position, Icon.Size = UDim2.fromOffset(6, 6), UDim2.fromOffset(IconSize, IconSize)
+        Icon.Visible = IconData ~= nil
+        Icon.Position = UDim2.fromOffset(Inset, math.max(Padding, OnFirstLine(IconSize)))
+        Icon.Size = UDim2.fromOffset(IconSize, IconSize)
         Close.Visible = Data.Dismissible
-        Close.Position, Close.Size = UDim2.fromOffset(math.max(0, Width - Padding - 18), math.max(0, TextTop - 6)), UDim2.fromOffset(24, 24)
+        Close.Position, Close.Size = UDim2.fromOffset(math.max(0, Width - Padding - 18), math.max(0, OnFirstLine(12) - 6)), UDim2.fromOffset(24, 24)
         CounterPill.Visible = CounterWidth > 0
         if CounterWidth > 0 then
             local CounterHeight = math.max(14, Data.DescriptionTextSize + 4)
             CounterLabel.TextSize = Data.DescriptionTextSize
             CounterLabel.Text = CounterText
             CounterPill.Size = UDim2.fromOffset(CounterWidth, CounterHeight)
-            CounterPill.Position = UDim2.fromOffset(math.max(Padding, Width - Padding - (Data.Dismissible and 20 or 0) - CounterWidth), TextTop)
+            CounterPill.Position = UDim2.fromOffset(
+                math.max(Padding, Width - Padding - (Data.Dismissible and 20 or 0) - CounterWidth),
+                math.max(0, OnFirstLine(CounterHeight))
+            )
         end
         ActionRow.Visible = ActionCount > 0
         if ActionCount > 0 then

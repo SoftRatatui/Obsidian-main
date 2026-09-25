@@ -1334,16 +1334,22 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 
 ## Notifications
 
-A card is a 280px panel with an outline, a tinted icon tile on the left, a 13px
-title, a 12px muted description, and a 2px countdown line along the whole bottom
-edge, just inside the outline. The line is cut from a shape with the card's own
-corner radius, so its ends follow the rounded corners instead of poking past
-them. The tile and the line take the variant colour. A card with only one line of text
-shows it in the body colour at title size, centred against the tile.
+A card is a plain 280px panel with the popup surface, a thin outline, a 13px
+title in the body colour and a 12px muted description. Status variants add a
+16px icon in their colour, centred on the first line of text; a default card has
+no icon unless you pass one. A card with a single line of text shows it in the
+body colour at title size.
 
-Cards slide in 14px from the screen edge while fading in, and slide back out when
-they close. The countdown pauses while the cursor is over a card and resumes from
+Text is measured at the scale it is drawn at, so the padding under the last line
+is the same on every card and at every UI scale.
+
+Cards slide in 10px from the screen edge while fading in, and slide back out when
+they close. The timer pauses while the cursor is over a card and resumes from
 where it stopped, so a message cannot vanish while it is being read.
+
+With `ShowProgress = true`, or with `Steps`, a 2px line runs along the bottom
+edge just inside the outline. It is cut from a shape with the card's corner
+radius, so its ends follow the rounded corners.
 
 ```luau
 Library:SetNotificationOptions({
@@ -1358,7 +1364,7 @@ Library:SetNotificationOptions({
     MaxVisible = 4,
     DefaultDuration = 4,
     Accent = false,
-    ShowProgress = true,
+    ShowProgress = false,
     Dismissible = false,
 })
 
@@ -1379,7 +1385,7 @@ Library:Notify({
 | `Margin` / `Gap` | Screen margin 0 to 40; stack gap 0 to 24. |
 | `MaxVisible` | 1 to 20. The oldest cards also close when the stack exceeds the viewport height. This includes persistent cards. |
 | `DefaultDuration` | Nonnegative seconds; `Time` overrides this per notification. |
-| `Accent` / `ShowProgress` / `Dismissible` | The leading accent bar (off), the bottom countdown line (on), and the close button (off). |
+| `Accent` / `ShowProgress` / `Dismissible` | The leading accent bar, the bottom countdown line, and the close button. All off by default. |
 
 Changes to the library font or global appearance update open cards. Notification text binds directly to `Library.Scheme.Font`; RichText is disabled so content cannot silently replace its weight or styling. A card's explicit `Width`, text sizes, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
 
@@ -1387,12 +1393,12 @@ Changes to the library font or global appearance update open cards. Notification
 
 | Variant | Colour | Default icon |
 | --- | --- | --- |
-| `Default` | `AccentColor` | `info` |
+| `Default` | `AccentColor` (progress line only) | none |
 | `Success` | `SuccessColor` | `circle-check` |
 | `Warning` | `WarningColor` | `triangle-alert` |
 | `Error`, `Danger` | `DestructiveColor` | `circle-x` |
 
-`Icon` replaces the default icon and `Icon = false` removes the tile. `IconColor` recolours the icon only. `AccentColor`, `TitleColor`, and `DescriptionColor` override colours. `BigIcon` uses a 24px icon in a 36px tile instead of the 16px icon in a 28px tile. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
+`Icon` sets or replaces the icon and `Icon = false` removes it. An icon on a default card uses the body text colour. `IconColor` recolours the icon only. `AccentColor`, `TitleColor`, and `DescriptionColor` override colours. `BigIcon` uses a 24px icon instead of the 16px one. A repeated notification shows its count in a small neutral badge on the right. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
 
 The returned controller supports `ChangeTitle(text)`, `ChangeDescription(text)`, `ChangeStep(number)` / `SetProgress(number)`, `Resize()`, and `Destroy(instant?)`. A title or description can be added after creation or cleared with an empty string. Calls after destruction do nothing. `Library:ClearNotifications()` also removes cards that are already fading out.
 
@@ -2007,7 +2013,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Added live `SetStyle`, `SetMinimal`, and `SetHighlighted` controllers to visual addons.
 - Added per-module `SetModuleStyle`, `GetModuleStyle`, `SetModuleMinimal`, and `SetModuleHighlighted` controls to addon windows, including custom highlight colors.
 - Added `ShowHeader`, `ShowBackground`, `ShowOutline`, and `ShowShadow` style controls for content-only and minimal module layouts.
-- Reworked notifications into 280px cards with a variant-coloured icon tile, 13px titles, 12px descriptions, a bottom countdown line that pauses on hover, a slide-in from the screen edge, a four-card limit, and optional close controls.
+- Reworked notifications into plain 280px cards: 13px title, 12px muted description, a 16px status icon only for success, warning and error, a timer that pauses on hover, a short slide-in from the screen edge, even padding at every UI scale, an optional full-width progress line, a four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
 - Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.
 

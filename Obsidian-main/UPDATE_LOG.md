@@ -59,19 +59,24 @@ UI scale fix. Numbers are measured in game unless a line says otherwise.
 
 ### Notifications
 
-- Each card has a tinted icon tile in the variant colour: `info` by default,
-  `circle-check` for success, `triangle-alert` for warning, `circle-x` for error and
-  danger. `Icon` replaces it, `Icon = false` removes it.
-- Title 13px in the body colour, description 12px muted. A card with a single line
-  of text shows it in the body colour at title size, centred against the tile.
-- A 2px countdown line runs along the whole bottom edge in the variant colour, just
-  inside the outline. It is cut from a shape with the card's corner radius, so its
-  ends follow the rounded corners (`ShowProgress` now defaults to on). The countdown
-  pauses while the cursor is over the card.
-- Cards slide in 14px from the screen edge while fading in, and slide back out. They
+- Cards are plain panels: title 13px in the body colour, description 12px muted,
+  thin outline. A card with a single line of text shows it at title size in the
+  body colour.
+- Status variants get a 16px icon in their colour (`circle-check`, `triangle-alert`,
+  `circle-x`), centred on the first line of text. Default cards have no icon unless
+  one is passed. An earlier draft of this update put every icon in a tinted tile and
+  gave every card a coloured bar, which read as generic; both are gone.
+- Text is measured at the scale it is drawn at. Before, a line that fit on screen at
+  200% could still be sized as two lines, leaving an empty strip under it. The space
+  under the last line now equals the padding on every card at 100%, 125% and 200%.
+- The timer pauses while the cursor is over a card.
+- Cards slide in 10px from the screen edge while fading in, and slide back out. They
   used to drop 3px.
-- New defaults: width 280, margin 10, gap 6, padding 10, corner radius 6, duration
-  4 s. The outline is a little stronger and the close icon brightens on hover.
+- The progress line (`ShowProgress`, off by default, or `Steps`) runs along the
+  whole bottom edge just inside the outline and follows the corner radius.
+- The repeat counter is a small neutral badge instead of an accent pill.
+- New defaults: width 280, margin 10, gap 6, padding 10, corner radius 6 (the card
+  radius used by the rest of the library), duration 4 s.
 
 ### UI scale
 

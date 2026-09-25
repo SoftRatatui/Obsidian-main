@@ -64,10 +64,10 @@ UI scale fix. Numbers are measured in game unless a line says otherwise.
   danger. `Icon` replaces it, `Icon = false` removes it.
 - Title 13px in the body colour, description 12px muted. A card with a single line
   of text shows it in the body colour at title size, centred against the tile.
-- A 2px countdown line runs along the bottom in the variant colour, inset by the
-  card padding so it lines up with the content and stays clear of the rounded
-  corners (`ShowProgress` now defaults to on). The countdown pauses while the cursor
-  is over the card.
+- A 2px countdown line runs along the whole bottom edge in the variant colour, just
+  inside the outline. It is cut from a shape with the card's corner radius, so its
+  ends follow the rounded corners (`ShowProgress` now defaults to on). The countdown
+  pauses while the cursor is over the card.
 - Cards slide in 14px from the screen edge while fading in, and slide back out. They
   used to drop 3px.
 - New defaults: width 280, margin 10, gap 6, padding 10, corner radius 6, duration
@@ -93,8 +93,9 @@ UI scale fix. Numbers are measured in game unless a line says otherwise.
   gaps between rows.
 - Notifications checked on screen at 100%, 200% and 300% in all four variants. A
   first draft drew the countdown line one layer below the card, so the card covered
-  it and only its ends showed past the rounded corners; the line now draws on the
-  card's own layer.
+  it and only its ends showed past the rounded corners. A second draft inset the
+  line by the padding, which read as a stub. The line now draws on the card's own
+  layer, spans the full width and follows the corner radius.
 
 ## Update 2026-09-24 (version: UNRESOLVED, see the note above)
 

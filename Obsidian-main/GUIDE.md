@@ -1335,10 +1335,10 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 ## Notifications
 
 A card is a 280px panel with an outline, a tinted icon tile on the left, a 13px
-title, a 12px muted description, and a 2px countdown line 1px above the bottom
-outline. The line is inset by the card padding, so it lines up with the tile and
-the text and stays clear of the rounded corners. The tile and the line take the
-variant colour. A card with only one line of text
+title, a 12px muted description, and a 2px countdown line along the whole bottom
+edge, just inside the outline. The line is cut from a shape with the card's own
+corner radius, so its ends follow the rounded corners instead of poking past
+them. The tile and the line take the variant colour. A card with only one line of text
 shows it in the body colour at title size, centred against the tile.
 
 Cards slide in 14px from the screen edge while fading in, and slide back out when

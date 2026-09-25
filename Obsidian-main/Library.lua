@@ -19786,9 +19786,13 @@ function Library:Notify(...)
     })
     local Timer = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, Parent = Holder })
     local Fill = New("Frame", {
-        BackgroundColor3 = AccentColor, BackgroundTransparency = 0.25, BorderSizePixel = 0,
+        BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true,
         Size = UDim2.fromScale(Data.Steps and 0 or 1, 1), Parent = Timer,
     })
+    local FillShape = New("Frame", {
+        BackgroundColor3 = AccentColor, BackgroundTransparency = 0.25, BorderSizePixel = 0, Parent = Fill,
+    })
+    local FillCorner = New("UICorner", { Parent = FillShape })
     local Started = os.clock()
     local Paused, PausedRemaining = false, 0
 
@@ -19978,7 +19982,13 @@ function Library:Notify(...)
         end
         Accent.Visible = Data.Accent
         Accent.Position, Accent.Size = UDim2.fromOffset(0, Padding), UDim2.fromOffset(2, math.max(1, Data.Height - Padding * 2))
-        Timer.Position, Timer.Size = UDim2.fromOffset(Padding, Data.Height - 3), UDim2.fromOffset(math.max(1, Width - Padding * 2), 2)
+        local EdgeInset = math.max(0, math.round(Stroke.Thickness))
+        local LineWidth = math.max(1, Width - EdgeInset * 2)
+        local LineRadius = math.max(0, Data.CornerRadius - EdgeInset)
+        local ShapeHeight = LineRadius * 2 + 2
+        Timer.Position, Timer.Size = UDim2.fromOffset(EdgeInset, Data.Height - EdgeInset - 2), UDim2.fromOffset(LineWidth, 2)
+        FillShape.Position, FillShape.Size = UDim2.fromOffset(0, 2 - ShapeHeight), UDim2.fromOffset(LineWidth, ShapeHeight)
+        FillCorner.CornerRadius = UDim.new(0, LineRadius)
         Resizing = false
         if Data.ResizePending then
             Data.ResizePending = false

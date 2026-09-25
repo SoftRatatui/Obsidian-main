@@ -19784,10 +19784,10 @@ function Library:Notify(...)
         ImageColor3 = "MutedFontColor", ImageTransparency = 0.3,
         Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(12, 12), Parent = Close,
     })
-    local Timer = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 3, Parent = Holder })
+    local Timer = New("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, Parent = Holder })
     local Fill = New("Frame", {
         BackgroundColor3 = AccentColor, BackgroundTransparency = 0.25, BorderSizePixel = 0,
-        Size = UDim2.fromScale(Data.Steps and 0 or 1, 1), ZIndex = 3, Parent = Timer,
+        Size = UDim2.fromScale(Data.Steps and 0 or 1, 1), Parent = Timer,
     })
     local Started = os.clock()
     local Paused, PausedRemaining = false, 0
@@ -19978,7 +19978,7 @@ function Library:Notify(...)
         end
         Accent.Visible = Data.Accent
         Accent.Position, Accent.Size = UDim2.fromOffset(0, Padding), UDim2.fromOffset(2, math.max(1, Data.Height - Padding * 2))
-        Timer.Position, Timer.Size = UDim2.fromOffset(0, Data.Height - 2), UDim2.fromOffset(Width, 2)
+        Timer.Position, Timer.Size = UDim2.fromOffset(Padding, Data.Height - 3), UDim2.fromOffset(math.max(1, Width - Padding * 2), 2)
         Resizing = false
         if Data.ResizePending then
             Data.ResizePending = false

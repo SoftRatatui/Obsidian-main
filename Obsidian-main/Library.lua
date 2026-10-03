@@ -873,7 +873,7 @@ function Library:GetFontPreset(Name: string): Font?
     for _, Preset in Library.FontPresets do
         if Preset.Name == Name then
             if Preset.Bundled then
-                if Library.DefaultFontError then
+                if Library.DefaultFontError and Library.DefaultFontError ~= "Downloading" then
                     return nil
                 end
                 return Library.DefaultFont
@@ -26592,18 +26592,23 @@ do
     else
         Library.DefaultFont = FallbackFont
         Library.DefaultFontError = "Downloading"
-        Library.CurrentFontName = "Gotham"
+        Library.CurrentFontName = "Inter"
         Library:SetThemeFont(FallbackFont)
 
         task.spawn(function()
             local Face, Problem = LoadDefaultFont()
             Library.DefaultFontError = Problem
-            if not Face or Library.Unloaded then
+            if Library.Unloaded then
+                return
+            end
+            if not Face then
+                if Library.CurrentFontName == "Inter" and Library.Scheme.Font == FallbackFont then
+                    Library.CurrentFontName = "Gotham"
+                end
                 return
             end
             Library.DefaultFont = Face
-            if Library.CurrentFontName == "Gotham" and Library.Scheme.Font == FallbackFont then
-                Library.CurrentFontName = "Inter"
+            if Library.CurrentFontName == "Inter" and Library.Scheme.Font == FallbackFont then
                 Library:SetThemeFont(Face)
             end
         end)

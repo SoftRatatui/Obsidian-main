@@ -117,6 +117,59 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 - [Addon recipes](#addon-recipes), [complete API reference](#complete-addon-api-reference), and [release checklist](#release-checklist)
 - [Runtime and advanced API](#runtime-and-advanced-api): reactivity, performance, declarative builder, registry, search, sub-tabs, touch, diagnostics, new controls, and performance numbers
 
+## Loading in production
+
+`dist/Library.lua` is the build hubs should load. It is one file holding the
+library, every addon and the Lucide icon module, minified with darklua: about
+930 KB for all of it, against 968 KB for the library source alone. Nothing in it
+needs the network at startup except the first download of the Inter font.
+
+Paste the block from `Loader.lua` at the top of a hub. It downloads
+`dist/Library.lua` like this:
+
+- It tries GitHub raw first, the freshest source. If no valid answer arrives
+  within 2 seconds, the next mirror starts in parallel: jsDelivr through Gcore,
+  Fastly, its main CDN and Cloudflare, then raw.githack and statically. The first
+  response that compiles wins, so a cut-off download or an HTML block page is
+  never executed.
+- Every successful download is saved to `MonHub/cache/Library.lua`. When no
+  mirror answers within 30 seconds, the cached copy is loaded instead, so a hub
+  that worked once keeps starting when GitHub is unreachable.
+
+```luau
+-- the MonHubLoad block from Loader.lua goes here
+local Library = MonHubLoad("Library.lua")
+local ThemeManager = Library.Addons.ThemeManager
+local SaveManager = Library.Addons.SaveManager
+```
+
+`Library.Addons.Name` runs the bundled addon the first time it is read and then
+returns the same table every time, so unused addons cost nothing at startup.
+`Library:GetAddon(Name)` does the same, `Library:GetAddonNames()` lists what the
+build contains, and `Library.Bundled` is true only in the build. Loading
+`Library.lua` from the repository root still works as before and has no bundled
+addons.
+
+Inside the library, every download from raw.githubusercontent.com (the default
+font, image assets, the icon module when not bundled) goes through the same
+mirror list, jsDelivr first because those files never change. When the Inter font
+is not cached yet, the window opens in Gotham immediately and switches to Inter
+once the download finishes, instead of waiting for it.
+
+### Building
+
+```
+python tools/build.py
+```
+
+The build needs darklua (`aftman add seaofvoices/darklua`). It writes
+`dist/Library.lua`, a standalone minified copy of each addon under
+`dist/addons/`, and `dist/sizes.json`. Rules are in `.darklua.json`: comments,
+whitespace and type annotations are removed, locals are renamed, constant
+expressions are folded, and lines stay under 240 characters because some
+executors fail on very long lines. Rebuild after every source change; the
+sources stay readable and are the files to edit.
+
 ## Quick start
 
 ```luau
@@ -1992,6 +2045,8 @@ Run local checks with Luau's compiler and interpreter installed:
 
 ### 0.0.1-release-3
 
+- Added the darklua build `dist/Library.lua` with every addon and the icon module inside (`Library.Addons`, `Library:GetAddon`), and `Loader.lua`, which downloads it through seven mirrors and falls back to a cached copy.
+- Routed the library's own downloads through the same mirrors with a time limit, and stopped the first launch from waiting on the Inter font download.
 - Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
 - Made the selected sidebar tab fill its row edge to edge with a full-height accent bar, and added `Window:AddTabSeparator` for captioned or plain sidebar sections.
 - Reworked sub-tabs: 28px indented rows on a single 1px guide under the header icon, with the open child's guide segment in the accent colour. A tab with children is a group header that toggles its group, rests greyer (`Library:GetRestingTransparency`) and is never highlighted.

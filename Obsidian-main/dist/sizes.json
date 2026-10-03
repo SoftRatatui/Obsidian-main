@@ -1,0 +1,20 @@
+{
+  "Library.lua": 949419,
+  "addons/AssetCatalog.lua": 48746,
+  "addons/CharacterTrail.lua": 10365,
+  "addons/CollectionModel.lua": 4639,
+  "addons/DashboardWindow.lua": 31855,
+  "addons/DrawingESPPreview.lua": 4756,
+  "addons/esp/ESP.lua": 33254,
+  "addons/esp/MonHubUI.lua": 8204,
+  "addons/FixedR6Preview.lua": 6086,
+  "addons/ImageGallery.lua": 30090,
+  "addons/ImagePreview.lua": 15428,
+  "addons/MetricsPanel.lua": 13148,
+  "addons/Onboarding.lua": 17816,
+  "addons/SaveManager.lua": 48632,
+  "addons/TextureGallery.lua": 17086,
+  "addons/ThemeManager.lua": 30971,
+  "addons/TracerPreview.lua": 7802,
+  "addons/VisualPreview.lua": 32397
+}

@@ -51,6 +51,25 @@
 
 ## Загрузка
 
+Для хабов берите сборку `dist/Library.lua`: в одном файле библиотека, все аддоны и
+иконки, сжато darklua. Вставьте в начало хаба блок из `Loader.lua`. Он качает
+сборку с GitHub, а если тот не отвечает за 2 секунды, параллельно пробует
+зеркала jsDelivr (Gcore, Fastly, CDN, Cloudflare), raw.githack и statically.
+Последняя рабочая версия сохраняется в `MonHub/cache/`, и если не отвечает ни
+одно зеркало, хаб запускается из кэша. Это нужно в первую очередь игрокам из
+России без VPN.
+
+```luau
+-- блок MonHubLoad из Loader.lua
+local Library = MonHubLoad("Library.lua")
+local ThemeManager = Library.Addons.ThemeManager
+local SaveManager = Library.Addons.SaveManager
+```
+
+После правок в исходниках пересоберите: `python tools/build.py` (нужен darklua).
+
+Старый способ ниже по-прежнему работает, но качает несжатые файлы только с GitHub.
+
 ```luau
 local BASE = "https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/"
 local CACHE = "0.0.1-release-3-configs-2-" .. tostring(os.time())

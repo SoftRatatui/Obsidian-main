@@ -35,6 +35,61 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-10-03 (version: UNRESOLVED, see the note above)
+
+Loading reliability, mainly for players in Russia without a VPN, where
+raw.githubusercontent.com is slow or cut off.
+
+### What was wrong
+
+- Startup downloaded the Lucide icon module from raw.githubusercontent.com,
+  synchronously and with no fallback. When GitHub hung, the whole library hung.
+- The first launch also waited for the Inter font (427 KB) from the same host.
+- Hubs downloaded 968 KB of library source plus each addon separately, from
+  GitHub only. A throttled connection often cut the file short, and running a
+  truncated file fails with "attempt to call a nil value".
+
+### Build
+
+- `python tools/build.py` runs darklua and writes `dist/Library.lua`: the library,
+  all 17 addons and the icon module in one file, 927 KB in total against 968 KB
+  for the library source alone. Minified copies of each addon go to
+  `dist/addons/`. Lines stay under 240 characters.
+- Bundled addons are reached through `Library.Addons.Name` (or
+  `Library:GetAddon`). Each one runs the first time it is read, so unused addons
+  cost nothing. `Library:GetAddonNames()` lists them, `Library.Bundled` tells the
+  build from the source.
+- The sources are unchanged in layout and stay the files to edit. Loading
+  `Library.lua` and `addons/*.lua` from the repository root works as before.
+
+### Downloads
+
+- `Loader.lua` is a block to paste into hubs. It tries GitHub raw, then after
+  2 seconds without an answer starts the next mirror in parallel: jsDelivr via
+  Gcore, Fastly, its main CDN and Cloudflare, then raw.githack and statically.
+  Only a response that compiles is accepted. Each good download is cached in
+  `MonHub/cache/`, and that copy is loaded when every mirror fails.
+- Inside the library, every raw.githubusercontent.com download (font, image
+  assets, the icon module when not bundled) uses the same mirrors, jsDelivr first,
+  with a time limit. A cached icon module that no longer compiles is downloaded
+  again instead of breaking the icons.
+- When the Inter font is not cached, the window opens in Gotham at once and
+  switches to Inter in the background. It does not switch if the font was changed
+  in the meantime.
+
+### Verification
+
+- In game: the build loads, all 17 addons start from it without errors, icons and
+  the Inter font work, ThemeManager and SaveManager build their sections, and the
+  menu looks the same as from the sources.
+- All seven mirrors answered from the test client. A font download through them
+  took 0.58 s; a missing file went through all seven and gave up in 3.8 s.
+- The loader pointed at the pushed repository loaded in 0.54 s; pointed at a
+  repository that does not exist, it gave up on all mirrors in 3.4 s and loaded
+  the cached copy.
+- Not tested from inside Russia. Which mirrors are reachable there changes over
+  time; the loader does not depend on any single one.
+
 ## Update 2026-09-25 (version: UNRESOLVED, see the note above)
 
 Group headers in the sidebar, a simpler sub-tab guide, new notifications, and the

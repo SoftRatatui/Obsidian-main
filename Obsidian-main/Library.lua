@@ -1,3 +1,8 @@
+local Bundle = ...
+if type(Bundle) ~= "table" or Bundle.MonHubBundle ~= true then
+    Bundle = nil
+end
+
 local function IsFunction(Value: any): boolean
     return type(Value) == "function"
 end
@@ -52,6 +57,81 @@ local function RequestGet(URL: string): (boolean, string)
     end
 
     return false, RequestError or tostring(Response)
+end
+
+local MirrorHosts = {
+    "https://gcore.jsdelivr.net/gh/%s/%s@%s/%s",
+    "https://fastly.jsdelivr.net/gh/%s/%s@%s/%s",
+    "https://cdn.jsdelivr.net/gh/%s/%s@%s/%s",
+    "https://testingcf.jsdelivr.net/gh/%s/%s@%s/%s",
+    false,
+    "https://raw.githack.com/%s/%s/%s/%s",
+    "https://cdn.statically.io/gh/%s/%s/%s/%s",
+}
+
+local function MirrorURLs(URL: string): { string }
+    local Owner, Repo, Rest = string.match(URL, "^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/(.+)$")
+    local Ref, Path
+    if Owner then
+        local Clean = string.gsub(Rest, "%?.*$", "")
+        Ref, Path = string.match(Clean, "^refs/heads/([^/]+)/(.+)$")
+        if not Ref then
+            Ref, Path = string.match(Clean, "^([^/]+)/(.+)$")
+        end
+    end
+    if not Ref then
+        return { URL }
+    end
+
+    local List = {}
+    for _, Host in MirrorHosts do
+        table.insert(List, Host and string.format(Host, Owner, Repo, Ref, Path) or URL)
+    end
+    return List
+end
+
+local function FetchFirst(URL: string, Validate: ((string) -> boolean)?, Deadline: number?): (boolean, string)
+    local URLs = MirrorURLs(URL)
+    local State = { Running = 0, Body = nil, Error = nil }
+
+    local function Start(Mirror)
+        State.Running += 1
+        task.spawn(function()
+            local Success, Body = RequestGet(Mirror)
+            State.Running -= 1
+            if State.Body then
+                return
+            end
+            if Success and (not Validate or Validate(Body)) then
+                State.Body = Body
+            else
+                State.Error = Success and "Response failed validation" or tostring(Body)
+            end
+        end)
+    end
+
+    local Limit = os.clock() + (Deadline or 15)
+    for Index, Mirror in URLs do
+        Start(Mirror)
+        if Index < #URLs then
+            local Next = os.clock() + 1.5
+            while not State.Body and State.Running > 0 and os.clock() < Next and os.clock() < Limit do
+                task.wait()
+            end
+        end
+        if State.Body or os.clock() >= Limit then
+            break
+        end
+    end
+
+    while not State.Body and State.Running > 0 and os.clock() < Limit do
+        task.wait()
+    end
+
+    if State.Body then
+        return true, State.Body
+    end
+    return false, State.Error or "Request timed out"
 end
 
 local CloneRefValue = GetExecutorGlobal("cloneref") or GetExecutorGlobal("clonereference")
@@ -228,7 +308,7 @@ do
         end
 
         local success, errorMessage = pcall(function()
-            local Downloaded, Content = RequestGet(AssetData.URL)
+            local Downloaded, Content = FetchFirst(AssetData.URL, nil, 20)
             if not Downloaded then
                 error(Content)
             end
@@ -643,7 +723,7 @@ function Library:LoadCustomFont(Name: string, URL: string, Weight: number?): (Fo
     end
 
     if ShouldDownload then
-        local Downloaded, FontData = RequestGet(URL)
+        local Downloaded, FontData = FetchFirst(URL, IsFontData, 25)
         if not Downloaded or not IsFontData(FontData) then
             return nil, "Downloaded data is not a valid font"
         end
@@ -3149,19 +3229,31 @@ type IconModule = {
 }
 
 local FetchIcons, Icons = pcall(function()
+    if Bundle and type(Bundle.Icons) == "function" then
+        return Bundle.Icons()
+    end
+
     local SourceURL = "https://raw.githubusercontent.com/mstudio45/lucide-roblox-direct/refs/heads/main/source.lua"
     local CachePath = "Obsidian/cache/lucide-2026-08-03.lua"
     local Source
 
+    if not NativeLoadString then
+        error("loadstring is unavailable")
+    end
+
+    local function Compiles(Text)
+        return type(Text) == "string" and #Text > 1024 and NativeLoadString(Text) ~= nil
+    end
+
     if readfile and isfile and isfile(CachePath) then
         local Success, CachedSource = pcall(readfile, CachePath)
-        if Success and typeof(CachedSource) == "string" and #CachedSource > 0 then
+        if Success and Compiles(CachedSource) then
             Source = CachedSource
         end
     end
 
     if not Source then
-        local Downloaded, Result = RequestGet(SourceURL)
+        local Downloaded, Result = FetchFirst(SourceURL, Compiles, 15)
         if not Downloaded then
             error(Result)
         end
@@ -3178,12 +3270,6 @@ local FetchIcons, Icons = pcall(function()
                 writefile(CachePath, Source)
             end)
         end
-    end
-
-    
-    
-    if not NativeLoadString then
-        error("loadstring is unavailable")
     end
 
     local FastSource = "local writefile, isfolder, makefolder, getcustomasset = nil, nil, nil, nil\n" .. Source
@@ -26469,16 +26555,60 @@ function Library:Unload()
     end
 end
 
-local FontLoaded, DefaultFont, DefaultFontError = pcall(Library.LoadCustomFont, Library,
-    Library.DefaultFontName,
-    Library.DefaultFontURL,
-    Library.DefaultFontWeight
-)
-if not FontLoaded then DefaultFont, DefaultFontError = nil, tostring(DefaultFont) end
-Library.DefaultFont = DefaultFont or Font.fromEnum(Enum.Font.GothamMedium)
-Library.DefaultFontError = DefaultFontError
-Library.CurrentFontName = DefaultFontError and "Gotham" or "Inter"
-Library:SetThemeFont(Library.DefaultFont)
+do
+    local FallbackFont = Font.fromEnum(Enum.Font.GothamMedium)
+
+    local function LoadDefaultFont()
+        local Loaded, Face, Problem = pcall(Library.LoadCustomFont, Library,
+            Library.DefaultFontName,
+            Library.DefaultFontURL,
+            Library.DefaultFontWeight
+        )
+        if not Loaded then
+            return nil, tostring(Face)
+        end
+        return Face, Problem
+    end
+
+    local function IsDefaultFontCached()
+        if not IsFunction(NativeIsFile) or not IsFunction(NativeReadFile) then
+            return false
+        end
+        local Path = "MonHub/assets/" .. string.gsub(Library.DefaultFontName, "[^%w_%-]", "_") .. ".ttf"
+        local Checked, Exists = pcall(NativeIsFile, Path)
+        if not Checked or not Exists then
+            return false
+        end
+        local Read, Data = pcall(NativeReadFile, Path)
+        return Read and IsFontData(Data)
+    end
+
+    if IsDefaultFontCached() then
+        local Face, Problem = LoadDefaultFont()
+        Library.DefaultFont = Face or FallbackFont
+        Library.DefaultFontError = Problem
+        Library.CurrentFontName = Problem and "Gotham" or "Inter"
+        Library:SetThemeFont(Library.DefaultFont)
+    else
+        Library.DefaultFont = FallbackFont
+        Library.DefaultFontError = "Downloading"
+        Library.CurrentFontName = "Gotham"
+        Library:SetThemeFont(FallbackFont)
+
+        task.spawn(function()
+            local Face, Problem = LoadDefaultFont()
+            Library.DefaultFontError = Problem
+            if not Face or Library.Unloaded then
+                return
+            end
+            Library.DefaultFont = Face
+            if Library.CurrentFontName == "Gotham" and Library.Scheme.Font == FallbackFont then
+                Library.CurrentFontName = "Inter"
+                Library:SetThemeFont(Face)
+            end
+        end)
+    end
+end
 
 Library.TabSwipeEnabled = Library.IsMobile
 Library.HapticsEnabled = Library.IsMobile and Library.Env.Haptics == true
@@ -26498,6 +26628,34 @@ Library:OnThemeChanged(function()
         end
     end
 end)
+
+Library.Bundled = Bundle ~= nil
+Library.Addons = setmetatable({}, {
+    __index = function(Self, Name)
+        local Factory = Bundle and Bundle.Modules[Name]
+        if type(Factory) ~= "function" then
+            return nil
+        end
+        local Module = Factory()
+        rawset(Self, Name, Module)
+        return Module
+    end,
+})
+
+function Library:GetAddon(Name: string): any
+    return Library.Addons[Name]
+end
+
+function Library:GetAddonNames(): { string }
+    local Names = {}
+    if Bundle then
+        for Name in Bundle.Modules do
+            table.insert(Names, Name)
+        end
+        table.sort(Names)
+    end
+    return Names
+end
 
 getgenv().Library = Library
 return Library

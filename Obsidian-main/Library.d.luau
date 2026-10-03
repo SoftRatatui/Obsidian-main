@@ -2065,6 +2065,10 @@ export type Library = {
         Segments: { string | { Text: string?, Icon: string?, Accent: boolean? } }?
     ) -> Library,
     GetIdleTransparency: (self: Library, Base: number?) -> number,
+    Bundled: boolean,
+    Addons: { [string]: any },
+    GetAddon: (self: Library, Name: string) -> any,
+    GetAddonNames: (self: Library) -> { string },
     GetRestingTransparency: (self: Library, Button: Instance?) -> number,
     GetEffectiveScale: (self: Library, Target: Instance?) -> number,
     LogicalSize: (self: Library, Target: GuiObject) -> Vector2,

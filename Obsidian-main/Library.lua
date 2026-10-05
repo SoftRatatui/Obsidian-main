@@ -517,9 +517,9 @@ local Library = {
             Swatch = 16,
             LabelRow = 18,
             TrackRow = 14,
-            Track = 6,
-            Thumb = 10,
-            ThumbHover = 12,
+            Track = 8,
+            Thumb = 12,
+            ThumbHover = 14,
             ControlGap = 4,
         },
         Stroke = {
@@ -1716,7 +1716,7 @@ Library.DensityPresets = {
         NavigationHeight = 32,
         Grid = {
             Row = 20, RowGap = 6, Indicator = 16, IndicatorGap = 9, Swatch = 16,
-            LabelRow = 18, TrackRow = 14, Track = 6, Thumb = 10, ThumbHover = 12, ControlGap = 4,
+            LabelRow = 18, TrackRow = 14, Track = 8, Thumb = 12, ThumbHover = 14, ControlGap = 4,
         },
     },
     Comfortable = {
@@ -1724,7 +1724,7 @@ Library.DensityPresets = {
         NavigationHeight = 44,
         Grid = {
             Row = 30, RowGap = 8, Indicator = 18, IndicatorGap = 10, Swatch = 18,
-            LabelRow = 20, TrackRow = 18, Track = 6, Thumb = 12, ThumbHover = 14, ControlGap = 6,
+            LabelRow = 20, TrackRow = 18, Track = 8, Thumb = 14, ThumbHover = 16, ControlGap = 6,
         },
     },
     Touch = {
@@ -1732,7 +1732,7 @@ Library.DensityPresets = {
         NavigationHeight = 44,
         Grid = {
             Row = 44, RowGap = 10, Indicator = 24, IndicatorGap = 12, Swatch = 24,
-            LabelRow = 22, TrackRow = 20, Track = 8, Thumb = 18, ThumbHover = 20, ControlGap = 8,
+            LabelRow = 22, TrackRow = 20, Track = 10, Thumb = 18, ThumbHover = 20, ControlGap = 8,
         },
     },
 }
@@ -13407,6 +13407,7 @@ do
     end
 
     local function AttachValidation(Control, Info, Groupbox, Holder, Stroke)
+        local RestTransparency = Stroke and Stroke.Transparency or 0
         Control.Valid = true
 
         if typeof(Info.Validate) ~= "function" then
@@ -13446,6 +13447,7 @@ do
                 Library.Registry[Stroke].Color = "DangerColor"
                 Library:PlayTween(Stroke, "Validate", Library.TweenInfo, {
                     Color = Library.Scheme.DangerColor,
+                    Transparency = 0,
                 })
             end
             Resize()
@@ -13461,6 +13463,7 @@ do
                 Library.Registry[Stroke].Color = "OutlineColor"
                 Library:PlayTween(Stroke, "Validate", Library.TweenInfo, {
                     Color = Library.Scheme.OutlineColor,
+                    Transparency = RestTransparency,
                 })
             end
             Resize()
@@ -13561,12 +13564,12 @@ do
             Parent = Bar,
         })
         New("UICorner", {
-            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
+            CornerRadius = UDim.new(1, 0),
             Parent = Track,
         })
         local TrackStroke = New("UIStroke", {
             Color = "OutlineColor",
-            Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
+            Transparency = 1,
             Parent = Track,
         })
 
@@ -13606,18 +13609,8 @@ do
             ZIndex = Bar.ZIndex + 1,
             Parent = Track,
         })
-        local FillGradient = New("UIGradient", {
-            Color = function()
-                return ColorSequence.new(
-                    Library.Scheme.AccentColor:Lerp(Library.Scheme.FontColor, 0.12),
-                    Library.Scheme.AccentColor
-                )
-            end,
-            Enabled = not Slider.Disabled,
-            Parent = Fill,
-        })
         New("UICorner", {
-            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
+            CornerRadius = UDim.new(1, 0),
             Parent = Fill,
         })
 
@@ -13631,11 +13624,6 @@ do
         })
         New("UICorner", {
             CornerRadius = UDim.new(1, 0),
-            Parent = Thumb,
-        })
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Thickness = 1,
             Parent = Thumb,
         })
 
@@ -13669,7 +13657,6 @@ do
 
             Fill.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.AccentColor
             Library.Registry[Fill].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "AccentColor"
-            FillGradient.Enabled = not Slider.Disabled
             Thumb.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.FontColor
             Library.Registry[Thumb].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "FontColor"
         end
@@ -13776,7 +13763,7 @@ do
 
             Bar.Active = not Slider.Disabled
             if Slider.Disabled then
-                Thumb.Size = UDim2.fromOffset(10, 10)
+                Thumb.Size = UDim2.fromOffset(ThumbSize, ThumbSize)
             end
             Slider:UpdateColors()
         end
@@ -16846,34 +16833,16 @@ do
         end
 
         local Track = New("Frame", {
-            BackgroundColor3 = "MainColor", BorderSizePixel = 0, ClipsDescendants = true,
+            BackgroundColor3 = "MainColor", BorderSizePixel = 0,
             Position = UDim2.new(0, TrackInset, 1, -(TrackRow - Library:CenterOffset(TrackRow, TrackHeight))),
             Size = UDim2.new(1, -TrackInset * 2, 0, TrackHeight), Parent = Row.Instance,
         })
-        New("UICorner", {
-            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
-            Parent = Track,
-        })
-        local TrackStroke = New("UIStroke", {
-            Color = "OutlineColor",
-            Transparency = Library:GetDesignToken("Stroke.SoftTransparency", 0.46),
-            Parent = Track,
-        })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Track })
         local Fill = New("Frame", {
             BackgroundColor3 = AccentColor, BorderSizePixel = 0,
             Size = UDim2.fromScale(0, 1), Parent = Track,
         })
-        New("UIGradient", {
-            Color = function()
-                local Base = AccentColor()
-                return ColorSequence.new(Base:Lerp(Library.Scheme.FontColor, 0.12), Base)
-            end,
-            Parent = Fill,
-        })
-        New("UICorner", {
-            CornerRadius = function() return UDim.new(0, Library:GetDesignToken("Radius.Indicator", 3)) end,
-            Parent = Fill,
-        })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Fill })
         Row.Fill = Fill
         Row.Track = Track
 
@@ -16899,8 +16868,6 @@ do
         if SegmentCount then
             Fill.Visible = false
             Track.BackgroundTransparency = 1
-            Track.ClipsDescendants = false
-            TrackStroke.Enabled = false
             for Index = 1, SegmentCount do
                 local Cell = New("Frame", {
                     BackgroundColor3 = function()

@@ -114,7 +114,13 @@ with the Touch density.
   the tick boxes back.
 - The on state of the switch is the full accent colour; before it was blended 56%
   into the surface and looked washed out.
-- Slider and progress tracks are 6px (8px on Touch), up from 4px.
+- Sliders and progress bars were visibly jagged. The 4px track had a one pixel
+  outline, a corner radius of 3 and a gradient fill, so the outline ring and the
+  fill edge disagreed on the curve and the ends looked stepped; the progress bar
+  also clipped its fill with a mask, which is not smoothed. Now the track is an 8px
+  pill (10px on Touch) with a full radius, no outline, no gradient and no clipping,
+  and the fill is a pill of the same shape. The knob is a plain 12px circle (14px on
+  hover) without its own ring. Validation errors still show a red ring.
 
 ### Notifications
 

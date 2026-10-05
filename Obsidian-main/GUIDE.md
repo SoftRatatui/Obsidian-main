@@ -80,7 +80,7 @@ progress:SetRange(0, 200)
 
 StatRow puts the label and value in separate columns and truncates long text instead of allowing overlap. Options: `Text` (defaults to the ID), `Value`, `Height` (22), `LabelRatio` (0.55, clamped to 0.1..0.9), and `Visible` (true). Methods: `SetText`, `SetValue`, `SetVisible`, `SetHeight`, `Destroy`.
 
-ProgressBar adds `Min` (0), `Max` (100), `Value` (Min), `ShowValue` (true), and optional `Color` (a `Color3` or a scheme key such as `"SuccessColor"`). It is drawn exactly like a slider without the thumb: the label on an 18px row, a 4px rounded track with the soft outline on a 14px row below it, the same 6px side inset, and the same accent gradient on the fill, so the two line up when they share a groupbox. The value reads `current/max` in the muted colour, matching the slider. Its default height is 32. The fill width is rounded to whole pixels, and any value above zero shows at least a round 4px dot. `Row.Fraction` holds the filled share from 0 to 1 and `Row.Track` the track frame. `SetValue` clamps finite values to the range; `SetRange(min, max)` requires a finite increasing range and reclamps the current value. Updates are immediate, so frequent progress reports do not accumulate tweens. It also supports `SetText`, `SetVisible`, `SetHeight` and `Destroy`. Both controls display runtime data and are not saved as configuration options.
+ProgressBar adds `Min` (0), `Max` (100), `Value` (Min), `ShowValue` (true), and optional `Color` (a `Color3` or a scheme key such as `"SuccessColor"`). It is drawn exactly like a slider without the thumb: the label on an 18px row, an 8px pill track with no outline on a 14px row below it, the same 7px side inset, and a flat accent fill, so the two line up when they share a groupbox. The value reads `current/max` in the muted colour, matching the slider. Its default height is 32. The fill width is rounded to whole pixels, and any value above zero shows at least a round dot as wide as the track is tall. `Row.Fraction` holds the filled share from 0 to 1 and `Row.Track` the track frame. `SetValue` clamps finite values to the range; `SetRange(min, max)` requires a finite increasing range and reclamps the current value. Updates are immediate, so frequent progress reports do not accumulate tweens. It also supports `SetText`, `SetVisible`, `SetHeight` and `Destroy`. Both controls display runtime data and are not saved as configuration options.
 
 ## Numeric input and player usernames
 
@@ -2048,7 +2048,7 @@ Run local checks with Luau's compiler and interpreter installed:
 ### 0.0.1-release-3
 
 - Redrew the sidebar as group cards (header plus text-only sub-tabs aligned with the header label), expanded by default, with soft inset pill rows and a 6px gap.
-- Toggles and `AddCheckbox` now draw 28x16 switches by default (`Library.ToggleStyle = "Checkbox"` restores tick boxes), and slider and progress tracks are 6px.
+- Toggles and `AddCheckbox` now draw 28x16 switches by default (`Library.ToggleStyle = "Checkbox"` restores tick boxes), and slider and progress tracks are 8px pills (10px on Touch) with no outline or gradient, with a 12px knob that grows to 14px on hover.
 - Notifications are plain 300px cards with a close cross, no icon unless asked, and tinted titles for success, warning and error.
 - On narrow screens the two page columns stack into one scroll, and key and colour pickers stay centred on tall touch rows.
 - Added the darklua build `dist/Library.lua` with every addon and the icon module inside (`Library.Addons`, `Library:GetAddon`), and `Loader.lua`, which downloads it through seven mirrors and falls back to a cached copy.
@@ -2077,7 +2077,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Added live `SetStyle`, `SetMinimal`, and `SetHighlighted` controllers to visual addons.
 - Added per-module `SetModuleStyle`, `GetModuleStyle`, `SetModuleMinimal`, and `SetModuleHighlighted` controls to addon windows, including custom highlight colors.
 - Added `ShowHeader`, `ShowBackground`, `ShowOutline`, and `ShowShadow` style controls for content-only and minimal module layouts.
-- Redrew the progress bar as a slider track without the thumb (same height, inset, outline, radius and accent gradient), with the value in the slider's `current/max` style and the fill on whole pixels.
+- Redrew the progress bar as a slider track without the thumb (same height, inset, shape and flat fill), with the value in the slider's `current/max` style and the fill on whole pixels.
 - Reworked notifications into plain 280px cards: 13px title, 12px muted description, a 16px status icon only for success, warning and error, a timer that pauses on hover, a short slide-in from the screen edge, even padding at every UI scale, an optional full-width progress line, a four-card limit, and optional close controls.
 - Bound title and description faces directly to `Library.Scheme.Font`, disabled notification RichText, and refreshed open notifications after font changes.
 - Added independent `TitleTextSize` and `DescriptionTextSize` settings while preserving `TextSize` compatibility.

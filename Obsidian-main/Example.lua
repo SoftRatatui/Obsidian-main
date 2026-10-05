@@ -213,7 +213,6 @@ local StatsService = game:GetService("Stats")
 local Options = Library.Options
 local Toggles = Library.Toggles
 
-Library.ForceCheckbox = true
 Library.ShowToggleFrameInKeybinds = true
 
 local Window = Library:CreateWindow({

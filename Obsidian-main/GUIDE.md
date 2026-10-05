@@ -408,6 +408,12 @@ local Skins = Window:AddTab({ Name = "Skins", Icon = "sparkles" })
 local Gallery = Skins:AddFullGroupbox("Weapon finishes", "layout-grid")
 ```
 
+When the content area is `SingleColumnWidth` (540) pixels wide or less, which is
+every phone, the two columns stack into one: left column groupboxes first, then
+the right column, in a single scroll. A touch drag anywhere on the page scrolls it.
+Earlier builds split the page into two half-height panels with a scroll each, which
+left a few rows visible on a landscape phone.
+
 `AddFullGroupbox` switches the tab to a single column and returns a normal groupbox, so every control still works inside it. `Tab:SetFullWidth(false)` restores the two-column layout.
 
 The two columns are measured in whole pixels: the tab splits its own width and gives any leftover pixel to the right column, so both sides land on exact pixel boundaries at any window size.
@@ -444,8 +450,6 @@ Supported button variants are `Default`, `Primary`, and `Ghost`.
 ### Toggle and checkbox
 
 ```luau
-Library.ForceCheckbox = true
-
 Group:AddToggle("Feature", {
     Text = "Feature",
     Default = false,
@@ -455,7 +459,7 @@ Group:AddToggle("Feature", {
 })
 ```
 
-Set `Library.ForceCheckbox = false` before building controls to use compact switch toggles. The release default uses checkboxes.
+Toggles are 28x16 switches with a 12px knob, label on the left, key pickers and colour pickers between the label and the switch. `AddCheckbox` draws the same switch, so existing hubs change look without edits. Set `Library.ToggleStyle = "Checkbox"` (or the older `Library.ForceCheckbox = true`) before building controls to draw tick boxes instead; both functions then follow it.
 
 ### Input
 
@@ -559,7 +563,7 @@ Group:AddUIPassthrough("Custom", {
 
 Radius tokens on bound controls, decorative effects, and menu scrollbar width can also be changed while the UI is open. Spacing, density, and font sizes should still be configured before creation. Explicit addon style overrides and addon `SetCornerRadius` calls retain their own values.
 
-The default appearance has no shadows, navigation accent line, or decorative section dividers. Scrollbars use muted text color. Use these switches to restore individual effects:
+The default appearance has no shadows, navigation accent line, or decorative section dividers. Scrollbars use muted text color. The window is seamless: the top bar, sidebar, content area and footer share the background colour, with no rule between them, and only cards (groupboxes and sidebar groups) are raised. `Shell.Seamless = false` restores the separate bar colours and the rules. Use these switches to restore individual effects:
 
 ```luau
 Library:SetDesign({
@@ -1343,8 +1347,9 @@ themes and `Base * 0.55` on light ones. Use it for any resting-state text or ico
 you dim with transparency.
 
 `Library:GetRestingTransparency(Button?)` is the resting value for a sidebar row:
-`GetIdleTransparency(0.62)` for a group header (a button with the `GroupHeader`
-attribute) and `GetIdleTransparency()` for everything else.
+`GetIdleTransparency(0.08)` for a group header (a button with the `GroupHeader`
+attribute), which reads as the bright title of its card, and
+`GetIdleTransparency()` for everything else.
 
 ## Configs
 
@@ -1387,11 +1392,13 @@ SaveManager:RegisterAdapter("SkinCatalog", {
 
 ## Notifications
 
-A card is a plain 280px panel with the popup surface, a thin outline, a 13px
-title in the body colour and a 12px muted description. Status variants add a
-16px icon in their colour, centred on the first line of text; a default card has
-no icon unless you pass one. A card with a single line of text shows it in the
-body colour at title size.
+A card is a plain 300px panel on the popup surface with a thin outline: a 14px
+title in the body colour, a 13px muted description and a close cross at the right,
+centred on the card. There is no icon, bar or badge unless you ask for one. A
+card with a single line of text shows it in the body colour at title size.
+
+Success, warning and error variants tint only the title. A repeated notification
+shows its count as a small neutral badge next to the cross.
 
 Text is measured at the scale it is drawn at, so the padding under the last line
 is the same on every card and at every UI scale.
@@ -1407,18 +1414,18 @@ radius, so its ends follow the rounded corners.
 ```luau
 Library:SetNotificationOptions({
     Side = "Right",
-    Width = 280,
-    Margin = 10,
-    Gap = 6,
-    Padding = 10,
-    CornerRadius = 6,
-    TitleTextSize = 13,
-    DescriptionTextSize = 12,
+    Width = 300,
+    Margin = 12,
+    Gap = 8,
+    Padding = 14,
+    CornerRadius = 8,
+    TitleTextSize = 14,
+    DescriptionTextSize = 13,
     MaxVisible = 4,
     DefaultDuration = 4,
     Accent = false,
     ShowProgress = false,
-    Dismissible = false,
+    Dismissible = true,
 })
 
 Library:Notify({
@@ -1438,20 +1445,13 @@ Library:Notify({
 | `Margin` / `Gap` | Screen margin 0 to 40; stack gap 0 to 24. |
 | `MaxVisible` | 1 to 20. The oldest cards also close when the stack exceeds the viewport height. This includes persistent cards. |
 | `DefaultDuration` | Nonnegative seconds; `Time` overrides this per notification. |
-| `Accent` / `ShowProgress` / `Dismissible` | The leading accent bar, the bottom countdown line, and the close button. All off by default. |
+| `Accent` / `ShowProgress` / `Dismissible` | The leading accent bar (off), the bottom countdown line (off), and the close cross (on). |
 
 Changes to the library font or global appearance update open cards. Notification text binds directly to `Library.Scheme.Font`; RichText is disabled so content cannot silently replace its weight or styling. A card's explicit `Width`, text sizes, `Padding`, `CornerRadius`, `Accent`, `ShowProgress`, or `Dismissible` override remains in effect. The duration of an existing card is not restarted by appearance changes.
 
-`Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`, and picks the colour and the default icon:
+`Variant` accepts `Default`, `Success`, `Warning`, `Error`, and `Danger`. Success, warning and error tint the title with `SuccessColor`, `WarningColor` and `DestructiveColor`; the progress line and `Accent` bar use the same colour.
 
-| Variant | Colour | Default icon |
-| --- | --- | --- |
-| `Default` | `AccentColor` (progress line only) | none |
-| `Success` | `SuccessColor` | `circle-check` |
-| `Warning` | `WarningColor` | `triangle-alert` |
-| `Error`, `Danger` | `DestructiveColor` | `circle-x` |
-
-`Icon` sets or replaces the icon and `Icon = false` removes it. An icon on a default card uses the body text colour. `IconColor` recolours the icon only. `AccentColor`, `TitleColor`, and `DescriptionColor` override colours. `BigIcon` uses a 24px icon instead of the 16px one. A repeated notification shows its count in a small neutral badge on the right. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
+`Icon` adds an icon left of the text in the body colour, `IconColor` recolours it, and `BigIcon` uses a 24px icon instead of the 16px one. `AccentColor`, `TitleColor`, and `DescriptionColor` override colours. Optional `SoundId` and `Volume` play a sound once; volume defaults to 1 and is limited to 0 to 10.
 
 The returned controller supports `ChangeTitle(text)`, `ChangeDescription(text)`, `ChangeStep(number)` / `SetProgress(number)`, `Resize()`, and `Destroy(instant?)`. A title or description can be added after creation or cleared with an empty string. Calls after destruction do nothing. `Library:ClearNotifications()` also removes cards that are already fading out.
 
@@ -2021,6 +2021,8 @@ Library:Unload()
 
 `Unload` disconnects registered signals, stops active tweens, destroys addon controllers registered through the library, restores the cursor state, and removes the interface.
 
+While the library runs, `Library:PruneRuntime()` runs every 30 seconds. It drops disconnected connections from `Library.Signals`, and registry, tween and corner entries whose instances were destroyed without releasing them, once they have stayed detached for three sweeps. Controls destroyed through their own `Destroy` are released at once and never reach it. Call it yourself after tearing down a large amount of UI by hand.
+
 ## Release checklist
 
 - [x] Runtime sources and type modules compile with the Luau compiler.
@@ -2045,11 +2047,18 @@ Run local checks with Luau's compiler and interpreter installed:
 
 ### 0.0.1-release-3
 
+- Redrew the sidebar as group cards (header plus text-only sub-tabs aligned with the header label), expanded by default, with soft inset pill rows and a 6px gap.
+- Toggles and `AddCheckbox` now draw 28x16 switches by default (`Library.ToggleStyle = "Checkbox"` restores tick boxes), and slider and progress tracks are 6px.
+- Notifications are plain 300px cards with a close cross, no icon unless asked, and tinted titles for success, warning and error.
+- On narrow screens the two page columns stack into one scroll, and key and colour pickers stay centred on tall touch rows.
 - Added the darklua build `dist/Library.lua` with every addon and the icon module inside (`Library.Addons`, `Library:GetAddon`), and `Loader.lua`, which downloads it through seven mirrors and falls back to a cached copy.
 - Routed the library's own downloads through the same mirrors with a time limit, and stopped the first launch from waiting on the Inter font download.
 - Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
-- Made the selected sidebar tab fill its row edge to edge with a full-height accent bar, and added `Window:AddTabSeparator` for captioned or plain sidebar sections.
-- Reworked sub-tabs: 28px indented rows on a single 1px guide under the header icon, with the open child's guide segment in the accent colour. A tab with children is a group header that toggles its group, rests greyer (`Library:GetRestingTransparency`) and is never highlighted.
+- Removed the accent bar and the accent-tinted fill behind tabs: the open tab is a neutral 8% pill with accent text, group cards are hairline only, tabbox headers have no tinted fill, groupboxes are 35% translucent (`Opacity.Card`) and strokes are lighter (`Stroke.SoftTransparency` 0.6). `Library:AnimateTabTrail` and the `Effects.NavigationIndicator` token are gone.
+- The footer is a borderless 22px strip in the window colour, with the text at the bottom left, aligned with the title, and the resize grip at the right. All outer gutters, the gap between the sidebar and the content and the gap between the two columns are 10px, and the spare spacer frames at the ends of each column are gone.
+- Fixed memory growth when controls are created and destroyed repeatedly: corner, signal and tween bookkeeping is swept by `Library:PruneRuntime`, and tooltips listen to global input only while a finger is down.
+- Added `Window:AddTabSeparator` for captioned or plain sidebar sections.
+- Made the window seamless: one background for the top bar, sidebar and content, with only a faint rule under the header.
 - Fixed the layout breaking at UI scales other than 100%: offsets computed from on-screen sizes were scaled twice. Added `Library:GetEffectiveScale` and `Library:LogicalSize`.
 - Started the sidebar tab list flush under the header, and fixed expanded sub-tab groups doubling their height at UI scales other than 100%.
 - Added the `Dusk`, `Dawn` and `Honey` themes and raised the default theme's layer separation and accent saturation.
@@ -3181,11 +3190,11 @@ Group:AddButton({ Text = "Search", Func = function() Library:OpenCommandPalette(
 
 ## Sidebar sub-tabs
 
-A tab can hold child tabs in the sidebar under a collapsible chevron.
+A tab can hold child tabs. The tab and its children are drawn as one rounded card in the sidebar: the tab is the card's header (icon, name, chevron) and the children are text rows under it, aligned with the header's label.
 
 - `Tab:AddSubTab(...)` takes the same arguments as `Window:AddTab` and returns the
-  child tab. The first call adds a chevron expander to the parent and indents the
-  child in the sidebar. `Tab.SubTabs` holds the children.
+  child tab. The first call wraps the parent in a card and adds a chevron to it.
+  `Tab.SubTabs` holds the children.
 - `Tab:SetExpanded(State)` expands or collapses the group and returns the tab.
 - `Tab:IsExpanded()` reports the current state.
 
@@ -3195,8 +3204,8 @@ its first visible child instead. Put controls in the children: groupboxes added 
 the header itself are never shown. If the header was the open tab when its first
 child was added, the selection moves to that child.
 
-Sub-tabs start collapsed. Selecting a child auto-expands its parent so the active
-tab is always visible. Swipe and keyboard tab switching skip headers and walk
+Groups start expanded, so the sub-tabs are visible without a click. Selecting a
+child expands its parent so the active tab is always visible. Swipe and keyboard tab switching skip headers and walk
 every child in order, including children of collapsed groups. When the sidebar is compacted (the narrow icon rail) the
 group is force-expanded, because a collapsed chevron in a rail with no room for
 the expander would make the children unreachable. On mobile the chevron and child
@@ -3213,29 +3222,26 @@ print(Settings:IsExpanded())   -- true
 
 ### How nested tabs read
 
-A sub-tab row is 4px shorter than a top-level row and indented 20px. A single
-1px guide line runs under the header's icon: it starts 3px below the icon, passes
-through every child row, and stops 6px short of the bottom of the last one.
+The card is a transparent frame with a hairline outline and a 4px inset, so the
+sidebar stays one surface. The header is a full 32px row in the body colour, with
+the chevron pointing up while the group is open. Children are 28px text rows, 1px
+smaller type, dimmed, with their label on the same line as the header's label;
+their icons are hidden in the full sidebar and shown in the compact one.
 
-The open child gets the full-width selection band, and its own segment of the
-guide turns the accent colour. The segment has exactly the guide's width and
-position, so the marker never sits half a pixel off the line at any UI scale.
-Switching between siblings fades the colour from one segment to the next.
+The open tab is a soft pill in the text colour at 8% (no accent tint, no bar),
+with full-strength text in the accent colour. Hover only brightens the text. The
+header never shows a selection.
 
-The header itself stays quiet: its label and icon rest one step greyer than an
-ordinary tab (`Library:GetRestingTransparency`), its hover is fainter, and it
-never shows the selection band, including while one of its children is open.
+Rows keep `Shell.NavigationInset` (8) from the sidebar edge, with 6px between
+cards and 2px between rows inside a card. Tabs without children are plain rows.
+A collapsed card shrinks to its header and leaves no extra gap.
 
-In the compact, icon-only sidebar the guide is hidden, because centred icons would
-sit on top of it.
+In the compact, icon-only sidebar the cards lose their inset and the children show
+as icons under the header icon.
 
 The group's height comes from the logical row heights, so it stays correct at any
 UI scale. Earlier builds measured it in screen pixels and doubled the gap under an
 expanded group at 200% scale.
-
-`Library:AnimateTabTrail(Button, Label, Icon, OnTrail)` lights a row without the
-accent bar. The library no longer calls it; it is kept for custom sidebars that
-want a lit parent.
 
 ### Sidebar separators
 

@@ -35,6 +35,102 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-10-05 (version: UNRESOLVED, see the note above)
+
+A second pass on the look, modelled on a reference menu the owner liked, plus the
+phone layout. Checked in game at 100%, 150% and 200%, in the compact sidebar and
+with the Touch density.
+
+### Sidebar
+
+- A tab with sub-tabs is now one rounded card: the tab is the header (icon, name,
+  chevron up while open) and the sub-tabs are text rows under it, aligned with the
+  header's label. Groups start expanded so the sub-tabs are visible at once.
+- The selected sub-tab gets a soft rounded fill and full text. Headers rest at full
+  strength; the previous grey header is gone, and so are the guide line, the
+  horizontal branches and the accent segment.
+- All rows are inset pills (8px inset, radius 5), 6px between cards, 2px inside a
+  card. The list and the pills now share one inset, so there is no uneven strip at
+  the top.
+- A collapsed group used to leave an extra 4px gap because its empty holder still
+  took part in the list. It is hidden when empty.
+- In the compact sidebar the cards drop their inset and sub-tab icons come back.
+
+### Window
+
+- Seamless: the top bar, sidebar, content area and footer use the background colour
+  and the rules between them are gone. Only the groupboxes and the sidebar cards are
+  raised. `Shell.Seamless = false` brings back the separate colours and rules.
+- The footer is a borderless 22px strip in the window colour: text in the bottom
+  left corner, aligned with the title, resize grip at the right. A faint rule
+  remains under the header only. A draft that put the version in the header was
+  dropped; it crowded the search field.
+- Every gutter is 10px: window edge to sidebar cards, sidebar to content, between
+  the two columns, the right edge, and top and bottom. Before, the gap between the
+  columns was 29px and the top gap 17px: padding on both columns, on the page
+  container and on two empty spacer frames per column all stacked. The spacers are
+  removed. Measured in game: card left 10, sidebar to content 10, column gap 10,
+  right margin 10, top gap 10.
+- The open tab is a quiet neutral pill (8% of the text colour) with accent text.
+  The accent bar and the accent-tinted fill are gone; an earlier draft with no
+  fill at all made the selection hard to see.
+- Sub-tab text rests brighter (30% dim instead of 50%) so the rows are readable at
+  a glance, and sidebar cards use the groupbox surface.
+
+### Fewer layers
+
+- No accent bar, no accent-tinted fill and no hover fill behind tabs. The open tab
+  is a neutral pill with accent text. The indicator frame is gone, one instance
+  less per tab. `Library:AnimateTabTrail` and `Effects.NavigationIndicator` are
+  removed.
+- Sidebar group cards are transparent with a hairline outline. Tabbox headers lose
+  their tinted fill and show the open tab through label colour.
+- Groupboxes and tabboxes are 35% translucent (`Opacity.Card`), strokes are
+  lighter (`Stroke.SoftTransparency` 0.46 to 0.6), and an unused transparent header
+  frame in every groupbox is gone.
+
+### Memory
+
+- Measured in game by creating and destroying 30 groupboxes of eight controls each:
+  instances, registry entries, options and toggles returned to their starting
+  count. Three lists did not: `Library.Corners` and `SpecificCorners` grew by about
+  24 entries per groupbox, `Library.Signals` by one per control, and
+  `Library.ActiveTweens` by one per destroyed instance.
+- New `Library:PruneRuntime()` runs every 30 seconds and clears those lists of
+  disconnected connections and of entries whose instances are gone, after they
+  stay detached for three sweeps. After the fix all counters return to their
+  starting values, and a live control keeps its registry entry through the sweeps.
+- Tooltips used to keep two global input listeners per control for the life of the
+  control. They now listen only while a finger is down, and the tooltip label is
+  stored once instead of once per tooltip.
+- `Unload` was checked too: after it the registry and signal lists are empty and
+  the interface is gone from the container.
+
+### Controls
+
+- Toggles draw as 28x16 switches by default, with the key picker and colour picker
+  between label and switch. `AddCheckbox` follows, so existing hubs change without
+  edits. `Library.ToggleStyle = "Checkbox"` or the old `Library.ForceCheckbox` bring
+  the tick boxes back.
+- The on state of the switch is the full accent colour; before it was blended 56%
+  into the surface and looked washed out.
+- Slider and progress tracks are 6px (8px on Touch), up from 4px.
+
+### Notifications
+
+- Plain cards, 300px wide: 14px title, 13px muted description, a close cross
+  centred on the right, 14px padding, radius 8, slightly translucent surface.
+- No automatic icons or bars. Success, warning and error tint only the title. The
+  repeat counter is a neutral badge.
+
+### Phones
+
+- When the content is 540px wide or less, the page columns stack into one column in
+  one scroll. Before, they became two half-height panels with a scroll each, which
+  left two or three rows visible on a landscape phone.
+- Key pickers and colour swatches attached to a row stay vertically centred on tall
+  Touch rows. They sat at the top edge.
+
 ## Update 2026-10-03 (version: UNRESOLVED, see the note above)
 
 Loading reliability, mainly for players in Russia without a VPN, where

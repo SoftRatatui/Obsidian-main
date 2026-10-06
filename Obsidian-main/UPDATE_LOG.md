@@ -96,6 +96,27 @@ simulated network; not checked from inside Russia.
   pinned file not published yet (alias used), only stale copies anywhere (refused,
   embedded copy used).
 
+### Cleanup pass that stalled a frame
+
+- Reported as the hub "lagging". A simulated hub (40 groupboxes, 4025 registry
+  entries, 7644 interface objects, loaded the old way from GitHub) showed no problem
+  at load (about 2.5 s with the downloads, 0.9 s to build) or at idle, and a full
+  Unload took 80 ms. The one stall was `Library:PruneRuntime()`: 60 to 86 ms in a
+  single frame, every 30 s, because it walked every registry entry up to the root
+  and removed dead entries from the lists one by one.
+- It now checks with `Instance:IsDescendantOf(game)`, works from a snapshot, yields
+  every 250 checks and compacts the lists in one pass. Same hub: the sweep takes
+  about 0.7 s of wall time and the worst frame during it equals a normal frame.
+  Counters still return to their starting values after create and destroy cycles
+  (corners 112 to 12, tweens 163 to 3 in the check).
+- `tools/embed_hub.py --light` writes a hub with the loader only (9 KB added, against
+  950 KB). The embedded copies are optional; a 1.3 MB script can be too much for an
+  executor's editor on a phone.
+- Not reproduced: a hub that "does not load at all". Loading the old way from the
+  pushed repository and building the full hub worked here. The client was also
+  rejoined by the game several times during this work (new server each time), which
+  looks like the game's own behaviour and not the library.
+
 ### Diagnostic script
 
 - `dist/Diagnose.lua` runs the whole start on the device and prints the result in an

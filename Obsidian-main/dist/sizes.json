@@ -1,5 +1,5 @@
 {
-  "Library.lua": 949393,
+  "Library.lua": 949752,
   "addons/AssetCatalog.lua": 48746,
   "addons/CharacterTrail.lua": 10365,
   "addons/CollectionModel.lua": 4639,
@@ -18,6 +18,7 @@
   "addons/TracerPreview.lua": 7802,
   "addons/VisualPreview.lua": 32397,
   "Diagnose.lua": 8269,
+  "Library.c2c8cc9fb4a2.lua": 949752,
   "Library.d286d188c439.lua": 949475,
   "Library.d3a17e9199aa.lua": 949393,
   "Loader.lua": 8952

@@ -225,12 +225,16 @@ window is put aside while it runs and restored afterwards.
 
 ```
 python tools/embed_hub.py hub.lua [hub.embedded.lua]
+python tools/embed_hub.py --light hub.lua [hub.light.lua]
 ```
 
 writes a copy of the hub that carries `dist/Library.lua` inside itself as the last
 resort, replaces its download of `Library.lua` with `MonHubLoad()` and its
 downloads of addons with `Library.Addons.Name`. The original is not changed. The
-file grows by about 950 KB. Rebuild with `tools/build.py` first, and rebuild the
+file grows by about 950 KB. `--light` writes the same hub with the loader only and no
+embedded copy: it grows by 9 KB. Use it when the executor struggles with a script
+over a megabyte (pasting one into an editor can freeze a phone); the embedded copy
+is a last resort and the stored copy usually makes it unnecessary. Rebuild with `tools/build.py` first, and rebuild the
 embedded hub from time to time: the embedded copy is only used when no mirror
 answers and nothing is stored, and it is replaced by the stored copy as soon as
 one download succeeds.
@@ -2120,7 +2124,7 @@ Library:Unload()
 
 `Unload` disconnects registered signals, stops active tweens, destroys addon controllers registered through the library, restores the cursor state, and removes the interface.
 
-While the library runs, `Library:PruneRuntime()` runs every 30 seconds. It drops disconnected connections from `Library.Signals`, and registry, tween and corner entries whose instances were destroyed without releasing them, once they have stayed detached for three sweeps. Controls destroyed through their own `Destroy` are released at once and never reach it. Call it yourself after tearing down a large amount of UI by hand.
+While the library runs, `Library:PruneRuntime()` runs every 30 seconds in slices of 250 checks per frame, so it never holds a frame (it yields, so call it from a thread that may wait). It drops disconnected connections from `Library.Signals`, and registry, tween and corner entries whose instances were destroyed without releasing them, once they have stayed detached for three sweeps. Controls destroyed through their own `Destroy` are released at once and never reach it. Call it yourself after tearing down a large amount of UI by hand.
 
 ## Release checklist
 

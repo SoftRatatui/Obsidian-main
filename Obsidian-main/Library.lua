@@ -3211,31 +3211,39 @@ function Library:GiveSignal(Connection: RBXScriptConnection | RBXScriptSignal)
     return Connection
 end
 
-local function TopAncestor(Object: Instance): Instance
-    local Top = Object
-    while Top.Parent do
-        Top = Top.Parent
+local function Compact(List, Drop)
+    local Write = 0
+    local Count = #List
+    for Read = 1, Count do
+        local Item = List[Read]
+        if not Drop(Item) then
+            Write += 1
+            List[Write] = Item
+        end
     end
-    return Top
+    for Index = Count, Write + 1, -1 do
+        List[Index] = nil
+    end
 end
 
 function Library:PruneRuntime()
-    for Index = #Library.Signals, 1, -1 do
-        local Connection = Library.Signals[Index]
-        if not Connection or not Connection.Connected then
-            table.remove(Library.Signals, Index)
-        end
-    end
-
-    local Gui = Library.ScreenGui
-    if typeof(Gui) ~= "Instance" then
+    if Library.Pruning or Library.Unloaded then
         return
     end
+    Library.Pruning = true
 
-    local LiveRoot = TopAncestor(Gui)
+    Compact(Library.Signals, function(Connection)
+        return not (Connection and Connection.Connected)
+    end)
+
     local Previous, Seen = Library.OrphanCounts or {}, {}
-    local function IsStale(Category, Object)
-        if typeof(Object) ~= "Instance" or TopAncestor(Object) == LiveRoot then
+    local Steps = 0
+    local function Stale(Category, Object)
+        Steps += 1
+        if Steps % 250 == 0 then
+            task.wait()
+        end
+        if typeof(Object) ~= "Instance" or Object:IsDescendantOf(game) then
             return false
         end
         local Last = Previous[Category]
@@ -3245,27 +3253,56 @@ function Library:PruneRuntime()
         return Count >= 3
     end
 
+    local Keys = {}
     for Object in Library.Registry do
-        if IsStale("Registry", Object) then
+        Keys[#Keys + 1] = Object
+    end
+    for _, Object in Keys do
+        if Library.Unloaded then
+            Library.Pruning = false
+            return
+        end
+        if Stale("Registry", Object) then
             Library.Registry[Object] = nil
         end
     end
-    for Object, Slots in Library.ActiveTweens do
-        if IsStale("Tweens", Object) then
+
+    Keys = {}
+    for Object in Library.ActiveTweens do
+        Keys[#Keys + 1] = Object
+    end
+    for _, Object in Keys do
+        if Library.Unloaded then
+            Library.Pruning = false
+            return
+        end
+        local Slots = Library.ActiveTweens[Object]
+        if Slots and Stale("Tweens", Object) then
             for _, Entry in Slots do
                 StopTween(Entry.Tween, true)
             end
             Library.ActiveTweens[Object] = nil
         end
     end
+
     for Name, List in { Corners = Library.Corners, SpecificCorners = Library.SpecificCorners } do
-        for Index = #List, 1, -1 do
-            if IsStale(Name, List[Index]) then
-                table.remove(List, Index)
+        local Drop = {}
+        for _, Object in table.clone(List) do
+            if Library.Unloaded then
+                Library.Pruning = false
+                return
+            end
+            if Stale(Name, Object) then
+                Drop[Object] = true
             end
         end
+        Compact(List, function(Object)
+            return Drop[Object] == true
+        end)
     end
+
     Library.OrphanCounts = Seen
+    Library.Pruning = false
 end
 
 function IsValidCustomIcon(Icon: string)

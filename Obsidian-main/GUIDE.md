@@ -133,7 +133,8 @@ local ThemeManager = Library.Addons.ThemeManager
 local SaveManager = Library.Addons.SaveManager
 ```
 
-`MonHubLoad` decides in this order, with 5 seconds in total for the network part:
+`MonHubLoad` decides in this order, with 5 seconds in total for the network part
+whenever a fallback exists (a stored copy or an embedded one):
 
 1. It reads `version.txt`. If the version equals the one stored from the last good
    download, and the stored file has the expected size, it runs the stored copy and
@@ -144,6 +145,19 @@ local SaveManager = Library.Addons.SaveManager
 3. If that fails or runs out of time, it runs the last stored copy.
 4. If nothing is stored, it runs the copy embedded in the script.
 5. Only if none of these exist does it raise an error listing what failed.
+
+With no stored copy and nothing embedded, as on the first launch of a hub that is
+not embedded, giving up at 5 seconds would leave the player with nothing, so the
+download is allowed `PatientTimeout` (60) seconds instead and the mirrors are
+started 3 seconds apart, so a slow phone connection is not shared by several
+copies of the same file. A Roblox notification says the first download is under
+way, and another says so if it finally fails, because a phone has no console to
+read the error from.
+
+The size check allows 16 bytes of difference and converts CRLF to LF, so a proxy or
+executor that trims a trailing newline or changes line endings does not make every
+download fail. A truncated file never compiles, and a different version differs by
+far more than 16 bytes.
 
 When it had to fall back, it keeps downloading in the background for up to two
 minutes and stores the result, so the next start is current. The window is never
@@ -157,8 +171,10 @@ a player behind a blocked host pays no delay. `MonHubConfig.Extra` takes more ba
 URLs ending in `/`, for a mirror you host yourself.
 
 Settings are in `MonHubConfig`: `Repo`, `Branch`, `Folder`, `Cache`, `Timeout`
-(5), `Stagger` (1), `Extra`, `Embedded` and `Get` (a function taking a URL and
-returning the body, to replace the built-in downloader).
+(5), `Stagger` (1), `PatientTimeout` (60), `Extra`, `Embedded` and `Get` (a
+function taking a URL and returning the body, to replace the built-in
+downloader). Requests go through the executor's `request` function and fall back to
+`game:HttpGet`, so executors that have only one of them work.
 
 `Library.Addons.Name` runs the bundled addon the first time it is read and then
 returns the same table every time, so unused addons cost nothing at startup.

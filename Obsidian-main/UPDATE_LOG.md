@@ -64,6 +64,27 @@ simulated network; not checked from inside Russia.
 - `.gitattributes` forces LF in `dist/`. The repository normalises line endings, and
   a CRLF copy would differ from the byte count in `version.txt` and be rejected.
 
+### Phones (Delta and similar executors)
+
+- The 5 second limit only makes sense when something can run instead. With no stored
+  copy and nothing embedded (the first launch of a hub that is not embedded) the
+  loader would have given up at 5 s on any slow mobile connection and shown nothing.
+  It now waits up to 60 s (`PatientTimeout`), starts mirrors 3 s apart instead of 1 s
+  so a slow link is not split between copies of one 950 KB file, and shows a Roblox
+  notification at the start and on failure, since a phone has no console.
+- Size check tolerance of 16 bytes plus CRLF conversion; `dist/Library.lua` is
+  written without trailing whitespace. Some HTTP layers trim a final newline, and an
+  exact byte match would reject every download there.
+- Requests use `request` and fall back to `game:HttpGet` when `request` gives no
+  usable answer (some mobile executors restrict one of them).
+- The library was run with every optional executor function removed (`gethui`,
+  `protectgui`, `cloneref`, `getcustomasset`, all file functions, `request`,
+  `loadstring`, `identifyexecutor`, `syn`, `setclipboard`) and built a full window:
+  tabs, sub-tabs, every control, key and colour pickers, notifications, watermark,
+  both bundled addons, Touch and Compact densities, 125% scale, two themes and
+  Unload. Everything worked, parented to CoreGui, with the Gotham font.
+- Not tested on a real phone: no mobile executor was available.
+
 ### Startup network use
 
 - Measured with the library running in an environment that records every request:

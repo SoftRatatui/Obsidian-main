@@ -2057,6 +2057,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Removed the accent bar and the accent-tinted fill behind tabs: the open tab is a neutral 8% pill with accent text, group cards are hairline only, tabbox headers have no tinted fill, groupboxes are 35% translucent (`Opacity.Card`) and strokes are lighter (`Stroke.SoftTransparency` 0.6). `Library:AnimateTabTrail` and the `Effects.NavigationIndicator` token are gone.
 - The footer is a borderless 22px strip in the window colour, with the text at the bottom left, aligned with the title, and the resize grip at the right. All outer gutters, the gap between the sidebar and the content and the gap between the two columns are 10px, and the spare spacer frames at the ends of each column are gone.
 - Fixed memory growth when controls are created and destroyed repeatedly: corner, signal and tween bookkeeping is swept by `Library:PruneRuntime`, and tooltips listen to global input only while a finger is down.
+- Fixed key picker boxes clipping their text after a font change: they re-measure on font changes and snap to whole pixels.
 - Added `Window:AddTabSeparator` for captioned or plain sidebar sections.
 - Made the window seamless: one background for the top bar, sidebar and content, with only a faint rule under the header.
 - Fixed the layout breaking at UI scales other than 100%: offsets computed from on-screen sizes were scaled twice. Added `Library:GetEffectiveScale` and `Library:LogicalSize`.

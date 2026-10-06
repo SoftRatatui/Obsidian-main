@@ -9378,9 +9378,17 @@ do
                     ToggleLabel.AbsoluteSize.X
                 )
                 Picker.Text = DisplayText
-                Picker.Size = IsForButton and UDim2.new(0, X + 9, 1, 0) or UDim2.fromOffset((X + 9), (Y + 4))
+                local Row = Library:Metric("Row", 20)
+                local Height = Library:MatchParity(Row, Library:Metric("Indicator", 16) + 2)
+                local Width = Library:MatchParity(Height, math.max(Height, math.ceil(X) + 10))
+                Picker.Size = IsForButton and UDim2.new(0, Width, 1, 0) or UDim2.fromOffset(Width, Height)
             end
         end
+
+        table.insert(KeyPicker.Connections, Picker:GetPropertyChangedSignal("FontFace"):Connect(function()
+            LastPickerWidth = nil
+            KeyPicker:Display()
+        end))
 
         function KeyPicker:Update()
             KeyPicker:Display()

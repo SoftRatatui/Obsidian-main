@@ -89,6 +89,17 @@ with the Touch density.
   lighter (`Stroke.SoftTransparency` 0.46 to 0.6), and an unused transparent header
   frame in every groupbox is gone.
 
+### Key pickers
+
+- The bind box next to a toggle was sized once, from the text width in whatever font
+  was active at that moment. A hub that sets its own font after building the menu
+  (or a font that finishes downloading later) left the box too narrow, so "None" was
+  clipped against the edge and touched the switch. The box now re-measures when the
+  font changes, rounds to whole pixels with the same parity as its height, and has a
+  fixed height of the indicator size plus 2 instead of the fractional text height
+  plus 4. Checked with four fonts: the box is always at least 10px wider than the
+  text.
+
 ### Memory
 
 - Measured in game by creating and destroying 30 groupboxes of eight controls each:

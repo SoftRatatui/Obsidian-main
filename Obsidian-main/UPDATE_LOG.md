@@ -79,8 +79,14 @@ simulated network; not checked from inside Russia.
   kept. The loader asks for the pinned file first and falls back to `Library.lua`.
   Git stores both names as one blob.
 - statically.io is removed from the list: it served `version.txt` but timed out on
-  the 950 KB file after 30 s in the test. The list is now GitHub raw, four jsDelivr
-  routes and raw.githack.
+  the 950 KB file after 30 s in the test. raw.githack is removed too: fetching a file
+  from it ends in a redirect to `raw.githubusercontent.com`, so it is not a second
+  route when GitHub raw is blocked. The list is now GitHub raw and four jsDelivr
+  routes (Gcore, Fastly, main, Cloudflare); an independent route needs a host of
+  your own (`MonHubConfig.Extra`).
+- With the pinned file pushed, every route returned `Library.<hash>.lua` byte for byte
+  identical (SHA-256) in 0.65 to 1.1 s, and the real Diagnose run on the desktop
+  client downloaded it from raw and ran all steps.
 - Cloudflare: its status page reported a partial outage (Asia and some data centres)
   at the time, with CDN, Pages and Workers operational and the Moscow and Saint
   Petersburg data centres operational. Only two of the six mirrors use Cloudflare, so
@@ -89,6 +95,18 @@ simulated network; not checked from inside Russia.
 - Simulated: stale `Library.lua` next to a fresh pinned file (fresh build used),
   pinned file not published yet (alias used), only stale copies anywhere (refused,
   embedded copy used).
+
+### Diagnostic script
+
+- `dist/Diagnose.lua` runs the whole start on the device and prints the result in an
+  on-screen panel and to `MonHub_diagnose.txt`: executor and platform, which
+  functions exist, each mirror's answer and speed, download size and compile time,
+  then the library step by step with tracebacks. Run on the desktop client it
+  reports every step ok in about 3 seconds. It exists because a phone user's error
+  text (`attempt to index nil with 'Appearance'`, from a 7 line script) could not be
+  traced: nothing in the library, the loader or the two hubs indexes a field called
+  `Appearance` on anything, so the error comes from another script or from the
+  executor.
 
 ### Phones (Delta and similar executors)
 

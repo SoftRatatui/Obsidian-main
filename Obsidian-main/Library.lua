@@ -65,8 +65,6 @@ local MirrorHosts = {
     "https://cdn.jsdelivr.net/gh/%s/%s@%s/%s",
     "https://testingcf.jsdelivr.net/gh/%s/%s@%s/%s",
     false,
-    "https://raw.githack.com/%s/%s/%s/%s",
-    "https://cdn.statically.io/gh/%s/%s/%s/%s",
 }
 
 local function MirrorURLs(URL: string): { string }

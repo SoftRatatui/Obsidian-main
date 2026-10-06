@@ -2,3 +2,4 @@
 * text=auto
 Obsidian-main/dist/** text eol=lf
 Obsidian-main/Loader.lua text eol=lf
+Obsidian-main/Diagnose.lua text eol=lf

@@ -169,9 +169,12 @@ held up by that.
 
 Mirrors are tried in this order, the next one starting in parallel when the
 previous has not answered after one second (three for the library file): GitHub
-raw, then jsDelivr through Gcore, Fastly, its main CDN and Cloudflare, then
-raw.githack. Only two of the six go through Cloudflare (`testingcf` and githack),
-so a Cloudflare outage leaves GitHub raw and three jsDelivr routes untouched. The
+raw, then jsDelivr through Gcore, Fastly, its main CDN and Cloudflare. Only one of
+the five goes through Cloudflare (`testingcf`), so a Cloudflare outage leaves GitHub
+raw and three jsDelivr routes untouched. raw.githack and statically.io were tried and
+removed: githack answers with a redirect to GitHub raw, so it is no route at all when
+raw is blocked, and statically.io timed out on the 950 KB file. All five routes
+returned the pinned file byte for byte identical (SHA-256) when checked. The
 mirror that answered is stored and tried first next time, so after one slow start
 a player behind a blocked host pays no delay. `MonHubConfig.Extra` takes more base
 URLs ending in `/`, for a mirror you host yourself.
@@ -199,6 +202,24 @@ arrives; if it does not, the request is repeated after 15, 45 and 120 seconds.
 The image assets of the color picker use the same mirrors and only when missing.
 Keep it this way: any future startup work that waits on the network brings back
 the timeouts this build was made to avoid.
+
+### Diagnosing a start that fails on a device
+
+`dist/Diagnose.lua` is a standalone script for a device where the hub does not
+start, usually a phone. It needs nothing but the executor:
+
+```luau
+loadstring(game:HttpGet("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/dist/Diagnose.lua"))()
+```
+
+It shows its results in an on-screen panel (a phone has no console) and saves the
+same text to `MonHub_diagnose.txt` in the executor workspace. It reports the
+executor name and platform, which of the functions the library can use exist,
+whether each of the five mirrors answers and how fast, the size and compile time of
+the download, and then runs the library step by step: running it, creating a window,
+tabs and controls, a notification and the bundled addons. A failing step prints its
+error with a traceback, so the line the error comes from is visible. Any open MonHub
+window is put aside while it runs and restored afterwards.
 
 ### Embedding the library in a hub
 

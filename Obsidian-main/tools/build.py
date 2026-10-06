@@ -79,6 +79,7 @@ def build():
     version = f"{hashlib.sha256(text).hexdigest()[:12]}-{len(text)}"
     (DIST / "version.txt").write_bytes((version + "\n").encode("ascii"))
     shutil.copyfile(ROOT / "Loader.lua", DIST / "Loader.lua")
+    shutil.copyfile(ROOT / "Diagnose.lua", DIST / "Diagnose.lua")
 
     pinned_name = f"Library.{version.split('-')[0]}.lua"
     (DIST / pinned_name).write_bytes(text)

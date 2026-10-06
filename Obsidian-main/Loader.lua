@@ -53,7 +53,6 @@ local function MonHubLoad(Config)
             "https://fastly.jsdelivr.net/gh/" .. Repo .. "@" .. Branch .. "/" .. Path,
             "https://cdn.jsdelivr.net/gh/" .. Repo .. "@" .. Branch .. "/" .. Path,
             "https://testingcf.jsdelivr.net/gh/" .. Repo .. "@" .. Branch .. "/" .. Path,
-            "https://raw.githack.com/" .. Repo .. "/" .. Branch .. "/" .. Path,
         }
         for _, Base in Config.Extra or {} do
             table.insert(List, Base .. Name)

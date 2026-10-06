@@ -1,6 +1,8 @@
 import hashlib
 import json
+import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -9,6 +11,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 WORK = ROOT / ".build"
 CONFIG = ROOT / ".darklua.json"
+KEEP_BUILDS = 5
+PINNED = re.compile(r"^Library\.[0-9a-f]{12}\.lua$")
 DARKLUA = shutil.which("darklua") or str(pathlib.Path.home() / ".aftman" / "bin" / "darklua.exe")
 
 
@@ -42,7 +46,11 @@ def build():
     if WORK.exists():
         shutil.rmtree(WORK)
     WORK.mkdir()
+    earlier = {}
     if DIST.exists():
+        for path in DIST.glob("Library.*.lua"):
+            if PINNED.match(path.name):
+                earlier[path.name] = (path.read_bytes(), path.stat().st_mtime)
         shutil.rmtree(DIST)
     DIST.mkdir()
 
@@ -71,6 +79,21 @@ def build():
     version = f"{hashlib.sha256(text).hexdigest()[:12]}-{len(text)}"
     (DIST / "version.txt").write_bytes((version + "\n").encode("ascii"))
     shutil.copyfile(ROOT / "Loader.lua", DIST / "Loader.lua")
+
+    pinned_name = f"Library.{version.split('-')[0]}.lua"
+    (DIST / pinned_name).write_bytes(text)
+    for name, (data, modified) in earlier.items():
+        if name != pinned_name:
+            target = DIST / name
+            target.write_bytes(data)
+            os.utime(target, (modified, modified))
+    builds = sorted(
+        (path for path in DIST.glob("Library.*.lua") if PINNED.match(path.name)),
+        key=lambda path: (path.name == pinned_name, path.stat().st_mtime),
+        reverse=True,
+    )
+    for path in builds[KEEP_BUILDS:]:
+        path.unlink()
 
     report = {"Library.lua": library.stat().st_size}
     for path in sorted(DIST.rglob("*.lua")):

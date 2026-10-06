@@ -64,6 +64,32 @@ simulated network; not checked from inside Russia.
 - `.gitattributes` forces LF in `dist/`. The repository normalises line endings, and
   a CRLF copy would differ from the byte count in `version.txt` and be rejected.
 
+### Stale CDN copies
+
+- Measured with the real mirrors after the first push of `dist/`: GitHub raw,
+  raw.githack and four jsDelivr routes all answered with 200 in 0.4 to 1.7 s, but
+  `Library.lua` was not the same everywhere: raw 949416 bytes (an older push),
+  jsDelivr 949175 bytes (an even older one), against 949475 in the repository, while
+  `version.txt` was current on all of them. A loader that trusts a mirror would have
+  run an old build; the size check refused it, which in a region where jsDelivr is the
+  only route means no hub at all.
+- The build now also writes `dist/Library.<hash>.lua`, and `version.txt` names it.
+  A new file name has never been cached, so it cannot be stale, and an old
+  `version.txt` still points at a file that exists because the last five builds are
+  kept. The loader asks for the pinned file first and falls back to `Library.lua`.
+  Git stores both names as one blob.
+- statically.io is removed from the list: it served `version.txt` but timed out on
+  the 950 KB file after 30 s in the test. The list is now GitHub raw, four jsDelivr
+  routes and raw.githack.
+- Cloudflare: its status page reported a partial outage (Asia and some data centres)
+  at the time, with CDN, Pages and Workers operational and the Moscow and Saint
+  Petersburg data centres operational. Only two of the six mirrors use Cloudflare, so
+  an outage there does not stop the loader. Delta's own key service may sit behind
+  Cloudflare; that is outside this library.
+- Simulated: stale `Library.lua` next to a fresh pinned file (fresh build used),
+  pinned file not published yet (alias used), only stale copies anywhere (refused,
+  embedded copy used).
+
 ### Phones (Delta and similar executors)
 
 - The 5 second limit only makes sense when something can run instead. With no stored

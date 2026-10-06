@@ -119,7 +119,8 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 
 ## Loading in production
 
-`dist/Library.lua` is the build hubs should load. It is one file holding the
+`dist/Library.<hash>.lua` is the build hubs should load (`dist/Library.lua` is the same
+file under a fixed name, kept for older loaders). It is one file holding the
 library, every addon and the Lucide icon module, minified with darklua: about
 930 KB for all of it. Next to it, `dist/version.txt` holds the build's version as
 `<hash>-<bytes>`, a few bytes that tell a hub whether its stored copy is current.
@@ -139,9 +140,12 @@ whenever a fallback exists (a stored copy or an embedded one):
 1. It reads `version.txt`. If the version equals the one stored from the last good
    download, and the stored file has the expected size, it runs the stored copy and
    downloads nothing else. This is the normal start: a few bytes over the network.
-2. Otherwise it downloads `Library.lua`. A response is accepted only if its size
-   matches `version.txt` and it compiles, so a cut-off download or an HTML block page
-   is never run. The copy is stored in `MonHub/cache/` after it runs successfully.
+2. Otherwise it downloads the build named in `version.txt`: `Library.<hash>.lua`,
+   a file whose name contains the build's hash and never changes. A response is
+   accepted only if its size matches `version.txt` and it compiles, so a cut-off
+   download or an HTML block page is never run. The copy is stored in
+   `MonHub/cache/` after it runs successfully. If the pinned file cannot be had, it
+   tries `Library.lua`, the same build under a fixed name, with the same checks.
 3. If that fails or runs out of time, it runs the last stored copy.
 4. If nothing is stored, it runs the copy embedded in the script.
 5. Only if none of these exist does it raise an error listing what failed.
@@ -164,8 +168,10 @@ minutes and stores the result, so the next start is current. The window is never
 held up by that.
 
 Mirrors are tried in this order, the next one starting in parallel when the
-previous has not answered after one second: GitHub raw, then jsDelivr through
-Gcore, Fastly, its main CDN and Cloudflare, then raw.githack and statically. The
+previous has not answered after one second (three for the library file): GitHub
+raw, then jsDelivr through Gcore, Fastly, its main CDN and Cloudflare, then
+raw.githack. Only two of the six go through Cloudflare (`testingcf` and githack),
+so a Cloudflare outage leaves GitHub raw and three jsDelivr routes untouched. The
 mirror that answered is stored and tried first next time, so after one slow start
 a player behind a blocked host pays no delay. `MonHubConfig.Extra` takes more base
 URLs ending in `/`, for a mirror you host yourself.
@@ -220,7 +226,13 @@ The build needs darklua (`aftman add seaofvoices/darklua`). It writes
 `dist/sizes.json`. Rules are in `.darklua.json`: comments, whitespace and type
 annotations are removed, locals are renamed, constant expressions are folded, and
 lines stay under 240 characters because some executors fail on very long lines.
-Files in `dist/` are written with LF endings and `.gitattributes` keeps them that
+The build keeps the five most recent `Library.<hash>.lua` files and removes older
+ones, so a stale `version.txt` on a slow mirror still points at a file that exists.
+Pinned names exist because CDNs cache a fixed name for hours: measured on the day
+this was added, jsDelivr was serving a `Library.lua` from an earlier push (949175
+bytes) next to a current `version.txt`, so any loader that checked the size would
+have refused it and any loader that did not would have run an old build. A new file
+name cannot be stale. Files in `dist/` are written with LF endings and `.gitattributes` keeps them that
 way, because the size check in the loader compares exact byte counts. Rebuild and
 push after every source change; the sources stay readable and are the files to
 edit.

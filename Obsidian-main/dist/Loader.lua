@@ -54,7 +54,6 @@ local function MonHubLoad(Config)
             "https://cdn.jsdelivr.net/gh/" .. Repo .. "@" .. Branch .. "/" .. Path,
             "https://testingcf.jsdelivr.net/gh/" .. Repo .. "@" .. Branch .. "/" .. Path,
             "https://raw.githack.com/" .. Repo .. "/" .. Branch .. "/" .. Path,
-            "https://cdn.statically.io/gh/" .. Repo .. "/" .. Branch .. "/" .. Path,
         }
         for _, Base in Config.Extra or {} do
             table.insert(List, Base .. Name)
@@ -176,14 +175,26 @@ local function MonHubLoad(Config)
         end
     end
 
+    local function Download(Version, Budget)
+        local Hash, Bytes = string.match(Version or "", "^(%x+)%-(%d+)$")
+        Bytes = tonumber(Bytes)
+        local Body, Chunk
+        if Hash then
+            Body, Chunk = Race("Library." .. Hash .. ".lua", LibraryCheck(Bytes), Budget, 3)
+        end
+        if not Body then
+            Body, Chunk = Race("Library.lua", LibraryCheck(Bytes), Budget, 3)
+        end
+        return Body, Chunk
+    end
+
     local function Refresh()
         task.spawn(function()
             local Version = Race("version.txt", VersionCheck, 20)
             if not Version or Version == ReadFile(Cache .. "Library.version") then
                 return
             end
-            local Bytes = tonumber(string.match(Version, "%-(%d+)$"))
-            local Body = Race("Library.lua", LibraryCheck(Bytes), 120)
+            local Body = Download(Version, 120)
             if Body then
                 Store(Body, Version)
             end
@@ -225,7 +236,7 @@ local function MonHubLoad(Config)
     if not HasFallback then
         Toast("Downloading the interface for the first time. On a slow connection this can take a minute.", 8)
     end
-    local Body, Chunk = Race("Library.lua", LibraryCheck(Bytes), HasFallback and Remaining() or Patient, 3)
+    local Body, Chunk = Download(Remote, HasFallback and Remaining() or Patient)
     if Body then
         local Library = Run(Chunk, "download")
         if Library then

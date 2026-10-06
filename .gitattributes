@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+Obsidian-main/dist/** text eol=lf
+Obsidian-main/Loader.lua text eol=lf

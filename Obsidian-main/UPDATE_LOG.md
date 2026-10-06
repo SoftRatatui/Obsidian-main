@@ -35,6 +35,61 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-10-06 (version: UNRESOLVED, see the note above)
+
+Loading for players who cannot reach GitHub reliably. Checked in game with a
+simulated network; not checked from inside Russia.
+
+### Loader
+
+- `dist/version.txt` holds `<hash>-<bytes>` of the build. The loader reads it first
+  (a few bytes) and runs the stored copy when the version matches, so a normal start
+  downloads nothing else. Before, every start downloaded 927 KB.
+- 5 second budget for the network part. A downloaded file is accepted only if it
+  compiles and its size equals the size in `version.txt`; the previous check was
+  compilation alone.
+- Fallback order: fresh download, stored copy in `MonHub/cache/`, copy embedded in
+  the hub, then a clear error. After a fallback the loader keeps downloading in the
+  background for up to two minutes and stores the result.
+- The mirror that answered is stored and tried first next time. With GitHub raw
+  hanging, the first start takes about 1.4 s and the second 0.2 s in the simulation.
+  Mirrors start one second apart instead of two.
+- `MonHubLoad()` takes no arguments now (it was `MonHubLoad("Library.lua")`).
+  `MonHubConfig` replaces the loose settings: `Repo`, `Branch`, `Folder`, `Cache`,
+  `Timeout`, `Stagger`, `Extra`, `Embedded`, `Get`.
+- `tools/embed_hub.py` writes a copy of a hub with the library embedded and its
+  downloads replaced by `MonHubLoad()` and `Library.Addons.Name`. Both current hubs
+  were converted and compile (BloxStrike 1.3 MB, Jump For Animals 1.0 MB); they were
+  not run.
+- `.gitattributes` forces LF in `dist/`. The repository normalises line endings, and
+  a CRLF copy would differ from the byte count in `version.txt` and be rejected.
+
+### Startup network use
+
+- Measured with the library running in an environment that records every request:
+  nothing is requested while the library loads, apart from the Inter font, which is
+  requested from a background task. Icons are inside the build.
+- A failed font download is now retried after 15, 45 and 120 seconds instead of
+  giving up for the session.
+- Loading the library offline took 0.02 s; through the loader with the embedded copy
+  0.15 s.
+
+### Simulated network results
+
+| Case | Result |
+| --- | --- |
+| Nothing reachable, nothing stored | Embedded copy runs, 0.00 s |
+| GitHub raw hangs, a CDN answers | 1.4 s, then 0.2 s on the next start |
+| Stored copy current | Library.lua is not requested at all |
+| New version published | Downloaded once |
+| First mirror truncates, second returns HTML, third is good | Third is used |
+| Every mirror takes 8 s | Stored copy runs at the 5.0 s mark |
+| Stored copy cut short, version matches | Rejected, downloaded again |
+| Nothing at all | Error naming the failures |
+
+All seven mirror hosts answered from the test client (a 404, since `dist/` is not
+pushed yet), so the address formats are right.
+
 ## Update 2026-10-05 (version: UNRESOLVED, see the note above)
 
 A second pass on the look, modelled on a reference menu the owner liked, plus the

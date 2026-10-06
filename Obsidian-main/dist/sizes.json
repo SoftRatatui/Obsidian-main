@@ -1,5 +1,5 @@
 {
-  "Library.lua": 949416,
+  "Library.lua": 949475,
   "addons/AssetCatalog.lua": 48746,
   "addons/CharacterTrail.lua": 10365,
   "addons/CollectionModel.lua": 4639,
@@ -16,5 +16,6 @@
   "addons/TextureGallery.lua": 17086,
   "addons/ThemeManager.lua": 30971,
   "addons/TracerPreview.lua": 7802,
-  "addons/VisualPreview.lua": 32397
+  "addons/VisualPreview.lua": 32397,
+  "Loader.lua": 8783
 }

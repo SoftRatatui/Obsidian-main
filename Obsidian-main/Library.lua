@@ -26570,20 +26570,25 @@ do
         Library:SetThemeFont(FallbackFont)
 
         task.spawn(function()
-            local Face, Problem = LoadDefaultFont()
-            Library.DefaultFontError = Problem
-            if Library.Unloaded then
-                return
-            end
-            if not Face then
+            for _, Delay in { 0, 15, 45, 120 } do
+                if Delay > 0 then
+                    task.wait(Delay)
+                end
+                if Library.Unloaded then
+                    return
+                end
+                local Face, Problem = LoadDefaultFont()
+                Library.DefaultFontError = Problem
+                if Face then
+                    Library.DefaultFont = Face
+                    if Library.CurrentFontName == "Inter" and Library.Scheme.Font == FallbackFont then
+                        Library:SetThemeFont(Face)
+                    end
+                    return
+                end
                 if Library.CurrentFontName == "Inter" and Library.Scheme.Font == FallbackFont then
                     Library.CurrentFontName = "Gotham"
                 end
-                return
-            end
-            Library.DefaultFont = Face
-            if Library.CurrentFontName == "Inter" and Library.Scheme.Font == FallbackFont then
-                Library:SetThemeFont(Face)
             end
         end)
     end

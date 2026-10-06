@@ -121,27 +121,44 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 
 `dist/Library.lua` is the build hubs should load. It is one file holding the
 library, every addon and the Lucide icon module, minified with darklua: about
-930 KB for all of it, against 968 KB for the library source alone. Nothing in it
-needs the network at startup except the first download of the Inter font.
+930 KB for all of it. Next to it, `dist/version.txt` holds the build's version as
+`<hash>-<bytes>`, a few bytes that tell a hub whether its stored copy is current.
 
-Paste the block from `Loader.lua` at the top of a hub. It downloads
-`dist/Library.lua` like this:
-
-- It tries GitHub raw first, the freshest source. If no valid answer arrives
-  within 2 seconds, the next mirror starts in parallel: jsDelivr through Gcore,
-  Fastly, its main CDN and Cloudflare, then raw.githack and statically. The first
-  response that compiles wins, so a cut-off download or an HTML block page is
-  never executed.
-- Every successful download is saved to `MonHub/cache/Library.lua`. When no
-  mirror answers within 30 seconds, the cached copy is loaded instead, so a hub
-  that worked once keeps starting when GitHub is unreachable.
+Paste the block from `Loader.lua` at the top of a hub, or build the hub with the
+copy embedded (below). Then load the library with:
 
 ```luau
--- the MonHubLoad block from Loader.lua goes here
-local Library = MonHubLoad("Library.lua")
+local Library = MonHubLoad()
 local ThemeManager = Library.Addons.ThemeManager
 local SaveManager = Library.Addons.SaveManager
 ```
+
+`MonHubLoad` decides in this order, with 5 seconds in total for the network part:
+
+1. It reads `version.txt`. If the version equals the one stored from the last good
+   download, and the stored file has the expected size, it runs the stored copy and
+   downloads nothing else. This is the normal start: a few bytes over the network.
+2. Otherwise it downloads `Library.lua`. A response is accepted only if its size
+   matches `version.txt` and it compiles, so a cut-off download or an HTML block page
+   is never run. The copy is stored in `MonHub/cache/` after it runs successfully.
+3. If that fails or runs out of time, it runs the last stored copy.
+4. If nothing is stored, it runs the copy embedded in the script.
+5. Only if none of these exist does it raise an error listing what failed.
+
+When it had to fall back, it keeps downloading in the background for up to two
+minutes and stores the result, so the next start is current. The window is never
+held up by that.
+
+Mirrors are tried in this order, the next one starting in parallel when the
+previous has not answered after one second: GitHub raw, then jsDelivr through
+Gcore, Fastly, its main CDN and Cloudflare, then raw.githack and statically. The
+mirror that answered is stored and tried first next time, so after one slow start
+a player behind a blocked host pays no delay. `MonHubConfig.Extra` takes more base
+URLs ending in `/`, for a mirror you host yourself.
+
+Settings are in `MonHubConfig`: `Repo`, `Branch`, `Folder`, `Cache`, `Timeout`
+(5), `Stagger` (1), `Extra`, `Embedded` and `Get` (a function taking a URL and
+returning the body, to replace the built-in downloader).
 
 `Library.Addons.Name` runs the bundled addon the first time it is read and then
 returns the same table every time, so unused addons cost nothing at startup.
@@ -150,11 +167,30 @@ build contains, and `Library.Bundled` is true only in the build. Loading
 `Library.lua` from the repository root still works as before and has no bundled
 addons.
 
-Inside the library, every download from raw.githubusercontent.com (the default
-font, image assets, the icon module when not bundled) goes through the same
-mirror list, jsDelivr first because those files never change. When the Inter font
-is not cached yet, the window opens in Gotham immediately and switches to Inter
-once the download finishes, instead of waiting for it.
+### What the library itself downloads
+
+Nothing at startup. The icons are inside the build, and `Library.Addons` runs
+from memory. The only network use is the Inter font (about 430 KB), requested in
+the background through the same mirrors, jsDelivr first because the file never
+changes. The window opens at once in Gotham and switches to Inter when the font
+arrives; if it does not, the request is repeated after 15, 45 and 120 seconds.
+The image assets of the color picker use the same mirrors and only when missing.
+Keep it this way: any future startup work that waits on the network brings back
+the timeouts this build was made to avoid.
+
+### Embedding the library in a hub
+
+```
+python tools/embed_hub.py hub.lua [hub.embedded.lua]
+```
+
+writes a copy of the hub that carries `dist/Library.lua` inside itself as the last
+resort, replaces its download of `Library.lua` with `MonHubLoad()` and its
+downloads of addons with `Library.Addons.Name`. The original is not changed. The
+file grows by about 950 KB. Rebuild with `tools/build.py` first, and rebuild the
+embedded hub from time to time: the embedded copy is only used when no mirror
+answers and nothing is stored, and it is replaced by the stored copy as soon as
+one download succeeds.
 
 ### Building
 
@@ -163,12 +199,26 @@ python tools/build.py
 ```
 
 The build needs darklua (`aftman add seaofvoices/darklua`). It writes
-`dist/Library.lua`, a standalone minified copy of each addon under
-`dist/addons/`, and `dist/sizes.json`. Rules are in `.darklua.json`: comments,
-whitespace and type annotations are removed, locals are renamed, constant
-expressions are folded, and lines stay under 240 characters because some
-executors fail on very long lines. Rebuild after every source change; the
-sources stay readable and are the files to edit.
+`dist/Library.lua`, `dist/version.txt`, `dist/Loader.lua` (a copy of
+`Loader.lua`), a standalone minified copy of each addon under `dist/addons/`, and
+`dist/sizes.json`. Rules are in `.darklua.json`: comments, whitespace and type
+annotations are removed, locals are renamed, constant expressions are folded, and
+lines stay under 240 characters because some executors fail on very long lines.
+Files in `dist/` are written with LF endings and `.gitattributes` keeps them that
+way, because the size check in the loader compares exact byte counts. Rebuild and
+push after every source change; the sources stay readable and are the files to
+edit.
+
+### Hosting your own mirror
+
+`dist/` is plain static files, so any static host can serve it: GitLab Pages,
+Codeberg Pages, Cloudflare Pages, or your own server. Upload the folder, then add
+its address to `MonHubConfig.Extra` (the folder URL with a trailing `/`, so that
+`<address>version.txt` and `<address>Library.lua` resolve). Pick a host that is
+reachable from the regions you care about, and serve the files unmodified: do not
+use a proxy that rewrites or minifies, because the loader rejects any file whose
+size differs from `version.txt`. A mirror can only serve what you uploaded; use
+hosts you control, since the loader runs whatever compiles and has the right size.
 
 ## Quick start
 
@@ -2051,7 +2101,7 @@ Run local checks with Luau's compiler and interpreter installed:
 - Toggles and `AddCheckbox` now draw 28x16 switches by default (`Library.ToggleStyle = "Checkbox"` restores tick boxes), and slider and progress tracks are 8px pills (10px on Touch) with no outline or gradient, with a 12px knob that grows to 14px on hover.
 - Notifications are plain 300px cards with a close cross, no icon unless asked, and tinted titles for success, warning and error.
 - On narrow screens the two page columns stack into one scroll, and key and colour pickers stay centred on tall touch rows.
-- Added the darklua build `dist/Library.lua` with every addon and the icon module inside (`Library.Addons`, `Library:GetAddon`), and `Loader.lua`, which downloads it through seven mirrors and falls back to a cached copy.
+- Added the darklua build `dist/Library.lua` with every addon and the icon module inside (`Library.Addons`, `Library:GetAddon`), `dist/version.txt`, and `Loader.lua`: it checks the version, downloads only when it changed, tries seven mirrors with a 5 second budget, remembers the mirror that worked, and falls back to the stored copy and then to a copy embedded in the hub (`tools/embed_hub.py`).
 - Routed the library's own downloads through the same mirrors with a time limit, and stopped the first launch from waiting on the Inter font download.
 - Tightened the default density: 20px control rows in `Compact` (checkboxes 26px apart instead of 33px), `Grid.RowGap` wired to the groupbox gap, 32px groupbox headers, 44px top bar, 184px sidebar with 32px tab rows.
 - Removed the accent bar and the accent-tinted fill behind tabs: the open tab is a neutral 8% pill with accent text, group cards are hairline only, tabbox headers have no tinted fill, groupboxes are 35% translucent (`Opacity.Card`) and strokes are lighter (`Stroke.SoftTransparency` 0.6). `Library:AnimateTabTrail` and the `Effects.NavigationIndicator` token are gone.

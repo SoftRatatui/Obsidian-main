@@ -1,3 +1,4 @@
+import hashlib
 import json
 import pathlib
 import shutil
@@ -64,14 +65,21 @@ def build():
     for name, path in addons.items():
         darklua(path, DIST / path.relative_to(ROOT))
 
-    report = {"Library.lua": (DIST / "Library.lua").stat().st_size}
+    library = DIST / "Library.lua"
+    text = library.read_bytes().replace(b"\r\n", b"\n").rstrip()
+    library.write_bytes(text)
+    version = f"{hashlib.sha256(text).hexdigest()[:12]}-{len(text)}"
+    (DIST / "version.txt").write_bytes((version + "\n").encode("ascii"))
+    shutil.copyfile(ROOT / "Loader.lua", DIST / "Loader.lua")
+
+    report = {"Library.lua": library.stat().st_size}
     for path in sorted(DIST.rglob("*.lua")):
         report[str(path.relative_to(DIST)).replace("\\", "/")] = path.stat().st_size
     (DIST / "sizes.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     source_size = (ROOT / "Library.lua").stat().st_size + sum(p.stat().st_size for p in addons.values())
     print(f"sources {source_size // 1024} KB -> dist/Library.lua {report['Library.lua'] // 1024} KB "
-          f"(library + {len(addons)} addons + icons)")
+          f"(library + {len(addons)} addons + icons), version {version}")
 
 
 if __name__ == "__main__":

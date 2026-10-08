@@ -12,17 +12,13 @@ foreach ($taskFile in $taskFiles) {
         throw "Compilation failed: $($taskFile.FullName)"
     }
 }
-& $Runtime (Join-Path $PSScriptRoot 'CollectionModel.spec.luau')
-if ($LASTEXITCODE -ne 0) {
-    throw 'Collection regression tests failed'
-}
 $taskMock = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'RobloxMock.luau'))
 $taskSource = "local Mock = (function()`n$taskMock`nend)()`n"
 foreach ($taskGlobal in @('game', 'Instance', 'Enum', 'UDim', 'UDim2', 'Vector2', 'Color3', 'Font', 'TweenInfo', 'ColorSequence', 'ColorSequenceKeypoint', 'NumberSequence', 'NumberSequenceKeypoint', 'typeof', 'task')) {
     $taskSource += "local $taskGlobal = Mock.$taskGlobal`n"
 }
 $taskSource += "local Modules = {}`nlocal getgenv = function() return {} end`n"
-foreach ($taskModule in @('AssetCatalog', 'ImageGallery', 'ImagePreview', 'TextureGallery', 'CollectionModel', 'DashboardWindow', 'ThemeManager')) {
+foreach ($taskModule in @('DashboardWindow', 'ThemeManager')) {
     $taskModuleSource = [IO.File]::ReadAllText((Join-Path $taskRoot "addons/$taskModule.lua"))
     $taskSource += "Modules.$taskModule = (function()`n$taskModuleSource`nend)()`n"
 }
@@ -229,9 +225,6 @@ $taskSource += "`n$taskDropdownMethods`nreturn Dropdown, View`nend`n"
 $taskTypographySpec = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Typography.spec.luau'))
 $taskSource += "local RunTypography = (function()`n$taskTypographySpec`nend)()`nRunTypography(CreateDropdown, Mock)`n"
 $taskEditorStart = $taskLibrarySource.IndexOf('    function Funcs:AddTable(')
-$taskDragStart = $taskLibrarySource.IndexOf('function Library:RegisterImageGrid(')
-$taskDragEnd = $taskLibrarySource.IndexOf('local function CopyOptionValue(', $taskDragStart)
-$taskDragMethods = $taskLibrarySource.Substring($taskDragStart, $taskDragEnd - $taskDragStart)
 $taskDependencyStart = $taskLibrarySource.IndexOf('function Library:UpdateDependencyBoxes()')
 $taskDependencyEnd = $taskLibrarySource.IndexOf('local function MatchesSearch(', $taskDependencyStart)
 $taskDependencyCode = $taskLibrarySource.Substring($taskDependencyStart, $taskDependencyEnd - $taskDependencyStart)
@@ -330,7 +323,7 @@ local function CreateEditor()
     Library.DialogOpenAnimationInfo, Library.DialogCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
     Library.DialogOverlayOpenAnimationInfo, Library.DialogOverlayCloseAnimationInfo = TweenInfo.new(0.1), TweenInfo.new(0.1)
 '@
-$taskSource += "`n$taskDependencyCode`n$taskDragMethods`n$taskHiddenMethods`n$taskEditorMethods`n$taskInputMethods`n$taskPopupMethods`n"
+$taskSource += "`n$taskDependencyCode`n$taskHiddenMethods`n$taskEditorMethods`n$taskInputMethods`n$taskPopupMethods`n"
 $taskSource += @'
     local Groupbox = setmetatable({ Elements = {}, Container = New("Frame", { Parent = MainFrame }), Resize = function() end }, BaseGroupbox)
     return Library, Groupbox, Window, UserInputService

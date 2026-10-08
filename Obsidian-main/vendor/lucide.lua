@@ -42,29 +42,32 @@ local iconIndices: { string } = icons[1]
 local idIndices: { string } = icons[2]
 local iconRegistry: { [number]: { number | { number } } } = icons[3]
 
+local nameIndices: { [string]: number } = {}
+for index, iconName in iconIndices do
+	nameIndices[iconName] = index
+end
+
+local registrySizeFor48 = 48
+do
+	local currentDifference = math.huge
+	for registrySize, _ in iconRegistry do
+		local diff = math.abs(48 - registrySize)
+		if diff < currentDifference then
+			currentDifference = diff
+			registrySizeFor48 = registrySize
+		end
+	end
+end
+
 Lucide.Icons = iconIndices
 function Lucide.GetAsset(name: string)
-	local size = 48
-
-	local iconIndex = table.find(iconIndices, name)
+	local iconIndex = nameIndices[name]
 
 	if not iconIndex then
 		return nil
 	end
 
-	local currentDifference = math.huge
-	local currentSize = size
-
-	for registrySize, _ in iconRegistry do
-		local diff = math.abs(size - registrySize)
-
-		if diff < currentDifference then
-			currentDifference = diff
-			currentSize = registrySize
-		end
-	end
-
-	local icon = iconRegistry[currentSize][iconIndex]
+	local icon = iconRegistry[registrySizeFor48][iconIndex]
 	if icon then
 		return {
 			IconName = name,

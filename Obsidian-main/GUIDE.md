@@ -39,31 +39,6 @@ Group:AddToggle("RefreshPreview", {
 
 Background jobs are queued only after successful option, adapter and theme application. Failed transactions discard them. `OnConfigLoaded` means stored values and adapters have been applied, not that background jobs have finished. `report.BackgroundCallbacks` is a live list with `Id`, `Status` (Pending, Running, Completed, Failed or Cancelled), and, after completion, `Seconds` and optional `Error`. Inspect it after your background work finishes. Errors in these jobs do not roll back an already completed load. Jobs that have not started are cancelled when the library is unloaded; already running work remains the application's responsibility. Repeated loads can overlap background work, so use cancellation tokens in long-running handlers. Background scheduling does not make CPU-bound work run in parallel; break large work into bounded steps.
 
-## AssetCatalog selection, pager and card updates
-
-```lua
-local catalog = Group:AddAddon("Assets", AssetCatalog, {
-    Items = {
-        { Id = "first", Name = "First", Image = 123 },
-        { Id = "second", Name = "Second", Image = 456 },
-    },
-    MultiSelect = true,
-    ShowPager = false,
-    OnSelected = function(items, normalizedItems)
-        print(#items, "selected")
-    end,
-})
-catalog:SetSelected({ "first", "second" }, true)
-local items, normalizedItems = catalog:GetSelected()
-catalog:SetItemState("first", { Status = "Ready", Favorite = true })
-```
-
-With `MultiSelect = true`, clicking a card or calling `Select(id)` toggles its selection. `SetSelected(ids, silent?)` replaces it; an empty array clears it. `GetSelected()` returns new arrays of source records and normalized records in catalog item order. Callback arguments use the same arrays. Treat the records as read-only and use `SetItemState` for edits. Selection survives search, pagination and item replacement when IDs still exist; removed or disabled IDs are removed from the selection. Programmatic selection rejects disabled items. Without MultiSelect, the original single-item API and callback signature remain unchanged. `CollectionModel` currently owns a single selection, so combining it with MultiSelect is rejected explicitly.
-
-`ShowPager = false` always hides the footer. `true` always shows it. Omit it for automatic hiding when there is one page. `SetShowPager(nil)` restores automatic behavior. The grid reclaims the footer space. Hiding the footer does not disable pagination: use `SetPage`, `NextPage` and `PreviousPage`, or choose an appropriate `PageSize` for your view.
-
-`SetItemState(id, patch)` returns true when the ID exists, otherwise false. It accepts the same item fields as `Items`, except that `Id` stays fixed. Use false to clear boolean fields and an empty string to clear Status. Updating Status, Disabled, Locked, Favorite, colors or imagery updates the visible matching card and its preview without replacing card instances. Changes that affect active filters, names, categories or sorting refresh the filtered view. Source tables supplied by the caller are not modified. Selection callbacks are not emitted for state patches; read GetSelected afterward if a patch disables a selected item.
-
 ## Runtime display controls
 
 ```lua
@@ -111,8 +86,8 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 
 - [Quick start](#quick-start) and [Standards](#standards)
 - [Window](#window), [tabs and groupboxes](#tabs-and-groupboxes), [controls](#controls), and [design system](#design-system)
-- [Addon mounting](#addon-mounting), [generic addon windows](#generic-addon-windows), and [collections without UI](#collections-without-ui)
-- [Asset catalog](#asset-catalog), [image gallery and preview](#image-gallery-and-image-preview), [dashboard](#dashboard), and [character preview](#character-preview)
+- [Addon mounting](#addon-mounting) and [generic addon windows](#generic-addon-windows)
+- [Dashboard](#dashboard) and [native trail](#native-trail)
 - [Themes](#themes), [configs](#configs), [notifications](#notifications), and [watermark](#watermark)
 - [Addon recipes](#addon-recipes), [complete API reference](#complete-addon-api-reference), and [release checklist](#release-checklist)
 - [Runtime and advanced API](#runtime-and-advanced-api): reactivity, performance, declarative builder, registry, search, sub-tabs, touch, diagnostics, new controls, and performance numbers
@@ -122,7 +97,7 @@ Numeric inputs accept Min and Max independently. `ThousandsSeparator = true` dis
 `dist/Library.<hash>.lua` is the build hubs should load (`dist/Library.lua` is the same
 file under a fixed name, kept for older loaders). It is one file holding the
 library, every addon and the Lucide icon module, minified with darklua: about
-930 KB for all of it. Next to it, `dist/version.txt` holds the build's version as
+720 KB for all of it. Next to it, `dist/version.txt` holds the build's version as
 `<hash>-<bytes>`, a few bytes that tell a hub whether its stored copy is current.
 
 Paste the block from `Loader.lua` at the top of a hub, or build the hub with the
@@ -179,11 +154,24 @@ mirror that answered is stored and tried first next time, so after one slow star
 a player behind a blocked host pays no delay. `MonHubConfig.Extra` takes more base
 URLs ending in `/`, for a mirror you host yourself.
 
-Settings are in `MonHubConfig`: `Repo`, `Branch`, `Folder`, `Cache`, `Timeout`
-(5), `Stagger` (1), `PatientTimeout` (60), `Extra`, `Embedded` and `Get` (a
-function taking a URL and returning the body, to replace the built-in
+Settings are in `MonHubConfig`: `Name` (`"Library"`), `Repo`, `Branch`, `Folder`,
+`Cache`, `Timeout` (5), `Stagger` (1), `PatientTimeout` (60), `Extra`, `Embedded`
+and `Get` (a function taking a URL and returning the body, to replace the built-in
 downloader). Requests go through the executor's `request` function and fall back to
-`game:HttpGet`, so executors that have only one of them work.
+`game:HttpGet`, so executors that have only one of them work. A table passed to
+`MonHubLoad` only needs the fields it changes; the rest come from `MonHubConfig`.
+
+The same loader fetches the WindUI build. `MonHubLoad("WindUI")` reads
+`WindUI.version.txt`, downloads `WindUI.<hash>.lua` or `WindUI.lua`, and keeps its
+own `WindUI.lua`, `WindUI.version` and `WindUI.mirror` in the cache folder, with the
+same mirrors, checks and fallbacks:
+
+```luau
+local WindUI = MonHubLoad("WindUI")
+local Window = WindUI:CreateWindow({ Title = "Hub", Folder = "Hub" })
+```
+
+See "WindUI build" below for what differs from upstream WindUI.
 
 `Library.Addons.Name` runs the bundled addon the first time it is read and then
 returns the same table every time, so unused addons cost nothing at startup.
@@ -262,6 +250,11 @@ way, because the size check in the loader compares exact byte counts. Rebuild an
 push after every source change; the sources stay readable and are the files to
 edit.
 
+The same run bundles `windui/src` into `dist/WindUI.lua` with
+`.darklua.windui.json` (the same rules plus darklua's `require` bundler), writes
+`dist/WindUI.version.txt`, and keeps the five most recent `WindUI.<hash>.lua` files
+the same way.
+
 ### Hosting your own mirror
 
 `dist/` is plain static files, so any static host can serve it: GitLab Pages,
@@ -272,6 +265,43 @@ reachable from the regions you care about, and serve the files unmodified: do no
 use a proxy that rewrites or minifies, because the loader rejects any file whose
 size differs from `version.txt`. A mirror can only serve what you uploaded; use
 hosts you control, since the loader runs whatever compiles and has the right size.
+
+### WindUI build
+
+`windui/` holds the sources of WindUI 1.6.66 by Footages (MIT, see
+`windui/LICENSE`), a separate library with its own API (`Window:Tab`,
+`Tab:Section`, `Section:Toggle({ ... })`). It is not a skin of MonHub and does not
+run MonHub hubs. Load it with `MonHubLoad("WindUI")` or from `dist/WindUI.lua`.
+
+What differs from upstream:
+
+- No downloads at start. Upstream fetches six icon packs from GitHub every time it
+  runs in an executor (about 0.9 s when measured, and an error where GitHub is
+  blocked). This build carries the Lucide module from `vendor/lucide.lua` and makes
+  no request: about 45 ms to compile and run against 950 ms upstream. Only Lucide
+  is included; `WindUI.Creator.AddIcons(Pack, Icons)` still registers other packs.
+  The few names from other packs that WindUI uses itself (`sfsymbols:checkmark`,
+  `sfsymbols:sunMinFill`, `sfsymbols:sunMaxFill`) map to Lucide `check`, `sun-dim`
+  and `sun`.
+- 320 KB instead of 1.35 MB.
+- Building is no longer quadratic in the number of labels: upstream set the font
+  again on every existing label each time a label was created. 180 elements build
+  in 0.54 s instead of 1.9 s.
+- The theme and font registries forget objects when they are destroyed. Upstream
+  kept every destroyed object, so recreated menus grew them forever and every theme
+  change walked the dead entries.
+- Objects get their properties before they are parented, and the theme gradient is
+  remembered instead of searched for on every theme pass.
+- `Creator.DisconnectAll` disconnects every connection; upstream skipped every
+  second one.
+- `Slider` with `Icons = {}` shows the default sun icons (upstream compared the
+  table with `{}`, which is never equal).
+- `WindUI.Version` is `"1.6.66"` and `WindUI.Build` is `"monhub"`.
+
+Known upstream problems that are not fixed yet: elements create their lock
+overlay, hover and highlight layers up front (about 45 objects for a toggle), and
+elements with `Hover` add a new mouse-move listener every time the pointer enters
+them.
 
 ## Quick start
 
@@ -337,7 +367,6 @@ Missing controls or adapters are skipped for compatibility when other entries ca
 - Give every toggle, slider, dropdown, input, color picker, key picker, passthrough, and config adapter a unique ID that never changes between releases.
 - Never reuse an ID for a different control type. Existing user configs identify state by type and ID.
 - Keep gameplay state in a controller or model. UI callbacks should call controller methods instead of owning the feature state.
-- Use `CollectionModel` when embedded and standalone views must share items, favorites, and selection.
 - Register non-control state with `SaveManager:RegisterAdapter`. This covers addon layout, selected presets, module visibility, and project-specific settings.
 
 ### Layout and visual quality
@@ -351,7 +380,6 @@ Text measurement failures, including mobile `Temp read failed` errors, fall back
 - Navigation rows use the full sidebar width. Put spacing inside the label and icon, not around the selected background. Change `Shell.NavigationInset` only when an intentionally inset navigation style is required.
 - Keep dividers away from rounded edges. A groupbox divider begins and ends at its horizontal content padding rather than touching the outline.
 - Mount custom content through `AddUIPassthrough`, `Groupbox:AddAddon`, or `Library:CreateAddonWindow`; these containers handle clipping and cleanup.
-- Use `MinCellWidth` instead of a fixed column count when a gallery must respond to different window widths.
 - Use `Library:SetPalette`, `SetTheme`, `SetDesign`, `BindTheme`, or `BindAddonStyle` for theme-dependent properties. Raw colors are suitable only for content-specific colors such as item rarity.
 - Keep one strong owner for each addon controller and call `Destroy()` when that feature is removed.
 
@@ -359,7 +387,7 @@ Text measurement failures, including mobile `Temp read failed` errors, fall back
 
 - Keep UI callbacks short. Move yielding work, HTTP requests, and expensive scans into a controller task.
 - Reuse one data model and one render loop instead of polling the same state from every widget.
-- Use paged catalogs for large item collections and load large preview assets only for the selected item.
+- Use `AddTable` or `Library:CreateVirtualList` for large item collections and load large preview assets only for the selected item.
 - Dashboard providers should normally use intervals of at least `0.1` seconds.
 - Register external connections and instances with `Library:OnUnload`, or let an addon controller own and destroy them.
 - Prefer `SetReducedMotion(true)` on constrained devices rather than removing state feedback.
@@ -368,16 +396,8 @@ Text measurement failures, including mobile `Temp read failed` errors, fall back
 
 | Need | Module |
 | --- | --- |
-| Skin, weapon, map, vehicle, or inventory browser | `AssetCatalog` |
-| Small paged thumbnail selector | `ImageGallery` |
-| Large selected image or inspect panel | `ImagePreview` |
-| Beam, trail, or texture preset chooser | `TextureGallery` |
-| Shared collection state without UI | `CollectionModel` |
 | Movable metrics and action panel | `DashboardWindow` |
-| Character model and ESP inspection | `VisualPreview` or `FixedR6Preview` |
 | Native character trail effect | `CharacterTrail` |
-| Decorative tracer configuration | `TracerPreview` |
-| Live ESP runtime | `addons/esp/ESP.lua` with `MonHubUI.lua` |
 | Persistent controls and module state | `SaveManager` |
 | Built-in themes and live appearance editing | `ThemeManager` |
 
@@ -408,20 +428,8 @@ Text measurement failures, including mobile `Temp read failed` errors, fall back
 | `QuickStart.luau` | Minimal loader |
 | `addons/SaveManager.lua` | Config persistence |
 | `addons/ThemeManager.lua` | Built-in and custom themes |
-| `addons/AssetCatalog.lua` | Complete skin, weapon, map, or asset browser |
-| `addons/CollectionModel.lua` | UI-independent collection, selection, favorites, queries, and view bindings |
-| `addons/CollectionModel.d.luau` | Collection model types |
-| `addons/ImageGallery.lua` | Lightweight paged image grid |
-| `addons/ImagePreview.lua` | Large configurable image preview |
-| `addons/TextureGallery.lua` | Texture-focused selector |
 | `addons/DashboardWindow.lua` | Metrics, text, buttons, and custom widgets |
-| `addons/VisualPreview.lua` | Real character viewport preview |
-| `addons/FixedR6Preview.lua` | Fixed R6 preview wrapper |
 | `addons/CharacterTrail.lua` | Native Roblox Trail controller |
-| `addons/TracerPreview.lua` | Optional decorative tracer preview |
-| `addons/DrawingESPPreview.lua` | Shared Drawing preview renderer |
-| `addons/esp/ESP.lua` | Optional universal ESP runtime |
-| `addons/esp/MonHubUI.lua` | Optional universal ESP controls |
 
 ## Window
 
@@ -776,23 +784,13 @@ That recording step is why the call is safe to make repeatedly. Each root carrie
 
 Reduced motion is respected: with `Library:SetReducedMotion(true)`, or `Motion = false` in the call, the function restores every target immediately and returns without animating.
 
-The asset catalog uses this on every refresh. Turn it off, or slow it down, per instance:
-
-```luau
-AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
-    Items = Items,
-    Reveal = true,
-    RevealStagger = 0.02,
-})
-```
-
 ### Module styles: minimal and highlight
 
 Every addon resolves its look through `Library:GetAddonStyle`, so two switches change any module without touching the module itself.
 
 ```luau
-AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
-    Items = Items,
+Group:AddAddon("Session", DashboardWindow, {
+    Height = 240,
     Style = { Minimal = true },
 })
 ```
@@ -824,49 +822,23 @@ Four independent chrome fields give precise control when `Minimal` is too broad:
 | `ShowShadow` | `true` | Controls the shadow of a standalone addon window. `Minimal` disables it. |
 | `ShowHeader` | `true` | Controls the shared standalone window header. Pass `false` for a content-only floating module. |
 
-Use a content-only module inside an existing surface like this:
+For modules mounted in a generic addon window, the host applies these fields by ID. Pass a style as the fifth `AddCustom` argument to mount content-only custom GUI, or change it later:
 
 ```luau
-local Gallery = ImageGallery.CreateEmbedded(Library, Groupbox, "Skins", {
-    Items = Items,
-    Style = {
-        Minimal = true,
-        ShowBackground = false,
-        Padding = 4,
-        Gap = 6,
-    },
-})
-```
-
-Visual addons expose `SetStyle`, `SetMinimal`, and `SetHighlighted`. These methods change the existing root and its registered theme bindings; they do not destroy the controller, reset selection, or rebuild image items.
-
-```luau
-Gallery:SetMinimal(true)
-Gallery:SetHighlighted(true)
-Gallery:SetStyle({
-    ShowBackground = true,
-    ShowOutline = true,
-    Radius = 4,
-    SelectionThickness = 2,
-})
-```
-
-`SetMinimal(false)` and `SetHighlighted(false)` restore the normal style derived from the instance's original overrides. A highlighted border always resolves its accent again during a theme update. Use highlighting for current selection, validation attention, a drag target, or the module that receives keyboard input. Do not use it on every module at once because then it stops communicating state.
-
-For modules mounted in a generic addon window, the host provides the same operation by ID:
-
-```luau
-Host:SetModuleMinimal("Gallery", true)
-Host:SetModuleHighlighted("Preview", true)
-Host:SetModuleHighlighted("Preview", true, Color3.fromRGB(108, 190, 255))
-Host:SetModuleStyle("Gallery", {
+Host:AddCustom("Notes", NotesFrame, 120, nil, { Minimal = true, ShowBackground = false })
+Host:SetModuleMinimal("Notes", true)
+Host:SetModuleHighlighted("Dashboard", true)
+Host:SetModuleHighlighted("Dashboard", true, Color3.fromRGB(108, 190, 255))
+Host:SetModuleStyle("Notes", {
     Minimal = false,
     ShowOutline = true,
     Radius = 5,
 })
 
-local EffectiveStyle = Host:GetModuleStyle("Gallery")
+local EffectiveStyle = Host:GetModuleStyle("Notes")
 ```
+
+`SetModuleMinimal(id, false)` and `SetModuleHighlighted(id, false)` turn the switches off again. A highlighted border always resolves its accent again during a theme update. Use highlighting for current selection, validation attention, or the module that receives keyboard input. Do not use it on every module at once because then it stops communicating state.
 
 Packaged visual addons draw the highlight with their existing root stroke. Custom modules use one inner stroke on the transparent, clipped host holder. The two paths are exclusive, so enabling a highlight does not stack coincident borders or let a stroke escape the window. `SetModuleStyle` forwards the style to visual addon controllers that support live styling. Custom GUI modules still receive host-level background, outline, radius, minimal, and highlight behavior.
 
@@ -902,14 +874,14 @@ Duration is tuned to what the movement is for, not to a single house value. Anyt
 
 | Token | Duration | Used by |
 | --- | --- | --- |
-| `TabExit` | `0.05` | The outgoing tab. Nothing is gained by watching it leave. |
+| `TabExit` | `0.05` | Kept for custom code. The outgoing tab now hides at once. |
 | `Fast` | `0.07` | Small state flips. |
-| `WindowClose` | `0.08` | Hiding on the keybind. The user has already decided; get out of the way. |
-| `TabEnter` | `0.09` | The incoming tab. |
+| `WindowClose` | `0.08` | Hiding on the keybind: the window shrinks to 97% and disappears. The user has already decided; get out of the way. |
+| `TabEnter` | `0.09` | The incoming tab sliding into place. |
 | `Hover` | `0.09` | Pointer feedback. Slower than this reads as lag. |
 | `Control` | `0.12` | Toggles, sliders, checkboxes. |
 | `Popup` | `0.14` | Dropdowns and menus. |
-| `WindowOpen` | `0.15` | Showing the menu. |
+| `WindowOpen` | `0.15` | Showing the menu: the window grows from 97% to full size. |
 | `Dialog` | `0.16` | Modal dialogs. |
 | `TextReveal` | `0.16` | Content fading in through `RevealText`. |
 | `Notify` | `0.18` | Notifications arriving unprompted, so worth noticing. |
@@ -930,6 +902,8 @@ Library:SetDesign({
 Every entry eases `Out`, so motion is fastest at the start and settles at the end. That is what makes a short duration still read as movement rather than a jump; easing `InOut` at these lengths just looks sluggish.
 
 Tab switching also has `Window.TabTransitionTime` (default `0.085`) and `TabSwipeOffset` (default `10`), the pixels the incoming tab travels. Keep the offset modest: a long slide cannot be fast and legible at the same time.
+
+Neither the window nor the tab pages fade. A fade needs a `CanvasGroup`, which renders everything inside it into an off-screen texture and redraws that texture whenever anything inside changes; around a whole window that doubled the render time when idle and caused 100 ms spikes while a slider moved. The window scales instead, the outgoing tab hides at once and the incoming one slides in.
 
 `TabSwipeFrom` chooses where the incoming tab enters from. Alongside `left`, `right`, `top` and `bottom` there is `auto`, the default, which picks the direction from the move itself. Selecting a tab further down the sidebar brings the new page up from the bottom; selecting one higher up brings it down from the top. The motion then agrees with the direction the user just moved, which is what makes switching read as one surface sliding rather than two pages crossfading.
 
@@ -1064,39 +1038,37 @@ Visual addons support three placement modes.
 ### Embedded in a groupbox
 
 ```luau
-local Gallery = Group:AddAddon("Skins", ImageGallery, {
+local Dashboard = Group:AddAddon("Session", DashboardWindow, {
     Height = 330,
-    Columns = 3,
-    Items = Items,
+    Title = "Session",
 })
 ```
 
 ### Direct parent
 
 ```luau
-local Gallery = ImageGallery.Create(Library, {
+local Dashboard = DashboardWindow.Create(Library, {
     Parent = CustomFrame,
     Height = 330,
-    Items = Items,
+    Title = "Session",
 })
 ```
 
 ### Standalone window
 
 ```luau
-local Gallery, Host = ImageGallery.CreateStandalone(Library, {
-    WindowTitle = "Skins",
-    WindowSubtitle = "Select a skin",
+local Dashboard, Host = DashboardWindow.CreateStandalone(Library, {
+    WindowTitle = "Session",
+    WindowSubtitle = "Live values",
     WindowWidth = 480,
     WindowHeight = 520,
-    Items = Items,
 })
 
 Host:SetVisible(true)
 Host:Toggle()
 ```
 
-`ImageGallery`, `ImagePreview`, `TextureGallery`, `TracerPreview`, `VisualPreview`, and `AssetCatalog` expose standalone helpers. `DashboardWindow.Create` is standalone by default and also supports `Group:AddAddon`.
+`DashboardWindow.Create` without a `Parent` is standalone by default and also supports `Group:AddAddon`.
 
 ## Generic addon windows
 
@@ -1114,14 +1086,14 @@ local Host = Library:CreateAddonWindow({
     HideWithMenu = true,
 })
 
-local Preview = Host:AddAddon("Preview", ImagePreview, {
+local Dashboard = Host:AddAddon("Dashboard", DashboardWindow, {
     Height = 240,
-    Image = "rbxassetid://123456",
+    Title = "Session",
 })
 
 Host:AddCustom("Custom", CustomFrame, 120)
-Host:SetModuleHeight("Preview", 280)
-Host:SetModuleHighlighted("Preview", true)
+Host:SetModuleHeight("Dashboard", 280)
+Host:SetModuleHighlighted("Dashboard", true)
 Host:SetModuleMinimal("Custom", true)
 Host:Remove("Custom")
 Host:SetSize(480, 600)
@@ -1131,182 +1103,6 @@ Host:SetPosition(UDim2.fromScale(0.75, 0.5))
 The host owns modules mounted through it. Destroying the host destroys those module controllers and their registered theme objects. Windows are resizable by default; pass `Resizable = false` to disable the grip. Window dimensions are clamped to the viewport.
 
 Standalone visual helpers fill the available height when `Height` is omitted. An explicit `Height` keeps the module at that size and allows the host to scroll. Use `FitHeight = true` with `Host:AddAddon` to opt into height fitting, or `FitHeight = false` to disable it. A controller's minimum height is retained on small screens.
-
-## Collections without UI
-
-Load `addons/CollectionModel.lua` independently. The module does not access `game`, create instances, or load the library. It can run in a plain Luau process. The same model can later drive embedded and independent windows.
-
-```luau
-local Skins = CollectionModel.Create({
-    Items = {
-        { Id = "violet", Name = "Violet", Category = "Rifles", Image = 123456 },
-        { Id = "arctic", Name = "Arctic", Category = "Rifles", Image = 123457 },
-    },
-    Selected = "violet",
-})
-
-Skins:Select("arctic")
-Skins:SetFavorite("arctic", true)
-local Saved = Skins:Query({ FavoritesOnly = true, Sort = "Name" })
-local SelectedSkin = Skins:GetSelected()
-
-local Listener = Skins:Subscribe(function(Model)
-    local Item = Model:GetSelected()
-    print(Item and Item.Id)
-end)
-```
-
-Selection stores the chosen item. Apply the actual cosmetic through your game's own code, for example in the catalog's `OnAction` callback. A locked item can be inspected; disabled items cannot be selected through the model.
-
-```luau
-local Embedded = AssetCatalog.CreateEmbedded(Library, Group, "Skins", {
-    Model = Skins,
-    Height = 480,
-    Layout = "Split",
-})
-
-local Detached, Host = AssetCatalog.CreateStandalone(Library, {
-    Model = Skins,
-    WindowTitle = "Skins",
-    WindowWidth = 820,
-    HideWithMenu = false,
-})
-```
-
-Both views share items, favorites, and selection. Each keeps its own search, category, sort, page, and layout. Selection alone does not rebuild item lists. `ImageGallery` accepts the same `Model` option. To attach an existing controller, use `Skins:Bind(Controller)`.
-
-When using a model, update data through `Skins:SetItems`, `AddItem`, `UpdateItem`, and `RemoveItem`. IDs are unique strings or numbers. `SetItems` rejects duplicates before replacing the current collection. Missing IDs receive generated IDs; explicit IDs are preferable for saved data. `GetItems`, `GetItem`, and `Query` return record copies, including copies of tag and badge lists; custom nested metadata remains shared.
-
-Destroying a bound view disconnects its binding. Destroying the model restores the views' original callbacks but leaves the views alive. The model owner should call `Skins:Destroy()` when finished, or register it with `Library:OnUnload`. Call `Listener:Disconnect()` to stop a subscription early. Search and favorite changes are in memory; persistence is the caller's responsibility.
-
-## Asset catalog
-
-`AssetCatalog` is the preferred base for skin changers, weapon selectors, skyboxes, maps, and other image collections. It combines a paged grid with a large selected preview, search, categories, badges, status, price text, primary action, and secondary action.
-
-```luau
-local AssetCatalog = loadstring(game:HttpGet(
-    BASE .. "addons/AssetCatalog.lua?monhub=" .. RELEASE
-))()
-
-local Items = {
-    {
-        Id = "violet",
-        Name = "Violet",
-        Subtitle = "Soft animated finish",
-        Category = "Rifles",
-        Image = 123456,
-        Thumbnail = 123457,
-        PreviewImage = 123458,
-        Rarity = "Rare",
-        Status = "Owned",
-        Price = "$1,250",
-        Tags = { "purple", "rifle" },
-        ActionText = "Equip",
-    },
-}
-
-local Catalog, Host = AssetCatalog.CreateStandalone(Library, {
-    WindowTitle = "Skin collection",
-    WindowSubtitle = "Search, inspect, and equip",
-    WindowWidth = 760,
-    WindowHeight = 560,
-    Layout = "Split",
-    PreviewSide = "Right",
-    PreviewRatio = 0.58,
-    Columns = 3,
-    Rows = 3,
-    CellHeight = 104,
-    Items = Items,
-    Selected = "violet",
-    ActionText = "Equip",
-    SecondaryActionText = "Inspect",
-    OnSelected = function(Source, Item)
-        print(Item.Name)
-    end,
-    OnAction = function(Source, Item)
-        print("Equip", Item.Id)
-    end,
-    OnSecondaryAction = function(Source, Item)
-        print("Inspect", Item.Id)
-    end,
-})
-```
-
-Omit `Columns` and the grid picks the column count from the space it actually has, keeping every cell an exact whole number of pixels wide. `MinCellWidth` sets the narrowest a cell may become before a column is dropped:
-
-```luau
-local Catalog = AssetCatalog.CreateEmbedded(Library, Gallery, "SkinCatalog", {
-    Items = Items,
-    Height = 420,
-    MinCellWidth = 116,
-})
-```
-
-Put a skin catalog in a full-width groupbox (`Tab:AddFullGroupbox`) or open it as its own window with `CreateStandalone`. Explicit `Columns` requests a fixed count; it is reduced when necessary to keep cards inside a narrow container. Card widths and outer padding are measured in whole pixels, including when the available width is odd.
-
-The toolbar includes search, categories, saved-item filtering, and name sorting. Below 460 pixels it uses two rows. `Layout = "Grid"` hides the preview; `Split` automatically falls back to `Stack` on narrow containers. The saved filter uses each item's `Favorite` value.
-
-For a narrow groupbox, embedded mode defaults to the stacked layout:
-
-```luau
-local Catalog = Group:AddAddon("SkinCatalog", AssetCatalog, {
-    Height = 520,
-    Layout = "Stack",
-    Columns = 3,
-    Items = Items,
-})
-```
-
-Runtime catalog methods:
-
-```luau
-Catalog:SetItems(Items)
-Catalog:AddItem(Item)
-Catalog:RemoveItem(Id)
-Catalog:SetSearch("violet")
-Catalog:SetCategory("Rifles")
-Catalog:SetFavoritesOnly(true)
-Catalog:SetSort("Name")
-Catalog:SetPage(2)
-Catalog:SetColumns(4)
-Catalog:SetCellHeight(112)
-Catalog:SetLayout("Split", "Left")
-Catalog:SetPreviewRatio(0.62)
-Catalog:SetPreviewSide("Right")
-Catalog:SetScaleType("Fit")
-Catalog:SetImagePadding(8)
-Catalog:SetPreviewPadding(12)
-Catalog:SetImageTransparency(0.1)
-Catalog:SetCardTransparency(0.05)
-Catalog:SetPreviewTransparency(0)
-Catalog:Select("violet")
-```
-
-Use thumbnails in the grid and full images only in `PreviewImage`. The catalog creates only `PageSize` card instances and reuses them while searching, filtering, and paging.
-
-## Image gallery and image preview
-
-Use these smaller addons when a complete catalog is unnecessary.
-
-```luau
-local Preview = PreviewGroup:AddAddon("SelectedSkin", ImagePreview, {
-    Height = 240,
-    Title = "Select a skin",
-    ScaleType = "Fit",
-    ImagePadding = 12,
-})
-
-local Gallery = GalleryGroup:AddAddon("Skins", ImageGallery, {
-    Height = 340,
-    Columns = 4,
-    PageSize = 12,
-    CellHeight = 88,
-    Preview = Preview,
-    Items = Items,
-})
-```
-
-Both addons support asset IDs, full asset strings, tint, scale type, padding, rotation, sprite rectangles, image position, image scale, canvas transparency, outline transparency, and per-item overrides.
 
 ## Dashboard
 
@@ -1363,27 +1159,6 @@ local Dashboard, Host = DashboardWindow.CreateStandalone(Library, {
 ```
 
 Every visual addon now exposes both `CreateEmbedded` and `CreateStandalone`, so any module can be placed inside the menu or opened as its own window without changing how it looks.
-
-## Character preview
-
-`VisualPreview` clones a real Roblox character into a `ViewportFrame`. It preserves the rig, body colors, clothing, and accessories. Dragging rotates the model and the mouse wheel changes zoom.
-
-```luau
-local VisualPreview = loadstring(game:HttpGet(
-    BASE .. "addons/VisualPreview.lua?monhub=" .. RELEASE
-))()
-
-local Preview = PreviewGroup:AddAddon("Character", VisualPreview, {
-    Height = 360,
-    Target = game.Players.LocalPlayer,
-    Box = true,
-    Health = true,
-    Distance = true,
-    DynamicBoxes = true,
-})
-```
-
-Pass the production ESP renderer through `Renderer` when the preview must use the exact live ESP logic. The preview itself does not modify the source character.
 
 ## Native trail
 
@@ -1474,19 +1249,17 @@ Create all saved controls before loading the autoload config. Use stable option 
 Register UI-independent module state before autoload:
 
 ```luau
-SaveManager:RegisterAdapter("SkinCatalog", {
+SaveManager:RegisterAdapter("DashboardState", {
     Save = function()
         return {
-            Selected = Catalog:GetSelected() and Catalog:GetSelected().Id,
-            Layout = Catalog.Layout,
+            Visible = Dashboard.Visible,
         }
     end,
     Validate = function(Value)
-        return type(Value) == "table" and type(Value.Layout) == "string", "invalid catalog state"
+        return type(Value) == "table" and type(Value.Visible) == "boolean", "invalid dashboard state"
     end,
     Load = function(Value)
-        Catalog:SetLayout(Value.Layout)
-        Catalog:Select(Value.Selected, true)
+        Dashboard:SetVisible(Value.Visible)
     end,
 })
 ```
@@ -1687,117 +1460,6 @@ Standalone mode routes the module through `Library:CreateAddonWindow`, so its ti
 
 Both modes accept the same configuration table, so you can move a module between them by changing one call.
 
-### A skin changer that does not feel cramped
-
-This is the most common mistake: a grid dropped into a half-width groupbox has room for one or two columns and reads as a list.
-
-```luau
-local Skins = Window:AddTab({ Name = "Skins", Icon = "sparkles" })
-local Gallery = Skins:AddFullGroupbox("Weapon finishes", "layout-grid")
-
-local Catalog = AssetCatalog.CreateEmbedded(Library, Gallery, "SkinCatalog", {
-    Items = Items,
-    Height = 430,
-    MinCellWidth = 116,
-    PreviewRatio = 0.42,
-    ActionText = "Equip",
-    SecondaryActionText = "Inspect",
-    OnAction = function(Item)
-        Equip(Item.Id)
-    end,
-})
-```
-
-Three choices carry this layout:
-
-- `AddFullGroupbox` gives the tab a single full-width column. A grid needs the width more than the tab needs two columns.
-- Omitting `Columns` lets the grid fit its own column count to the space available and size every cell to a whole number of pixels. `MinCellWidth` is the narrowest a card may get before a column is dropped. Passing `Columns` pins the count and turns that off.
-- `PreviewRatio` below `0.5` keeps the grid dominant. The preview panel is a detail view, not the subject.
-
-If the container can become narrow, the catalog falls back from the split layout to the stacked one on its own, so the grid never collapses to a single column. `SplitMinWidth` sets that threshold.
-
-Give items a `Category` and the toolbar filter populates itself. Give them `Tags` and the search box matches those too.
-
-### A grid with no preview panel
-
-`Layout = "Grid"` hides the preview panel and gives the grid the whole body. Use it when the cards themselves are the interface and a detail pane would only take space away from them, which is the usual shape of a skin picker.
-
-```luau
-AssetCatalog.CreateEmbedded(Library, Gallery, "Skins", {
-    Items = Items,
-    Layout = "Grid",
-    Height = 470,
-    MinCellWidth = 96,
-})
-```
-
-`Split` and `Stack` both reserve room for the preview; `Grid` does not, so a narrow container fits noticeably more columns.
-
-### Rarity and per-item colors
-
-An item may carry `AccentColor`, and the card border uses it. Unselected cards draw that color at reduced opacity; the selected card draws it at full strength and selection thickness. Items without one fall back to the outline color, so a mixed collection stays readable.
-
-```luau
-local RarityColors = {
-    ["Mil-Spec"] = Color3.fromRGB(75, 105, 255),
-    ["Restricted"] = Color3.fromRGB(136, 71, 255),
-    ["Classified"] = Color3.fromRGB(211, 44, 230),
-    ["Covert"] = Color3.fromRGB(235, 75, 75),
-}
-
-for _, Item in Items do
-    Item.AccentColor = RarityColors[Item.Rarity]
-end
-```
-
-This is what lets a grid read at a glance: the border carries the tier, so the eye sorts the collection before reading a single label.
-
-### Two levels in one gallery
-
-A catalog holds one list, so a drill-down is a matter of swapping that list and giving the user a way back. Put a synthetic card first rather than adding a separate back button, and the whole surface stays a gallery:
-
-```luau
-local BackId = "__back__"
-
-local function showWeapons()
-    Suppress = true
-    Catalog:SetItems(WeaponCards())
-    Suppress = false
-end
-
-local function showSkins(Weapon)
-    local Cards = { { Id = BackId, Name = "All weapons", ActionText = "Back" } }
-    for _, Item in Items do
-        if Item.ModelName == Weapon then
-            table.insert(Cards, Item)
-        end
-    end
-    Suppress = true
-    Catalog:SetItems(Cards)
-    Suppress = false
-end
-```
-
-`OnSelected` receives `(Source, Item)` where `Source` is the exact table you supplied and `Item` is the normalized copy, so custom fields such as `IsWeaponCard` survive on `Source` and on `Item.Source`. Branch on those to decide between drilling in and acting on the item.
-
-The `Suppress` flag matters: swapping the list can re-emit a selection, and without the guard the handler would treat that as a click and immediately drill in again.
-
-### Loading a large collection
-
-`SetItems` replaces the whole collection and resets to the first page. For incremental work use the collection helpers instead of rebuilding:
-
-```luau
-Catalog:AddItem({ Id = "fade", Name = "Fade", Category = "Knife", Image = 123456 })
-Catalog:RemoveItem("fade")
-Catalog:SetCategory("Knife")
-Catalog:SetSearch("fade")
-Catalog:Select("fade")
-```
-
-Only `PageSize` cards exist as instances; paging rebinds them rather than creating more. Raising `PageSize` past what fits on screen costs instances without showing anything, so leave it alone unless you also raise `Height`.
-
-Use `rbxthumb://type=Asset&id=<id>&w=150&h=150` for catalog items. It resolves through Roblox's thumbnail service and avoids a full asset download per card.
-
 ### Dashboards for live values
 
 A dashboard is for values that change while the user watches. Anything static belongs in a normal groupbox.
@@ -1825,12 +1487,12 @@ Every dynamic value shares one scheduler. It pauses when the dashboard is hidden
 Addons inherit the design system. Override per instance only when that module genuinely differs:
 
 ```luau
-local Catalog = AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
-    Items = Items,
+local Dashboard = DashboardWindow.Create(Library, {
+    Title = "Session",
     Style = {
         Padding = 12,
         Gap = 10,
-        CellRadius = 4,
+        ControlRadius = 4,
         Motion = false,
     },
 })
@@ -1840,14 +1502,14 @@ local Catalog = AssetCatalog.CreateEmbedded(Library, Group, "Catalog", {
 
 ### Keeping addons cheap
 
-- Create modules when the user first asks for them, not at startup. A gallery that is never opened should not exist.
+- Create modules when the user first asks for them, not at startup. A panel that is never opened should not exist.
 - Call `Host:SetVisible(false)` rather than destroying and rebuilding a standalone window the user reopens.
 - Destroy modules you will not reuse; `Destroy` releases the instances, its registry entries, and its connections.
 - Leave `HideWithMenu` at its default so standalone windows follow the menu keybind instead of floating over the game after the user hides the UI.
 
 ## Complete addon API reference
 
-This section is the complete public reference for every addon shipped in `addons`. Constructor settings are passed in the final `Info` table. Methods use colon syntax, for example `Gallery:SetPage(2)`.
+This section is the complete public reference for every addon shipped in `addons`. Constructor settings are passed in the final `Info` table. Methods use colon syntax, for example `Dashboard:SetHeight(480)`.
 
 All visual addons support three mounting forms where listed:
 
@@ -1858,92 +1520,6 @@ local Standalone, Host = Addon.CreateStandalone(Library, Info)
 ```
 
 `CreateEmbedded` can also be called through `Groupbox:AddAddon`. Standalone settings shared by visual addons are `WindowTitle`, `WindowSubtitle`, `WindowIcon`, `WindowWidth`, `WindowHeight`, `Position`, `AnchorPoint`, `Draggable`, `Resizable`, `Closable`, `HideWithMenu`, `Visible`, and `FitHeight`.
-
-### AssetCatalog API
-
-`AssetCatalog` is a searchable, paged collection with a large preview and two actions.
-
-| Setting | Purpose |
-| --- | --- |
-| `Items`, `Model`, `Selected` | Source records, optional shared `CollectionModel`, and initial item ID. |
-| `Height`, `Columns`, `Rows`, `PageSize` | Overall height and grid capacity. |
-| `MinCellWidth`, `CellHeight`, `Gap`, `Padding` | Responsive grid geometry in pixels. |
-| `Layout` | `Split`, `Stack`, or `Grid`. |
-| `PreviewSide`, `PreviewRatio`, `SplitMinWidth` | Preview position, split ratio, and responsive breakpoint. |
-| `ToolbarHeight`, `CategoryWidth`, `LabelHeight` | Toolbar and text geometry. |
-| `ImagePadding`, `PreviewPadding`, `ScaleType` | Card and preview image layout. `ScaleType` accepts `Fit`, `Crop`, `Stretch`, or `Tile`. |
-| `ImageTransparency`, `CardTransparency`, `PreviewTransparency`, `BackgroundTransparency` | Independent visual opacity values from `0` to `1`. |
-| `SearchPlaceholder`, `EmptyText`, `EmptyTitle`, `EmptySubtitle` | Empty and search text. |
-| `Category`, `Sort`, `FavoritesOnly` | Initial filter state. Sort accepts the modes provided by `CollectionModel`. |
-| `ActionText`, `SecondaryActionText` | Labels for the preview actions. |
-| `OnSelected`, `OnAction`, `OnSecondaryAction`, `Callback` | Selection and action callbacks. |
-| `Style` | Per-instance design token overrides. |
-
-Item records accept `Id`, `Name`, `Category`, `Subtitle`, `Image`, `PreviewImage`, `Tags`, `Badges`, `Status`, `Price`, `Favorite`, `Disabled`, `Locked`, `Color`, `ScaleType`, `ImageScale`, `ImageTransparency`, `ImagePosition`, `ImageAnchorPoint`, `RectOffset`, `RectSize`, `ActionText`, and `SecondaryActionText`.
-
-| Method | Result |
-| --- | --- |
-| `Refresh()` | Rebuilds the current filtered page. |
-| `SetItems(items)`, `AddItem(item)`, `RemoveItem(id)` | Replaces or edits collection data. |
-| `SetSearch(text)`, `SetCategory(name)`, `SetFavoritesOnly(bool)`, `SetSort(mode)` | Changes filtering and sorting. |
-| `SetPage(page)` | Opens a clamped page number. |
-| `SetColumns(count)`, `SetMinCellWidth(px)`, `SetCellHeight(px)` | Changes responsive grid geometry. |
-| `SetLayout(mode, side)`, `SetPreviewRatio(ratio)`, `SetPreviewSide(side)` | Changes catalog layout without recreating it. |
-| `SetScaleType(mode)`, `SetImagePadding(px)`, `SetPreviewPadding(px)` | Changes image fitting. |
-| `SetImageTransparency(value)`, `SetCardTransparency(value)`, `SetPreviewTransparency(value)` | Changes opacity live. |
-| `SetStyle(overrides)`, `SetMinimal(bool)`, `SetHighlighted(bool)` | Changes root chrome while preserving catalog state. |
-| `Select(id, silent)`, `GetSelected()` | Selects or reads an item. `silent` skips callbacks. |
-| `SetVisible(bool)`, `SetHeight(px)`, `Mount(parent)`, `Destroy()` | Controls lifecycle and mounting. |
-
-### ImageGallery API
-
-`ImageGallery` is the lighter grid-only selector. It can bind directly to `ImagePreview` through `Preview` or `BindPreview`.
-
-| Setting | Purpose |
-| --- | --- |
-| `Items`, `Model`, `Selected`, `Preview` | Items, shared model, initial ID, and preview controller. |
-| `Height`, `Columns`, `PageSize`, `MinCellWidth`, `CellHeight`, `Gap` | Gallery and responsive grid geometry. |
-| `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImagePadding`, `ImageScale`, `Zoom` | Image bounds and transform. |
-| `ScaleType`, `TileSize`, `Rotation` | Roblox image rendering properties. |
-| `LabelHeight`, `CornerRadius` | Caption and card corner geometry. |
-| `BackgroundTransparency`, `ContainerOutlineTransparency` | Outer surface opacity. |
-| `CellTransparency`, `CellOutlineTransparency`, `OutlineTransparency` | Card opacity and stroke. |
-| `ImageTransparency`, `ImageBackgroundTransparency` | Image and image-canvas opacity. |
-| `Category`, `SearchPlaceholder`, `EmptyText` | Initial filtering text. |
-| `ForwardItemStyle` | Forwards compatible per-item style fields to the bound preview. |
-| `OnSelected`, `Callback`, `Style`, `Visible` | Callback, style overrides, and initial visibility. |
-
-Methods: `Refresh`, `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`, `NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`, `SetScaleType`, `SetImageTransparency`, `SetImageBackgroundTransparency`, `SetBackgroundTransparency`, `SetCellTransparency`, `SetOutlineTransparency`, `SetContainerOutlineTransparency`, `SetImagePadding`, `SetLabelHeight`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetTileSize`, `SetRotation`, `SetCornerRadius`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `Select`, `GetSelected`, `BindPreview`, `SetVisible`, `SetHeight`, `Mount`, and `Destroy`.
-
-### ImagePreview API
-
-| Setting | Purpose |
-| --- | --- |
-| `Image`, `AssetId`, `Title`, `Subtitle` | Initial image and caption. Numeric asset IDs are normalized automatically. |
-| `Height`, `CaptionHeight`, `Caption` | Overall and caption dimensions; `Caption = false` hides it. |
-| `ImageSize`, `ImagePosition`, `ImageAnchorPoint`, `ImagePadding`, `ImageScale` | Image layout and zoom. |
-| `ScaleType`, `TileSize`, `Rotation`, `ImageColor` | Roblox image rendering properties. |
-| `ImageTransparency`, `BackgroundTransparency`, `CanvasTransparency`, `CaptionTransparency` | Independent opacity values. |
-| `OutlineTransparency`, `OutlineThickness`, `CornerRadius` | Border geometry. |
-| `Shade`, `ShadeTransparency`, `Motion`, `Interactive` | Overlay, transitions, and interaction behavior. |
-| `Style`, `Visible` | Style overrides and initial visibility. |
-
-Methods: `SetImage(value, transition)`, `SetTitle`, `SetSubtitle`, `SetImageColor`, `SetImageTransparency`, `SetScaleType`, `SetImageSize`, `SetImageScale`, `SetImagePosition`, `SetImagePadding`, `SetTileSize`, `SetRotation`, `SetBackgroundTransparency`, `SetCanvasTransparency`, `SetCaptionTransparency`, `SetOutlineTransparency`, `SetOutlineThickness`, `SetCornerRadius`, `SetShade(visible, transparency)`, `SetCaptionVisible`, `SetMotion`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
-
-### TextureGallery API
-
-`TextureGallery.DefaultItems` contains the built-in Clean, Soft beam, Lightning, Pulse, Chain, Glitch, Swirl, Neon, Plasma, and Laser presets.
-
-| Setting | Purpose |
-| --- | --- |
-| `Items`, `Selected` | Texture records and initial ID or record. |
-| `Height`, `Columns` | Gallery geometry. |
-| `ScaleType`, `ImageScale`, `Zoom` | Texture fitting and zoom. |
-| `ImageTransparency`, `PreviewImageTransparency` | Card and large preview image opacity. |
-| `CardTransparency`, `PreviewTransparency`, `OutlineTransparency` | Surface opacity. |
-| `OnSelected`, `Style`, `Visible` | Selection callback, style overrides, and visibility. |
-
-Texture items accept `Id`, `Name`, `Texture`, `AssetId`, `Image`, `ColorA`, `ColorB`, `ScaleType`, `ImageScale`, `Zoom`, `ImageTransparency`, and `Transparency`. Methods: `SetItems`, `Select`, `GetSelected`, `SetVisible`, `SetColumns`, `SetImageTransparency`, `SetPreviewImageTransparency`, `SetCardTransparency`, `SetPreviewTransparency`, `SetOutlineTransparency`, `SetScaleType`, `SetImageScale`, `SetStyle`, `SetMinimal`, `SetHighlighted`, `Mount`, `SetHeight`, and `Destroy`.
 
 ### DashboardWindow API
 
@@ -1962,27 +1538,6 @@ Create sections with `Dashboard:AddSection({ Title = "Runtime", Icon = "activity
 
 Dashboard methods: `GetDefaultSection`, `Add`, `AddText`, `AddMetric`, `AddButton`, `AddCustom`, `SetTitle`, `SetVisible`, `Toggle`, `SetDraggable`, `SetPosition`, `SetSize`, `Refresh`, `SetHeight`, and `Destroy`.
 
-### VisualPreview API
-
-| Setting | Purpose |
-| --- | --- |
-| `Target`, `Player` | Character, model, player, or player source. |
-| `Width`, `Height`, `Side`, `Alignment`, `Gap`, `Position` | Preview placement and geometry. |
-| `Renderer` | Optional shared renderer created by `DrawingESPPreview`. |
-| `Enabled`, `Visible`, `ShowHeader`, `BindToTab` | Initial state and tab behavior. |
-| `Color`, `GradientColor`, `Gradient`, `Box`, `BoxScale`, `DynamicBoxes` | Box overlay appearance. |
-| `NameVisible`, `Distance`, `Team`, `Weapon`, `Health`, `Highlight` | Overlay components. |
-| `ChamsFillColor`, `ChamsOutlineColor`, `ChamsFillTransparency`, `ChamsOutlineTransparency` | Highlight appearance. |
-| `Style`, `OutlineTransparency` | Style overrides. |
-
-Methods: `SetTarget`, `Rotate`, `SetZoom`, `ResetView`, `GetRendererContext`, `SetEnabled`, `SetColor`, `SetBoxScale`, `SetDynamicBoxes`, `SetBoxStyle`, `SetGradientEnabled`, `SetGradientColor`, `SetOpacity`, `SetPosition`, `SetPanelGap`, `Mount`, `Embed`, `SetBoxVisible`, `SetNameVisible`, `SetDistanceVisible`, `SetTeamVisible`, `SetWeaponVisible`, `SetTracerVisible`, `SetHealthVisible`, `SetHighlightVisible`, `SetChams`, `SetDistance`, and `Destroy`.
-
-### FixedR6Preview API
-
-Call `FixedR6Preview.Create(Library, VisualPreview, DrawingESPPreview, Tab, Info)`. It resolves the selected player's avatar as R6 and mounts a `VisualPreview`.
-
-Settings: `Target`, `Player`, `Renderer`, `Width`, `Height`, `Side`, `Alignment`, `Gap`, `Enabled`, `AutoRefresh`, `ShowHeader`, `Color`, `GradientColor`, `Gradient`, `Box`, `DynamicBoxes`, `NameVisible`, `Distance`, `Health`, `Highlight`, and `Style`. Methods: `SetEnabled`, `SetColors`, `SetGradientEnabled`, `SetPosition`, `Rotate`, `SetZoom`, `RefreshCharacter`, and `Destroy`.
-
 ### CharacterTrail API
 
 `CharacterTrail` is UI independent. Call `CharacterTrail.Create(Info)`.
@@ -1998,51 +1553,6 @@ Settings: `Target`, `Player`, `Renderer`, `Width`, `Height`, `Side`, `Alignment`
 | `FaceCamera`, `LightEmission`, `LightInfluence`, `Brightness` | Native Roblox `Trail` lighting properties. |
 
 Methods: `SetEnabled`, `SetTarget`, `SetColors`, `SetTransparency`, `SetWidthScale`, `SetAttachmentWidth`, `SetVerticalOffset`, `SetAttachmentPart`, `SetLifetime`, `SetMinLength`, `SetMaxLength`, `SetTexture`, `SetTextureMode`, `SetTextureLength`, `SetFaceCamera`, `SetLight`, `SetBrightness`, `ApplyPreset`, `Refresh`, `GetTrail`, `GetState`, and `Destroy`. Available named presets and textures are exposed as `CharacterTrail.Presets` and `CharacterTrail.TexturePresets`.
-
-### TracerPreview API
-
-Settings: `AssetId` or `Image`, `Name`, `ColorA`, `ColorB`, `Glow`, `Speed`, `Enabled`, `Visible`, `Height`, `BackgroundTransparency`, `OutlineTransparency`, and `Style`, plus the common standalone settings. Methods: `SetAssetId`, `SetColors`, `SetGlow`, `SetSpeed`, `SetEnabled`, `SetName`, `SetHeight`, `SetVisible`, `Mount`, and `Destroy`.
-
-### DrawingESPPreview API
-
-Call `DrawingESPPreview.Create({ Color, GradientColor, Thickness, OutlineThickness, TextSize, Continuous })`. The returned renderer exposes `CreateEntity`, `SetEntityVisible`, `UpdateEntity`, `RemoveEntity`, `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, `DetachPreview`, `SetColors`, and `Destroy`. `UpdateEntity` receives the renderer state produced by `VisualPreview` or another compatible ESP source.
-
-### UniversalESP API
-
-Load `addons/esp/ESP.lua`, then call `UniversalESP.new(Info)`. `Info.Settings` can contain the settings tree below; top-level settings in `Info` are also accepted. `AutoStart` controls the render connection and `WrapPlayers` registers current and future players.
-
-- General: `Enabled`, `Players`, `NPCs`, `Parts`, `IncludeLocalPlayer`, `AliveCheck`, `TeamCheck`, `TeamColors`, `VisibilityCheck`, `VisibilityInterval`, `MaxDistance`, `TextDistance`, `UpdateRate`, and `TextUpdateRate`.
-- `Box`: `Enabled`, `Style`, `Dynamic`, `Scale`, `Thickness`, `Transparency`, `Outline`, `OutlineThickness`, `Fill`, `FillTransparency`, `Gradient`, `Rainbow`, and `RainbowSpeed`.
-- `Text`: `Name`, `DisplayName`, `Team`, `Distance`, `Tool`, `Health`, `Category`, `Flags`, `Size`, `RelativeSize`, `Outline`, `Font`, and `Separator`.
-- `HealthBar`: `Enabled`, `Position`, `Width`, `Offset`, `Outline`, and `Text`.
-- `Tracer`: `Enabled`, `Origin`, `Target`, `Thickness`, `Transparency`, and `Outline`.
-- `Skeleton`: `Enabled`, `Thickness`, `Transparency`, `Outline`, and `MaxJoints`.
-- `HeadDot`: `Enabled`, `Filled`, `Radius`, `Sides`, `Thickness`, `Transparency`, and `Outline`.
-- `OffscreenArrow`: `Enabled`, `Radius`, `Size`, `Filled`, `Transparency`, and `Outline`.
-- `Highlight`: `Enabled`, `FillTransparency`, `OutlineTransparency`, `DepthMode`, and `HealthColor`.
-- `Colors`: `Enemy`, `Gradient`, `Tracer`, `Skeleton`, `HeadDot`, `Arrow`, `Team`, `NPC`, `Part`, `Visible`, `Occluded`, `Outline`, `Text`, `HealthLow`, `HealthHigh`, `HighlightFill`, and `HighlightOutline`.
-
-Public controller methods: `Get(path)`, `Set(path, value)`, `ApplySettings`, `ApplyPreset` (`Performance`, `Balanced`, or `Quality`), `SetEnabled`, `Start`, `Stop`, `WrapObject`, `GetEntry`, `UnwrapObject`, `WrapPlayers`, `UnwrapPlayers`, `ScanNPCs`, `WatchNPCs`, `SetAutomaticNPCs`, `HideAll`, `CreatePreviewAdapter`, `GetStats`, `Restart`, and `Destroy`.
-
-`WrapObject(object, info)` accepts `Id`, `Kind`, `Name`, `Category`, `Team`, `Tool`, `Flags`, `Color`, `GradientColor`, `MaxDistance`, `TextDistance`, `AllowedVisuals`, and `Predicate`. `WatchNPCs(container, info)` returns a watcher with `Scan()` and `Destroy()`. The preview adapter exposes `AttachPreview`, `UpdatePreview`, `SetPreviewVisible`, `DetachPreview`, and `Destroy`.
-
-### UniversalESP MonHubUI API
-
-Load `addons/esp/MonHubUI.lua` and call `MonHubUI.Mount(Library, Tab, Controller, Info)`. Settings are `Prefix` for unique option IDs, `GeneralTitle`, `Keybind`, `AutoNPCs`, `NPCContainer`, `NPCInfo`, and `OwnController`. The returned handle contains the mounted controls and exposes `Destroy()`. When `OwnController` is true, destroying the panel also destroys the ESP controller.
-
-### CollectionModel API
-
-Create it with `{ Items = {}, Selected = id }`. Item IDs remain stable through filtering and replacement.
-
-| Method | Result |
-| --- | --- |
-| `GetItems()`, `GetItem(id)`, `GetSelected()` | Returns safe copies of collection data. |
-| `SetItems(items)`, `AddItem(item)`, `UpdateItem(id, changes)`, `RemoveItem(id)` | Mutates collection data and updates bound views. |
-| `Select(id)`, `SetFavorite(id, bool)` | Changes shared selection or favorite state. |
-| `Query(options)` | Filters by `Search`, `Category`, `FavoritesOnly`, and `Sort`. |
-| `Subscribe(callback)` | Returns a listener with `Disconnect()`. |
-| `Bind(view)` | Synchronizes a compatible catalog/gallery controller and returns a binding. |
-| `Destroy()` | Disconnects bindings and listeners. |
 
 ### SaveManager API
 
@@ -2090,9 +1600,9 @@ local Host = Library:CreateAddonWindow({
 `Host:Detach(id, parent)` transfers an existing module to a GUI container and returns its controller (or root for a custom module). It preserves the module state, removes the old holder, and stops the old host from owning its destruction. The new parent must be outside the old module holder. A missing module returns `nil`. To transfer it to another host:
 
 ```luau
-local Gallery = SourceHost:Detach("Gallery", TargetHost.Content)
-if Gallery then
-    TargetHost:AddCustom("Gallery", Gallery.Root, Gallery.Height, Gallery)
+local Dashboard = SourceHost:Detach("Dashboard", TargetHost.Content)
+if Dashboard then
+    TargetHost:AddCustom("Dashboard", Dashboard.Root, Dashboard.Height, Dashboard)
 end
 ```
 
@@ -2102,10 +1612,8 @@ After a direct detach, call the returned controller's `Destroy()` when finished.
 ## Performance rules
 
 - Load only the addons used by the project.
-- Prefer `AssetCatalog` pagination for large collections.
 - Use small thumbnails in grids and full images only for the selected preview.
 - Do not create a separate `RenderStepped` connection for every widget.
-- Reuse the ESP update loop through a renderer adapter.
 - Keep function-backed dashboard values above a `0.1` second interval.
 - Destroy temporary windows and previews when their feature is removed.
 - Use `Library:OnUnload` for every external connection or instance owner.
@@ -2129,11 +1637,9 @@ While the library runs, `Library:PruneRuntime()` runs every 30 seconds in slices
 ## Release checklist
 
 - [x] Runtime sources and type modules compile with the Luau compiler.
-- [x] Collection IDs, atomic updates, selection, filters, bindings, and cleanup pass 12 regression tests.
-- [x] Twelve UI contract scenarios cover addon lifecycle and geometry, repeated palette/theme changes, custom theme validation, appearance picker synchronization, texture colors, and live addon corners.
+- [x] Seven UI contract scenarios cover addon host lifecycle and geometry, dashboard sizing, repeated palette/theme changes, custom theme validation, appearance picker synchronization, and live addon corners.
 - [x] Config regression coverage verifies round-trip values, legacy color transparency, custom adapters, deterministic compatibility skips, autoload cleanup, and rollback after a callback failure.
 - [x] Theme persistence coverage verifies custom theme writes, reload, startup selection, protected built-in names, and deletion.
-- [x] Examples include a shared skin collection, a separate gallery window, grid mode, favorites, and adjustable gallery height.
 - [x] Visual addon cleanup visits its own descendants instead of scanning the whole theme registry.
 - [ ] Verify real rendering in Roblox at 480, 780, and 1100 pixel window widths, including odd widths, DPI changes, light and dark themes.
 - [ ] Verify live image loading, fonts, touch, gamepad input, viewport previews, rapid tab changes, and full-library unload in Roblox.
@@ -2149,6 +1655,13 @@ Run local checks with Luau's compiler and interpreter installed:
 ## Changelog
 
 ### 0.0.1-release-3
+
+- Removed the TracerPreview, DrawingESPPreview, FixedR6Preview, VisualPreview, ImageGallery, ImagePreview, TextureGallery, AssetCatalog and CollectionModel addons, the `esp` folder, and `AddImageGrid`, `AddItemSlots`, `Library:RegisterImageGrid` and `Library:BindItemDragSource`. `dist/Library.lua` is 719 KB instead of 950 KB.
+- Dropdown lists, colour picker panels, the key picker mode menu and keybind list rows are built when first needed, and objects get their properties before they are parented. A window with 24 groupboxes builds in about 360 ms with 2965 objects instead of 1009 ms with 7405.
+- The window and tab pages are plain frames instead of `CanvasGroup` (half the idle render cost, no 100 ms spikes while dragging a slider). The window scales from 97% when it opens and closes, and the incoming tab slides in while the old one hides at once.
+- Window drag and resize listen to mouse movement only during a drag.
+- Popups created after `SetDPIScale` start at the current scale, and icon lookups are cached.
+- Added the WindUI build (`windui/`, `dist/WindUI.lua`, `MonHubLoad("WindUI")`): Lucide inside instead of six packs downloaded at every start, 320 KB instead of 1.35 MB, and a build that is no longer quadratic in the number of labels.
 
 - Redrew the sidebar as group cards (header plus text-only sub-tabs aligned with the header label), expanded by default, with soft inset pill rows and a 6px gap.
 - Toggles and `AddCheckbox` now draw 28x16 switches by default (`Library.ToggleStyle = "Checkbox"` restores tick boxes), and slider and progress tracks are 8px pills (10px on Touch) with no outline or gradient, with a 12px knob that grows to 14px on hover.
@@ -2347,113 +1860,12 @@ Store model state in hidden options or custom adapters, not invisible text contr
 Update the library, types and addons together to the latest revision even while the
 release label is unchanged. Keep a config backup before intentionally raising option
 versions. Disconnect view callbacks when their consumer is destroyed.
-## Catalog and item editor controls
+## Item editor controls
 
-The release label stays `0.0.1-release-3`. Update `Library.lua`, `Library.d.luau`,
-`addons/ImageGallery.lua` and `Example.lua` together. The Preview tab includes an
-item editor demo. The library manages UI and state; your script applies sticker
-textures, attachment transforms and game-specific model changes.
-
-### AddImageGrid(id, info)
-
-Register the loaded gallery module once. No extra HTTP request is made by this API.
-It returns the existing ImageGallery controller with search, categories, pagination,
-responsive columns and reusable cards. `info.Addon = ImageGallery` can supply the
-module for a single grid instead of registration.
-
-```lua
-Library:RegisterImageGrid(ImageGallery)
-local Grid = Groupbox:AddImageGrid("StickerCatalog", {
-    Items = {
-        { Id = "blue", Name = "Blue", Image = "rbxassetid://123", Category = "Stickers" },
-        { Id = "red", Name = "Red", Image = "rbxassetid://456", Category = "Stickers" },
-    },
-    Height = 280,
-    PageSize = 12,
-    MinCellWidth = 100,
-    CellHeight = 90,
-    DraggableItems = true,
-    DragType = "Sticker",
-    Callback = function(source, item)
-        selectedSticker = item
-    end,
-})
-```
-
-Items use stable `Id` values and support `Name`, `Image`, `Thumbnail`, `Category`,
-`Subtitle`, `Tags` and `Disabled`. Callback receives the original source followed
-by the normalized item. Selection and drag payloads use the same normalized item.
-`DraggableItems` defaults to false; `DragType` defaults to `Item` and must match
-its target. A drag starts after eight screen pixels of movement; an ordinary tap
-still selects a card. Scrolling pauses during a drag and resumes when it ends.
-
-Layout options include `Height`, `Columns` (omit for automatic fitting),
-`MinCellWidth`, `PageSize`, `CellHeight`, `Gap`, `ImagePadding`, `LabelHeight`,
-`ScaleType`, `Visible`, and `Style`. `Preview` connects an ImagePreview controller;
-`Model` connects a CollectionModel. The existing ImageGallery style and image
-options remain available. PageSize is chosen at creation.
-
-Use `SetItems`, `AddItem`, `RemoveItem`, `SetSearch`, `SetCategory`, `SetPage`,
-`NextPage`, `PreviousPage`, `SetColumns`, `SetMinCellWidth`, `SetCellHeight`,
-`SetHeight`, `Select(id, silent?)`, `GetSelected`, `SetVisible`, `SetStyle`,
-`SetMinimal`, `SetHighlighted`, or `Destroy` on the returned controller. Destroying
-its group also releases gallery handlers. Selection itself is not a saved option;
-store a selected ID in AddHidden or use a config adapter if it must survive reloads.
-
-### AddItemSlots(id, info)
-
-Slots store a map from slot ID to item ID. They save through SaveManager as a hidden
-option without serializing image data or Instances. The default slots are Sticker1
-through Sticker5. Supply another array for charms or other attachment points.
-
-```lua
-local Slots = Groupbox:AddItemSlots("WeaponStickers", {
-    Slots = { "Sticker1", "Sticker2", "Sticker3", "Sticker4", "Sticker5" },
-    Items = stickerItems,
-    Default = {},
-    DragType = "Sticker",
-    Accept = function(item, slotId)
-        return not item.Disabled
-    end,
-    Callback = function(values)
-        applyStickerIds(values)
-    end,
-    OnSelect = function(slotId, itemId)
-        openStickerEditor(slotId, itemId)
-    end,
-})
-local Charms = Groupbox:AddItemSlots("WeaponCharms", {
-    Slots = { "Charm1", "Charm2", "Charm3", "Charm4" },
-    DragType = "Charm",
-})
-```
-
-`Slots` must be a nonempty array of unique strings. `Items` supplies display data
-indexed by each item's Id. `Default` is a slot-to-ID map. Other settings are
-`ConfigVersion`, `Visible`, `CornerRadius`, `DragType`, `Accept`, `Callback`,
-`OnDrop` and `OnSelect`. Callback receives the complete value map after a change.
-OnDrop receives `(slotId, item)` after Assign or a drop; clearing passes nil.
-OnSelect receives `(slotId, itemId)` when a cell is activated. Accept runs before
-assigning an item, including programmatic Assign, but not when restoring a config.
-Keep config validation separate from transient catalog availability.
-
-- `Assign(slotId, item)` assigns an item with Id, Name and Image; returns false if
-  disabled or rejected by Accept. `Assign(slotId, nil)` clears the cell.
-- `GetValue()` returns a copy. `SetValue(map)` restores/replaces the whole map.
-  Unknown slots and non-string/non-number item IDs are rejected before assignment.
-- `SetItems(items)` refreshes captions/images without changing selected IDs.
-- `SetDisabled`, `SetVisible`, `SetConfigVersion`, `OnChanged` and `Destroy` follow
-  other controls. Config loading can restore values while a control is disabled.
-
-Unknown item IDs remain saved and appear as text until SetItems supplies metadata.
-This lets a config load before an asynchronous catalog finishes downloading.
-Slots wrap to additional rows on narrow screens. Hidden or clipped targets reject
-drops. Opening a popup, losing focus or destroying the source cancels a pending drag.
-Dragging assigns a copy of the item ID; it does not remove the source card.
-
-For a tap-based alternative, retain the normalized item from the grid callback
-and call `Slots:Assign(slotId, selectedItem)` from OnSelect. Preview demonstrates
-both selection and dragging. Use a matching DragType for a separate charm grid.
+The release label stays `0.0.1-release-3`. Update `Library.lua`, `Library.d.luau`
+and `Example.lua` together. The Preview tab includes an item editor demo. The
+library manages UI and state; your script applies sticker textures, attachment
+transforms and game-specific model changes.
 
 ### AddSliderGroup(id, info)
 
@@ -2526,7 +1938,7 @@ Pinch end/cancel also restores scrolling when fingers leave the preview area.
 `Window:AddPopup(id, info)` uses the dialog system with stacking. `AddDialog`
 remains supported. Open a child using `parent:AddPopup(id, info)`; closing it
 reveals the parent with its state intact. Popups support normal groupbox controls,
-including grids, slots, sliders and viewports.
+including sliders and viewports.
 
 ```lua
 local Catalog = Window:AddPopup("Catalog", { Title = "Stickers", Width = 560 })
@@ -2556,8 +1968,8 @@ controls without discarding the user's model data. Popup controls with temporary
 IDs should be ignored by SaveManager, or recreated before loading saved values.
 ## September 9 wishlist update
 
-The release remains `0.0.1-release-3`. Update Library.lua, Library.d.luau,
-ImageGallery and SaveManager together. Mixed revisions can omit option versions,
+The release remains `0.0.1-release-3`. Update Library.lua, Library.d.luau
+and SaveManager together. Mixed revisions can omit option versions,
 hidden values or new report fields. The Preview tab demonstrates presets, release-only
 sliders, keybind profiles, deferred pages and attachment markers.
 
@@ -2620,9 +2032,9 @@ RefreshConfigList, which remains available.
 
 Set `Save = false` in an option's creation info, or call `option:SetSave(false)`.
 SaveManager omits it when saving and skips old persisted entries when loading.
-SetSave(true) enables persistence again. Hidden values and item slots support this
-flag too. A slider group's Save setting is inherited by fields that do not override
-it. Excluding a control does not disable its UI or callbacks.
+SetSave(true) enables persistence again. Hidden values support this flag too. A
+slider group's Save setting is inherited by fields that do not override it.
+Excluding a control does not disable its UI or callbacks.
 
 ### Search, group visibility and mobile tooltips
 
@@ -2726,20 +2138,15 @@ and removed when a point disappears. Scanning is explicit, not per rendered fram
 
 ### Verified existing performance paths
 
-Empty ImageGallery instances accept later SetItems calls and reuse their allocated
-cards. Passing Gallery.Items back into SetItems is now safe. Search, category and
-page state are refreshed on replacement. CollectionModel-backed galleries should
-receive model changes through the model API so all bound views remain consistent.
-
 GetTextBounds already uses a bounded cache keyed by text, font, text size and
 available width. Width must remain part of the key because wrapping affects height.
 Font changes invalidate the cache. Mobile fallback measurements have a retry
 cooldown so a temporary font-service failure can recover.
 
 Local regression tests cover batching, lazy builds, hidden option versions, stale
-dropdowns, persistence exclusion, late catalog population, card reuse, search,
-release-only callbacks and attachment marker reuse. Device rendering, gesture timing
-and frame-time improvements still require checking in Roblox on target hardware.
+dropdowns, persistence exclusion, search, release-only callbacks and attachment
+marker reuse. Device rendering, gesture timing and frame-time improvements still
+require checking in Roblox on target hardware.
 ## Compact addon windows and watermarks
 
 Addon windows now default to a 28-pixel header without an icon badge or subtitle.
@@ -3148,8 +2555,6 @@ Element type map (the `Type` string, case-insensitive, with common aliases):
 | `statrow` | AddStatRow | |
 | `progressbar` | AddProgressBar | |
 | `uipassthrough` | AddUIPassthrough | `ui` |
-| `imagegrid` | AddImageGrid | |
-| `itemslots` | AddItemSlots | |
 | `slidergroup` | AddSliderGroup | |
 | `segmented` | AddSegmented | `segment` |
 | `badge` | AddBadge | `pill` |
@@ -3810,17 +3215,23 @@ number is not sourced, the behaviour is described qualitatively.
   `Overscan = 2`, the pool creates at most 14 rows on first render and at most 28
   after scrolling to the end (`tests/Runtime.spec.luau`). The instance count
   tracks the visible window plus overscan, not the item count.
-- Asset catalog over the same virtual list: a 5000-item catalog keeps its pool
-  under 80 instances across a full scroll (`tests/Runtime.spec.luau`).
 - Layout coalescing: `QueueFrame` collapses repeated requests for the same target
   into one run per frame, so adding N controls in a loop costs one resize, not N.
 - Text metrics are cached. `Library:GetTextBounds` memoizes measured bounds, and
   `Library:ClearTextBoundsCache` drops the cache; repeated measurement of the same
   text and font is a cache hit rather than a re-measure.
 - CanvasGroup cost: a `CanvasGroup` forces the engine to render its subtree to an
-  off-screen buffer, which is more expensive than a plain frame. The rule is to
-  use a CanvasGroup only when you actually need to fade or transform a whole
-  subtree as one unit, and a plain `Frame` otherwise.
+  off-screen buffer and redraw it when anything inside changes. Measured side by
+  side on the same window, render CPU was about 6 ms idle inside one and 3 ms
+  without, and frames spiked to 130 ms against 22 ms while a slider moved. The
+  window and tab pages are plain frames; canvas groups remain only on small,
+  short-lived surfaces (notifications, the keybind list, addon windows).
+- Popups are built when first opened. A dropdown with three values is 13 objects
+  until it opens (63 before), a colour picker 7 (57), and a key picker with no key
+  bound 3 (20): its keybind list row is created when the bind is first shown.
+- A test window with 24 groupboxes (120 toggles with key pickers, 24 each of
+  sliders, dropdowns, colour pickers, buttons and inputs) builds in about 360 ms
+  with 2965 objects, against 1009 ms and 7405 objects before.
 
 Read the live picture at any time with `Library:Diagnose()` for counts, or
 `Library:GetProfile()` for the slowest recent build samples alongside the current

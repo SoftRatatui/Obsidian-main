@@ -6,7 +6,6 @@ local Obsidian = {
     Types = require("./Library.d"),
     SaveManager = require("./addons/SaveManager"),
     ThemeManager = require("./addons/ThemeManager"),
-    CollectionModel = require("./addons/CollectionModel"),
     Themes = Library.Themes,
 }
 

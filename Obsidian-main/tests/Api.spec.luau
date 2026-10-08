@@ -31,7 +31,6 @@ return function(LibrarySource, TypeSource)
     -- Library.d.luau, which is what makes the d.luau audit self-enforcing.
     local InternalMethods = {
         BindControl = true,
-        BindItemDragSource = true,
         ClosePopupsUnder = true,
         EmitConfigChanged = true,
         GetButtonStyle = true,

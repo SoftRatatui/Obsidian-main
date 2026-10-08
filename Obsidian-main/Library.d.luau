@@ -1146,55 +1146,6 @@ export type Option = Hidden |
     | ColorPicker
 
 
-export type ImageGridInfo = {
-    Items: { any }?,
-    Addon: any?,
-    Model: any?,
-    Height: number?,
-    Columns: number?,
-    MinCellWidth: number?,
-    PageSize: number?,
-    CellHeight: number?,
-    ImagePadding: number?,
-    Preview: any?,
-    DraggableItems: boolean?,
-    DragType: string?,
-    Callback: ((any, any) -> ())?,
-    OnSelected: ((any, any) -> ())?,
-    Style: any?,
-    Visible: boolean?,
-}
-
-export type ItemSlotsInfo = {
-    Save: boolean?,
-    Slots: { string }?,
-    Items: { any }?,
-    Default: { [string]: string | number }?,
-    ConfigVersion: number?,
-    ConfigCallbackMode: ("Sync" | "Background")?,
-    DragType: string?,
-    Visible: boolean?,
-    CornerRadius: number?,
-    Accept: ((any, string) -> boolean)?,
-    Callback: (({ [string]: string | number }) -> ())?,
-    OnDrop: ((string, any?) -> ())?,
-    OnSelect: ((string, (string | number)?) -> ())?,
-}
-
-export type ItemSlots = {
-    SetSave: (self: ItemSlots, Enabled: boolean) -> ItemSlots,
-    Value: { [string]: string | number },
-    Assign: (self: ItemSlots, Id: string, Item: any?) -> boolean,
-    GetValue: (self: ItemSlots) -> { [string]: string | number },
-    SetValue: (self: ItemSlots, Value: { [string]: string | number }) -> ItemSlots,
-    SetItems: (self: ItemSlots, Items: { any }) -> ItemSlots,
-    SetDisabled: (self: ItemSlots, Disabled: boolean) -> ItemSlots,
-    SetVisible: (self: ItemSlots, Visible: boolean) -> ItemSlots,
-    OnChanged: (self: ItemSlots, Callback: (any) -> ()) -> ItemSlots,
-    SetConfigVersion: (self: ItemSlots, Version: number) -> ItemSlots,
-    Destroy: (self: ItemSlots) -> (),
-}
-
 export type SliderGroupInfo = {
     Save: boolean?,
     Sliders: { SliderInfo & { Id: string } }?,
@@ -1315,8 +1266,6 @@ export type BaseGroupbox = {
     AddStatRow: (self: BaseGroupbox, Id: string, Info: StatRowInfo?) -> StatRow,
     AddProgressBar: (self: BaseGroupbox, Id: string, Info: ProgressBarInfo?) -> ProgressBar,
     AddSection: (self: BaseGroupbox, Title: string) -> Label,
-    AddImageGrid: (self: BaseGroupbox, Id: string, Info: ImageGridInfo) -> any,
-    AddItemSlots: (self: BaseGroupbox, Id: string, Info: ItemSlotsInfo?) -> ItemSlots,
     AddSliderGroup: (self: BaseGroupbox, Id: string, Info: SliderGroupInfo?) -> SliderGroup,
     AddHidden: (self: BaseGroupbox, Id: string | number, Default: any, Info: { ConfigVersion: number?, Save: boolean?, Callback: ((any) -> ())? }?) -> Hidden,
     AddDivider: (self: Groupbox, MarginTop: number?, MarginBottom: number?) -> (),
@@ -1588,7 +1537,7 @@ export type Window = {
     AddLazyTab: (self: Window, Name: string, Info: { Icon: string?, Build: (Tab) -> () }) -> Tab,
     AddPopup: (self: Window, Id: string, Info: PopupInfo?) -> Dialog,
     AlwaysOnTop: boolean,
-    Frame: CanvasGroup,
+    Frame: Frame,
     CompactLauncher: TextButton?,
     VisibilityChanged: BindableEvent,
     IsSidebarCompacted: (self: Window) -> boolean,
@@ -1761,7 +1710,6 @@ export type Library = {
     OnConfigChanged: (self: Library, Callback: (any) -> ()) -> (() -> ()),
     BuildLazyTabs: (self: Library) -> (boolean, string?),
     AddKeybindProfile: (self: Library, Id: any, Info: any?) -> any,
-    RegisterImageGrid: (self: Library, Addon: any) -> Library,
     AddHidden: (self: Library, Id: string | number, Default: any, Info: { ConfigVersion: number?, Save: boolean?, Callback: ((any) -> ())? }?) -> Hidden,
     ReleaseVersion: "0.0.1-release-3",
     
@@ -1946,6 +1894,9 @@ export type Library = {
     GiveSignal: (self: Library, Connection: RBXScriptConnection) -> RBXScriptConnection,
     GetIcon: (self: Library, IconName: string) -> Icon?,
     GetCustomIcon: (self: Library, IconName: string) -> Icon?,
+    CompareRevision: (self: Library, A: string, B: string) -> number?,
+    GetRevision: (self: Library) -> (string, string),
+    RequireRevision: (self: Library, Minimum: string) -> boolean,
     Validate: (self: Library, Table: { [string]: any }, Template: { [string]: any }) -> { [string]: any },
     ResetCursorIcon: (self: Library) -> (),
     ChangeCursorIcon: (self: Library, ImageId: string) -> (),

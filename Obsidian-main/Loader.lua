@@ -1,4 +1,5 @@
 local MonHubConfig = {
+    Name = "Library",
     Repo = "SoftRatatui/Obsidian-main",
     Branch = "main",
     Folder = "Obsidian-main/dist/",
@@ -12,7 +13,15 @@ local MonHubConfig = {
 }
 
 local function MonHubLoad(Config)
+    if type(Config) == "string" then
+        Config = { Name = Config }
+    end
+    if Config and Config ~= MonHubConfig then
+        setmetatable(Config, { __index = MonHubConfig })
+    end
     Config = Config or MonHubConfig
+    local Name = Config.Name or "Library"
+    local VersionFile = Name == "Library" and "version.txt" or Name .. ".version.txt"
     local Started = os.clock()
     local Timeout = Config.Timeout or 5
     local Stagger = Config.Stagger or 1
@@ -164,13 +173,13 @@ local function MonHubLoad(Config)
     end
 
     local function Store(Body, Version)
-        WriteFile(Cache .. "Library.lua", Body)
-        WriteFile(Cache .. "Library.version", Version or "")
+        WriteFile(Cache .. Name .. ".lua", Body)
+        WriteFile(Cache .. Name .. ".version", Version or "")
     end
 
     local function RememberMirror()
-        if Preferred and Preferred ~= ReadFile(Cache .. "Library.mirror") then
-            WriteFile(Cache .. "Library.mirror", Preferred)
+        if Preferred and Preferred ~= ReadFile(Cache .. Name .. ".mirror") then
+            WriteFile(Cache .. Name .. ".mirror", Preferred)
         end
     end
 
@@ -179,18 +188,18 @@ local function MonHubLoad(Config)
         Bytes = tonumber(Bytes)
         local Body, Chunk
         if Hash then
-            Body, Chunk = Race("Library." .. Hash .. ".lua", LibraryCheck(Bytes), Budget, 3)
+            Body, Chunk = Race(Name .. "." .. Hash .. ".lua", LibraryCheck(Bytes), Budget, 3)
         end
         if not Body then
-            Body, Chunk = Race("Library.lua", LibraryCheck(Bytes), Budget, 3)
+            Body, Chunk = Race(Name .. ".lua", LibraryCheck(Bytes), Budget, 3)
         end
         return Body, Chunk
     end
 
     local function Refresh()
         task.spawn(function()
-            local Version = Race("version.txt", VersionCheck, 20)
-            if not Version or Version == ReadFile(Cache .. "Library.version") then
+            local Version = Race(VersionFile, VersionCheck, 20)
+            if not Version or Version == ReadFile(Cache .. Name .. ".version") then
                 return
             end
             local Body = Download(Version, 120)
@@ -214,15 +223,15 @@ local function MonHubLoad(Config)
         return math.max(0, Timeout - (os.clock() - Started))
     end
 
-    Preferred = ReadFile(Cache .. "Library.mirror")
+    Preferred = ReadFile(Cache .. Name .. ".mirror")
 
-    local Remote = Race("version.txt", VersionCheck, math.min(3, Timeout))
+    local Remote = Race(VersionFile, VersionCheck, math.min(3, Timeout))
     RememberMirror()
     local Bytes = Remote and tonumber(string.match(Remote, "%-(%d+)$"))
-    local Cached = ReadFile(Cache .. "Library.version")
+    local Cached = ReadFile(Cache .. Name .. ".version")
 
     if Remote and Cached == Remote then
-        local Body = ReadFile(Cache .. "Library.lua")
+        local Body = ReadFile(Cache .. Name .. ".lua")
         local Chunk = Body and SizeMatches(#Body, Bytes) and loadstring(Body)
         local Library = Chunk and Run(Chunk, "cached copy")
         if Library then
@@ -230,7 +239,7 @@ local function MonHubLoad(Config)
         end
     end
 
-    local Saved = ReadFile(Cache .. "Library.lua")
+    local Saved = ReadFile(Cache .. Name .. ".lua")
     local HasFallback = Saved ~= nil or Config.Embedded ~= nil
     if not HasFallback then
         Toast("Downloading the interface for the first time. On a slow connection this can take a minute.", 8)
@@ -259,7 +268,7 @@ local function MonHubLoad(Config)
         return Library
     end
 
-    local Message = "MonHub could not be loaded: " .. (#Notes > 0 and table.concat(Notes, "; ") or "no mirror answered and no copy is stored")
+    local Message = Name .. " could not be loaded: " .. (#Notes > 0 and table.concat(Notes, "; ") or "no mirror answered and no copy is stored")
     Toast("Could not download the interface. Check the connection and run the script again.", 12)
     error(Message, 0)
 end

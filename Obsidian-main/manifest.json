@@ -5,15 +5,7 @@
 		"Library.lua",
 		"addons/SaveManager.lua",
 		"addons/ThemeManager.lua",
-		"addons/VisualPreview.lua",
-		"addons/DrawingESPPreview.lua",
-		"addons/ImageGallery.lua",
-		"addons/ImagePreview.lua",
-		"addons/AssetCatalog.lua",
-		"addons/CollectionModel.lua",
 		"addons/CharacterTrail.lua",
-		"addons/DashboardWindow.lua",
-		"addons/esp/ESP.lua",
-		"addons/esp/MonHubUI.lua"
+		"addons/DashboardWindow.lua"
 	]
 }

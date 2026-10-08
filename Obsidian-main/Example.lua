@@ -196,17 +196,8 @@ if Manifest and type(Manifest.revision) == "string" then
 end
 local SaveManager = LoadModule("addons/SaveManager.lua", false, ActiveRepository)
 local ThemeManager = LoadModule("addons/ThemeManager.lua", false, ActiveRepository)
-local VisualPreview = LoadModule("addons/VisualPreview.lua", false, ActiveRepository)
-local DrawingESPPreview = LoadModule("addons/DrawingESPPreview.lua", false, ActiveRepository)
-local ImageGallery = LoadModule("addons/ImageGallery.lua", false, ActiveRepository)
-if ImageGallery then Library:RegisterImageGrid(ImageGallery) end
-local ImagePreview = LoadModule("addons/ImagePreview.lua", false, ActiveRepository)
-local AssetCatalog = LoadModule("addons/AssetCatalog.lua", false, ActiveRepository)
-local CollectionModel = LoadModule("addons/CollectionModel.lua", false, ActiveRepository)
 local CharacterTrail = LoadModule("addons/CharacterTrail.lua", false, ActiveRepository)
 local DashboardWindow = LoadModule("addons/DashboardWindow.lua", false, ActiveRepository)
-local UniversalESP = LoadModule("addons/esp/ESP.lua", false, ActiveRepository)
-local UniversalESPUI = LoadModule("addons/esp/MonHubUI.lua", false, ActiveRepository)
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
@@ -270,45 +261,11 @@ local Tabs = {
 	Preview = Window:AddTab("Preview", "sparkles"),
 	Controls = Window:AddTab("Controls", "sliders-horizontal"),
 	Media = Window:AddTab("Media", "gallery-horizontal-end"),
-	Visuals = Window:AddTab("Visuals", "eye"),
-	ESP = Window:AddTab("ESP", "scan-eye"),
 	Addons = Window:AddTab("Addons", "package-plus"),
-	Gallery = Window:AddTab("Gallery", "layout-grid"),
 	Advanced = Window:AddTab("Advanced", "wand-sparkles"),
 	KeySystem = Window:AddKeyTab("Key System"),
 	Settings = Window:AddTab("UI Settings", "settings-2"),
 }
-
-local UniversalESPController
-local UniversalESPPanel
-local UniversalESPPreviewRenderer
-if UniversalESP and UniversalESPUI then
-	local Created, Result = pcall(function()
-		local Controller = UniversalESP.new({
-			AutoStart = true,
-			WrapPlayers = true,
-		})
-		local Panel = UniversalESPUI.Mount(Library, Tabs.ESP, Controller, {
-			Prefix = "ExampleESP_",
-			AutoNPCs = false,
-		})
-		return {
-			Controller = Controller,
-			Panel = Panel,
-			PreviewRenderer = Controller:CreatePreviewAdapter({ UseContext = true }),
-		}
-	end)
-	if Created then
-		UniversalESPController = Result.Controller
-		UniversalESPPanel = Result.Panel
-		UniversalESPPreviewRenderer = Result.PreviewRenderer
-		Library:OnUnload(function()
-			UniversalESPController:Destroy()
-		end)
-	else
-		warn("[MonHub Example] Universal ESP disabled: " .. tostring(Result))
-	end
-end
 
 
 local BasicGroup = Tabs.Controls:AddLeftGroupbox("Basic controls", "component")
@@ -423,52 +380,7 @@ DropdownGroup:AddLabel("Press keybind"):AddKeyPicker("PressKeybind", {
 })
 
 
-local function CreateR6Preview()
-	local Model = Instance.new("Model")
-	Model.Name = "MonHubR6Preview"
-
-	local function CreatePart(Name, Size, Position, Color, Material, Transparency)
-		local Part = Instance.new("Part")
-		Part.Name = Name
-		Part.Anchored = true
-		Part.CanCollide = false
-		Part.CastShadow = false
-		Part.Color = Color
-		Part.Material = Material or Enum.Material.SmoothPlastic
-		Part.Size = Size
-		Part.CFrame = CFrame.new(Position)
-		Part.Transparency = Transparency or 0
-		Part.TopSurface = Enum.SurfaceType.Smooth
-		Part.BottomSurface = Enum.SurfaceType.Smooth
-		Part.Parent = Model
-		return Part
-	end
-
-	local Skin = Color3.fromRGB(239, 196, 156)
-	local Shirt = Color3.fromRGB(86, 91, 105)
-	local Pants = Color3.fromRGB(39, 41, 47)
-	local Torso = CreatePart("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), Shirt)
-	local Head = CreatePart("Head", Vector3.new(2, 1, 1), Vector3.new(0, 4.5, 0), Skin)
-	local RightArm = CreatePart("Right Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), Skin)
-	local LeftArm = CreatePart("Left Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, 0), Skin)
-	local RightLeg = CreatePart("Right Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), Pants)
-	local LeftLeg = CreatePart("Left Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), Pants)
-
-	local HeadMesh = Instance.new("SpecialMesh")
-	HeadMesh.MeshType = Enum.MeshType.Head
-	HeadMesh.Scale = Vector3.new(1.25, 1.25, 1.25)
-	HeadMesh.Parent = Head
-
-	local Face = Instance.new("Decal")
-	Face.Face = Enum.NormalId.Back
-	Face.Texture = "rbxasset://textures/face.png"
-	Face.Parent = Head
-
-	Model.PrimaryPart = Torso
-	return Model
-end
-
-local MediaLeft = Tabs.Media:AddLeftGroupbox("R6 character preview", "user-round")
+local MediaLeft = Tabs.Media:AddLeftGroupbox("Image", "image")
 local ShowcaseImage = MediaLeft:AddImage("ShowcaseImage", {
 	Image = "sparkles",
 	Color = Color3.fromRGB(184, 189, 201),
@@ -527,15 +439,6 @@ MediaLeft:AddSlider("ShowcaseImageScale", {
 		ShowcaseImage:SetImageScale(Value / 100)
 	end,
 })
-
-MediaLeft:AddViewport("ShowcaseViewport", {
-	Object = CreateR6Preview(),
-	Clone = false,
-	AutoFocus = true,
-	Interactive = true,
-	Height = 260,
-})
-MediaLeft:AddLabel("Left or right drag to rotate. Use the mouse wheel or pinch to zoom.", true)
 
 local CustomCard = Instance.new("Frame")
 CustomCard.Name = "CustomPassthroughCard"
@@ -599,8 +502,6 @@ MediaRight:AddUIPassthrough("CustomUI", {
 })
 
 
-local AddonGalleryGroup = Tabs.Addons:AddLeftGroupbox("Asset gallery", "layout-grid")
-local AddonImageGroup = Tabs.Addons:AddRightGroupbox("Image preview", "image")
 local CharacterTrailGroup = Tabs.Addons:AddRightGroupbox("Character trail", "sparkles")
 local Dashboard
 if DashboardWindow then
@@ -648,672 +549,6 @@ if DashboardWindow then
 		Dashboard:Refresh()
 	end)
 end
-
-local GalleryItems = {
-	{
-		Id = "neptune",
-		Name = "Neptune",
-		Category = "Space",
-		Subtitle = "Deep blue skybox",
-		Image = "rbxassetid://218954524",
-	},
-	{
-		Id = "nebula",
-		Name = "Nebula",
-		Category = "Space",
-		Subtitle = "Classic nebula skybox",
-		Image = "rbxassetid://159454293",
-	},
-	{
-		Id = "vaporwave",
-		Name = "Vaporwave",
-		Category = "Space",
-		Subtitle = "Purple horizon skybox",
-		Image = "rbxassetid://1417494253",
-	},
-	{
-		Id = "clouds",
-		Name = "Clouds",
-		Category = "Atmosphere",
-		Subtitle = "Soft daytime clouds",
-		Image = "rbxassetid://570557559",
-	},
-	{
-		Id = "twilight",
-		Name = "Twilight",
-		Category = "Atmosphere",
-		Subtitle = "Muted evening skybox",
-		Image = "rbxassetid://264909420",
-	},
-	{
-		Id = "blue-aurora",
-		Name = "Blue Aurora",
-		Category = "Atmosphere",
-		Subtitle = "Cold aurora skybox",
-		Image = "rbxassetid://12064152",
-	},
-	{
-		Id = "minecraft",
-		Name = "Minecraft",
-		Category = "Worlds",
-		Subtitle = "Block world skybox",
-		Image = "rbxassetid://1876542941",
-	},
-	{
-		Id = "jungle",
-		Name = "Jungle",
-		Category = "Worlds",
-		Subtitle = "Dense green skybox",
-		Image = "rbxassetid://214399894",
-	},
-	{
-		Id = "winter-mountain",
-		Name = "Winter Mountain",
-		Category = "Worlds",
-		Subtitle = "Snow mountain skybox",
-		Image = "rbxassetid://402229293",
-	},
-}
-
-local SkinCollection = CollectionModel and CollectionModel.Create({ Items = GalleryItems, Selected = "neptune" })
-if SkinCollection then
-	Library:OnUnload(function()
-		SkinCollection:Destroy()
-	end)
-end
-
-local CatalogModule
-local CatalogHost
-if AssetCatalog then
-	local CatalogGroup = Tabs.Addons:AddRightGroupbox("Asset catalog", "panels-top-left")
-	CatalogModule, CatalogHost = AssetCatalog.CreateStandalone(Library, {
-		Model = SkinCollection,
-		WindowTitle = "Skin collection",
-		WindowSubtitle = "Search, inspect, and apply",
-		WindowIcon = "layout-grid",
-		WindowWidth = 760,
-		WindowHeight = 560,
-		Height = 482,
-		Layout = "Split",
-		PreviewSide = "Right",
-		Columns = 3,
-		Rows = 3,
-		Items = GalleryItems,
-		Selected = "neptune",
-		Visible = true,
-		HideWithMenu = true,
-		ActionText = "Apply",
-		OnAction = function(Item)
-			if Item then
-				Notify("Catalog action", tostring(Item.Name) .. " selected")
-			end
-		end,
-	})
-	CatalogHost:SetVisible(false, true)
-
-	CatalogGroup:AddLabel("A complete skin changer surface with compact and standalone layouts.", true)
-	CatalogGroup:AddButton("Toggle catalog window", function()
-		CatalogHost:Toggle()
-	end)
-	CatalogGroup:AddDropdown("CatalogLayout", {
-		Text = "Catalog layout",
-		Values = { "Split", "Stack", "Grid" },
-		Default = "Split",
-		Callback = function(Value)
-			CatalogModule:SetLayout(Value)
-		end,
-	})
-	CatalogGroup:AddSlider("CatalogPreviewRatio", {
-		Text = "Preview width",
-		Default = 58,
-		Min = 35,
-		Max = 72,
-		Rounding = 0,
-		Suffix = "%",
-		Callback = function(Value)
-			CatalogModule:SetPreviewRatio(Value / 100)
-		end,
-	})
-end
-
-local GalleryCatalog
-if AssetCatalog then
-	local GalleryGroup = Tabs.Gallery:AddFullGroupbox("Skin gallery", "layout-grid")
-
-	local Created, Result = pcall(function()
-		return AssetCatalog.CreateEmbedded(Library, GalleryGroup, "GalleryCatalog", {
-			Model = SkinCollection,
-			Items = GalleryItems,
-			Height = 430,
-			MinCellWidth = 116,
-			Layout = "Split",
-			PreviewSide = "Right",
-			PreviewRatio = 0.42,
-			ActionText = "Apply",
-			SecondaryActionText = "Inspect",
-			OnAction = function(Item)
-				if Item then
-					Notify("Gallery", tostring(Item.Name) .. " applied")
-				end
-			end,
-		})
-	end)
-
-	if Created then
-		GalleryCatalog = Result
-	else
-		GalleryGroup:AddLabel("Gallery unavailable: " .. tostring(Result), true)
-	end
-
-	local GalleryOptions = Tabs.Gallery:AddFullGroupbox("Gallery layout", "sliders-horizontal")
-	GalleryOptions:AddLabel(
-		"A full width groupbox gives the grid the room a half width column cannot. Columns are fitted to the available space in whole pixels.",
-		true
-	)
-	GalleryOptions:AddDropdown("GalleryLayoutMode", {
-		Text = "Layout",
-		Values = { "Split", "Stack", "Grid" },
-		Default = "Split",
-		Callback = function(Value)
-			if GalleryCatalog then
-				GalleryCatalog:SetLayout(Value)
-			end
-		end,
-	})
-	GalleryOptions:AddSlider("GalleryCellWidth", {
-		Text = "Minimum card width",
-		Default = 124,
-		Min = 90,
-		Max = 220,
-		Rounding = 0,
-		Suffix = "px",
-		Callback = function(Value)
-			if GalleryCatalog then
-				GalleryCatalog:SetMinCellWidth(Value)
-			end
-		end,
-	})
-	GalleryOptions:AddSlider("GalleryCellHeight", {
-		Text = "Card height",
-		Default = 104,
-		Min = 78,
-		Max = 180,
-		Rounding = 0,
-		Suffix = "px",
-		Callback = function(Value)
-			if GalleryCatalog then
-				GalleryCatalog:SetCellHeight(Value)
-			end
-		end,
-	})
-	GalleryOptions:AddButton("Open the same gallery as a window", function()
-		local Ok, Err = pcall(function()
-			AssetCatalog.CreateStandalone(Library, {
-				Model = SkinCollection,
-				Items = GalleryItems,
-				WindowTitle = "Skin gallery",
-				WindowSubtitle = "Standalone module",
-				WindowWidth = 820,
-				WindowHeight = 560,
-				MinCellWidth = 124,
-			})
-		end)
-		if not Ok then
-			Notify("Gallery", "Standalone failed: " .. tostring(Err))
-		end
-	end)
-	GalleryOptions:AddSlider("GalleryPanelHeight", {
-		Text = "Gallery height",
-		Default = 430,
-		Min = 340,
-		Max = 800,
-		Rounding = 0,
-		Suffix = "px",
-		Callback = function(Value)
-			if GalleryCatalog then
-				GalleryCatalog:SetHeight(Value)
-			end
-		end,
-	})
-	GalleryOptions:AddButton("Save or unsave selected skin", function()
-		local Item = SkinCollection and SkinCollection:GetSelected()
-		if Item then
-			SkinCollection:SetFavorite(Item.Id, not Item.Favorite)
-		end
-	end)
-end
-
-local AddonImagePreview
-if ImagePreview then
-	local Created, Result = pcall(function()
-		return AddonImageGroup:AddAddon("AddonImagePreview", ImagePreview, {
-			Height = 220,
-			ScaleType = "Fit",
-			ImagePadding = 12,
-			BackgroundTransparency = 0.04,
-			CanvasTransparency = 0.18,
-			CaptionTransparency = 0.08,
-			OutlineTransparency = 0.48,
-			ShadeTransparency = 0.62,
-			Title = "Select an asset",
-			Subtitle = "Gallery selection appears here",
-			Motion = true,
-		})
-	end)
-	if Created then
-		AddonImagePreview = Result
-	else
-		warn("[MonHub Example] ImagePreview disabled: " .. tostring(Result))
-	end
-end
-
-local AddonGallery
-if ImageGallery then
-	local Created, Result = pcall(function()
-		return AddonGalleryGroup:AddAddon("AddonImageGallery", ImageGallery, {
-			Height = 330,
-			Columns = 3,
-			PageSize = 9,
-			CellHeight = 78,
-			ScaleType = "Fit",
-			CellTransparency = 0.06,
-			OutlineTransparency = 0.48,
-			ImageBackgroundTransparency = 0.22,
-			ImagePadding = 5,
-			Preview = AddonImagePreview,
-			Items = GalleryItems,
-			OnSelected = function(Item)
-				if Item then
-					Notify("Gallery selection", Item.Name)
-				end
-			end,
-		})
-	end)
-	if Created then
-		AddonGallery = Result
-		AddonGallery:Select("neptune", true)
-	else
-		warn("[MonHub Example] ImageGallery disabled: " .. tostring(Result))
-	end
-end
-
-AddonGalleryGroup:AddInput("AddonGallerySearch", {
-	Text = "Gallery search",
-	Default = "",
-	ClearTextOnFocus = false,
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetSearch(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddDropdown("AddonGalleryCategory", {
-	Text = "Gallery category",
-	Values = { "All", "Space", "Atmosphere", "Worlds" },
-	Default = "All",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetCategory(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddDropdown("AddonGalleryColumns", {
-	Text = "Gallery columns",
-	Values = { "1", "2", "3", "4", "5" },
-	Default = "3",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetColumns(tonumber(Value))
-		end
-	end,
-})
-
-AddonGalleryGroup:AddDropdown("AddonGalleryScaleType", {
-	Text = "Gallery image scale",
-	Values = { "Fit", "Crop", "Stretch" },
-	Default = "Fit",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetScaleType(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryImageTransparency", {
-	Text = "Gallery image transparency",
-	Default = 0,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetImageTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryImageBackgroundTransparency", {
-	Text = "Image area transparency",
-	Default = 22,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetImageBackgroundTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryCellTransparency", {
-	Text = "Card transparency",
-	Default = 6,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetCellTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryOutlineTransparency", {
-	Text = "Card outline transparency",
-	Default = 48,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetOutlineTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryImagePadding", {
-	Text = "Gallery image padding",
-	Default = 5,
-	Min = 0,
-	Max = 20,
-	Rounding = 0,
-	Suffix = "px",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetImagePadding(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryImageScale", {
-	Text = "Gallery image zoom",
-	Default = 100,
-	Min = 25,
-	Max = 300,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetImageScale(Value / 100)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryCellHeight", {
-	Text = "Gallery card height",
-	Default = 78,
-	Min = 52,
-	Max = 140,
-	Rounding = 0,
-	Suffix = "px",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetCellHeight(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddToggle("AddonGalleryVisible", {
-	Text = "Gallery visible",
-	Default = true,
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetVisible(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddSlider("AddonGalleryHeight", {
-	Text = "Gallery height",
-	Default = 330,
-	Min = 220,
-	Max = 500,
-	Rounding = 0,
-	Suffix = "px",
-	Callback = function(Value)
-		if AddonGallery then
-			AddonGallery:SetHeight(Value)
-		end
-	end,
-})
-
-AddonGalleryGroup:AddButton("Previous gallery page", function()
-	if AddonGallery then
-		AddonGallery:PreviousPage()
-	end
-end)
-
-AddonGalleryGroup:AddButton("Next gallery page", function()
-	if AddonGallery then
-		AddonGallery:NextPage()
-	end
-end)
-
-local AddedGalleryItems = 0
-AddonGalleryGroup:AddButton("Add gallery item", function()
-	if not AddonGallery then
-		return
-	end
-	AddedGalleryItems += 1
-	local SourceItem = GalleryItems[((AddedGalleryItems - 1) % #GalleryItems) + 1]
-	AddonGallery:AddItem({
-		Id = "custom-" .. tostring(AddedGalleryItems),
-		Name = "Custom " .. tostring(AddedGalleryItems),
-		Category = "Worlds",
-		Subtitle = "Runtime copy of " .. SourceItem.Name,
-		Image = SourceItem.Image,
-	})
-end)
-
-AddonGalleryGroup:AddButton("Remove selected item", function()
-	if not AddonGallery then
-		return
-	end
-	local _, Item = AddonGallery:GetSelected()
-	if Item then
-		AddonGallery:RemoveItem(Item.Id)
-	end
-end)
-
-AddonGalleryGroup:AddButton("Reset gallery items", function()
-	if AddonGallery then
-		AddonGallery:SetItems(GalleryItems)
-		AddonGallery:Select("neptune", true)
-	end
-end)
-
-AddonGalleryGroup:AddButton("Select first gallery item", function()
-	if AddonGallery then
-		AddonGallery:Select("neptune")
-	end
-end)
-
-AddonImageGroup:AddDropdown("AddonImageScaleType", {
-	Text = "Preview scale type",
-	Values = { "Fit", "Crop", "Stretch" },
-	Default = "Fit",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetScaleType(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddToggle("AddonImageMotion", {
-	Text = "Preview motion",
-	Default = true,
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetMotion(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageTransparency", {
-	Text = "Image transparency",
-	Default = 0,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetImageTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageCanvasTransparency", {
-	Text = "Canvas transparency",
-	Default = 18,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetCanvasTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageCaptionTransparency", {
-	Text = "Caption transparency",
-	Default = 8,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetCaptionTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageOutlineTransparency", {
-	Text = "Preview outline transparency",
-	Default = 48,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetOutlineTransparency(Value / 100)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImagePadding", {
-	Text = "Preview image padding",
-	Default = 12,
-	Min = 0,
-	Max = 48,
-	Rounding = 0,
-	Suffix = "px",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetImagePadding(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageScale", {
-	Text = "Preview image zoom",
-	Default = 100,
-	Min = 25,
-	Max = 300,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetImageScale(Value / 100)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageRotation", {
-	Text = "Preview rotation",
-	Default = 0,
-	Min = -180,
-	Max = 180,
-	Rounding = 0,
-	Suffix = "°",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetRotation(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddToggle("AddonImageShade", {
-	Text = "Preview shade",
-	Default = true,
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetShade(Value, 0.62)
-		end
-	end,
-})
-
-AddonImageGroup:AddSlider("AddonImageHeight", {
-	Text = "Preview height",
-	Default = 220,
-	Min = 140,
-	Max = 360,
-	Rounding = 0,
-	Suffix = "px",
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetHeight(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddToggle("AddonImageVisible", {
-	Text = "Image preview visible",
-	Default = true,
-	Callback = function(Value)
-		if AddonImagePreview then
-			AddonImagePreview:SetVisible(Value)
-		end
-	end,
-})
-
-AddonImageGroup:AddButton("Clear image preview", function()
-	if AddonImagePreview then
-		AddonImagePreview:SetImage("")
-		AddonImagePreview:SetTitle("Select an asset")
-		AddonImagePreview:SetSubtitle("")
-	end
-end)
 
 local TrailController = CharacterTrail and CharacterTrail.Create({
 	Target = game:GetService("Players").LocalPlayer,
@@ -1672,288 +907,6 @@ CharacterTrailGroup:AddButton("Rebind character trail", function()
 end)
 
 
-local VisualControls = Tabs.Visuals:AddLeftGroupbox("ESP controls", "eye")
-local VisualPreviewBox = Tabs.Visuals:AddRightGroupbox("Live previews", "scan-eye")
-VisualControls:AddLabel("The preview uses the same renderer contract that can draw live player ESP.", true)
-
-local ESPPreview
-local SharedESPRenderer = UniversalESPPreviewRenderer or DrawingESPPreview and DrawingESPPreview.Create({
-    Color = Color3.fromRGB(119, 166, 209),
-    GradientColor = Color3.fromRGB(202, 220, 239),
-}) or nil
-if SharedESPRenderer then
-	Library:OnUnload(function()
-		SharedESPRenderer:Destroy()
-	end)
-end
-if VisualPreview then
-    local Created, PreviewOrError = pcall(function()
-        return VisualPreviewBox:AddAddon("EmbeddedESPPreview", VisualPreview, {
-            Id = "EmbeddedESPPreview",
-            Name = "ESP preview",
-            Height = 320,
-            Color = Color3.fromRGB(119, 166, 209),
-            GradientColor = Color3.fromRGB(202, 220, 239),
-            Gradient = true,
-            DynamicBoxes = true,
-            Renderer = SharedESPRenderer,
-            Style = {
-                Motion = true,
-                OutlineTransparency = 0.48,
-            },
-        })
-    end)
-
-    if Created then
-        ESPPreview = PreviewOrError
-    else
-        warn("[MonHub Example] VisualPreview disabled: " .. tostring(PreviewOrError))
-    end
-end
-
-local ESPEnabled = VisualControls:AddToggle("ESPEnabled", {
-	Text = "Enable ESP preview",
-	Default = false,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetEnabled(Value)
-		end
-	end,
-})
-
-local ESPPreviewColor = Color3.fromRGB(119, 166, 209)
-local ESPPreviewGradientColor = Color3.fromRGB(202, 220, 239)
-ESPEnabled:AddColorPicker("ESPPreviewColor", {
-	Title = "ESP color",
-	Default = ESPPreviewColor,
-	Callback = function(Value)
-		ESPPreviewColor = Value
-		if ESPPreview then
-			ESPPreview:SetColor(Value)
-		end
-	end,
-})
-ESPEnabled:AddColorPicker("ESPPreviewGradientColor", {
-	Title = "ESP gradient color",
-	Default = ESPPreviewGradientColor,
-	Callback = function(Value)
-		ESPPreviewGradientColor = Value
-		if ESPPreview then
-			ESPPreview:SetGradientColor(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPGradient", {
-	Text = "Gradient box",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetGradientEnabled(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPBox", {
-	Text = "Box",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetBoxVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPName", {
-	Text = "Name",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetNameVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPDistance", {
-	Text = "Distance",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetDistanceVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPTeam", {
-	Text = "Team",
-	Default = false,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetTeamVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPWeapon", {
-	Text = "Weapon",
-	Default = false,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetWeaponVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddSlider("ESPPreviewDistance", {
-	Text = "Preview distance",
-	Default = 86,
-	Min = 5,
-	Max = 500,
-	Rounding = 0,
-	Suffix = "m",
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetDistance(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPHealth", {
-	Text = "Health bar",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetHealthVisible(Value)
-		end
-	end,
-})
-
-VisualControls:AddToggle("ESPDynamicBoxes", {
-	Text = "Dynamic boxes",
-	Default = true,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetDynamicBoxes(Value)
-		end
-	end,
-})
-
-VisualControls:AddSlider("ESPBoxScale", {
-	Text = "Box scale",
-	Default = 92,
-	Min = 70,
-	Max = 115,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetBoxScale(Value)
-		end
-	end,
-})
-
-VisualControls:AddSlider("ESPPreviewZoom", {
-	Text = "Preview zoom",
-	Default = 190,
-	Min = 120,
-	Max = 320,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetZoom(Value / 100)
-		end
-	end,
-})
-
-local ESPChamsFill = Color3.fromRGB(119, 166, 209)
-local ESPChamsOutline = Color3.fromRGB(235, 241, 248)
-local ESPChamsTransparency = 25
-local ESPHighlightToggle = VisualControls:AddToggle("ESPHighlight", {
-	Text = "Highlight",
-	Default = false,
-	Callback = function(Value)
-		if ESPPreview then
-			ESPPreview:SetChams(Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
-		end
-	end,
-})
-ESPHighlightToggle:AddColorPicker("ESPChamsFill", {
-	Title = "Highlight fill",
-	Default = ESPChamsFill,
-	Callback = function(Value)
-		ESPChamsFill = Value
-		if ESPPreview then
-			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
-		end
-	end,
-})
-ESPHighlightToggle:AddColorPicker("ESPChamsOutline", {
-	Title = "Highlight outline",
-	Default = ESPChamsOutline,
-	Callback = function(Value)
-		ESPChamsOutline = Value
-		if ESPPreview then
-			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
-		end
-	end,
-})
-
-VisualControls:AddSlider("ESPChamsTransparency", {
-	Text = "Highlight transparency",
-	Default = ESPChamsTransparency,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Suffix = "%",
-	Callback = function(Value)
-		ESPChamsTransparency = Value
-		if ESPPreview then
-			ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
-		end
-	end,
-})
-
-VisualControls:AddButton("Rotate preview left", function()
-	if ESPPreview then
-		ESPPreview:Rotate(-24, 0)
-	end
-end)
-
-VisualControls:AddButton("Rotate preview right", function()
-	if ESPPreview then
-		ESPPreview:Rotate(24, 0)
-	end
-end)
-
-VisualControls:AddButton("Reset preview camera", function()
-	if ESPPreview then
-		ESPPreview:ResetView()
-	end
-end)
-
-if ESPPreview then
-	ESPPreview:SetEnabled(ESPEnabled.Value)
-	ESPPreview:SetBoxVisible(Toggles.ESPBox.Value)
-	ESPPreview:SetNameVisible(Toggles.ESPName.Value)
-	ESPPreview:SetDistanceVisible(Toggles.ESPDistance.Value)
-	ESPPreview:SetTeamVisible(Toggles.ESPTeam.Value)
-	ESPPreview:SetWeaponVisible(Toggles.ESPWeapon.Value)
-	ESPPreview:SetDistance(Options.ESPPreviewDistance.Value)
-	ESPPreview:SetHealthVisible(Toggles.ESPHealth.Value)
-	ESPPreview:SetDynamicBoxes(Toggles.ESPDynamicBoxes.Value)
-	ESPPreview:SetBoxScale(Options.ESPBoxScale.Value)
-	ESPPreview:SetZoom(Options.ESPPreviewZoom.Value / 100)
-	ESPPreview:SetGradientEnabled(Toggles.ESPGradient.Value)
-	ESPPreview:SetGradientColor(ESPPreviewGradientColor)
-	ESPPreview:SetChams(Toggles.ESPHighlight.Value, ESPChamsFill, ESPChamsOutline, ESPChamsTransparency / 100, 0)
-end
-
-
-local PreviewImage
-local PreviewGallery
-local PreviewModulesMinimal = false
-local PreviewModuleHighlighted = false
 do
 	local PreviewControls = Tabs.Preview:AddLeftGroupbox("Library controls", "component")
 	PreviewControls:AddSection("Controls and presets")    local WatermarkPresetIndex = 1
@@ -2076,17 +1029,6 @@ do
     PreviewControls:AddButton("Toggle deferred tab visibility", function()
         LazyPreview:SetVisible(LazyPreview.Visible == false)
     end)
-    if AssetCatalog then
-        local MultiBox = Tabs.Preview:AddFullGroupbox("Multiple selection", "images")
-        local MultiCatalog = MultiBox:AddAddon("PreviewMultiCatalog", AssetCatalog, {
-            Items = GalleryItems, MultiSelect = true, ShowPager = false, Layout = "Grid", Height = 280,
-            OnSelected = function(Items) StatDemo:SetValue(tostring(#Items) .. " selected") end,
-        })
-        MultiBox:AddButton("Mark first card ready", function()
-            local Item = MultiCatalog.Items[1]
-            if Item then MultiCatalog:SetItemState(Item.Id, { Status = "Ready" }) end
-        end)
-    end
 
     PreviewControls:AddButton("Open command palette", function() Library:OpenCommandPalette() end)
     PreviewControls:AddButton("Favorite strength", function()
@@ -2123,56 +1065,11 @@ do
 
     local PreviewAddons = Tabs.Preview:AddRightGroupbox("Addon modules", "package-plus")
 	PreviewAddons:AddLabel("Open or trigger every large module from one place.", true)
-	PreviewAddons:AddButton("Toggle skin catalog", function()
-		if CatalogHost then
-			CatalogHost:Toggle()
-		end
-	end)
 	PreviewAddons:AddButton("Toggle dashboard", function()
 		if Dashboard then
 			Dashboard:Toggle()
 		end
 	end)
-	PreviewAddons:AddButton("Next gallery image", function()
-		if AddonGallery then
-			AddonGallery:NextPage()
-			local Current = AddonGallery:GetSelected()
-			local CurrentIndex = 0
-			for Index, Item in GalleryItems do
-				if Current and Item.Id == Current.Id then
-					CurrentIndex = Index
-					break
-				end
-			end
-			AddonGallery:Select(GalleryItems[(CurrentIndex % #GalleryItems) + 1].Id)
-		end
-	end)
-	PreviewAddons:AddButton("Toggle minimal modules", function()
-		PreviewModulesMinimal = not PreviewModulesMinimal
-		if PreviewImage and PreviewImage.SetMinimal then
-			PreviewImage:SetMinimal(PreviewModulesMinimal)
-		end
-		if PreviewGallery and PreviewGallery.SetMinimal then
-			PreviewGallery:SetMinimal(PreviewModulesMinimal)
-		end
-	end)
-	PreviewAddons:AddButton("Highlight gallery module", function()
-		PreviewModuleHighlighted = not PreviewModuleHighlighted
-		if PreviewGallery and PreviewGallery.SetHighlighted then
-			PreviewGallery:SetHighlighted(PreviewModuleHighlighted)
-		end
-	end)
-	PreviewAddons:AddToggle("PreviewESPEnabled", {
-		Text = "Live ESP preview",
-		Default = false,
-		Callback = function(Value)
-			if Toggles.ESPEnabled then
-				Toggles.ESPEnabled:SetValue(Value)
-			elseif ESPPreview then
-				ESPPreview:SetEnabled(Value)
-			end
-		end,
-	})
 	PreviewAddons:AddToggle("PreviewTrailEnabled", {
 		Text = "Character trail",
 		Default = false,
@@ -2185,57 +1082,7 @@ do
 		end,
 	})
 
-	if ImagePreview then
-		local PreviewImageBox = Tabs.Preview:AddRightGroupbox("Selected asset", "image")
-		local Created, Result = pcall(function()
-			return PreviewImageBox:AddAddon("PreviewImage", ImagePreview, {
-				Height = 178,
-				ImagePadding = 10,
-				Title = "Neptune",
-				Subtitle = "Interactive addon preview",
-				Motion = true,
-			})
-		end)
-		if Created then
-			PreviewImage = Result
-		end
-	end
-
-	if ImageGallery then
-		local PreviewGalleryBox = Tabs.Preview:AddFullGroupbox("Gallery preview", "layout-grid")
-		local Created, Result = pcall(function()
-			return PreviewGalleryBox:AddImageGrid("PreviewGallery", {
-				Height = 250,
-				MinCellWidth = 108,
-				PageSize = 9,
-				CellHeight = 82,
-				ImagePadding = 5,
-				Preview = PreviewImage,
-				Items = GalleryItems,
-			})
-		end)
-		if Created then
-			PreviewGallery = Result
-			PreviewGallery:Select("neptune", true)
-		end
-	end
-
 	local EditorDemo = Tabs.Preview:AddFullGroupbox("Item editor", "layers")
-    local ActiveSlot = "Sticker1"
-    local SelectedItem
-    local DemoSlots = EditorDemo:AddItemSlots("PreviewStickerSlots", {
-        Items = GalleryItems,
-        DragType = "Sticker",
-        OnSelect = function(Id)
-            ActiveSlot = Id
-            if SelectedItem then Options.PreviewStickerSlots:Assign(Id, SelectedItem) end
-        end,
-    })
-    EditorDemo:AddItemSlots("PreviewCharmSlots", {
-        Slots = { "Charm1", "Charm2", "Charm3", "Charm4" },
-        Items = GalleryItems,
-        DragType = "Sticker",
-    })
     EditorDemo:AddSliderGroup("PreviewStickerTransform", {
         Callback = function(Values)
             if Options.PreviewEditorViewport then
@@ -2244,23 +1091,13 @@ do
             end
         end,
     })
-    if ImageGallery then
-        EditorDemo:AddImageGrid("PreviewStickerGrid", {
-            Items = GalleryItems, Height = 230, PageSize = 9,
-            DraggableItems = true, DragType = "Sticker",
-            Callback = function(_, Item) SelectedItem = Item end,
-        })
-    end
     EditorDemo:AddButton("Open nested editor", function()
-        local CatalogPopup = Window:AddPopup("PreviewCatalogPopup", {
-            Title = "Catalog", Description = "Open an editor above this catalog.", Width = 580,
+        local OuterPopup = Window:AddPopup("PreviewOuterPopup", {
+            Title = "Editors", Description = "Open a second editor above this one.", Width = 580,
         })
-        if ImageGallery then
-            CatalogPopup:AddImageGrid("PreviewPopupGrid", { Items = GalleryItems, Height = 220 })
-        end
-        CatalogPopup:AddButton("Edit selected slot", function()
-            local EditorPopup = CatalogPopup:AddPopup("PreviewStickerPopup", {
-                Title = ActiveSlot, Description = "Drag to rotate. Scroll or pinch to zoom.", Width = 580,
+        OuterPopup:AddButton("Edit preview block", function()
+            local EditorPopup = OuterPopup:AddPopup("PreviewBlockPopup", {
+                Title = "Preview block", Description = "Drag to rotate. Scroll or pinch to zoom.", Width = 580,
                 FooterButtons = { { Text = "Close", Callback = function(Dialog) Dialog:Dismiss() end } },
             })
             local Sample = Instance.new("Part")
@@ -2283,17 +1120,13 @@ do
             })
         end)
     end)
-    EditorDemo:AddButton("Clear selected slot", function() DemoSlots:Assign(ActiveSlot, nil) end)
 
     local PreviewPages = Tabs.Preview:AddFullGroupbox("Complete examples", "panels-top-left")
 	PreviewPages:AddLabel("Each page contains the full API example for that area.", true)
 	for _, Entry in {
 		{ "Controls", Tabs.Controls },
 		{ "Media", Tabs.Media },
-		{ "Visuals", Tabs.Visuals },
-		{ "ESP", Tabs.ESP },
 		{ "Addons", Tabs.Addons },
-		{ "Gallery", Tabs.Gallery },
 		{ "Advanced", Tabs.Advanced },
 		{ "UI settings", Tabs.Settings },
 	} do
@@ -3009,26 +1842,16 @@ if SaveManager then
 		SaveManager:SetSubFolder(tostring(game.PlaceId))
 		SaveManager:RegisterAdapter("ExampleModuleState", {
 			Save = function()
-				local Selected = SkinCollection and SkinCollection:GetSelected()
 				return {
-					Selected = Selected and Selected.Id or nil,
-					CatalogVisible = CatalogHost and CatalogHost.Visible or false,
-					CatalogLayout = CatalogModule and CatalogModule.Layout or nil,
 					DashboardVisible = Dashboard and Dashboard.Visible or false,
 				}
 			end,
 			Validate = function(Value)
 				if type(Value) ~= "table" then return false, "expected module state table" end
-				if Value.Selected ~= nil and type(Value.Selected) ~= "string" then return false, "invalid selection" end
-				if Value.CatalogLayout ~= nil and type(Value.CatalogLayout) ~= "string" then return false, "invalid layout" end
-				if Value.CatalogVisible ~= nil and type(Value.CatalogVisible) ~= "boolean" then return false, "invalid catalog visibility" end
 				if Value.DashboardVisible ~= nil and type(Value.DashboardVisible) ~= "boolean" then return false, "invalid dashboard visibility" end
 				return true
 			end,
 			Load = function(Value)
-				if SkinCollection then SkinCollection:Select(Value.Selected) end
-				if CatalogModule and Value.CatalogLayout then CatalogModule:SetLayout(Value.CatalogLayout) end
-				if CatalogHost then CatalogHost:SetVisible(Value.CatalogVisible == true) end
 				if Dashboard then Dashboard:SetVisible(Value.DashboardVisible == true) end
 			end,
 		})
@@ -3644,34 +2467,15 @@ return {
 	DemoTabs = DemoTabs,
 	SaveManager = SaveManager,
 	ThemeManager = ThemeManager,
-	ESPPreview = ESPPreview,
-	ESPRenderer = SharedESPRenderer,
 	AddonModules = {
-		ImageGallery = ImageGallery,
-		ImagePreview = ImagePreview,
-		AssetCatalog = AssetCatalog,
-		CollectionModel = CollectionModel,
 		CharacterTrail = CharacterTrail,
 		DashboardWindow = DashboardWindow,
-		VisualPreview = VisualPreview,
-		DrawingESPPreview = DrawingESPPreview,
-		UniversalESP = UniversalESP,
-		UniversalESPUI = UniversalESPUI,
 		SaveManager = SaveManager,
 		ThemeManager = ThemeManager,
 	},
 	AddonExamples = {
-		PreviewGallery = PreviewGallery,
-		PreviewImage = PreviewImage,
-		ImageGallery = AddonGallery,
-		ImagePreview = AddonImagePreview,
-		AssetCatalog = CatalogModule,
-		SkinCollection = SkinCollection,
-		AssetCatalogWindow = CatalogHost,
 		CharacterTrail = TrailController,
 		DashboardWindow = Dashboard,
-		UniversalESP = UniversalESPController,
-		UniversalESPPanel = UniversalESPPanel,
 	},
 	Repository = ActiveRepository,
 }

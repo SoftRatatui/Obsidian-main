@@ -35,6 +35,84 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-10-08 (version: UNRESOLVED, see the note above)
+
+Removed unused addons, made windows cheaper to build and to draw, and added a WindUI
+build next to the library. Measured in game on a test window with 24 groupboxes:
+120 toggles with key pickers and 24 each of sliders, dropdowns, colour pickers,
+buttons and inputs.
+
+### Removed
+
+- Addons: TracerPreview, DrawingESPPreview, FixedR6Preview, VisualPreview,
+  ImageGallery, ImagePreview, TextureGallery, AssetCatalog, CollectionModel and the
+  `esp` folder (ESP, MonHubUI).
+- Library: `Library:RegisterImageGrid`, `AddImageGrid`, `AddItemSlots`,
+  `Library:BindItemDragSource`, `Library.ItemDropTargets`, `Library.CancelItemDrag`
+  and the `imagegrid` and `itemslots` element kinds.
+- `Example.lua` lost the ESP, Visuals and Gallery tabs and the gallery parts of the
+  Addons and Preview tabs. Tests and the guide were trimmed to match.
+- `dist/Library.lua` is 719 KB instead of 950 KB.
+- A hub that loads `addons/ImageGallery.lua` inside `pcall` keeps working: the
+  download fails and the block is skipped.
+
+### Building a window
+
+- Dropdown lists, colour picker panels and the key picker mode menu are built the
+  first time they open, and a key picker's row in the keybind list when the bind is
+  first shown. A dropdown with three values is 13 objects instead of 63, a colour
+  picker 7 instead of 57, an unbound key picker 3 instead of 20.
+- Objects get their properties before they are parented. Measured in the executor,
+  that is about 1.5 times faster per object.
+- The test window: 359 ms and 2965 objects, against 1009 ms and 7405 before. A hub
+  simulation with ThemeManager and SaveManager: 362 ms to build (about 900 before),
+  3004 objects (7644), 1755 theme registry entries (4025), and the 30 second cleanup
+  pass takes 107 ms in slices (735).
+
+### Drawing
+
+- The window and the tab pages are plain frames instead of `CanvasGroup`. A canvas
+  group renders everything inside it into an off-screen texture and redraws it when
+  anything inside changes. Side by side on the same window: render CPU about 6 ms
+  idle inside a canvas group and 3 ms without, and frame spikes up to 130 ms against
+  22 ms while a slider moved.
+- Without a canvas group nothing can fade as a whole, so the window now grows from
+  97% when it opens and shrinks back when it closes, and switching tabs hides the old
+  page at once and slides the new one in by `TabSwipeOffset`.
+
+### Input
+
+- Window drag and resize listen to mouse movement only while dragging. Before, every
+  draggable element (window, resize grip, keybind list, watermark) handled every
+  mouse movement all the time.
+
+### Small fixes
+
+- Popup menus created after `SetDPIScale` stayed at 100% until the next DPI change.
+  A `UIScale` created without an explicit `Scale` now starts at the current DPI.
+- Icon lookups are cached by name, and the bundled Lucide module finds an icon
+  through a name index instead of scanning about 1700 names.
+- `Library.d.luau` declares `CompareRevision`, `GetRevision` and `RequireRevision`,
+  and `Window.Frame` is a `Frame`.
+
+### WindUI
+
+- `windui/` holds WindUI 1.6.66 sources (MIT, by Footages). `python tools/build.py`
+  writes `dist/WindUI.lua` (320 KB instead of 1.35 MB upstream),
+  `dist/WindUI.version.txt` and a pinned `WindUI.<hash>.lua`.
+- `MonHubLoad("WindUI")` loads it through the same mirrors, version check, cache and
+  fallbacks. `MonHubLoad()` without an argument still loads MonHub, and a table
+  passed to it now only needs the fields it changes.
+- Upstream downloads six icon packs from GitHub on every start in an executor (about
+  0.9 s here, and an error where GitHub is blocked). This build carries Lucide inside
+  and makes no request: 45 ms to compile and run instead of 950 ms.
+- Fixed a quadratic build: upstream set the font again on every existing label each
+  time a label was created. 180 elements build in 0.54 s instead of 1.9 s.
+- The theme and font registries drop destroyed objects instead of keeping them
+  forever.
+- Work on fewer objects per element and on a hover listener that piles up on every
+  mouse enter froze the test client and was rolled back; it is paused.
+
 ## Update 2026-10-06 (version: UNRESOLVED, see the note above)
 
 Loading for players who cannot reach GitHub reliably. Checked in game with a

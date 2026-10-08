@@ -34,15 +34,6 @@ return function(Install, Mock, Modules)
     assert(View.Rows[1] and View.Rows[2] and not View.Rows[5000])
     View:Destroy()
     assert(Library:Diagnose().ActiveRows == 0)
-    local Items = {}
-    for Index = 1, 5000 do Items[Index] = { Id = Index, Name = "Asset " .. Index, Image = 123 } end
-    local Catalog = Modules.AssetCatalog.Create(Library, { Items = Items, Columns = 3 })
-    assert(Catalog.Virtualized and Catalog.VirtualView.Pool.Created < 40)
-    Catalog.VirtualView:ScrollTo(4999)
-    assert(Catalog.VirtualView.Last == 5000 and Catalog.VirtualView.Pool.Created < 80)
-    Catalog:SetItemState(5000, { Status = "Ready" })
-    Catalog:Destroy()
-    assert(Library:Diagnose().ActiveRows == 0)
     local State, Seen = Library:State(false), {}
     local Observer = Library:Observe(function() table.insert(Seen, State:Get()) end)
     State:Set(true); State:Set(true); State:Set(false)

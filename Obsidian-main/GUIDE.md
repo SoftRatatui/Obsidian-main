@@ -161,6 +161,26 @@ downloader). Requests go through the executor's `request` function and fall back
 `game:HttpGet`, so executors that have only one of them work. A table passed to
 `MonHubLoad` only needs the fields it changes; the rest come from `MonHubConfig`.
 
+The version file decides which build runs, so a stale one would hold players on an
+old build. jsDelivr keeps `@main` files for up to 12 hours, while GitHub raw with a
+fresh query parameter is current within seconds. `version.txt` is therefore always
+requested from GitHub raw at once, next to the remembered mirror; if a jsDelivr
+mirror answers first, the loader waits up to half a second more for GitHub raw and
+takes its answer when it comes. Where GitHub raw is blocked, the jsDelivr answer is
+used as before. To make jsDelivr current right after a push, run:
+
+```
+python tools/purge.py
+```
+
+It asks jsDelivr to drop its copies of every file in `dist/` whose name does not
+change (`version.txt`, `Library.lua`, `Loader.lua`, the WindUI files and the
+addons). Pinned `Library.<hash>.lua` files never need it.
+
+The loader sets `Library.BuildVersion` to the version it ran (`<hash>-<bytes>`),
+or to `"embedded copy"` for the copy inside a hub, so a hub can show or log which
+build is running.
+
 The same loader fetches the WindUI build. `MonHubLoad("WindUI")` reads
 `WindUI.version.txt`, downloads `WindUI.<hash>.lua` or `WindUI.lua`, and keeps its
 own `WindUI.lua`, `WindUI.version` and `WindUI.mirror` in the cache folder, with the
@@ -467,6 +487,19 @@ Window:Toggle()
 ```
 
 The main window is clamped to the active viewport. The compact launcher is also clamped and appears only when the mouse button hides the window. Hiding through the menu keybind does not create the launcher.
+
+### Remembered layout
+
+The window reopens where it was left: position, size and the open tab are written
+to `MonHub/window/<Title>.json` a second after they change and once more on
+`Unload`, and read back by `CreateWindow`. A saved size is clamped to the current
+viewport and minimum size, a saved position keeps the window on screen, and the
+saved tab opens as soon as a tab with that name is added. The file is keyed by the
+window title, so two hubs with different titles do not share it.
+
+`RememberLayout = false` in `CreateWindow` turns this off. Without file functions
+in the executor nothing is read or written. `Library:SaveWindowLayout()` writes
+the file at once.
 
 ### UI scale
 
@@ -1016,6 +1049,8 @@ Library:GlyphSize(Box, Preferred)
 ```
 
 `CenterOffset` centers on an integer. `MatchParity` grows a size by one pixel when needed so that centering it inside its container cannot land on a half pixel. `GlyphSize` picks an icon size on a clean divisor of the 24px Lucide sprite, which is what keeps small icons such as the checkbox tick from losing strokes.
+
+Lucide renamed a number of icons over time (`filter` is now `funnel`, `home` is `house`, `edit` is `pencil`, `alert-triangle` is `triangle-alert`, the `*-circle` icons became `circle-*`, the charts became `chart-*`). `Library:GetIcon` accepts the old names too, so a tab or groupbox written against an older Lucide still gets its icon instead of an empty space.
 
 ```luau
 local Card, Stroke, Corner = Library:CreateSurface(Parent, {

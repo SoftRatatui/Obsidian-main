@@ -78,33 +78,77 @@ local function MonHubLoad(Config)
         return List
     end
 
-    local function Race(Name, Accept, Budget, Spacing)
+    local OriginHost = "raw.githubusercontent.com"
+
+    local function Race(Name, Accept, Budget, Spacing, PreferOrigin)
         Spacing = Spacing or Stagger
         local State = { Running = 0 }
         local Deadline = os.clock() + Budget
-        for _, Url in Urls(Name, true) do
+        local OriginRunning = false
+        local SettleAt = 0
+
+        local function Done()
+            if State.Final then
+                return true
+            end
+            return State.Body ~= nil and (not OriginRunning or os.clock() >= SettleAt)
+        end
+
+        local function Launch(Url)
+            local Host = string.match(Url, "//([^/]+)")
+            local IsOrigin = Host == OriginHost
             State.Running += 1
+            if IsOrigin then
+                OriginRunning = true
+            end
             task.spawn(function()
                 local Raw = Get(Url)
                 State.Running -= 1
-                if Raw and not State.Body then
-                    local Body, Chunk = Accept(Raw)
-                    if Body and not State.Body then
-                        State.Body, State.Chunk = Body, Chunk
-                        Preferred = string.match(Url, "//([^/]+)")
-                    end
+                if IsOrigin then
+                    OriginRunning = false
+                end
+                if not Raw or State.Final then
+                    return
+                end
+                local Body, Chunk = Accept(Raw)
+                if not Body then
+                    return
+                end
+                if IsOrigin or not PreferOrigin then
+                    State.Final = true
+                    State.Body, State.Chunk, State.Host = Body, Chunk, Host
+                elseif not State.Body then
+                    State.Body, State.Chunk, State.Host = Body, Chunk, Host
+                    SettleAt = os.clock() + 0.5
                 end
             end)
+        end
+
+        local List = Urls(Name, true)
+        if PreferOrigin then
+            for Index, Url in List do
+                if string.match(Url, "//([^/]+)") == OriginHost then
+                    table.remove(List, Index)
+                    Launch(Url)
+                    break
+                end
+            end
+        end
+        for _, Url in List do
+            Launch(Url)
             local Next = os.clock() + Spacing
-            while not State.Body and State.Running > 0 and os.clock() < Next and os.clock() < Deadline do
+            while not Done() and State.Running > 0 and os.clock() < Next and os.clock() < Deadline do
                 task.wait()
             end
-            if State.Body or os.clock() >= Deadline then
+            if Done() or os.clock() >= Deadline then
                 break
             end
         end
-        while not State.Body and State.Running > 0 and os.clock() < Deadline do
+        while not Done() and State.Running > 0 and os.clock() < Deadline do
             task.wait()
+        end
+        if State.Host then
+            Preferred = State.Host
         end
         return State.Body, State.Chunk
     end
@@ -163,9 +207,12 @@ local function MonHubLoad(Config)
         end
     end
 
-    local function Run(Chunk, Source)
+    local function Run(Chunk, Source, Version)
         local Ok, Result = pcall(Chunk)
         if Ok and type(Result) == "table" then
+            pcall(function()
+                Result.BuildVersion = Version or Source
+            end)
             return Result
         end
         table.insert(Notes, Source .. ": " .. (Ok and "did not return the library" or tostring(Result)))
@@ -198,7 +245,7 @@ local function MonHubLoad(Config)
 
     local function Refresh()
         task.spawn(function()
-            local Version = Race(VersionFile, VersionCheck, 20)
+            local Version = Race(VersionFile, VersionCheck, 20, nil, true)
             if not Version or Version == ReadFile(Cache .. Name .. ".version") then
                 return
             end
@@ -225,7 +272,7 @@ local function MonHubLoad(Config)
 
     Preferred = ReadFile(Cache .. Name .. ".mirror")
 
-    local Remote = Race(VersionFile, VersionCheck, math.min(3, Timeout))
+    local Remote = Race(VersionFile, VersionCheck, math.min(3, Timeout), nil, true)
     RememberMirror()
     local Bytes = Remote and tonumber(string.match(Remote, "%-(%d+)$"))
     local Cached = ReadFile(Cache .. Name .. ".version")
@@ -233,7 +280,7 @@ local function MonHubLoad(Config)
     if Remote and Cached == Remote then
         local Body = ReadFile(Cache .. Name .. ".lua")
         local Chunk = Body and SizeMatches(#Body, Bytes) and loadstring(Body)
-        local Library = Chunk and Run(Chunk, "cached copy")
+        local Library = Chunk and Run(Chunk, "cached copy", Remote)
         if Library then
             return Library
         end
@@ -246,7 +293,7 @@ local function MonHubLoad(Config)
     end
     local Body, Chunk = Download(Remote, HasFallback and Remaining() or Patient)
     if Body then
-        local Library = Run(Chunk, "download")
+        local Library = Run(Chunk, "download", Remote)
         if Library then
             Store(Body, Remote)
             RememberMirror()
@@ -255,7 +302,7 @@ local function MonHubLoad(Config)
     end
 
     local SavedChunk = Saved and loadstring(Saved)
-    local Library = SavedChunk and Run(SavedChunk, "cached copy")
+    local Library = SavedChunk and Run(SavedChunk, "cached copy", ReadFile(Cache .. Name .. ".version"))
     if Library then
         Refresh()
         return Library

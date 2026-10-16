@@ -97,6 +97,8 @@ def build():
     windui_version = build_windui()
     (DIST / "WindUI.version.txt").write_bytes((windui_version + chr(10)).encode("ascii"))
     shutil.copyfile(ROOT / "Loader.lua", DIST / "Loader.lua")
+    loader = read(ROOT / "Loader.lua").rstrip()
+    (DIST / "Load.lua").write_bytes((loader + chr(10) + chr(10) + "return MonHubLoad(...)" + chr(10)).encode("utf-8"))
     shutil.copyfile(ROOT / "Diagnose.lua", DIST / "Diagnose.lua")
 
     current = {

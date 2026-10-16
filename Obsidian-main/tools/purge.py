@@ -11,7 +11,7 @@ FOLDER = "Obsidian-main/dist/"
 
 # jsDelivr keeps @main files for up to 12 hours. After a push, ask it to drop
 # the files whose names do not change, so every mirror serves the new build.
-FIXED = ["version.txt", "Library.lua", "WindUI.version.txt", "WindUI.lua", "Loader.lua", "Diagnose.lua"]
+FIXED = ["version.txt", "Library.lua", "WindUI.version.txt", "WindUI.lua", "Loader.lua", "Load.lua", "Diagnose.lua"]
 
 
 def purge(path):

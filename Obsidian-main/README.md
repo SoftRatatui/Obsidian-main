@@ -45,6 +45,35 @@
 
 ## Загрузка
 
+### Одна строка, всегда свежая сборка
+
+```luau
+local function Get(Url)
+    local Ok, Body = pcall(game.HttpGet, game, Url)
+    return Ok and Body or nil
+end
+local Load = Get("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/dist/Load.lua?t=" .. os.time())
+    or Get("https://cdn.jsdelivr.net/gh/SoftRatatui/Obsidian-main@main/Obsidian-main/dist/Load.lua")
+local Library = loadstring(Load)()
+local ThemeManager = Library.Addons.ThemeManager
+local SaveManager = Library.Addons.SaveManager
+```
+
+`Load.lua` это тот же загрузчик, только он сразу возвращает библиотеку. Версию он
+всегда спрашивает у GitHub с антикешем, поэтому после пуша хаб получает новую
+сборку при следующем запуске, а не через 5 минут или 12 часов. Если GitHub закрыт,
+строка берёт загрузчик с jsDelivr, а дальше всё идёт через зеркала и кеш.
+
+Старая строка `game:HttpGet(BASE .. "Library.lua?monhub=" .. RELEASE)` грузит
+несжатый исходник, а постоянный `?monhub=` CDN кеширует до 5 минут, отсюда «старая
+версия» сразу после пуша. Если не хочется менять хаб, достаточно заменить хвост на
+`"Library.lua?t=" .. os.time()`.
+
+После каждого пуша запускайте `python tools/purge.py`, чтобы jsDelivr сразу отдавал
+новые файлы игрокам, у которых GitHub не открывается.
+
+### Через вставленный загрузчик
+
 Для хабов берите сборку `dist/Library.lua`: в одном файле библиотека, все аддоны и
 иконки, сжато darklua. Рядом лежит `dist/version.txt` (номер сборки, несколько
 байт). Вставьте в начало хаба блок из `Loader.lua` и загружайте так:

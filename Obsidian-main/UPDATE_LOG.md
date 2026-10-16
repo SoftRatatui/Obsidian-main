@@ -35,6 +35,114 @@ picks the authoritative value, aligning the rest is one edit per location:
 
 Until then, quote the file you read the number from rather than a bare "the version".
 
+## Update 2026-10-16 (version: UNRESOLVED, see the note above)
+
+A cleaner sidebar and page layout, a window that remembers where it was, the newest
+build for everyone, and less work per frame and per mouse movement. Checked in game
+on a hub-like window: four tab groups with sub-tabs and a long Settings tab.
+
+### Look
+
+- Sidebar groups are flat: no outline card and no extra 4 px inset, so group headers,
+  sub-tabs and plain tabs start on one line 10 px from the window edge, and the
+  right gutter is 10 px too (it was 0, so the open tab touched the divider).
+- The open tab is filled with the card surface (`SurfaceColor` at `Opacity.Card`),
+  the same material as the groupboxes next to it.
+- Scrollbars of the sidebar and of the page columns float over the gutter and show
+  only while scrolling. Before, a column long enough to scroll lost 3 px of width
+  and kept a visible line beside it, so the two columns differed.
+- One rule for disclosure arrows: open points down, folded points right. A closed
+  dropdown points down and an open one up (it was the other way round).
+- The search text sits next to its icon instead of in the middle of the bar.
+- An unbound key picker is a quiet outline with dim "None"; a bound key stays a
+  solid key cap.
+- Header buttons are 10 px from the edge, 4 px apart and 10 px from the search bar
+  (they were 8 px and 2 px).
+- Tabboxes use the card radius (6 px) like groupboxes instead of the window radius.
+- `AddDivider` draws a faint line (`Opacity.Divider`). Before, it was only an empty
+  gap unless `Effects.Dividers` was on.
+- Half of an odd window radius is rounded to whole pixels, popup rows share one even
+  height, and the keybind list check is 8 px so it centres on whole pixels.
+
+### Fewer layers, clear levels
+
+- Controls are drawn by their fill alone: buttons, inputs, dropdowns, bound key
+  caps, colour swatches and the search bar have no resting outline
+  (`Stroke.ControlTransparency` is 1). Focus and validation outlines still show.
+- The line under every groupbox title is gone (it returns with `Effects.Dividers`),
+  and so are the outlines of the move and minimize buttons.
+- Three steps that read at a glance: window background, card, control. Cards are
+  solid (`Opacity.Card` 0, was 0.35, which left them about 5 levels above the
+  background), and the Default theme spaces its surfaces evenly: background 14,
+  card 26, control 38, hover 48 (was 14, 22, 33, 42). Card outlines are a little
+  stronger (`Stroke.SoftTransparency` 0.5, was 0.6).
+
+### Window
+
+- The window reopens with the position, size and tab it had (`RememberLayout`, on by
+  default, stored in `MonHub/window/<Title>.json`).
+- Old Lucide names (`filter`, `home`, `edit`, `alert-triangle`, the `*-circle` and
+  chart icons) resolve to their new names, so such icons no longer disappear.
+
+### Speed
+
+- `New()` remembers which classes have `ZIndex` instead of throwing and catching an
+  error for every `UICorner`, `UIPadding` and `UIListLayout`. The test window builds
+  in 286 ms instead of 337 ms with the same objects.
+- Tab swipe, the compact launcher and sidebar resizing listen to mouse movement
+  only during their gesture. With the menu open, nothing in the library runs on
+  mouse movement unless something is being dragged.
+- A key picker redraws only for its own key in Hold mode or when it toggles. Before,
+  every picker redrew on every key press and click.
+- While dragging, a slider redraws only when its value changes. A dropdown list
+  redraws on scroll only when its first visible row changes. Config change events
+  do nothing when nothing listens to them.
+- Built when first needed: the slider's typed-value box (first right click), the
+  slider's validation outline (only with `Validate`), the colour swatch
+  checkerboard (only for pickers with transparency).
+- Text measurement reuses its `GetTextBoundsParams`, and the cache counts new
+  entries only. It used to count rewrites too and flushed the whole cache early.
+- When the library loads without the bundle, the icon module compiles once instead
+  of twice.
+- The library's own cursor is moved each frame only when it is shown.
+- With the menu open and idle, the window costs nothing measurable per frame: 208
+  visible objects, 5.4 ms frames with the menu open or closed.
+
+### Fixes
+
+- A library loaded from the repository root took its icons from the moving `main`
+  branch of `lucide-roblox-direct`. Its cached copy had already been replaced by a
+  version with different icon sheets. Icons now come from this repository's pinned
+  `vendor/lucide.lua` under a new cache name, and the colour picker textures from
+  this repository instead of the original Obsidian repository.
+- An unknown icon name (or icons that failed to download) no longer stops the hub
+  from loading: the icon is drawn empty and the name is reported once.
+- Moving straight from one control with a tooltip to the next hid the new tooltip.
+- `AddLabel({ Visible = false })` showed the label anyway.
+- A toggle inside a settings card reported `nil` instead of `false`.
+- `SetDisabledValues(nil)` broke the next list rebuild.
+- Progress values printed long fractions (`33.333333333333336/100`).
+- The key tab lost its selected look after a theme change.
+- `Groupbox:Destroy` left the groupbox in `Tab.Groupboxes`.
+- Every `SetDesign` call shrank some static corners (header buttons went from 5 to
+  4 px); the corner pass now runs only when the radius changes.
+- Moving the mouse while the window was hidden cleared the drag lock set by the
+  phone Lock button.
+
+### Loader
+
+- `version.txt` is requested from GitHub raw at once, next to the remembered mirror,
+  and preferred over a jsDelivr answer that arrives first, since jsDelivr can keep
+  an old copy for up to 12 hours.
+- `python tools/purge.py` clears jsDelivr's copies of the fixed-name files after a
+  push.
+- `Library.BuildVersion` holds the version the loader ran.
+- `dist/Load.lua` is the loader followed by `return MonHubLoad(...)`, so a hub loads
+  the newest build in one expression (GitHub raw with a fresh query, jsDelivr as the
+  fallback). The README shows the line. Hubs that load `Library.lua?monhub=RELEASE`
+  get a copy that a CDN may keep for 5 minutes after a push; `?t=os.time()` avoids
+  that.
+
 ## Update 2026-10-08 (version: UNRESOLVED, see the note above)
 
 Removed unused addons, made windows cheaper to build and to draw, and added a WindUI

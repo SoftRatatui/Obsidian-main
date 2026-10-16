@@ -181,6 +181,22 @@ The loader sets `Library.BuildVersion` to the version it ran (`<hash>-<bytes>`),
 or to `"embedded copy"` for the copy inside a hub, so a hub can show or log which
 build is running.
 
+`dist/Load.lua` is `Loader.lua` followed by `return MonHubLoad(...)`, so a hub can
+load the library in one expression without pasting the loader:
+
+```luau
+local function Get(Url)
+    local Ok, Body = pcall(game.HttpGet, game, Url)
+    return Ok and Body or nil
+end
+local Load = Get("https://raw.githubusercontent.com/SoftRatatui/Obsidian-main/main/Obsidian-main/dist/Load.lua?t=" .. os.time())
+    or Get("https://cdn.jsdelivr.net/gh/SoftRatatui/Obsidian-main@main/Obsidian-main/dist/Load.lua")
+local Library = loadstring(Load)()          -- or loadstring(Load)("WindUI")
+```
+
+A stale `Load.lua` from jsDelivr does no harm: it only decides how to load, and it
+always asks for the current version first.
+
 The same loader fetches the WindUI build. `MonHubLoad("WindUI")` reads
 `WindUI.version.txt`, downloads `WindUI.<hash>.lua` or `WindUI.lua`, and keeps its
 own `WindUI.lua`, `WindUI.version` and `WindUI.mirror` in the cache folder, with the
@@ -210,6 +226,17 @@ arrives; if it does not, the request is repeated after 15, 45 and 120 seconds.
 The image assets of the color picker use the same mirrors and only when missing.
 Keep it this way: any future startup work that waits on the network brings back
 the timeouts this build was made to avoid.
+
+When `Library.lua` is loaded from the repository root instead of the build, it
+fetches the icon module once from this repository (`vendor/lucide.lua`, the pinned
+copy) and keeps it in `Obsidian/cache/lucide-vendor-2026-08-03.lua`. It used to
+take the module from the moving `main` branch of `lucide-roblox-direct`, so a
+change there could swap every icon sheet under a hub that had not changed at all.
+The colour picker textures and the loading icon come from this repository too.
+
+An icon name that cannot be resolved, or icons that could not be downloaded at
+all, never stop a hub from loading: the image is drawn empty and the name is
+reported once with `warn`.
 
 ### Diagnosing a start that fails on a device
 
@@ -1690,6 +1717,13 @@ Run local checks with Luau's compiler and interpreter installed:
 ## Changelog
 
 ### 0.0.1-release-3
+
+- Flat sidebar groups with even 10 px gutters, the open tab drawn in the card surface, scrollbars that float over the gutter and show only while scrolling, one direction rule for every disclosure arrow, quiet unbound key pickers, aligned header buttons and search text, visible dividers, card radius on tabboxes.
+- The window remembers its position, size and tab (`RememberLayout`), and old Lucide icon names keep working.
+- Less work per frame and per input: no mouse-move listeners outside a drag, key pickers redraw only for their own key, sliders and dropdown lists redraw only on change, `New()` no longer throws an error per layout object (test window 337 ms to 286 ms).
+- The loader prefers GitHub raw for `version.txt`, `tools/purge.py` clears jsDelivr after a push, and `Library.BuildVersion` names the build that runs.
+- Fewer layers and clear levels: controls without resting outlines, no rule under groupbox titles, solid cards, and an evenly spaced Default palette (background 14, card 26, control 38, hover 48).
+- Icons come from the pinned `vendor/lucide.lua` in this repository, unknown icons no longer stop a hub from loading, and `dist/Load.lua` loads the newest build in one line.
 
 - Removed the TracerPreview, DrawingESPPreview, FixedR6Preview, VisualPreview, ImageGallery, ImagePreview, TextureGallery, AssetCatalog and CollectionModel addons, the `esp` folder, and `AddImageGrid`, `AddItemSlots`, `Library:RegisterImageGrid` and `Library:BindItemDragSource`. `dist/Library.lua` is 719 KB instead of 950 KB.
 - Dropdown lists, colour picker panels, the key picker mode menu and keybind list rows are built when first needed, and objects get their properties before they are parented. A window with 24 groupboxes builds in about 360 ms with 2965 objects instead of 1009 ms with 7405.

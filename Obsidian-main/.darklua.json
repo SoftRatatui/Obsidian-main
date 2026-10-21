@@ -1,16 +1,19 @@
 {
-    "generator": { "name": "dense", "column_span": 240 },
+    "generator": { "name": "dense", "column_span": 1000 },
     "rules": [
         "remove_comments",
         "remove_spaces",
         "remove_types",
+        "remove_debug_profiling",
         "remove_empty_do",
+        "compute_expression",
         "remove_unused_if_branch",
         "remove_unused_while",
         "filter_after_early_return",
         "remove_nil_declaration",
+        "remove_unused_variable",
         "convert_index_to_field",
-        "compute_expression",
+        "group_local_assignment",
         "remove_function_call_parens",
         { "rule": "rename_variables", "include_functions": true }
     ]

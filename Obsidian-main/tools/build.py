@@ -8,18 +8,20 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
 DIST = ROOT / "dist"
 WORK = ROOT / ".build"
 CONFIG = ROOT / ".darklua.json"
 WINDUI_CONFIG = ROOT / ".darklua.windui.json"
-WINDUI = ROOT / "windui"
+WINDUI = SRC / "windui"
 KEEP_BUILDS = 5
 PINNED = re.compile(r"^(Library|WindUI)\.[0-9a-f]{12}\.lua$")
 DARKLUA = shutil.which("darklua") or str(pathlib.Path.home() / ".aftman" / "bin" / "darklua.exe")
+LOADER_NAMES = "MonHubConfig, MonHubLoad"
 
 
 def addon_files():
-    files = sorted((ROOT / "addons").glob("*.lua"))
+    files = sorted((SRC / "addons").glob("*.lua"))
     names = {}
     for path in files:
         name = path.stem
@@ -44,10 +46,32 @@ def darklua(source, target, config=CONFIG):
         sys.exit(f"darklua failed on {source}:\n{result.stdout}\n{result.stderr}")
 
 
+def minify(text, name):
+    source = WORK / "text" / name
+    target = WORK / "out" / name
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(text, encoding="utf-8")
+    darklua(source, target)
+    return target.read_bytes().decode("utf-8").replace("\r\n", "\n").rstrip() + "\n"
+
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(text.encode("utf-8"))
+
+
+def minify_loader(loader):
+    wrapped = f"return (function()\n{loader}\nreturn {LOADER_NAMES}\nend)()\n"
+    text = minify(wrapped, "Loader.lua")
+    if not text.startswith("return"):
+        sys.exit("unexpected darklua output for Loader.lua")
+    return f"local {LOADER_NAMES.replace(' ', '')}=" + text[len("return"):]
+
+
 def build_windui():
     work = WORK / "windui"
     shutil.copytree(WINDUI / "src", work / "src")
-    lucide = "local writefile, isfolder, makefolder, getcustomasset = nil, nil, nil, nil\n" + read(ROOT / "vendor" / "lucide.lua")
+    lucide = "local writefile, isfolder, makefolder, getcustomasset = nil, nil, nil, nil\n" + read(SRC / "vendor" / "lucide.lua")
     (work / "src" / "modules" / "Lucide.lua").write_text(lucide, encoding="utf-8")
     target = DIST / "WindUI.lua"
     darklua(work / "src" / "Init.lua", target, WINDUI_CONFIG)
@@ -58,7 +82,22 @@ def build_windui():
     return f"{hashlib.sha256(text).hexdigest()[:12]}-{len(text)}"
 
 
+def publish_root(addons):
+    # The repository root only carries build output. Readable sources live in src/.
+    write(ROOT / "Library.lua", minify(read(SRC / "Library.lua"), "Library.lua"))
+    write(ROOT / "vendor" / "lucide.lua", minify(read(SRC / "vendor" / "lucide.lua"), "lucide.lua"))
+    for path in (ROOT / "addons").glob("*.lua"):
+        if path.stem not in addons:
+            path.unlink()
+    for name in addons:
+        shutil.copyfile(DIST / "addons" / f"{name}.lua", ROOT / "addons" / f"{name}.lua")
+    for name in ("Loader.lua", "Diagnose.lua"):
+        shutil.copyfile(DIST / name, ROOT / name)
+
+
 def build():
+    if not (SRC / "Library.lua").is_file():
+        sys.exit("src/Library.lua is missing. The files in the repository root are build output; build from the readable sources in src/.")
     if WORK.exists():
         shutil.rmtree(WORK)
     WORK.mkdir()
@@ -75,19 +114,19 @@ def build():
         "local MonHubBundle = { MonHubBundle = true, Modules = {} }",
         "MonHubBundle.Icons = function()",
         "local writefile, isfolder, makefolder, getcustomasset = nil, nil, nil, nil",
-        read(ROOT / "vendor" / "lucide.lua"),
+        read(SRC / "vendor" / "lucide.lua"),
         "end",
     ]
     for name, path in addons.items():
         parts += [f"MonHubBundle.Modules.{name} = function(...)", read(path), "end"]
-    parts += ["return (function(...)", read(ROOT / "Library.lua"), "end)(MonHubBundle)"]
+    parts += ["return (function(...)", read(SRC / "Library.lua"), "end)(MonHubBundle)"]
 
     bundle = WORK / "Library.luau"
     bundle.write_text("\n".join(parts) + "\n", encoding="utf-8")
     darklua(bundle, DIST / "Library.lua")
 
     for name, path in addons.items():
-        darklua(path, DIST / path.relative_to(ROOT))
+        darklua(path, DIST / "addons" / path.name)
 
     library = DIST / "Library.lua"
     text = library.read_bytes().replace(b"\r\n", b"\n").rstrip()
@@ -95,11 +134,12 @@ def build():
     version = f"{hashlib.sha256(text).hexdigest()[:12]}-{len(text)}"
     (DIST / "version.txt").write_bytes((version + "\n").encode("ascii"))
     windui_version = build_windui()
-    (DIST / "WindUI.version.txt").write_bytes((windui_version + chr(10)).encode("ascii"))
-    shutil.copyfile(ROOT / "Loader.lua", DIST / "Loader.lua")
-    loader = read(ROOT / "Loader.lua").rstrip()
-    (DIST / "Load.lua").write_bytes((loader + chr(10) + chr(10) + "return MonHubLoad(...)" + chr(10)).encode("utf-8"))
-    shutil.copyfile(ROOT / "Diagnose.lua", DIST / "Diagnose.lua")
+    (DIST / "WindUI.version.txt").write_bytes((windui_version + "\n").encode("ascii"))
+
+    loader = read(SRC / "Loader.lua").rstrip()
+    write(DIST / "Loader.lua", minify_loader(loader))
+    write(DIST / "Load.lua", minify(loader + "\n\nreturn MonHubLoad(...)\n", "Load.lua"))
+    write(DIST / "Diagnose.lua", minify(read(SRC / "Diagnose.lua"), "Diagnose.lua"))
 
     current = {
         "Library": f"Library.{version.split('-')[0]}.lua",
@@ -121,14 +161,17 @@ def build():
         for path in builds[KEEP_BUILDS:]:
             path.unlink()
 
+    publish_root(addons)
+
     report = {"Library.lua": library.stat().st_size}
     for path in sorted(DIST.rglob("*.lua")):
         report[str(path.relative_to(DIST)).replace("\\", "/")] = path.stat().st_size
     (DIST / "sizes.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
-    source_size = (ROOT / "Library.lua").stat().st_size + sum(p.stat().st_size for p in addons.values())
+    source_size = (SRC / "Library.lua").stat().st_size + sum(p.stat().st_size for p in addons.values())
     print(f"sources {source_size // 1024} KB -> dist/Library.lua {report['Library.lua'] // 1024} KB "
           f"(library + {len(addons)} addons + icons), version {version}")
+    print(f"root Library.lua {(ROOT / 'Library.lua').stat().st_size // 1024} KB, Loader.lua {(ROOT / 'Loader.lua').stat().st_size // 1024} KB")
     print(f"windui -> dist/WindUI.lua {report['WindUI.lua'] // 1024} KB, version {windui_version}")
 
 

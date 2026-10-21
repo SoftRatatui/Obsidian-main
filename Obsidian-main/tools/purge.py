@@ -7,11 +7,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 REPO = "SoftRatatui/Obsidian-main"
 BRANCH = "main"
-FOLDER = "Obsidian-main/dist/"
+FOLDER = "Obsidian-main/"
 
 # jsDelivr keeps @main files for up to 12 hours. After a push, ask it to drop
 # the files whose names do not change, so every mirror serves the new build.
 FIXED = ["version.txt", "Library.lua", "WindUI.version.txt", "WindUI.lua", "Loader.lua", "Load.lua", "Diagnose.lua"]
+ROOT_FIXED = ["Library.lua", "Loader.lua", "Diagnose.lua", "vendor/lucide.lua"]
 
 
 def purge(path):
@@ -26,7 +27,9 @@ def purge(path):
 
 
 def main():
-    names = FIXED + [f"addons/{p.name}" for p in sorted((DIST / "addons").glob("*.lua"))]
+    names = [f"dist/{name}" for name in FIXED]
+    names += [f"dist/addons/{p.name}" for p in sorted((DIST / "addons").glob("*.lua"))]
+    names += ROOT_FIXED + [f"addons/{p.name}" for p in sorted((ROOT / "addons").glob("*.lua"))]
     failed = 0
     for name in names:
         ok, detail = purge(name)

@@ -31,6 +31,8 @@ PINNED = re.compile(r"^Library\.[0-9a-f]{12}\.lua$")
 HOME = pathlib.Path.home()
 DARKLUA = shutil.which("darklua") or str(HOME / ".aftman" / "bin" / "darklua.exe")
 LUAU_COMPILE = HOME / "AppData" / "Local" / "Temp" / "monhub-luau-tools" / "luau-compile.exe"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import check as luau_check  # noqa: E402
 WORKSPACE = HOME / "AppData" / "Local" / "Real" / "workspace" / "monhub_rewrite"
 
 
@@ -146,24 +148,30 @@ def development():
     return outputs
 
 
+def compile_errors(path):
+    """luau-compile output for a file, or luau-lsp syntax errors when the compiler is missing."""
+    if LUAU_COMPILE.is_file():
+        result = subprocess.run([str(LUAU_COMPILE), "--null", str(path)], capture_output=True, text=True)
+        return "" if result.returncode == 0 else (result.stdout + result.stderr).strip()
+    return "\n".join(luau_check.syntax_errors([path]))
+
+
 def check(outputs):
     """Compiles every output; returns True when all of them parse and compile."""
-    if not LUAU_COMPILE.is_file():
-        fail(f"luau-compile not found at {LUAU_COMPILE}")
     clean = True
     for path in outputs:
-        result = subprocess.run([str(LUAU_COMPILE), "--null", str(path)], capture_output=True, text=True)
+        errors = compile_errors(path)
         try:
             label = path.relative_to(ROOT).as_posix()
         except ValueError:
             label = str(path)
         size = path.stat().st_size
-        if result.returncode == 0:
+        if not errors:
             print(f"ok    {size / 1024:8.1f} KB  {label}")
         else:
             clean = False
             print(f"FAIL  {size / 1024:8.1f} KB  {label}")
-            print((result.stdout + result.stderr).strip())
+            print(errors)
     return clean
 
 

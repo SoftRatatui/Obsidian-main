@@ -63,8 +63,10 @@ def luau_lsp():
     candidates = [
         os.environ.get("MONHUB_LUAU_LSP"),
         shutil.which("luau-lsp"),
-        str(HOME / "AppData" / "Local" / "Real" / "real-3.0.1" / "bin" / "luau-lsp.exe"),
     ]
+    # The Real app ships one and renames its folder with every update; newest first.
+    real = HOME / "AppData" / "Local" / "Real"
+    candidates += [str(path) for path in sorted(real.glob("real-*/bin/luau-lsp.exe"), reverse=True)]
     for candidate in candidates:
         if candidate and pathlib.Path(candidate).is_file():
             return candidate

@@ -1,7 +1,9 @@
 """Builds MonHub from src/ with darklua.
 
     python tools/build.py          release: dist/ and the repository root
-    python tools/build.py --beta   the release bundle and its add-ons in beta/ only
+    python tools/build.py --beta   beta/ only: the bundle as Library.<version>.lua and
+                                   Library.core.lua, its add-ons, and Library.lua as the
+                                   loader that fetches the bundle once per PC
     python tools/build.py --dev    readable bundle plus the release bundle, copied to the test workspace
 
 Every output is compiled with luau-compile before the script reports success.
@@ -26,6 +28,13 @@ STAGE = ROOT / ".build"
 BUNDLE_CONFIG = ROOT / ".darklua.bundle.json"
 DEV_CONFIG = ROOT / ".darklua.dev.json"
 KEEP_BUILDS = 5
+# Clients keep a beta loader for up to half an hour before their hub fetches a newer one,
+# so more pinned beta builds stay online than release builds.
+KEEP_BETA_BUILDS = 8
+BETA_LOADER = ROOT / "tools" / "beta_loader.luau"
+# Hub loaders written for the full bundle treat a Library.lua under this size as a broken
+# download, so the beta loader is padded past it.
+HUB_MINIMUM = 10000
 PINNED = re.compile(r"^Library\.[0-9a-f]{12}\.lua$")
 
 HOME = pathlib.Path.home()
@@ -82,6 +91,28 @@ def rotate_builds(current):
         path.unlink()
 
 
+def rotate_beta_builds(current):
+    builds = sorted(
+        (path for path in BETA.glob("Library.*.lua") if PINNED.match(path.name)),
+        key=lambda path: (path.name == current, path.stat().st_mtime),
+        reverse=True,
+    )
+    for path in builds[KEEP_BETA_BUILDS:]:
+        path.unlink()
+
+
+def beta_loader(sha, size):
+    """tools/beta_loader.luau filled in for one build."""
+    text = BETA_LOADER.read_text(encoding="utf-8").replace("\r\n", "\n")
+    text = text.replace('"__VERSION__"', f'"{sha}"').replace("__SIZE__", str(size))
+    if "__VERSION__" in text or "__SIZE__" in text:
+        fail("tools/beta_loader.luau lost its __VERSION__ or __SIZE__ marker")
+    length = len(text.encode("utf-8"))
+    if length <= HUB_MINIMUM:
+        text += "-- " + "-" * (HUB_MINIMUM + 256 - length) + "\n"
+    return text
+
+
 def write_sizes():
     report = {"Library.lua": (DIST / "Library.lua").stat().st_size}
     for path in sorted(DIST.rglob("*.lua")):
@@ -117,13 +148,20 @@ def release():
 
 
 def beta():
-    """Builds the release bundle and its add-ons into beta/, leaving dist/ and the root alone."""
+    """Builds beta/, leaving dist/ and the root alone. The bundle goes to
+    Library.<version>.lua and Library.core.lua; Library.lua is the loader, which every
+    client on a PC uses to share one downloaded copy of the bundle."""
     text = bundle(ENTRY, BUNDLE_CONFIG, "Library.lua")
     data = text.encode("utf-8")
-    version = f"{hashlib.sha256(data).hexdigest()[:12]}-{len(data)}"
-    write(BETA / "Library.lua", text)
+    sha = hashlib.sha256(data).hexdigest()[:12]
+    version = f"{sha}-{len(data)}"
+    pinned = f"Library.{sha}.lua"
+    write(BETA / pinned, text)
+    write(BETA / "Library.core.lua", text)
+    write(BETA / "Library.lua", beta_loader(sha, len(data)))
     write(BETA / "version.txt", version + "\n")
-    outputs = [BETA / "Library.lua"]
+    rotate_beta_builds(pinned)
+    outputs = [BETA / "Library.lua", BETA / pinned, BETA / "Library.core.lua"]
     addons = addon_sources()
     for name, source in addons.items():
         path = BETA / "addons" / f"{name}.lua"

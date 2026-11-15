@@ -8,8 +8,8 @@
 --
 -- A hub runs this file and gets the library back, as it did with the full bundle. A table
 -- passed as the first argument can replace Get (a function from url to body) and Cache.
-local Version = "13e50c971a57"
-local Size = 512444
+local Version = "a4de8dbdb72b"
+local Size = 514360
 local Repo = "SoftRatatui/Obsidian-main"
 local Branch = "MonHub-Rewrite-Project"
 local Folder = "Obsidian-main/beta/"

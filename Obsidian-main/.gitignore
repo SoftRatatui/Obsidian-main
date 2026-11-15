@@ -1,3 +1,18 @@
 .claude/worktrees/*
 .build/
 /src/
+
+/tools/
+/WindUI-main (1)/
+/.vscode/
+/Example.lua
+/QuickStart.luau
+/Library.d.luau
+/init.luau
+/manifest.json
+/wally.toml
+/rokit.toml
+/.stylua.toml
+/.darklua*.json
+/assets/Example.png
+__pycache__/

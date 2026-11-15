@@ -1,7 +1,0 @@
-{
-    "bundle": {
-        "require_mode": "path"
-    },
-    "generator": "readable",
-    "rules": []
-}
